@@ -5,16 +5,12 @@
   gather_facts: true
   tasks:
 
-  - name: Debug Environment Variables
-    debug:
-      var: hostvars[inventory_hostname].ansible_env
-
   - name: install public keys
     ansible.posix.authorized_key:
-      user: "{{ lookup('env','user') }}"
+      user: "{{ lookup('env','USER') }}"
       state: present
       key: "{{ lookup('env', 'AUTHORIZED_KEY') }}"
-      path: /home/{{ lookup('env','user') }}/.ssh/authorized_keys
+      path: /home/{{ lookup('env','USER') }}/.ssh/authorized_keys
   
   - name: change sudoers file
     lineinfile:
