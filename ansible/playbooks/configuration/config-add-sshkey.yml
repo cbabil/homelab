@@ -7,7 +7,7 @@
 
   - name: Debug Environment Variables
     debug:
-      var: ansible.builtin.env
+      var: hostvars[inventory_hostname].ansible_env
 
   - name: install public keys
     ansible.posix.authorized_key:
