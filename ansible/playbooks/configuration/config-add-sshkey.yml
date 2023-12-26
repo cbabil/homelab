@@ -7,7 +7,8 @@
     ansible.posix.authorized_key:
       user: "{{ lookup('env','USER') }}"
       state: present
-      key: "{{ lookup('env', 'SSH_PUBLIC_KEY') }}"
+      key: "{{ lookup('env', 'AUTHORIZED_KEY') }}"
+      path: /home/{{ lookup('env','USER') }}/.ssh/authorized_keys
   - name: change sudoers file
     lineinfile:
       path: /etc/sudoers
