@@ -4,6 +4,10 @@
   become: yes
   tasks:
 
+  - name: Debug Environment Variables
+      debug:
+        var: hostvars[inventory_hostname].ansible_env
+        
   - name: install public keys
     ansible.posix.authorized_key:
       user: "{{ lookup('env','USER') }}"
