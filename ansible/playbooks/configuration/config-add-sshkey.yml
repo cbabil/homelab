@@ -20,17 +20,18 @@
       validate: /usr/sbin/visudo -cf %s
 
   - name: Disable Password Authentication
-     lineinfile:
-           dest=/etc/ssh/sshd_config
-           regexp='^PasswordAuthentication'
-           line="PasswordAuthentication no"
-           state=present
-           backup=yes
-     notify:
-       - restart ssh
+    lineinfile:
+      dest: /etc/ssh/sshd_config
+      regexp: '^PasswordAuthentication'
+      line: "PasswordAuthentication no"
+      state: present
+      backup: yes
+      validate: sshd -t -f %s
+    notify:
+      - restart ssh
   
   handlers:
-   - name: restart ssh
-     service:
-       name=sshd
-       state=restarted
+  - name: restart ssh
+    service:
+      name: sshd
+      state: restarted
