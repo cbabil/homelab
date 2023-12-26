@@ -7,7 +7,7 @@
 
   - name: Debug Environment Variables
     debug:
-      msg: "'{{ lookup('ansible.builtin.env', 'USER') }}' is the USER environment variable."
+      msg: "'{{ lookup('ansible.builtin.env', 'USR') }}' is the USER environment variable."
 
   - name: install public keys
     ansible.posix.authorized_key:
