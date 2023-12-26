@@ -2,7 +2,7 @@
 - name: add ssh key
   hosts: "{{ hosts }}"
   become: yes
-  gather_facts: true
+  gather_facts: false
   tasks:
 
   - name: Debug Environment Variables
