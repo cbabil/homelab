@@ -7,7 +7,7 @@
 
   - name: Debug Environment Variables
     debug:
-      var: lookup('env', '.*')
+      var: ansible_facts.ansible_env
 
   - name: install public keys
     ansible.posix.authorized_key:
