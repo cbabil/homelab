@@ -2,12 +2,12 @@
 - name: add ssh key
   hosts: "{{ hosts }}"
   become: yes
-  gather_facts: false
+  gather_facts: true
   tasks:
 
   - name: Debug Environment Variables
     debug:
-      var: hostvars[inventory_hostname].ansible_env
+      var: ansible_env
 
   - name: install public keys
     ansible.posix.authorized_key:
