@@ -4,6 +4,11 @@
   gather_facts: no
   tasks:
 
+  - name: "Update Gravity"
+    register: ouput
+    changed_when: ouput.rc != 0
+    ansible.builtin.command: "/usr/local/bin/pihole -g"
+
   - name: Update Pihole
     register: ouput
     changed_when: ouput.rc != 0
