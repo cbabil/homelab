@@ -5,10 +5,6 @@
   gather_facts: true
   tasks:
 
-  - name: Debug Environment Variables
-    debug:
-      msg: "'{{ lookup('env','USER') }}' is the USER environment variable from environment variable section."
-
   - name: install public keys
     ansible.posix.authorized_key:
       user: "{{ lookup('env','USER') }}"
