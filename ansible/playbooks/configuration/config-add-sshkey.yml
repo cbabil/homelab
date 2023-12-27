@@ -8,7 +8,6 @@
   - name: Debug Environment Variables
     debug:
       msg: "'{{ lookup('env','extra') }}' is the environment variable from extra variable section."
-      var: hostvars[inventory_hostname].ansible_env
 
   - name: install public keys
     ansible.posix.authorized_key:
