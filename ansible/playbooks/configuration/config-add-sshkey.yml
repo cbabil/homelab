@@ -7,7 +7,7 @@
 
   - name: Debug Environment Variables
     debug:
-      msg: "'{{ lookup('env','extra') }}' is the environment variable from extra variable section."
+      msg: "'{{ lookup('env','keyword') }}' is the environment variable from environment variable section."
 
   - name: install public keys
     ansible.posix.authorized_key:
