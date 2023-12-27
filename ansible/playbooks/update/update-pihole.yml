@@ -1,5 +1,8 @@
-- name: "Update Pihole"
+---
+- name: Update Pihole
   hosts: "{{ hosts }}"
   gather_facts: no
   tasks:
+
+  - name: Update Pihole
     ansible.builtin.command: "/usr/local/bin/pihole -up"
