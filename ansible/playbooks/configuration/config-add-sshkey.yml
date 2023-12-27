@@ -14,11 +14,9 @@
       user: "{{ lookup('env','USER') }}"
       state: present
       validate_certs: False
-      key: '{{ item }}'
+      key: "{{ lookup('env', 'AUTHORIZED_KEY') }}"
       path: /home/{{ lookup('env','USER') }}/.ssh/authorized_keys
-    with_file:
-      - "{{ lookup('env','AUTHORIZED_KEY_FILE') }}"
-
+  
   - name: change sudoers file
     lineinfile:
       path: /etc/sudoers
