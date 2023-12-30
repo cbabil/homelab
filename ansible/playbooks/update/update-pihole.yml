@@ -1,6 +1,6 @@
 ---
 - name: Update Pihole
-  hosts: "{{ hosts }}"
+  hosts: "{{ target_hosts | default('all') }}"
   gather_facts: no
   tasks:
 
