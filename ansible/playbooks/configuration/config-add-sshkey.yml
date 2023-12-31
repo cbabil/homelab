@@ -15,9 +15,11 @@
     ansible.posix.authorized_key:
       user: "{{ lookup('env','USER') }}"
       state: present
-      key: "{{ lookup('env', 'AUTHORIZED_KEY') }}"
+      key: "{{ lookup('file', item) }}"
       path: /home/{{ lookup('env','USER') }}/.ssh/authorized_keys
-      manage_dir: False
+    with_fileglob:
+    - "{{ lookup('env', 'AUTHORIZED_KEY') }}"
+      
   
   - name: change sudoers file
     lineinfile:
