@@ -116,101 +116,42 @@ install_semaphore() {
     success "Semaphore has been installed"
 }
 
-# Install all components
-install_all() {
-    print_header "Installing All Components"
-    info "This script will install the following components:"
-    echo "  - Git (Version Control)"
-    echo "  - Python3 (Required for Ansible)"
-    echo "  - Pip3 (Python Package Manager)"
-    echo "  - Docker (Container Runtime)"
-    echo "  - Docker Compose (Container Orchestration)"
-    echo "  - Ansible Semaphore (Ansible UI)"
-    echo
-    read -p "Press Enter to continue or Ctrl+C to cancel..."
+install_motd() {
+    print_header "Installing HomeLab MOTD"
     
+    wget https://raw.githubusercontent.com/cbabil/motd/master/homelab/10-uname
+    sudo mv 10-uname /etc/motd.sh
+    sudo chmod +x /etc/motd.sh
+    sudo rm -f /etc/motd
+    sudo printf "# MOTD\n/etc/motd.sh\n" | sudo tee -a /etc/profile > /dev/null 2>&1
+    sudo systemctl restart sshd
+    
+    success "HomeLab MOTD installed successfully"
+}
+
+main() {
+    check_root
+    install_dependencies
     install_git
+    install_motd
     install_python3
     install_pip3
     install_docker
     install_docker_compose
     install_semaphore
     
-    success "All components have been installed successfully!"
-}
-
-show_usage() {
-    echo "Usage: $0 [OPTION]"
-    echo "Initialize homelab components"
-    echo
-    echo "Options:"
-    echo "  -a, --all            Install all components"
-    echo "  -g, --git            Install Git"
-    echo "  -p, --python         Install Python3"
-    echo "  -i, --pip            Install Pip3"
-    echo "  -d, --docker         Install Docker"
-    echo "  -c, --compose        Install Docker Compose"
-    echo "  -s, --semaphore      Install Ansible Semaphore"
-    echo "  -h, --help           Display this help message"
-    echo
-    echo "Example: $0 --docker --semaphore"
-}
-
-# No arguments provided
-if [ $# -eq 0 ]; then
-    show_usage
-    exit 1
-fi
-
-# Parse command line arguments
-while [ $# -gt 0 ]; do
-    case "$1" in
-        -a|--all)
-            install_all
-            ;;
-        -g|--git)
-            install_git
-            ;;
-        -p|--python)
-            install_python3
-            ;;
-        -i|--pip)
-            install_pip3
-            ;;
-        -d|--docker)
-            install_docker
-            ;;
-        -c|--compose)
-            install_docker_compose
-            ;;
-        -s|--semaphore)
-            install_semaphore
-            ;;
-        -h|--help)
-            show_usage
-            exit 0
-            ;;
-        *)
-            error "Unknown option: $1"
-            show_usage
-            exit 1
-            ;;
-    esac
-    shift
-done
-
-print_header "Installation Complete!"
-info "System may need to be rebooted for all changes to take effect"
-
-if command -v docker >/dev/null 2>&1; then
-    echo
-    info "Post-installation steps:"
-    echo "1. Log out and log back in for docker group membership to take effect"
-    echo "2. Verify Docker installation with: docker --version"
-    if command -v docker-compose >/dev/null 2>&1; then
-        echo "3. Check Semaphore UI at: http://localhost:3000"
-        echo "4. Default Semaphore credentials can be found in .env file"
+    if command -v docker >/dev/null 2>&1; then
         echo
-        warning "Make sure to change default passwords in production environments!"
+        info "Post-installation steps:"
+        echo "1. Log out and log back in for docker group membership to take effect"
+        echo "2. Verify Docker installation with: docker --version"
+        if command -v docker-compose >/dev/null 2>&1; then
+            echo "3. Check Semaphore UI at: http://localhost:3000"
+            echo "4. Default Semaphore credentials can be found in .env file"
+            echo
+            warning "Make sure to change default passwords in production environments!"
+        fi
     fi
-fi
+}
+
+main "$@"

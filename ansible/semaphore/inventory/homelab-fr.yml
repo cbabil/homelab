@@ -1,7 +1,0 @@
-all:
-  children:
-    FRANCE:
-      children:
-        pihole:
-          hosts:
-            172.168.0.66:

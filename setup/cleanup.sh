@@ -116,6 +116,19 @@ cleanup_semaphore() {
     success "Semaphore has been removed"
 }
 
+cleanup_motd() {
+    print_header "Removing HomeLab MOTD"
+    # Remove MOTD script
+    rm -f /etc/motd.sh
+    # Restore default MOTD
+    touch /etc/motd
+    # Remove MOTD line from profile
+    sed -i '/# MOTD/d' /etc/profile
+    sed -i '/\/etc\/motd.sh/d' /etc/profile
+    systemctl restart sshd
+    success "MOTD has been removed"
+}
+
 cleanup_all() {
     print_header "Removing All Components"
     cleanup_semaphore
@@ -123,6 +136,7 @@ cleanup_all() {
     cleanup_docker
     cleanup_pip3
     cleanup_python3
+    cleanup_motd
     cleanup_git
     success "All components have been removed"
 }

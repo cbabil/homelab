@@ -1,23 +1,9 @@
 {
  	"mysql": {
  		"host": "mysql:3306",
- 		"user": "\"root\"",
+ 		"user": "\"user\"",
  		"pass": "\"password\"",
  		"name": "\"semaphore\"",
- 		"options": null
- 	},
- 	"bolt": {
- 		"host": "",
- 		"user": "",
- 		"pass": "",
- 		"name": "",
- 		"options": null
- 	},
- 	"postgres": {
- 		"host": "",
- 		"user": "",
- 		"pass": "",
- 		"name": "",
  		"options": null
  	},
  	"dialect": "mysql",
@@ -27,9 +13,9 @@
  	"ssh_config_path": "",
  	"git_client": "",
  	"web_host": "",
- 	"cookie_hash": "9cyupr1ACeDFzlfEW5BK86r1U+dV5ELwfxc1pLvoz6k=",
- 	"cookie_encryption": "Kt9L7luhxJXNJyfiW28IK2vUdLVNmB4RQM5liRy2PcA=",
- 	"access_key_encryption": "MJ6RxYzegsKkRz2d2/TdZVicGazF6LBLbs/Dv8h+ulY=",
+ 	"cookie_hash": "",
+ 	"cookie_encryption": "",
+ 	"access_key_encryption": "",
  	"email_alert": false,
  	"email_sender": "",
  	"email_host": "",
