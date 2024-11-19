@@ -1,0 +1,19 @@
+---
+- name: Create portainer container
+  community.docker.docker_container:
+    name: portainer
+    image: portainer/portainer-ce:latest
+    pull: true
+    state: started
+    restart_policy: unless-stopped
+    volumes:
+      - /etc/localtime:/etc/localtime:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - "{{ docker_dir }}/portainer/data:/data"
+    ports:
+      - "9000:9000"
+    security_opts:
+      - no-new-privileges:true
+    networks:
+      - name: homelab
+    

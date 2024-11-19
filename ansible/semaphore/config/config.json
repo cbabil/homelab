@@ -1,0 +1,73 @@
+{
+ 	"mysql": {
+ 		"host": "mysql:3306",
+ 		"user": "\"root\"",
+ 		"pass": "\"password\"",
+ 		"name": "\"semaphore\"",
+ 		"options": null
+ 	},
+ 	"bolt": {
+ 		"host": "",
+ 		"user": "",
+ 		"pass": "",
+ 		"name": "",
+ 		"options": null
+ 	},
+ 	"postgres": {
+ 		"host": "",
+ 		"user": "",
+ 		"pass": "",
+ 		"name": "",
+ 		"options": null
+ 	},
+ 	"dialect": "mysql",
+ 	"port": "",
+ 	"interface": "",
+ 	"tmp_path": "/tmp/semaphore",
+ 	"ssh_config_path": "",
+ 	"git_client": "",
+ 	"web_host": "",
+ 	"cookie_hash": "9cyupr1ACeDFzlfEW5BK86r1U+dV5ELwfxc1pLvoz6k=",
+ 	"cookie_encryption": "Kt9L7luhxJXNJyfiW28IK2vUdLVNmB4RQM5liRy2PcA=",
+ 	"access_key_encryption": "MJ6RxYzegsKkRz2d2/TdZVicGazF6LBLbs/Dv8h+ulY=",
+ 	"email_alert": false,
+ 	"email_sender": "",
+ 	"email_host": "",
+ 	"email_port": "",
+ 	"email_username": "",
+ 	"email_password": "",
+ 	"email_secure": false,
+ 	"ldap_enable": false,
+ 	"ldap_binddn": "",
+ 	"ldap_bindpassword": "",
+ 	"ldap_server": "",
+ 	"ldap_searchdn": "",
+ 	"ldap_searchfilter": "",
+ 	"ldap_mappings": {
+ 		"dn": "",
+ 		"mail": "",
+ 		"uid": "",
+ 		"cn": ""
+ 	},
+ 	"ldap_needtls": false,
+ 	"telegram_alert": false,
+ 	"telegram_chat": "",
+ 	"telegram_token": "",
+ 	"slack_alert": false,
+ 	"slack_url": "",
+ 	"oidc_providers": null,
+ 	"max_parallel_tasks": 0,
+ 	"runner_registration_token": "",
+ 	"password_login_disable": false,
+ 	"non_admin_can_create_project": false,
+ 	"use_remote_runner": false,
+ 	"runner": {
+ 		"api_url": "",
+ 		"registration_token": "",
+ 		"config_file": "",
+ 		"one_off": false,
+ 		"webhook": "",
+ 		"max_parallel_tasks": 0
+ 	},
+ 	"billing_enabled": false
+ }

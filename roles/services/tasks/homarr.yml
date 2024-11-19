@@ -1,0 +1,16 @@
+---
+- name: Create homarr container
+  community.docker.docker_container:
+    name: homarr
+    image: ghcr.io/ajnart/homarr:latest
+    pull: true
+    state: started
+    restart_policy: unless-stopped
+    volumes:
+      - "{{ docker_dir }}/homarr/configs:/app/data/configs"
+      - "{{ docker_dir }}/homarr/icons:/app/public/icons"
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    ports:
+      - "7575:7575"
+    networks:
+      - name: homelab

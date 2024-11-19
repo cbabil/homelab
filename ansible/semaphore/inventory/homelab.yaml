@@ -1,0 +1,10 @@
+all:
+  children:
+    USA:
+      children:
+        pihole:
+          hosts:
+            10.0.5.254:
+        servers:
+          hosts:
+            10.0.5.254:

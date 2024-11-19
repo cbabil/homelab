@@ -1,5 +1,5 @@
 ---
-- name: add ssh key
+- name: install ssh key
   hosts: "{{ hosts }}"
   become: yes
   gather_facts: true

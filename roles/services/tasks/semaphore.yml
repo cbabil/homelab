@@ -1,0 +1,30 @@
+---
+- name: Create semaphore container
+  community.docker.docker_container:
+    name: semaphore
+    image: semaphoreui/semaphore:latest
+    pull: true
+    state: started
+    restart_policy: unless-stopped
+    volumes:
+      - "{{ docker_dir }}/semaphore/inventory:/inventory:ro"
+      - "{{ docker_dir }}/semaphore/authorized-keys:/authorized-keys:ro"
+      - "{{ docker_dir }}/semaphore/config:/config:rw"
+    env:
+      - SEMAPHORE_DB_USER:  "{{ mysql_user }}"
+      - SEMAPHORE_DB_PASS: "{{ mysql_password }}"
+      - SEMAPHORE_DB_HOST: "mysql"
+      - SEMAPHORE_DB_PORT: "{{ mysql_port }}"
+      - SEMAPHORE_DB_DIALECT: "mysql"
+      - SEMAPHORE_DB: "{{ mysql_database }}"
+      - SEMAPHORE_PLAYBOOK_PATH: "/tmp/semaphore/"
+      - SEMAPHORE_ADMIN_PASSWORD: "{{ semaphore_admin_password }}"
+      - SEMAPHORE_ADMIN_NAME: "{{ semaphore_admin_name }}"
+      - SEMAPHORE_ADMIN_EMAIL: "{{ semaphore_admin_email }}"
+      - SEMAPHORE_ADMIN: "{{ semaphore_admin_name }}"
+      - SEMAPHORE_ACCESS_KEY_ENCRYPTION: "{{ semaphore_access_key_encryption }}"
+      - ANSIBLE_HOST_KEY_CHECKING: "false"
+    ports:
+      - "7575:7575"
+    networks:
+      - name: homelab

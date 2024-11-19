@@ -1,0 +1,16 @@
+---
+- name: Create watchtower container
+  community.docker.docker_container:
+    name: watchtower
+    image: containrrr/watchtower:latest
+    pull: true
+    state: started
+    restart_policy: unless-stopped
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock"
+    env:
+      WATCHTOWER_CLEANUP: "true"
+    ports:
+      - "8090:3000"
+    networks:
+      - name: homelab
