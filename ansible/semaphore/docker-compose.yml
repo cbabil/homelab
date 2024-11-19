@@ -9,31 +9,31 @@ services:
       - semaphore-mysql:/var/lib/mysql
     environment:
       - MYSQL_RANDOM_ROOT_PASSWORD=yes
-      - MYSQL_DATABASE=$MYSQL_DB
-      - MYSQL_USER=$MYSQL_USER
-      - MYSQL_PASSWORD=$MYSQL_PASSWORD
+      - MYSQL_DATABASE=${MYSQL_DB}
+      - MYSQL_USER=${MYSQL_USER}
+      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
     networks:
-      - myLocalNetwork
+      - homelab
     restart: unless-stopped
   semaphore:
     container_name: ansiblesemaphore
-    image: semaphoreui/semaphore:latest
+    image: semaphoreui/semaphore:v2.10.35
     user: "${UID}:${GID}"
     ports:
       - 3000:3000
     environment:
-      - SEMAPHORE_DB_USER=$MYSQL_USER
-      - SEMAPHORE_DB_PASS=$MYSQL_PASSWORD
+      - SEMAPHORE_DB_USER=${MYSQL_USER}
+      - SEMAPHORE_DB_PASS=${MYSQL_PASSWORD}
       - SEMAPHORE_DB_HOST=mysql
-      - SEMAPHORE_DB_PORT=$MYSQL_DB_PORT
+      - SEMAPHORE_DB_PORT=${MYSQL_DB_PORT}
       - SEMAPHORE_DB_DIALECT=mysql
-      - SEMAPHORE_DB=$MYSQL_DB
+      - SEMAPHORE_DB=${MYSQL_DB}
       - SEMAPHORE_PLAYBOOK_PATH=/tmp/semaphore/
-      - SEMAPHORE_ADMIN_PASSWORD=$SEMAPHORE_ADMIN_PASSWORD
-      - SEMAPHORE_ADMIN_NAME=$SEMAPHORE_ADMIN_NAME
-      - SEMAPHORE_ADMIN_EMAIL=$SEMAPHORE_ADMIN_EMAIL
-      - SEMAPHORE_ADMIN=$SEMAPHORE_ADMIN
-      - SEMAPHORE_ACCESS_KEY_ENCRYPTION=$SEMAPHORE_ACCESS_KEY_ENCRYPTION
+      - SEMAPHORE_ADMIN_PASSWORD=${SEMAPHORE_ADMIN_PASSWORD}
+      - SEMAPHORE_ADMIN_NAME=${SEMAPHORE_ADMIN_NAME}
+      - SEMAPHORE_ADMIN_EMAIL=${SEMAPHORE_ADMIN_EMAIL}
+      - SEMAPHORE_ADMIN=${SEMAPHORE_ADMIN}
+      - SEMAPHORE_ACCESS_KEY_ENCRYPTION=${SEMAPHORE_ACCESS_KEY_ENCRYPTION}
       - ANSIBLE_HOST_KEY_CHECKING=false
     volumes:
       - ./inventory/:/inventory:ro
@@ -43,9 +43,9 @@ services:
     depends_on:
       - mysql
     networks:
-      - myLocalNetwork
+      - homelab
 volumes:
   semaphore-mysql:
 networks:
-  myLocalNetwork:
-   name: myLocalNetwork
+  homelab:
+    external: true
