@@ -1,0 +1,15 @@
+---
+# System configuration
+timezone: "UTC"
+system_packages:
+  - curl
+  - git
+  - iproute2
+  - whiptail
+
+# Security configuration
+secure_permissions:
+  - /etc/passwd
+  - /etc/shadow
+  - /etc/group
+  - /etc/gshadow 

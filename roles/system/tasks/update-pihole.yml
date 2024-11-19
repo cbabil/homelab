@@ -1,15 +1,46 @@
 ---
-- name: Update Pihole
-  hosts: "{{ hosts }}"
-  gather_facts: no
-  tasks:
+- name: Update Pi-hole
+  block:
+    - name: Update Pi-hole Core
+      command: pihole -up
+      register: pihole_update
+      changed_when: "'Everything is up to date' not in pihole_update.stdout"
 
-  - name: "Update Gravity"
-    register: ouput
-    changed_when: ouput.rc != 0
-    ansible.builtin.command: "/usr/local/bin/pihole -g"
+    - name: Update Gravity Database
+      command: pihole -g
+      register: gravity_update
+      changed_when: "'up to date' not in gravity_update.stdout"
 
-  - name: Update Pihole
-    register: ouput
-    changed_when: ouput.rc != 0
-    ansible.builtin.command: "/usr/local/bin/pihole -up"
+    - name: Get Pi-hole Status
+      command: pihole status
+      register: pihole_status
+      changed_when: false
+
+    - name: Display Pi-hole Status
+      debug:
+        var: pihole_status.stdout_lines
+
+- name: Manage Pi-hole Lists
+  block:
+    - name: Add Adlists
+      command: "pihole -a adlist add {{ item }}"
+      loop: "{{ pihole_adlists | default([]) }}"
+      when: pihole_adlists is defined
+      register: adlist_add
+      changed_when: "'already exists' not in adlist_add.stderr"
+
+- name: Manage Pi-hole Configuration
+  block:
+    - name: Set DNS Servers
+      command: "pihole -a setdns {{ pihole_dns_servers | join(' ') }}"
+      when: pihole_dns_servers is defined
+      register: dns_set
+      changed_when: dns_set.rc == 0
+
+    - name: Configure DHCP
+      command: >
+        pihole -a enabledhcp {{ item.start }} {{ item.end }} {{ item.router }} {{ item.lease_time }}
+      when: 
+        - pihole_dhcp is defined
+        - pihole_dhcp.enabled | default(false)
+      loop: "{{ pihole_dhcp.config | default([]) }}" 

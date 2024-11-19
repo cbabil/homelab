@@ -1,0 +1,22 @@
+---
+# Pi-hole Secrets
+vault_pihole_web_password: "your_secure_password"
+
+# MySQL Database Secrets
+vault_mysql_root_password: "your_secure_root_password"
+vault_mysql_user: "semaphore"
+vault_mysql_password: "your_secure_db_password"
+vault_mysql_database: "semaphore"
+
+# Semaphore Secrets
+vault_semaphore_admin: "admin"
+vault_semaphore_admin_password: "your_secure_admin_password"
+vault_semaphore_admin_name: "Administrator"
+vault_semaphore_admin_email: "admin@yourdomain.com"
+vault_semaphore_access_key: "your_secure_access_key"
+
+# Note: Since we're using Ansible Semaphore, secrets management should be handled
+# through Semaphore's UI. Sensitive data can be stored as:
+# 1. Environment variables in Semaphore project settings
+# 2. Key store entries in Semaphore
+# 3. SSH keys in Semaphore's key management

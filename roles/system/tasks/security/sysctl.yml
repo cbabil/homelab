@@ -1,0 +1,11 @@
+---
+- name: Configure system security parameters
+  sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: yes
+  loop:
+    - { key: 'kernel.sysrq', value: '0' }
+    - { key: 'net.ipv4.tcp_syncookies', value: '1' }
+    - { key: 'net.ipv4.conf.all.accept_redirects', value: '0' } 

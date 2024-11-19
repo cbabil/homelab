@@ -1,0 +1,22 @@
+---
+- name: Update Pi-hole
+  block:
+    - name: Update Pi-hole Core
+      command: pihole -up
+      register: pihole_update
+      changed_when: "'Everything is up to date' not in pihole_update.stdout"
+      failed_when: pihole_update.rc != 0 or 'Error' in pihole_update.stderr
+
+    - name: Update Gravity Database
+      command: pihole -g
+      register: gravity_update
+      changed_when: "'up to date' not in gravity_update.stdout"
+
+    - name: Get Pi-hole Status
+      command: pihole status
+      register: pihole_status
+      changed_when: false
+
+    - name: Display Pi-hole Status
+      debug:
+        var: pihole_status.stdout_lines 

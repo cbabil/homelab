@@ -1,0 +1,11 @@
+---
+# Docker configuration
+docker_dir: "/opt/docker"
+data_dir: "/data"
+
+# Container versions
+mysql_version: "8.0"
+semaphore_version: "v2.10.35"
+portainer_version: "latest"
+watchtower_version: "latest"
+homarr_version: "latest" 

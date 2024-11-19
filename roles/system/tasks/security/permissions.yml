@@ -1,0 +1,35 @@
+---
+# Basic Security Settings
+- name: Set secure permissions on system files
+  file:
+    path: "{{ item }}"
+    mode: '0600'
+    state: file
+  loop:
+    - /etc/passwd
+    - /etc/shadow
+    - /etc/group
+    - /etc/gshadow
+
+- name: Set secure umask
+  lineinfile:
+    path: /etc/profile
+    line: 'umask 027'
+    state: present
+
+- name: Disable core dumps
+  lineinfile:
+    path: /etc/security/limits.conf
+    line: '* hard core 0'
+    state: present
+
+- name: Set secure sysctl parameters
+  sysctl:
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    state: present
+    reload: yes
+  loop:
+    - { key: 'kernel.sysrq', value: '0' }                     # Disable magic SysRq key
+    - { key: 'net.ipv4.tcp_syncookies', value: '1' }         # Enable TCP SYN cookie protection
+    - { key: 'net.ipv4.conf.all.accept_redirects', value: '0' }  # Disable ICMP redirects 

@@ -1,0 +1,38 @@
+- name: Create MySQL container
+  community.docker.docker_container:
+    name: mysql
+    hostname: mysql
+    image: mysql:latest
+    state: started
+    restart_policy: unless-stopped
+    volumes:
+      - "{{ docker_dir }}/mysql/config:/etc/mysql/conf.d"
+      - "{{ data_dir }}/mysql/database:/var/lib/mysql"
+      - "{{ data_dir }}/mysql/dbbackups:/var/backups/mysql"
+    env:
+      PUID: "{{ puid }}"
+      PGID: "{{ pgid }}"
+      MYSQL_ROOT_PASSWORD: "{{ vault_mysql_root_password }}"
+      MYSQL_DATABASE: "{{ vault_mysql_database }}"
+      MYSQL_USER: "{{ vault_mysql_user }}"
+      MYSQL_PASSWORD: "{{ vault_mysql_password }}"
+    ports:
+      - "3306:3306"
+    networks:
+      - name: homelab
+    security_opts:
+      - no-new-privileges:true
+    ulimits:
+      nofile:
+        soft: 65536
+        hard: 65536
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

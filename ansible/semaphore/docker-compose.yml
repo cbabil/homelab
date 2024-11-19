@@ -1,3 +1,4 @@
+---
 version: '3.7'
 
 services:
@@ -9,9 +10,9 @@ services:
       - semaphore-mysql:/var/lib/mysql
     environment:
       - MYSQL_RANDOM_ROOT_PASSWORD=yes
-      - MYSQL_DATABASE=${MYSQL_DB}
-      - MYSQL_USER=${MYSQL_USER}
-      - MYSQL_PASSWORD=${MYSQL_PASSWORD}
+      - MYSQL_DATABASE={{ vault_mysql_db }}
+      - MYSQL_USER={{ vault_mysql_user }}
+      - MYSQL_PASSWORD={{ vault_mysql_password }}
     networks:
       - homelab
     restart: unless-stopped
@@ -22,18 +23,18 @@ services:
     ports:
       - 3000:3000
     environment:
-      - SEMAPHORE_DB_USER=${MYSQL_USER}
-      - SEMAPHORE_DB_PASS=${MYSQL_PASSWORD}
+      - SEMAPHORE_DB_USER={{ vault_mysql_user }}
+      - SEMAPHORE_DB_PASS={{ vault_mysql_password }}
       - SEMAPHORE_DB_HOST=mysql
-      - SEMAPHORE_DB_PORT=${MYSQL_DB_PORT}
+      - SEMAPHORE_DB_PORT={{ vault_mysql_db_port }}
       - SEMAPHORE_DB_DIALECT=mysql
-      - SEMAPHORE_DB=${MYSQL_DB}
+      - SEMAPHORE_DB={{ vault_mysql_db }}
       - SEMAPHORE_PLAYBOOK_PATH=/tmp/semaphore/
-      - SEMAPHORE_ADMIN_PASSWORD=${SEMAPHORE_ADMIN_PASSWORD}
-      - SEMAPHORE_ADMIN_NAME=${SEMAPHORE_ADMIN_NAME}
-      - SEMAPHORE_ADMIN_EMAIL=${SEMAPHORE_ADMIN_EMAIL}
-      - SEMAPHORE_ADMIN=${SEMAPHORE_ADMIN}
-      - SEMAPHORE_ACCESS_KEY_ENCRYPTION=${SEMAPHORE_ACCESS_KEY_ENCRYPTION}
+      - SEMAPHORE_ADMIN_PASSWORD={{ vault_semaphore_admin_password }}
+      - SEMAPHORE_ADMIN_NAME={{ vault_semaphore_admin_name }}
+      - SEMAPHORE_ADMIN_EMAIL={{ vault_semaphore_admin_email }}
+      - SEMAPHORE_ADMIN={{ vault_semaphore_admin }}
+      - SEMAPHORE_ACCESS_KEY_ENCRYPTION={{ vault_semaphore_access_key }}
       - ANSIBLE_HOST_KEY_CHECKING=false
     volumes:
       - ./inventory/:/inventory:ro

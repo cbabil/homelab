@@ -1,0 +1,5 @@
+# Common variables that don't fit into specific categories
+# or are used across multiple roles
+docker_dir: "/opt/docker"
+data_dir: "/data"
+network_interface: "eth0"

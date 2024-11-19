@@ -1,0 +1,30 @@
+# Pi-hole Configuration
+network_interface: "eth0"  # Change this to match your Raspberry Pi's network interface
+pihole_password: "{{ vault_pihole_password }}"  # Reference vault variables
+
+# Pi-hole Adlists
+pihole_adlists:
+  # Security Lists
+  - "https://blocklistproject.github.io/Lists/phishing.txt"
+  - "https://blocklistproject.github.io/Lists/ransomware.txt"
+  - "https://blocklistproject.github.io/Lists/scam.txt"
+  - "https://blocklistproject.github.io/Lists/malware.txt"
+  - "https://blocklistproject.github.io/Lists/fraud.txt"
+  
+  # Privacy Lists
+  - "https://blocklistproject.github.io/Lists/tracking.txt"
+  - "https://blocklistproject.github.io/Lists/ads.txt"
+  
+  # Content Lists
+  - "https://blocklistproject.github.io/Lists/porn.txt"
+  - "https://blocklistproject.github.io/Lists/gambling.txt"
+  - "https://blocklistproject.github.io/Lists/piracy.txt"
+  - "https://blocklistproject.github.io/Lists/drugs.txt"
+  
+  # Other Lists
+  - "https://raw.githubusercontent.com/StevenBlack/hosts/master/hosts"
+  - "https://raw.githubusercontent.com/PolishFiltersTeam/KADhosts/master/KADhosts.txt"
+  - "https://blocklistproject.github.io/Lists/abuse.txt"
+  - "https://blocklistproject.github.io/Lists/redirect.txt"
+  - "https://blocklistproject.github.io/Lists/torrent.txt"
+  - "https://blocklistproject.github.io/Lists/smart-tv.txt" 

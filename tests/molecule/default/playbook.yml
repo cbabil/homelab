@@ -1,0 +1,17 @@
+---
+- name: Converge
+  hosts: all
+  become: true
+  
+  pre_tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: true
+        cache_valid_time: 600
+      when: ansible_os_family == 'Debian'
+      
+  roles:
+    - role: services
+      vars:
+        pihole_password: "{{ vault_pihole_password | default('testpassword123') }}"
+    - role: system

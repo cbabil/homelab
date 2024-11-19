@@ -1,0 +1,15 @@
+---
+exclude_paths:
+  - .cache/
+  - .github/
+  - molecule/
+  - tests/
+
+skip_list:
+  - '306'  # Recommended to use FQCN
+  - '305'  # Use shell only when shell functionality is required
+  - '503'  # Tasks that run when changed should likely be handlers
+
+warn_list:
+  - '208'  # File permissions unset or incorrect
+  - '301'  # Commands should not change things if nothing needs doing 

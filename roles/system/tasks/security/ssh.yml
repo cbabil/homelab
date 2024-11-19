@@ -1,0 +1,12 @@
+---
+- name: Configure SSH
+  lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    state: present
+  loop:
+    - { regexp: '^PermitRootLogin', line: 'PermitRootLogin no' }
+    - { regexp: '^PasswordAuthentication', line: 'PasswordAuthentication no' }
+    - { regexp: '^PubkeyAuthentication', line: 'PubkeyAuthentication yes' }
+  notify: Restart SSH 

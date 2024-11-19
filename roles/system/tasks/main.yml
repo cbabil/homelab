@@ -1,0 +1,8 @@
+---
+# Security Configuration
+- include_tasks: security/permissions.yml
+- include_tasks: security/ssh.yml
+- include_tasks: security/sysctl.yml
+
+# System Maintenance
+- include_tasks: maintenance/update.yml 

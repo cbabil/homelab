@@ -1,0 +1,11 @@
+---
+# Container Services
+- include_tasks: containers/mysql.yml
+- include_tasks: containers/semaphore.yml
+- include_tasks: containers/portainer.yml
+- include_tasks: containers/watchtower.yml
+- include_tasks: containers/homarr.yml
+
+# Applications
+- include_tasks: applications/pihole/install.yml
+- include_tasks: applications/pihole/update.yml
