@@ -7,14 +7,14 @@ services:
     container_name: mysql
     hostname: mysql
     volumes:
-      - semaphore-mysql:/var/lib/mysql
+      - ${DOCKER_VOLUME_PATH}/mysql:/var/lib/mysql
     environment:
       - MYSQL_RANDOM_ROOT_PASSWORD=yes
       - MYSQL_DATABASE={{ vault_mysql_db }}
       - MYSQL_USER={{ vault_mysql_user }}
       - MYSQL_PASSWORD={{ vault_mysql_password }}
     networks:
-      - homelab
+      - ${DOCKER_NETWORK}
     restart: unless-stopped
   semaphore:
     container_name: ansiblesemaphore
@@ -36,15 +36,16 @@ services:
       - SEMAPHORE_ADMIN={{ vault_semaphore_admin }}
       - SEMAPHORE_ACCESS_KEY_ENCRYPTION={{ vault_semaphore_access_key }}
       - ANSIBLE_HOST_KEY_CHECKING=false
+      - LOG_LEVEL=${LOG_LEVEL}
     volumes:
-      - ./inventory/:/inventory:ro
-      - ./authorized-keys/:/authorized-keys:ro
-      - ./config/:/etc/semaphore:rw
+      - ${DOCKER_VOLUME_PATH}/inventory:/inventory:ro
+      - ${DOCKER_VOLUME_PATH}/authorized-keys:/authorized-keys:ro
+      - ${DOCKER_VOLUME_PATH}/config:/etc/semaphore:rw
     restart: unless-stopped
     depends_on:
       - mysql
     networks:
-      - homelab
+      - ${DOCKER_NETWORK}
 volumes:
   semaphore-mysql:
 networks:

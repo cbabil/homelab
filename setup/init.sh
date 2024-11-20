@@ -116,17 +116,12 @@ install_semaphore() {
     success "Semaphore has been installed"
 }
 
+# MOTD installation
 install_motd() {
     print_header "Installing HomeLab MOTD"
-    
-    wget https://raw.githubusercontent.com/cbabil/motd/master/homelab/10-uname
-    sudo mv 10-uname /etc/motd.sh
-    sudo chmod +x /etc/motd.sh
-    sudo rm -f /etc/motd
-    sudo printf "# MOTD\n/etc/motd.sh\n" | sudo tee -a /etc/profile > /dev/null 2>&1
-    sudo systemctl restart sshd
-    
-    success "HomeLab MOTD installed successfully"
+    info "Setting up the Message of the Day for the homelab"
+    bash "${SCRIPT_DIR}/install-motd.sh" || error "MOTD installation failed"
+    success "HomeLab MOTD has been installed"
 }
 
 main() {
