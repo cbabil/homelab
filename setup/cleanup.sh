@@ -72,24 +72,26 @@ cleanup_pip3() {
 }
 
 cleanup_docker() {
-    print_header "Removing Docker"
-    # Stop all running containers
+    print_header "Cleaning up Docker"
+    
+    # Stop and remove all containers
     if command -v docker >/dev/null 2>&1; then
-        docker stop $(docker ps -aq) 2>/dev/null || true
-        docker rm $(docker ps -aq) 2>/dev/null || true
+        docker ps -aq | xargs -r docker rm -f
+        
+        # Remove all images (including unused and dangling)
+        docker images -aq | xargs -r docker rmi -f
+        docker image prune -af
+        
+        # Remove unused volumes and networks
+        docker volume prune -f
+        docker network prune -f
+        docker system prune -af
     fi
     
-    # Remove Docker packages
-    apt-get remove --purge -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+    # Remove Docker installation
+    apt-get remove -y docker-ce docker-ce-cli containerd.io
     apt-get autoremove -y
-    
-    # Remove Docker files and directories
     rm -rf /var/lib/docker
-    rm -rf /var/lib/containerd
-    rm -rf ~/.docker
-    
-    # Remove Docker group
-    groupdel docker 2>/dev/null || true
     
     success "Docker has been removed"
 }
