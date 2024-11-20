@@ -2,7 +2,7 @@
 
 ## Overview
 
-This document provides detailed instructions on using Ansible Semaphore, managing secrets with Semaphore Vault, configuring the `.env` file, and utilizing the `group_vars` directory for your homelab setup.
+This document provides detailed instructions on using Ansible Semaphore, managing secrets with Semaphore Vault, configuring the `.env` file, utilizing the `group_vars` directory, and understanding the role of `ansible.cfg` in your homelab setup.
 
 ## Ansible Semaphore
 
@@ -91,6 +91,42 @@ vault_semaphore_access_key: "your_secure_access_key"
 - **Centralized Configuration**: Use `group_vars` to centralize configuration settings that apply to multiple hosts or roles.
 - **Secure Secrets**: Store sensitive information in `vault.yml` and encrypt it using Ansible Vault for added security.
 - **Environment-Specific Variables**: Create separate files for different environments (e.g., `production.yml`, `staging.yml`) to manage environment-specific configurations.
+
+## Ansible Configuration (`ansible.cfg`)
+
+The `ansible.cfg` file is used to define default configurations for Ansible operations. It is important for both local development and when using Ansible Semaphore.
+
+### Key Configurations
+
+- **Vault Password File**: Specifies the file used to decrypt Ansible Vault secrets.
+  ```ini
+  vault_password_file = .vault_pass
+  ```
+
+- **Inventory Path**: Defines the default path for inventory files.
+  ```ini
+  inventory = inventory/
+  ```
+
+- **Roles Path**: Specifies where Ansible should look for roles.
+  ```ini
+  roles_path = roles/
+  ```
+
+- **Host Key Checking**: Disables SSH host key checking, useful in testing environments.
+  ```ini
+  host_key_checking = False
+  ```
+
+- **Retry Files**: Disables the creation of retry files.
+  ```ini
+  retry_files_enabled = False
+  ```
+
+### Usage with Semaphore
+
+- **Integration**: When Semaphore executes playbooks, it respects the settings in `ansible.cfg` unless overridden in the Semaphore UI or project settings.
+- **Local Development**: The `ansible.cfg` is also useful when testing playbooks locally before uploading them to Semaphore.
 
 ## Cleanup Script
 
