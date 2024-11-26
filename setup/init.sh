@@ -21,21 +21,25 @@ error() {
     printf '\n'
     exit 1
 }
+export -f error
 
 info() {
     printf '%s' "${BLUE}Info: ${1}${NC}"
     printf '\n'
 }
+export -f info
 
 success() {
     printf '%s' "${GREEN}Success: ${1}${NC}"
     printf '\n'
 }
+export -f success
 
 warning() {
     printf '%s' "${YELLOW}Warning: ${1}${NC}"
     printf '\n'
 }
+export -f warning
 
 # Print section header
 print_header() {
@@ -46,25 +50,13 @@ print_header() {
     echo
 }
 
-# Check if we are on a supported OS
-if [ -f /etc/os-release ]; then
-    . /etc/os-release
-    case "${ID}" in
-        debian|ubuntu)
-            info "${ID} detected..."
-            ;;
-        *)
-            error "${ID} detected, not supported..."
-            ;;
-    esac
-else
-    error "Could not determine OS type..."
-fi
-
-# Check if we are root
-if [[ $EUID -ne 0 ]]; then
-    error "This script must be run as root. Exiting..."
-fi
+# Check prerequisites
+check_prerequisites() {
+    print_header "Checking prerequisites"
+    info "Checking if prerequisites are installed"
+    bash "${SCRIPT_DIR}/check-prerequisites.sh" || error "Prerequisites check failed"
+    success "All prerequisites are installed"
+}
 
 # Git installation
 install_git() {
@@ -125,8 +117,7 @@ install_motd() {
 }
 
 main() {
-    check_root
-    install_dependencies
+    check_prerequisites
     install_git
     install_motd
     install_python3

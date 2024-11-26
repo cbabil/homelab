@@ -51,7 +51,7 @@ cleanup_git() {
     print_header "Removing Git"
     apt-get remove --purge -y git
     apt-get autoremove -y
-    rm -rf ~/.git
+    rm -rf /opt/homelab/.git
     success "Git has been removed"
 }
 
@@ -77,21 +77,23 @@ cleanup_docker() {
     # Stop and remove all containers
     if command -v docker >/dev/null 2>&1; then
         docker ps -aq | xargs -r docker rm -f
-        
-        # Remove all images (including unused and dangling)
-        docker images -aq | xargs -r docker rmi -f
-        docker image prune -af
-        
-        # Remove unused volumes and networks
-        docker volume prune -f
-        docker network prune -f
-        docker system prune -af
+        docker images -q | xargs -r docker rmi -f
     fi
     
     # Remove Docker installation
     apt-get remove -y docker-ce docker-ce-cli containerd.io
     apt-get autoremove -y
+    
+    # Remove Docker files and directories
     rm -rf /var/lib/docker
+    rm -rf /etc/docker
+    rm -f /etc/apt/keyrings/docker.gpg
+    
+    # Remove Docker repository
+    if [ -f /etc/apt/sources.list.d/docker.list ]; then
+        rm -f /etc/apt/sources.list.d/docker.list
+        apt-get update || error "Failed to update package list after removing Docker repository"
+    fi
     
     success "Docker has been removed"
 }

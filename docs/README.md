@@ -8,14 +8,16 @@ This repository contains scripts and configurations to set up a homelab environm
 
 - A Debian/Ubuntu-based system
 - Root access or sudo privileges
+- unzip installed
 - Internet connection
 
 ## Setup Instructions
 
-1. **Clone the Repository**
+1. **Get the latest release**
    ```bash
-   git clone <repository-url>
-   cd <repository-directory>
+   Navigate to https://github.com:cbabil/homelab/releases/latest
+   unzip homelab-x.x.x.zip to your system of choice
+   cd homelab
    ```
 
 2. **Run the Initialization Script**
