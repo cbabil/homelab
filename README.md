@@ -1,91 +1,92 @@
-# homelab
+# 🏠 HomeLab
 
-1. Install Bookworm on your raspberry pi 5 (https://www.raspberrypi.com/software/operating-systems/)
+<div align="center">
 
-2. Update and upgrade your system
-sudo apt-get update -y
-sudo apt-get upgrade -y
+![Homelab Banner](https://raw.githubusercontent.com/cbabil/homelab/master/docs/assets/banner.png)
 
-2. Install Docker Engine
+_Transform Your Home Into an Enterprise-Grade Data Center_
 
-# Add Docker's official GPG key:
-sudo apt-get update
-sudo apt-get install ca-certificates curl gnupg
-sudo install -m 0755 -d /etc/apt/keyrings
-curl -fsSL https://download.docker.com/linux/debian/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
-sudo chmod a+r /etc/apt/keyrings/docker.gpg
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Docker](https://img.shields.io/badge/Docker-Powered-blue)](https://www.docker.com/)
+[![Maintenance](https://img.shields.io/badge/Maintained%3F-yes-green.svg)](https://github.com/cbabil/homelab/graphs/commit-activity)
+[![GitHub Issues](https://img.shields.io/github/issues/cbabil/homelab)](https://github.com/cbabil/homelab/issues)
+[![GitHub Discussions](https://img.shields.io/github/discussions/cbabil/homelab)](https://github.com/cbabil/homelab/discussions)
 
-# Add the repository to Apt sources:
-echo \
-  "deb [arch="$(dpkg --print-architecture)" signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/debian \
-  "$(. /etc/os-release && echo "$VERSION_CODENAME")" stable" | \
-  sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
-sudo apt-get update
+[Features](#-features) •
+[Documentation](#-documentation) •
+[Installation](#-installation) •
+[Support](#-support) •
+[Contributing](#-contributing) •
+[License](#-license)
 
-# Install Docker packages
-sudo apt-get install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+</div>
 
+## 🌟 Introduction
 
+Welcome to HomeLab - your gateway to professional-grade home infrastructure! This project transforms your humble hardware into a powerful, self-hosted data center, complete with monitoring, automation, and enterprise-level security features.
 
-3. Install docker-compose
+### Why HomeLab?
 
+- 🛡️ **Own Your Data**: Break free from cloud dependencies and maintain complete control
+- 🚀 **Enterprise Features**: Professional tools adapted for home use
+- 🔧 **Fully Customizable**: Adapt and extend to meet your specific needs
+- 🤖 **Automation-First**: Infrastructure as Code (IaC) for everything
 
-4. Clone this repo
+## 🚀 Features
 
+### Core Capabilities
+- **Infrastructure as Code**: Automated deployment and configuration
+- **Backup Solutions**: Automated backup and recovery systems
 
+## 📚 Documentation
 
-5. Run `docker-compose up -d`
+- [Complete Wiki](https://github.com/cbabil/homelab/wiki)
+- [Installation Guide](https://github.com/cbabil/homelab/wiki/installation)
+- [Configuration Options](https://github.com/cbabil/homelab/wiki/configuration)
+- [Best Practices](https://github.com/cbabil/homelab/wiki/best-practices)
 
-# make sure the .env file contains the following variables without quotes around the values
-# MYSQL
-MYSQL_USER=root
-MYSQL_PASSWORD=password
-MYSQL_DB=semaphore
-MYSQL_DB_HOST=127.0.0.1
-MYSQL_DB_PORT=3306
+## 🛠️ Installation
 
-# SEMAPHORE
-SEMAPHORE_ADMIN=admin
-SEMAPHORE_ADMIN_PASSWORD=password
-SEMAPHORE_ADMIN_NAME=admin
-SEMAPHORE_ADMIN_EMAIL=admin@localhost
-#
-# create with head -c32 /dev/urandom | base64
-SEMAPHORE_ACCESS_KEY_ENCRYPTION=<MYACCESS_KEY>
+1. **Get the latest release**
+```bash
+   Navigate to https://github.com:cbabil/homelab/releases/latest
+   unzip homelab-x.x.x.zip to your system of choice
+   cd homelab
+```
 
+2. **Run the Initialization Script**
+```bash
+   sudo bash setup/init.sh
+```
 
-# You need to define your inventory in a text file and put it
-# in inventory directory
-[homelab]
-pihole ansible_host=10.0.5.254
+## 💬 Support
 
+We're here to help! Reach out through:
 
+- [GitHub Issues](https://github.com/cbabil/homelab/issues) - Bug reports and feature requests
+- [GitHub Discussions](https://github.com/cbabil/homelab/discussions) - Community discussions and support
+- [Wiki](https://github.com/cbabil/homelab/wiki) - Comprehensive documentation
 
-# generate the ssh key
-ssh-keygen -t rsa -b 4096
+## 🤝 Contributing
 
+Contributions are welcome! Here's how you can help:
 
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit your changes (`git commit -m 'Add AmazingFeature'`)
+4. Push to the branch (`git push origin feature/AmazingFeature`)
+5. Open a Pull Request
 
+## 📜 License
 
-inventory 
-secure auth to servers
-create playbooks (store on github)
-environments
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
+---
 
-workflow
----------
+<div align="center">
 
-Install docker
-Install ansible/semaphore
-Create inventory and update inventory in semaphore
-Load playbooks
+**[⬆ back to top](#-homelab)**
 
+Made with ❤️ by the HomeLab Community
 
-
-| Application   | Description   | Folder            |
-| ------------- | ------------- | ------------------|
-| Semaphore     | Ansible UI    | ansible/semaphore |
-| Content Cell  | Content Cell  |                   |
-
-
+</div>
