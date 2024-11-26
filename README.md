@@ -40,10 +40,8 @@ Welcome to HomeLab - your gateway to professional-grade home infrastructure! Thi
 
 ## 📚 Documentation
 
-- [Complete Wiki](https://github.com/cbabil/homelab/wiki)
-- [Installation Guide](https://github.com/cbabil/homelab/wiki/installation)
-- [Configuration Options](https://github.com/cbabil/homelab/wiki/configuration)
-- [Best Practices](https://github.com/cbabil/homelab/wiki/best-practices)
+- [Installation Guide](https://github.com/cbabil/homelab/wiki)
+- [Usage](https://github.com/cbabil/homelab/wiki/Usage)
 
 ## 🛠️ Installation
 
