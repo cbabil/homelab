@@ -7,7 +7,7 @@ FRONTEND_DIR := frontend
 BACKEND_VENV := $(BACKEND_DIR)/venv
 DATA_DIR := $(BACKEND_DIR)/data
 
-.PHONY: help setup dev start stop backend frontend build test lint clean
+.PHONY: help setup check-setup dev dev-tmux backend frontend build test lint clean
 
 # Default target
 help: ## Show this help
@@ -16,15 +16,19 @@ help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
 # Setup
-setup: ## Install all dependencies
+setup: clean ## Install all dependencies (cleans first)
 	@echo "Setting up backend..."
-	@if [ ! -d "$(BACKEND_VENV)" ]; then \
-		python3 -m venv $(BACKEND_VENV); \
-	fi
+	@python3 -m venv $(BACKEND_VENV)
 	@cd $(BACKEND_DIR) && . venv/bin/activate && pip install -r requirements.txt
 	@echo "Setting up frontend..."
 	@cd $(FRONTEND_DIR) && yarn install
 	@echo "Setup complete!"
+
+check-setup: ## Check if setup is done, run if not
+	@if [ ! -d "$(BACKEND_VENV)" ] || [ ! -d "$(FRONTEND_DIR)/node_modules" ]; then \
+		echo "Dependencies not installed. Running setup..."; \
+		$(MAKE) setup; \
+	fi
 
 # Development
 dev: ## Run backend and frontend (use 'make dev' in separate terminals or with tmux)
@@ -36,18 +40,14 @@ dev: ## Run backend and frontend (use 'make dev' in separate terminals or with t
 	@echo ""
 	@echo "Or use: make dev-tmux (requires tmux)"
 
-dev-tmux: ## Run both servers in tmux split
+dev-tmux: check-setup ## Run both servers in tmux split
 	@tmux new-session -d -s homelab 'make backend' \; split-window -h 'make frontend' \; attach
 
-backend: ## Start backend server
-	@if [ ! -d "$(BACKEND_VENV)" ]; then \
-		echo "Error: Run 'make setup' first"; \
-		exit 1; \
-	fi
+backend: check-setup ## Start backend server
 	@echo "Starting backend on http://localhost:8000..."
 	@cd $(BACKEND_DIR) && . venv/bin/activate && DATA_DIRECTORY="$(shell pwd)/$(DATA_DIR)" python src/main.py
 
-frontend: ## Start frontend dev server
+frontend: check-setup ## Start frontend dev server
 	@echo "Starting frontend on http://localhost:5173..."
 	@cd $(FRONTEND_DIR) && yarn dev
 
