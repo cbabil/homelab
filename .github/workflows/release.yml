@@ -2,6 +2,11 @@ name: Create Release
 
 on:
   workflow_dispatch:
+    inputs:
+      release_notes:
+        description: 'Release notes (summary of changes)'
+        required: true
+        type: string
 
 permissions:
   contents: write
@@ -93,18 +98,12 @@ jobs:
           git tag -a "v${{ steps.version.outputs.VERSION }}" -m "Release v${{ steps.version.outputs.VERSION }}"
           git push origin "v${{ steps.version.outputs.VERSION }}"
 
-      - name: Generate changelog
-        run: |
-          echo "## What's Changed" > CHANGELOG.md
-          echo "" >> CHANGELOG.md
-          git log $(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD --pretty=format:"- %s" >> CHANGELOG.md 2>/dev/null || echo "- Initial release" >> CHANGELOG.md
-
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.version.outputs.VERSION }}
           name: v${{ steps.version.outputs.VERSION }}
-          body_path: CHANGELOG.md
+          body: ${{ inputs.release_notes }}
           files: release/homelab-assistant-${{ steps.version.outputs.VERSION }}.tar.gz
           draft: false
           prerelease: false
