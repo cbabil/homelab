@@ -41,6 +41,12 @@ dev: ## Run backend and frontend (use 'make dev' in separate terminals or with t
 	@echo "Or use: make dev-tmux (requires tmux)"
 
 dev-tmux: check-setup ## Run both servers in tmux split
+	@if ! command -v tmux &> /dev/null; then \
+		echo "Error: tmux is not installed"; \
+		echo "Install with: brew install tmux"; \
+		echo "Or run 'make backend' and 'make frontend' in separate terminals"; \
+		exit 1; \
+	fi
 	@tmux new-session -d -s homelab 'make backend' \; split-window -h 'make frontend' \; attach
 
 backend: check-setup ## Start backend server
