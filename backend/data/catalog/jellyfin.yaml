@@ -1,0 +1,19 @@
+id: jellyfin
+name: Jellyfin
+description: Free media server for movies, TV, and music
+category: media
+image: jellyfin/jellyfin:latest
+ports:
+  - container: 8096
+    host: 8096
+  - container: 8920
+    host: 8920
+volumes:
+  - host_path: /var/jellyfin/config
+    container_path: /config
+  - host_path: /var/jellyfin/cache
+    container_path: /cache
+  - host_path: /media
+    container_path: /media
+    readonly: true
+restart_policy: unless-stopped

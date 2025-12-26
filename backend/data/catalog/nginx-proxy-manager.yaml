@@ -1,0 +1,18 @@
+id: nginx-proxy-manager
+name: Nginx Proxy Manager
+description: Easy-to-use reverse proxy with SSL support and web UI
+category: networking
+image: jc21/nginx-proxy-manager:latest
+ports:
+  - container: 80
+    host: 80
+  - container: 443
+    host: 443
+  - container: 81
+    host: 81
+volumes:
+  - host_path: /var/npm/data
+    container_path: /data
+  - host_path: /var/npm/letsencrypt
+    container_path: /etc/letsencrypt
+restart_policy: unless-stopped

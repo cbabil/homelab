@@ -1,0 +1,30 @@
+id: pihole
+name: Pi-hole
+description: Network-wide ad blocking and DNS server
+category: networking
+image: pihole/pihole:latest
+ports:
+  - container: 53
+    host: 53
+    protocol: tcp
+  - container: 53
+    host: 53
+    protocol: udp
+  - container: 80
+    host: 8053
+volumes:
+  - host_path: /var/pihole/etc
+    container_path: /etc/pihole
+  - host_path: /var/pihole/dnsmasq
+    container_path: /etc/dnsmasq.d
+env:
+  - name: WEBPASSWORD
+    description: Admin password for web interface
+    required: true
+  - name: TZ
+    description: Timezone
+    required: false
+    default: UTC
+capabilities:
+  - NET_ADMIN
+restart_policy: unless-stopped

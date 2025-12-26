@@ -1,0 +1,25 @@
+id: nextcloud
+name: Nextcloud
+description: Personal cloud storage and collaboration platform
+category: storage
+image: nextcloud:latest
+ports:
+  - container: 80
+    host: 8080
+volumes:
+  - host_path: /var/nextcloud/data
+    container_path: /var/www/html
+env:
+  - name: MYSQL_HOST
+    description: MySQL database host
+    required: false
+  - name: MYSQL_DATABASE
+    description: MySQL database name
+    required: false
+  - name: MYSQL_USER
+    description: MySQL username
+    required: false
+  - name: MYSQL_PASSWORD
+    description: MySQL password
+    required: false
+restart_policy: unless-stopped
