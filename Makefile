@@ -88,8 +88,10 @@ test-backend: ## Run backend tests
 test-frontend: ## Run frontend tests
 	@cd $(FRONTEND_DIR) && yarn test
 
-test-e2e: ## Run end-to-end tests
-	@cd $(FRONTEND_DIR) && yarn test:e2e
+test-e2e: ## Run end-to-end tests (requires backend running)
+	@echo "Note: E2E tests require backend running with admin user created"
+	@echo "Run 'make backend' in another terminal first, then 'make create-admin'"
+	@cd $(FRONTEND_DIR) && source ../venv/bin/activate && yarn test:e2e --project=chromium
 
 test-coverage: ## Run tests with coverage
 	@cd $(BACKEND_DIR) && . venv/bin/activate && PYTHONPATH=src pytest tests/unit/ --cov=src --cov-report=html
