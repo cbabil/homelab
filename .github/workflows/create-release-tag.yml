@@ -1,0 +1,71 @@
+name: Create Release Tag
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Release type'
+        required: true
+        default: 'release'
+        type: choice
+        options:
+          - release
+          - prerelease
+
+permissions:
+  contents: write
+
+jobs:
+  create-tag:
+    name: Create Tag from package.json
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from package.json
+        id: package
+        run: |
+          VERSION=$(node -p "require('./frontend/package.json').version")
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Found version: $VERSION"
+
+      - name: Check if tag exists
+        id: check_tag
+        run: |
+          if git rev-parse "v${{ steps.package.outputs.VERSION }}" >/dev/null 2>&1; then
+            echo "TAG_EXISTS=true" >> $GITHUB_OUTPUT
+            echo "Tag v${{ steps.package.outputs.VERSION }} already exists"
+          else
+            echo "TAG_EXISTS=false" >> $GITHUB_OUTPUT
+            echo "Tag v${{ steps.package.outputs.VERSION }} does not exist"
+          fi
+
+      - name: Fail if tag exists
+        if: steps.check_tag.outputs.TAG_EXISTS == 'true'
+        run: |
+          echo "::error::Tag v${{ steps.package.outputs.VERSION }} already exists. Please update the version in frontend/package.json"
+          exit 1
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Create and push tag
+        run: |
+          git tag -a "v${{ steps.package.outputs.VERSION }}" -m "Release v${{ steps.package.outputs.VERSION }}"
+          git push origin "v${{ steps.package.outputs.VERSION }}"
+          echo "Created and pushed tag v${{ steps.package.outputs.VERSION }}"
+
+      - name: Summary
+        run: |
+          echo "## Release Tag Created" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "- **Version:** v${{ steps.package.outputs.VERSION }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Type:** ${{ inputs.release_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "The release workflow will now run automatically to create the GitHub release." >> $GITHUB_STEP_SUMMARY
