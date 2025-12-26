@@ -47,6 +47,11 @@ coverage/
 .coverage
 .pytest_cache/
 
+# Playwright test artifacts
+playwright-report/
+test-results/
+playwright/.cache/
+
 # Temporary files
 .tmp/
 temp/
