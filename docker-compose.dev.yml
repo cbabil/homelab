@@ -20,6 +20,12 @@ services:
       dockerfile: docker/Dockerfile.dev
     volumes:
       - ./backend:/app
+      # SECURITY WARNING: Docker socket mounting grants container full control over Docker daemon.
+      # This is required for container management features but poses security risks:
+      # - Container can access/modify any container on the host
+      # - Potential for container escape attacks
+      # In production, consider using Docker socket proxy (tecnativa/docker-socket-proxy)
+      # with restricted permissions, or running without this mount if not needed.
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - PYTHON_ENV=development
