@@ -1,0 +1,138 @@
+/* Import theme variables and design tokens */
+@import './theme.css';
+
+/* Import generic component styles */
+@import './components/buttons.css';
+@import './components/cards.css';
+@import './components/forms.css';
+@import './components/tables.css';
+@import './components/navigation.css';
+@import './components/dialogs.css';
+@import './components/badges.css';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  
+  body {
+    @apply bg-background text-foreground;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+
+  /* Custom scrollbar styles */
+  .scrollbar-thin {
+    scrollbar-width: thin;
+    scrollbar-color: transparent transparent;
+  }
+
+  .scrollbar-thin:hover {
+    scrollbar-color: hsl(var(--border)) transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar {
+    width: 4px;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb {
+    background: transparent;
+    border-radius: 2px;
+  }
+
+  .scrollbar-thin:hover::-webkit-scrollbar-thumb {
+    background: hsl(var(--border) / 0.3);
+  }
+
+  .scrollbar-thin::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--border) / 0.5);
+  }
+}
+
+@layer components {
+  /* Modern glass effect with purple undertones */
+  .glass {
+    @apply bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60;
+  }
+  
+  /* Clean card styling */
+  .card-hover {
+    /* No effects */
+  }
+  
+  /* Clean flat purple button for light and dark modes */
+  .btn-gradient {
+    @apply bg-primary text-white;
+  }
+  
+  /* Enhanced purple button variant */
+  .btn-purple {
+    @apply bg-primary text-white;
+  }
+  
+  /* Purple header gradient */
+  .header-gradient {
+    background: linear-gradient(135deg, 
+      hsl(var(--background)) 0%, 
+      hsl(var(--primary))/5% 100%
+    );
+    @apply border-b border-primary/10;
+  }
+  
+  /* Loading animation - disabled */
+  .loading-pulse {
+    /* No animation */
+  }
+  
+  /* Status indicators with purple theme */
+  .status-online {
+    @apply bg-green-500 shadow-lg shadow-green-500/25;
+    /* No animation */
+  }
+  
+  .status-offline {
+    @apply bg-red-500 shadow-lg shadow-red-500/25;
+  }
+  
+  /* Professional navigation active state */
+  .nav-active {
+    @apply bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-l-4 border-l-primary;
+    @apply shadow-sm;
+  }
+}
+
+@layer utilities {
+  /* Animation utilities - disabled */
+  .animate-fade-in {
+    /* No animation */
+  }
+  
+  .animate-slide-up {
+    /* No animation */
+  }
+  
+  .animate-scale-in {
+    /* No animation */
+  }
+  
+  /* Text utilities */
+  .line-clamp-2 {
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+  }
+}
+
+/* Keyframe animations - all removed for static site */

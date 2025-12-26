@@ -1,0 +1,29 @@
+# Development Dockerfile
+FROM python:3.11-alpine
+
+# Install system dependencies
+RUN apk add --no-cache \
+    build-base \
+    libffi-dev \
+    openssl-dev \
+    curl
+
+# Set working directory
+WORKDIR /app
+
+# Copy and install Python dependencies
+COPY backend/requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Copy backend source
+COPY backend/src ./src
+
+# Set environment variables
+ENV PYTHONPATH=/app
+ENV PYTHONUNBUFFERED=1
+
+# Expose port
+EXPOSE 8000
+
+# Start development server
+CMD ["python", "-m", "uvicorn", "src.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]

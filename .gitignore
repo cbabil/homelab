@@ -1,0 +1,57 @@
+# Claude Code
+.claude/
+
+# Dependencies
+node_modules/
+package-lock.json
+**/package-lock.json
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+
+# Build outputs
+dist/
+build/
+*.egg-info/
+
+# Environment files
+.env
+.env.local
+.env.production
+venv/
+env/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Data and config
+data/*
+!data/catalog/
+data/catalog/*
+!data/catalog/*.yaml
+config/
+*.enc
+
+# Coverage reports
+coverage/
+.coverage
+.pytest_cache/
+
+# Temporary files
+.tmp/
+temp/
+
+# Documentation - NOT ignored, included in repo

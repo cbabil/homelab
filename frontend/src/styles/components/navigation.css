@@ -1,0 +1,245 @@
+/**
+ * Navigation Components
+ * 
+ * Generic navigation styles for tabs, breadcrumbs, and navigation menus.
+ * Includes active states and responsive navigation patterns.
+ */
+
+/* Professional navigation active state (from globals.css) */
+.nav-active {
+  @apply bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 border-l-4 border-l-primary;
+  @apply shadow-sm;
+}
+
+/* Tab navigation containers */
+.nav-tabs {
+  @apply flex space-x-1 bg-muted p-1 rounded-lg w-fit;
+}
+
+.nav-tabs-large {
+  @apply flex space-x-1 bg-muted p-1 rounded-lg;
+}
+
+/* Tab button base styles */
+.nav-tab {
+  @apply px-3 py-1 rounded text-sm font-medium transition-colors;
+}
+
+.nav-tab-large {
+  @apply flex items-center space-x-2 px-4 py-2 rounded text-sm font-medium transition-colors;
+}
+
+/* Tab states */
+.nav-tab-active {
+  @apply bg-background shadow-sm text-primary;
+}
+
+.nav-tab-inactive {
+  @apply text-muted-foreground hover:text-foreground;
+}
+
+/* Icon in large tabs */
+.nav-tab-icon {
+  @apply h-4 w-4;
+}
+
+/* Breadcrumb navigation */
+.nav-breadcrumb {
+  @apply flex items-center space-x-2 text-sm;
+}
+
+.nav-breadcrumb-item {
+  @apply text-muted-foreground hover:text-foreground transition-colors;
+}
+
+.nav-breadcrumb-current {
+  @apply text-foreground font-medium;
+}
+
+.nav-breadcrumb-separator {
+  @apply text-muted-foreground;
+}
+
+/* Sidebar navigation */
+.nav-sidebar {
+  @apply flex flex-col space-y-1;
+}
+
+.nav-sidebar-item {
+  @apply flex items-center px-3 py-2 rounded-lg text-sm font-medium transition-colors;
+}
+
+.nav-sidebar-item-active {
+  @apply bg-primary/10 text-primary;
+}
+
+.nav-sidebar-item-inactive {
+  @apply text-muted-foreground hover:text-foreground hover:bg-accent;
+}
+
+.nav-sidebar-icon {
+  @apply h-4 w-4 mr-3;
+}
+
+/* Header navigation */
+.nav-header {
+  @apply flex items-center space-x-6;
+}
+
+.nav-header-item {
+  @apply px-3 py-2 rounded-md text-sm font-medium transition-colors;
+}
+
+.nav-header-item-active {
+  @apply text-primary bg-primary/10;
+}
+
+.nav-header-item-inactive {
+  @apply text-muted-foreground hover:text-foreground;
+}
+
+/* Mobile navigation */
+.nav-mobile {
+  @apply md:hidden;
+}
+
+.nav-mobile-menu {
+  @apply absolute top-full left-0 right-0 bg-background border-t border-border shadow-lg;
+}
+
+.nav-mobile-item {
+  @apply block px-4 py-2 text-sm border-b border-border last:border-b-0;
+}
+
+.nav-mobile-item-active {
+  @apply text-primary bg-primary/5;
+}
+
+.nav-mobile-item-inactive {
+  @apply text-muted-foreground hover:text-foreground hover:bg-accent;
+}
+
+/* Dropdown navigation */
+.nav-dropdown {
+  @apply relative;
+}
+
+.nav-dropdown-trigger {
+  @apply flex items-center space-x-1 px-3 py-2 rounded-md text-sm font-medium transition-colors;
+  @apply hover:text-foreground hover:bg-accent;
+}
+
+.nav-dropdown-content {
+  @apply absolute top-full left-0 mt-1 bg-background border border-border rounded-md shadow-lg min-w-48 z-50;
+}
+
+.nav-dropdown-item {
+  @apply block px-3 py-2 text-sm hover:bg-accent first:rounded-t-md last:rounded-b-md;
+}
+
+.nav-dropdown-separator {
+  @apply border-t border-border my-1;
+}
+
+/* Pagination navigation */
+.nav-pagination {
+  @apply flex items-center space-x-2;
+}
+
+.nav-pagination-item {
+  @apply w-8 h-8 flex items-center justify-center rounded border border-input text-sm;
+  @apply hover:bg-accent transition-colors;
+}
+
+.nav-pagination-item-active {
+  @apply bg-primary text-primary-foreground border-primary;
+}
+
+.nav-pagination-item-disabled {
+  @apply opacity-50 pointer-events-none;
+}
+
+.nav-pagination-prev,
+.nav-pagination-next {
+  @apply px-3 py-1 flex items-center space-x-1 rounded border border-input text-sm;
+  @apply hover:bg-accent transition-colors;
+}
+
+.nav-pagination-info {
+  @apply text-sm text-muted-foreground;
+}
+
+/* Step navigation/Progress */
+.nav-steps {
+  @apply flex items-center space-x-4;
+}
+
+.nav-step {
+  @apply flex items-center space-x-2;
+}
+
+.nav-step-number {
+  @apply w-8 h-8 rounded-full border-2 flex items-center justify-center text-sm font-medium;
+}
+
+.nav-step-completed {
+  @apply border-primary bg-primary text-primary-foreground;
+}
+
+.nav-step-current {
+  @apply border-primary text-primary;
+}
+
+.nav-step-pending {
+  @apply border-muted text-muted-foreground;
+}
+
+.nav-step-label {
+  @apply text-sm font-medium;
+}
+
+.nav-step-separator {
+  @apply h-0.5 bg-muted flex-1;
+}
+
+.nav-step-separator-completed {
+  @apply bg-primary;
+}
+
+/* Quick navigation (floating action) */
+.nav-quick {
+  @apply fixed bottom-6 right-6 z-50;
+}
+
+.nav-quick-button {
+  @apply w-14 h-14 rounded-full bg-primary text-primary-foreground shadow-lg;
+  @apply flex items-center justify-center hover:scale-105 transition-transform;
+}
+
+/* Navigation overlays */
+.nav-overlay {
+  @apply fixed inset-0 bg-black/50 z-40;
+}
+
+.nav-overlay-panel {
+  @apply fixed inset-y-0 left-0 w-64 bg-background border-r border-border shadow-xl z-50;
+  @apply transform transition-transform duration-300;
+}
+
+.nav-overlay-panel-open {
+  @apply translate-x-0;
+}
+
+.nav-overlay-panel-closed {
+  @apply -translate-x-full;
+}
+
+/* Navigation badges/indicators */
+.nav-badge {
+  @apply absolute -top-1 -right-1 w-5 h-5 rounded-full bg-destructive text-destructive-foreground;
+  @apply flex items-center justify-center text-xs font-medium;
+}
+
+.nav-indicator {
+  @apply absolute top-1 right-1 w-2 h-2 rounded-full bg-primary;
+}

@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Server Storage Investigation</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        pre {
+            background: #f8f8f8;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .connected { background: #d4edda; color: #155724; }
+        .disconnected { background: #f8d7da; color: #721c24; }
+        .error { background: #f8d7da; color: #721c24; }
+        .preparing { background: #fff3cd; color: #856404; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Server Storage Investigation</h1>
+        <p>This tool helps investigate where server data is stored and test persistence.</p>
+        
+        <div>
+            <button onclick="examineStorage()">Examine Current Storage</button>
+            <button onclick="addTestServer()">Add Test Server</button>
+            <button onclick="clearStorage()">Clear Storage</button>
+            <button onclick="simulateLogout()">Simulate Logout</button>
+            <button onclick="reloadPage()">Reload Page</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>Storage Analysis</h2>
+        <div id="storage-analysis"></div>
+    </div>
+
+    <div class="container">
+        <h2>Current Server Data</h2>
+        <div id="server-data"></div>
+    </div>
+
+    <div class="container">
+        <h2>localStorage Contents</h2>
+        <div id="localStorage-contents"></div>
+    </div>
+
+    <div class="container">
+        <h2>Test Results</h2>
+        <div id="test-results"></div>
+    </div>
+
+    <script>
+        const STORAGE_KEY = 'homelab_servers';
+        
+        function examineStorage() {
+            const analysis = document.getElementById('storage-analysis');
+            
+            // Check what's in localStorage
+            const stored = localStorage.getItem(STORAGE_KEY);
+            const serverData = stored ? JSON.parse(stored) : null;
+            
+            let html = '<h3>Storage Analysis Results:</h3>';
+            html += `<p><strong>Storage Key:</strong> <code>${STORAGE_KEY}</code></p>`;
+            html += `<p><strong>Data exists:</strong> ${stored ? 'Yes' : 'No'}</p>`;
+            
+            if (serverData) {
+                html += `<p><strong>Data version:</strong> ${serverData.version}</p>`;
+                html += `<p><strong>Server count:</strong> ${serverData.servers ? serverData.servers.length : 0}</p>`;
+                html += `<p><strong>Last updated:</strong> ${serverData.updated_at}</p>`;
+            }
+            
+            html += `<p><strong>Storage type:</strong> localStorage (persists across browser sessions)</p>`;
+            html += `<p><strong>Domain scope:</strong> ${window.location.origin}</p>`;
+            html += `<p><strong>Persists across logout:</strong> Yes (localStorage is independent of user sessions)</p>`;
+            
+            analysis.innerHTML = html;
+            
+            updateServerDisplay();
+            updateLocalStorageDisplay();
+            
+            addTestResult('Storage examination completed', 'info');
+        }
+        
+        function updateServerDisplay() {
+            const container = document.getElementById('server-data');
+            const stored = localStorage.getItem(STORAGE_KEY);
+            
+            if (!stored) {
+                container.innerHTML = '<p>No server data found</p>';
+                return;
+            }
+            
+            const data = JSON.parse(stored);
+            let html = `<h3>${data.servers.length} servers found:</h3>`;
+            
+            data.servers.forEach(server => {
+                html += `
+                    <div style="border: 1px solid #ddd; padding: 10px; margin: 5px 0; border-radius: 4px;">
+                        <strong>${server.name}</strong>
+                        <span class="status ${server.status}">${server.status}</span>
+                        <br>
+                        <small>
+                            ${server.host}:${server.port} (${server.username})
+                            <br>
+                            ID: ${server.id}
+                            <br>
+                            Created: ${server.created_at}
+                        </small>
+                    </div>
+                `;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        function updateLocalStorageDisplay() {
+            const container = document.getElementById('localStorage-contents');
+            const stored = localStorage.getItem(STORAGE_KEY);
+            
+            let html = '<h3>Raw localStorage Content:</h3>';
+            if (stored) {
+                html += `<pre>${JSON.stringify(JSON.parse(stored), null, 2)}</pre>`;
+            } else {
+                html += '<p>No data in localStorage</p>';
+            }
+            
+            container.innerHTML = html;
+        }
+        
+        function addTestServer() {
+            const stored = localStorage.getItem(STORAGE_KEY);
+            let data;
+            
+            if (stored) {
+                data = JSON.parse(stored);
+            } else {
+                data = {
+                    version: '1.0',
+                    servers: [],
+                    updated_at: new Date().toISOString()
+                };
+            }
+            
+            const testServer = {
+                id: `test-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                name: `Test Server ${Date.now()}`,
+                host: '192.168.1.200',
+                port: 22,
+                username: 'testuser',
+                auth_type: 'password',
+                status: 'disconnected',
+                created_at: new Date().toISOString()
+            };
+            
+            data.servers.push(testServer);
+            data.updated_at = new Date().toISOString();
+            
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+            
+            updateServerDisplay();
+            updateLocalStorageDisplay();
+            addTestResult(`Added test server: ${testServer.name}`, 'success');
+        }
+        
+        function clearStorage() {
+            localStorage.removeItem(STORAGE_KEY);
+            updateServerDisplay();
+            updateLocalStorageDisplay();
+            addTestResult('Storage cleared', 'warning');
+        }
+        
+        function simulateLogout() {
+            // Check if server data still exists after simulating logout
+            const beforeLogout = localStorage.getItem(STORAGE_KEY);
+            
+            // Simulate clearing auth-related data (but not server data)
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('user_session');
+            sessionStorage.clear(); // Clear session storage
+            
+            const afterLogout = localStorage.getItem(STORAGE_KEY);
+            
+            const result = beforeLogout === afterLogout ? 
+                'Server data PERSISTS after logout simulation' : 
+                'Server data was CLEARED after logout simulation';
+                
+            addTestResult(result, beforeLogout === afterLogout ? 'success' : 'error');
+            updateServerDisplay();
+        }
+        
+        function reloadPage() {
+            window.location.reload();
+        }
+        
+        function addTestResult(message, type) {
+            const container = document.getElementById('test-results');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'success' ? 'connected' : 
+                             type === 'error' ? 'error' : 
+                             type === 'warning' ? 'preparing' : '';
+                             
+            const html = `
+                <div style="border-left: 4px solid #007bff; padding: 10px; margin: 5px 0; background: #f8f9fa;">
+                    <span class="status ${className}">${type.toUpperCase()}</span>
+                    <strong>${timestamp}:</strong> ${message}
+                </div>
+            `;
+            
+            container.innerHTML = html + container.innerHTML;
+        }
+        
+        // Auto-examine on page load
+        window.addEventListener('load', examineStorage);
+        
+        // Add some helper info
+        document.addEventListener('DOMContentLoaded', function() {
+            addTestResult('Storage investigation tool loaded', 'info');
+            addTestResult(`Current URL: ${window.location.href}`, 'info');
+            addTestResult(`Storage will persist for domain: ${window.location.origin}`, 'info');
+        });
+    </script>
+</body>
+</html>

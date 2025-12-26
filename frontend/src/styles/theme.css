@@ -1,0 +1,97 @@
+/**
+ * Theme Variables and Design Tokens
+ * 
+ * Centralized theme configuration including colors, spacing, animations, and design tokens.
+ * This file contains all CSS custom properties for light and dark themes.
+ */
+
+@layer base {
+  :root {
+    /* Base colors */
+    --background: 0 0% 100%;
+    --foreground: 240 10% 3.9%;
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 3.9%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 3.9%;
+    
+    /* Primary colors - Professional Purple #8b5cf6 */
+    --primary: 258 90% 66%;
+    --primary-foreground: 0 0% 98%;
+    
+    /* Secondary colors - Purple-tinted grays */
+    --secondary: 270 5% 96%;
+    --secondary-foreground: 270 15% 15%;
+    
+    /* Muted colors */
+    --muted: 270 5% 96%;
+    --muted-foreground: 270 5% 45%;
+    
+    /* Accent colors */
+    --accent: 270 10% 94%;
+    --accent-foreground: 270 15% 15%;
+    
+    /* Status colors */
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 0 0% 98%;
+    --success: 142.1 76.2% 36.3%;
+    --success-foreground: 355.7 100% 97.3%;
+    --warning: 32.1 94.6% 43.7%;
+    --warning-foreground: 313.4 96.2% 2.9%;
+    
+    /* UI elements */
+    --border: 270 10% 90%;
+    --input: 270 10% 90%;
+    --ring: 258 90% 66%;
+    --radius: 0.75rem;
+    
+    /* Purple gradient variables - #8b5cf6 */
+    --purple-gradient-from: 258 90% 66%;
+    --purple-gradient-to: 258 90% 66%;
+    --purple-glow: 258 90% 76%;
+  }
+
+  .dark {
+    /* Base colors - Dark with subtle purple undertones */
+    --background: 255 10% 4%;
+    --foreground: 270 20% 98%;
+    --card: 255 15% 6%;
+    --card-foreground: 270 20% 98%;
+    --popover: 255 15% 6%;
+    --popover-foreground: 270 20% 98%;
+    
+    /* Primary colors - Purple #8b5cf6 for dark mode */
+    --primary: 258 90% 66%;
+    --primary-foreground: 255 10% 4%;
+    
+    /* Secondary colors */
+    --secondary: 270 10% 12%;
+    --secondary-foreground: 270 20% 98%;
+    
+    /* Muted colors */
+    --muted: 270 10% 12%;
+    --muted-foreground: 270 15% 65%;
+    
+    /* Accent colors */
+    --accent: 270 15% 15%;
+    --accent-foreground: 270 20% 98%;
+    
+    /* Status colors */
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 0 0% 98%;
+    --success: 142.1 70.6% 45.3%;
+    --success-foreground: 144.9 80.4% 10%;
+    --warning: 35.5 91.7% 32.9%;
+    --warning-foreground: 20.9 83.7% 7.1%;
+    
+    /* UI elements */
+    --border: 270 15% 20%;
+    --input: 270 15% 20%;
+    --ring: 258 90% 66%;
+    
+    /* Purple gradient variables for dark mode - #8b5cf6 */
+    --purple-gradient-from: 258 90% 66%;
+    --purple-gradient-to: 258 90% 66%;
+    --purple-glow: 258 90% 76%;
+  }
+}

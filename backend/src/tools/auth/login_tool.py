@@ -1,0 +1,107 @@
+"""
+Login Authentication Tool
+
+Handles user login authentication functionality.
+Part of the authentication tools module.
+"""
+
+from typing import Dict, Any, Optional
+import structlog
+from fastmcp import Context
+from models.auth import LoginCredentials
+from services.auth_service import AuthService
+
+
+logger = structlog.get_logger("login_tool")
+
+
+class LoginTool:
+    """Login authentication tool."""
+    
+    def __init__(self, auth_service: AuthService):
+        """Initialize login tool with auth service."""
+        self.auth_service = auth_service
+    
+    async def login(self, credentials: Dict[str, Any], ctx: Optional[Context] = None) -> Dict[str, Any]:
+        """
+        Authenticate user with credentials.
+
+        Args:
+            credentials: Login credentials (username, password, remember_me)
+            ctx: Optional FastMCP context for accessing request information
+
+        Returns:
+            dict: Authentication result with token and user data
+        """
+        logger.info("Login attempt started", credentials_received=list(credentials.keys()))
+
+        try:
+            # Handle nested credentials structure from frontend
+            if "credentials" in credentials:
+                cred_data = credentials["credentials"]
+            else:
+                cred_data = credentials
+
+            login_creds = LoginCredentials(**cred_data)
+            logger.debug("LoginCredentials created", username=login_creds.username)
+
+            # Extract client IP and user agent from request context if available
+            client_ip = None
+            user_agent = None
+
+            if ctx:
+                try:
+                    request = ctx.get_http_request()
+                    client_ip = request.client.host if request.client else None
+                    user_agent = request.headers.get("user-agent")
+                except Exception as e:
+                    logger.debug("Could not extract request context", error=str(e))
+
+            logger.info("Calling auth_service.authenticate_user", username=login_creds.username, client_ip=client_ip)
+            response = await self.auth_service.authenticate_user(
+                login_creds,
+                client_ip=client_ip,
+                user_agent=user_agent
+            )
+            logger.info("Auth service response received", response_type=type(response).__name__, has_response=bool(response))
+
+            if not response:
+                logger.warning("Login failed - no response from auth service", username=login_creds.username, client_ip=client_ip)
+                return {
+                    "success": False,
+                    "message": "Invalid credentials",
+                    "error": "INVALID_CREDENTIALS"
+                }
+
+            logger.info("Login successful - preparing response", username=login_creds.username, client_ip=client_ip)
+
+            user_data = response.user.model_dump()
+            # Ensure role is serialized as string value, not enum
+            if 'role' in user_data and hasattr(user_data['role'], 'value'):
+                user_data['role'] = user_data['role'].value
+            logger.debug("User data prepared", user_id=user_data.get('id'), user_username=user_data.get('username'), user_role=user_data.get('role'))
+
+            final_response = {
+                "success": True,
+                "data": {
+                    "user": user_data,
+                    "token": response.token,
+                    "expires_in": response.expires_in,
+                    "session_id": response.session_id,
+                    "token_type": response.token_type.value
+                },
+                "message": "Login successful"
+            }
+
+            logger.info("Final response prepared", success=final_response["success"], has_user_data=bool(final_response["data"]["user"]), message=final_response["message"])
+            return final_response
+
+        except Exception as e:
+            logger.error("Login error - exception caught", error=str(e), error_type=type(e).__name__, username=credentials.get('username', 'unknown'))
+            import traceback
+            logger.debug("Login error traceback", traceback=traceback.format_exc())
+            return {
+                "success": False,
+                "message": f"Login failed: {str(e)}",
+                "error": "LOGIN_ERROR"
+            }

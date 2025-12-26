@@ -1,0 +1,246 @@
+/**
+ * Badge Components
+ * 
+ * Generic badge styles for status indicators, labels, tags, and notification badges.
+ * Used across app cards, server status, notifications, and other components.
+ */
+
+/* Base badge styles */
+.badge {
+  @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium;
+}
+
+.badge-sm {
+  @apply px-1.5 py-0.5 text-xs;
+}
+
+.badge-md {
+  @apply px-2 py-1 text-xs;
+}
+
+.badge-lg {
+  @apply px-3 py-1 text-sm;
+}
+
+/* Badge variants */
+.badge-primary {
+  @apply bg-primary text-primary-foreground;
+}
+
+.badge-secondary {
+  @apply bg-secondary text-secondary-foreground;
+}
+
+.badge-accent {
+  @apply bg-accent text-accent-foreground;
+}
+
+.badge-muted {
+  @apply bg-muted text-muted-foreground;
+}
+
+/* Status badges */
+.badge-success {
+  @apply bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300;
+}
+
+.badge-warning {
+  @apply bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300;
+}
+
+.badge-danger {
+  @apply bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300;
+}
+
+.badge-info {
+  @apply bg-blue-100 dark:bg-blue-900/50 text-blue-700 dark:text-blue-300;
+}
+
+/* Server status badges (from ServerCard) */
+.badge-connected {
+  @apply bg-green-50 dark:bg-green-950/50 text-green-600 dark:text-green-400;
+}
+
+.badge-disconnected {
+  @apply bg-gray-50 dark:bg-gray-950/50 text-gray-600 dark:text-gray-400;
+}
+
+.badge-error {
+  @apply bg-red-50 dark:bg-red-950/50 text-red-600 dark:text-red-400;
+}
+
+.badge-preparing {
+  @apply bg-yellow-50 dark:bg-yellow-950/50 text-yellow-600 dark:text-yellow-400;
+}
+
+/* Featured badge (from AppCard) */
+.badge-featured {
+  @apply flex items-center space-x-0.5 px-1 py-0.5 rounded;
+  @apply bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300;
+  @apply text-xs font-medium;
+}
+
+.badge-featured-icon {
+  @apply h-2.5 w-2.5 fill-current;
+}
+
+/* Version badge */
+.badge-version {
+  @apply px-1.5 py-0.5 rounded bg-accent text-xs font-medium;
+}
+
+/* Tag badges (from AppCard tags) */
+.badge-tag {
+  @apply px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground text-xs font-medium;
+}
+
+/* Notification badge (for counts) */
+.badge-notification {
+  @apply absolute -top-1 -right-1 w-5 h-5 rounded-full bg-destructive text-destructive-foreground;
+  @apply flex items-center justify-center text-xs font-medium min-w-5;
+}
+
+.badge-notification-sm {
+  @apply w-4 h-4 text-xs min-w-4;
+}
+
+.badge-notification-lg {
+  @apply w-6 h-6 text-sm min-w-6;
+}
+
+/* Dot indicator badges */
+.badge-dot {
+  @apply w-2 h-2 rounded-full;
+}
+
+.badge-dot-sm {
+  @apply w-1.5 h-1.5;
+}
+
+.badge-dot-lg {
+  @apply w-3 h-3;
+}
+
+/* Colored dot variants */
+.badge-dot-green {
+  @apply bg-green-500;
+}
+
+.badge-dot-red {
+  @apply bg-red-500;
+}
+
+.badge-dot-yellow {
+  @apply bg-yellow-500;
+}
+
+.badge-dot-blue {
+  @apply bg-blue-500;
+}
+
+.badge-dot-gray {
+  @apply bg-gray-400;
+}
+
+.badge-dot-primary {
+  @apply bg-primary;
+}
+
+/* Pulse effect for status dots - disabled */
+.badge-dot-pulse {
+  /* No animation */
+}
+
+.badge-dot-pulse-green {
+  @apply bg-green-500 shadow-lg shadow-green-500/25;
+  /* No animation */
+}
+
+.badge-dot-pulse-red {
+  @apply bg-red-500 shadow-lg shadow-red-500/25;
+  /* No animation */
+}
+
+/* Interactive badges */
+.badge-clickable {
+  @apply cursor-pointer hover:opacity-80 transition-opacity;
+}
+
+.badge-removable {
+  @apply pr-1;
+}
+
+.badge-remove-button {
+  @apply ml-1 p-0.5 rounded-full hover:bg-black/10 dark:hover:bg-white/10;
+}
+
+.badge-remove-icon {
+  @apply h-3 w-3;
+}
+
+/* Badge groups */
+.badge-group {
+  @apply flex flex-wrap gap-1;
+}
+
+.badge-group-vertical {
+  @apply flex flex-col space-y-1;
+}
+
+/* Badge with icon */
+.badge-with-icon {
+  @apply flex items-center space-x-1;
+}
+
+.badge-icon {
+  @apply h-3 w-3;
+}
+
+.badge-icon-left {
+  @apply mr-1;
+}
+
+.badge-icon-right {
+  @apply ml-1;
+}
+
+/* Outline badges */
+.badge-outline {
+  @apply border border-current bg-transparent;
+}
+
+.badge-outline-primary {
+  @apply border-primary text-primary bg-transparent;
+}
+
+.badge-outline-success {
+  @apply border-green-500 text-green-700 dark:text-green-300 bg-transparent;
+}
+
+.badge-outline-warning {
+  @apply border-yellow-500 text-yellow-700 dark:text-yellow-300 bg-transparent;
+}
+
+.badge-outline-danger {
+  @apply border-red-500 text-red-700 dark:text-red-300 bg-transparent;
+}
+
+/* Special layout badges */
+.badge-pill {
+  @apply rounded-full;
+}
+
+.badge-square {
+  @apply rounded-none;
+}
+
+.badge-rounded {
+  @apply rounded-md;
+}
+
+/* Loading badge - disabled */
+.badge-loading {
+  /* No animation */
+}
+
+/* Keyframes for pulse animation - removed for static site */

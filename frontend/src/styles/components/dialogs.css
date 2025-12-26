@@ -1,0 +1,295 @@
+/**
+ * Dialog Components
+ * 
+ * Generic dialog, modal, and overlay styles for all popup components.
+ * Includes backdrop overlays, dialog containers, and responsive layouts.
+ */
+
+/* Dialog backdrop/overlay */
+.dialog-backdrop {
+  @apply fixed inset-0 bg-black/50 flex items-center justify-center z-50;
+}
+
+.dialog-backdrop-blur {
+  @apply backdrop-blur-sm;
+}
+
+/* Dialog container */
+.dialog-container {
+  @apply bg-background rounded-xl border shadow-xl;
+  @apply max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto;
+}
+
+.dialog-container-sm {
+  @apply max-w-sm;
+}
+
+.dialog-container-md {
+  @apply max-w-md;
+}
+
+.dialog-container-lg {
+  @apply max-w-lg;
+}
+
+.dialog-container-xl {
+  @apply max-w-xl;
+}
+
+.dialog-container-full {
+  @apply max-w-4xl;
+}
+
+/* Dialog content */
+.dialog-content {
+  @apply p-6;
+}
+
+.dialog-content-sm {
+  @apply p-4;
+}
+
+.dialog-content-lg {
+  @apply p-8;
+}
+
+/* Dialog header */
+.dialog-header {
+  @apply flex items-center justify-between mb-6;
+}
+
+.dialog-title {
+  @apply text-xl font-semibold;
+}
+
+.dialog-title-sm {
+  @apply text-lg font-semibold;
+}
+
+.dialog-title-lg {
+  @apply text-2xl font-bold;
+}
+
+.dialog-close {
+  @apply p-1 hover:bg-accent rounded-md transition-colors;
+}
+
+.dialog-close-icon {
+  @apply h-5 w-5;
+}
+
+/* Dialog body */
+.dialog-body {
+  @apply space-y-4;
+}
+
+.dialog-description {
+  @apply text-muted-foreground mb-4;
+}
+
+/* Dialog footer */
+.dialog-footer {
+  @apply flex justify-end space-x-3 pt-6 border-t border-border mt-6;
+}
+
+.dialog-footer-between {
+  @apply flex items-center justify-between pt-6 border-t border-border mt-6;
+}
+
+.dialog-footer-center {
+  @apply flex justify-center space-x-3 pt-6 border-t border-border mt-6;
+}
+
+.dialog-footer-full {
+  @apply flex space-x-3 pt-6;
+}
+
+/* Form dialogs */
+.dialog-form {
+  @apply space-y-4;
+}
+
+.dialog-form-group {
+  @apply space-y-2;
+}
+
+.dialog-form-row {
+  @apply grid grid-cols-1 gap-4;
+}
+
+.dialog-form-row-2 {
+  @apply grid grid-cols-2 gap-4;
+}
+
+.dialog-form-row-3 {
+  @apply grid grid-cols-3 gap-4;
+}
+
+.dialog-form-actions {
+  @apply flex justify-end space-x-3 pt-4;
+}
+
+/* Confirmation dialogs */
+.dialog-confirm-icon {
+  @apply w-12 h-12 mx-auto rounded-full flex items-center justify-center mb-4;
+}
+
+.dialog-confirm-icon-danger {
+  @apply bg-red-100 text-red-600 dark:bg-red-950/50 dark:text-red-400;
+}
+
+.dialog-confirm-icon-warning {
+  @apply bg-yellow-100 text-yellow-600 dark:bg-yellow-950/50 dark:text-yellow-400;
+}
+
+.dialog-confirm-icon-info {
+  @apply bg-blue-100 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400;
+}
+
+.dialog-confirm-icon-success {
+  @apply bg-green-100 text-green-600 dark:bg-green-950/50 dark:text-green-400;
+}
+
+.dialog-confirm-title {
+  @apply text-lg font-semibold text-center mb-2;
+}
+
+.dialog-confirm-message {
+  @apply text-center text-muted-foreground mb-6;
+}
+
+/* Alert dialogs */
+.dialog-alert {
+  @apply text-center;
+}
+
+.dialog-alert-content {
+  @apply space-y-4;
+}
+
+/* Loading dialogs */
+.dialog-loading {
+  @apply flex flex-col items-center space-y-4 py-8;
+}
+
+.dialog-loading-spinner {
+  @apply w-8 h-8;
+}
+
+.dialog-loading-message {
+  @apply text-center text-muted-foreground;
+}
+
+/* Dialog animations */
+.dialog-enter {
+  @apply opacity-0 scale-95;
+  @apply transition-all duration-300 ease-out;
+}
+
+.dialog-enter-active {
+  @apply opacity-100 scale-100;
+}
+
+.dialog-exit {
+  @apply opacity-100 scale-100;
+  @apply transition-all duration-200 ease-in;
+}
+
+.dialog-exit-active {
+  @apply opacity-0 scale-95;
+}
+
+/* Backdrop animations */
+.dialog-backdrop-enter {
+  @apply opacity-0;
+  @apply transition-opacity duration-300 ease-out;
+}
+
+.dialog-backdrop-enter-active {
+  @apply opacity-100;
+}
+
+.dialog-backdrop-exit {
+  @apply opacity-100;
+  @apply transition-opacity duration-200 ease-in;
+}
+
+.dialog-backdrop-exit-active {
+  @apply opacity-0;
+}
+
+/* Responsive dialog */
+.dialog-mobile {
+  @apply fixed inset-x-0 bottom-0 rounded-t-xl rounded-b-none max-h-[90vh];
+}
+
+.dialog-mobile-content {
+  @apply p-4;
+}
+
+.dialog-mobile-handle {
+  @apply w-12 h-1 bg-muted rounded-full mx-auto mb-4;
+}
+
+/* Dialog scrollable content */
+.dialog-scroll {
+  @apply max-h-96 overflow-y-auto;
+}
+
+.dialog-scroll-lg {
+  @apply max-h-[32rem] overflow-y-auto;
+}
+
+/* Nested dialogs */
+.dialog-nested {
+  @apply z-50;
+}
+
+/* Dialog with tabs */
+.dialog-tabs {
+  @apply border-b border-border mb-4;
+}
+
+.dialog-tab-list {
+  @apply flex space-x-4;
+}
+
+.dialog-tab {
+  @apply px-3 py-2 text-sm font-medium border-b-2 border-transparent;
+  @apply hover:text-foreground transition-colors;
+}
+
+.dialog-tab-active {
+  @apply border-primary text-primary;
+}
+
+.dialog-tab-content {
+  @apply mt-4;
+}
+
+/* Specific dialog types from the codebase */
+.dialog-server-form {
+  @apply max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto;
+}
+
+/* Toast/notification dialogs */
+.dialog-toast {
+  @apply fixed top-4 right-4 z-50 max-w-sm;
+  @apply bg-background border rounded-lg shadow-lg p-4;
+}
+
+.dialog-toast-success {
+  @apply border-l-4 border-l-green-500;
+}
+
+.dialog-toast-error {
+  @apply border-l-4 border-l-red-500;
+}
+
+.dialog-toast-warning {
+  @apply border-l-4 border-l-yellow-500;
+}
+
+.dialog-toast-info {
+  @apply border-l-4 border-l-blue-500;
+}

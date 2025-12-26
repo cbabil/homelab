@@ -1,0 +1,249 @@
+/**
+ * Table Components
+ * 
+ * Generic table styles for data tables, session management tables, and other tabular data.
+ * Includes sortable headers, row actions, and responsive table layouts.
+ */
+
+/* Base table styles */
+.table-base {
+  @apply min-w-full divide-y divide-border;
+}
+
+.table-responsive {
+  @apply overflow-x-auto;
+}
+
+/* Table wrapper (typically inside a card) */
+.table-wrapper {
+  @apply overflow-hidden;
+}
+
+/* Table header styles */
+.table-header {
+  @apply bg-muted/50;
+}
+
+.table-header-row {
+  /* Base row styles applied via table-base */
+}
+
+.table-header-cell {
+  @apply px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider;
+}
+
+/* Sortable header styles */
+.table-header-sortable {
+  @apply cursor-pointer hover:text-foreground transition-colors select-none;
+}
+
+.table-header-sort-wrapper {
+  @apply flex items-center space-x-1;
+}
+
+.table-header-sort-icons {
+  @apply flex flex-col;
+}
+
+.table-header-sort-up {
+  @apply h-3 w-3;
+}
+
+.table-header-sort-down {
+  @apply h-3 w-3 -mt-1;
+}
+
+.table-header-sort-active {
+  @apply text-primary;
+}
+
+.table-header-sort-inactive {
+  @apply text-muted-foreground/50;
+}
+
+/* Table body styles */
+.table-body {
+  @apply bg-background divide-y divide-border;
+}
+
+.table-row {
+  @apply hover:bg-muted/50 transition-colors;
+}
+
+.table-cell {
+  @apply px-4 py-3 whitespace-nowrap;
+}
+
+/* Table cell content variants */
+.table-cell-text {
+  @apply text-sm;
+}
+
+.table-cell-text-primary {
+  @apply text-sm text-foreground;
+}
+
+.table-cell-text-secondary {
+  @apply text-sm text-muted-foreground;
+}
+
+.table-cell-mono {
+  @apply text-sm font-mono text-foreground;
+}
+
+/* Status indicator in table cells */
+.table-status-wrapper {
+  @apply flex items-center justify-center;
+}
+
+.table-status-container {
+  @apply relative p-2 cursor-help;
+}
+
+.table-status-dot {
+  @apply w-2 h-2 rounded-full;
+}
+
+/* Status dot colors */
+.table-status-active {
+  @apply bg-green-500;
+}
+
+.table-status-idle {
+  @apply bg-orange-500;
+}
+
+.table-status-expired {
+  @apply bg-red-500;
+}
+
+.table-status-unknown {
+  @apply bg-gray-400;
+}
+
+/* Tooltip for status */
+.table-status-tooltip {
+  @apply absolute left-full top-1/2 transform -translate-y-1/2 ml-1 px-2 py-1;
+  @apply bg-gray-900 text-white text-xs rounded whitespace-nowrap z-10;
+}
+
+.table-status-tooltip-arrow {
+  @apply absolute right-full top-1/2 transform -translate-y-1/2;
+  @apply border-2 border-transparent border-r-gray-900;
+}
+
+/* Table actions column */
+.table-actions {
+  @apply flex items-center justify-center space-x-2;
+}
+
+.table-action-button {
+  @apply inline-flex items-center justify-center p-1 transition-colors;
+}
+
+.table-action-restore {
+  @apply text-blue-600 hover:text-blue-800;
+}
+
+.table-action-terminate {
+  @apply text-red-600 hover:text-red-800;
+}
+
+.table-action-disabled {
+  @apply text-xs text-muted-foreground;
+}
+
+/* Empty table state */
+.table-empty {
+  @apply text-center py-8;
+}
+
+.table-empty-icon {
+  @apply w-12 h-12 mx-auto text-muted-foreground mb-4;
+}
+
+.table-empty-title {
+  @apply text-lg font-semibold text-foreground mb-2;
+}
+
+.table-empty-description {
+  @apply text-muted-foreground;
+}
+
+/* Loading table state - disabled */
+.table-loading {
+  /* No animation */
+}
+
+.table-loading-row {
+  @apply px-4 py-3;
+}
+
+.table-loading-cell {
+  @apply h-4 bg-muted rounded;
+}
+
+/* Table pagination */
+.table-pagination {
+  @apply flex items-center justify-between px-4 py-3 border-t border-border;
+}
+
+.table-pagination-info {
+  @apply text-sm text-muted-foreground;
+}
+
+.table-pagination-controls {
+  @apply flex items-center space-x-2;
+}
+
+/* Responsive table helpers */
+.table-mobile-stack {
+  @apply block lg:table;
+}
+
+.table-mobile-row {
+  @apply block lg:table-row border-b border-border pb-4 mb-4 lg:border-b-0 lg:pb-0 lg:mb-0;
+}
+
+.table-mobile-cell {
+  @apply block lg:table-cell px-0 py-2 lg:px-4 lg:py-3;
+}
+
+.table-mobile-label {
+  @apply font-medium text-foreground lg:hidden;
+}
+
+/* Special table layouts */
+.table-compact .table-cell {
+  @apply px-2 py-2;
+}
+
+.table-comfortable .table-cell {
+  @apply px-6 py-4;
+}
+
+/* Table selection */
+.table-select-all {
+  @apply cursor-pointer;
+}
+
+.table-select-row {
+  @apply cursor-pointer;
+}
+
+.table-row-selected {
+  @apply bg-primary/10;
+}
+
+/* Specialized content types */
+.table-cell-badge {
+  @apply inline-flex items-center px-2 py-1 rounded-full text-xs font-medium;
+}
+
+.table-cell-actions {
+  @apply flex items-center space-x-1;
+}
+
+.table-cell-timestamp {
+  @apply text-sm text-muted-foreground;
+}

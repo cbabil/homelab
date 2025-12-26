@@ -1,0 +1,295 @@
+/**
+ * Card Components
+ * 
+ * Generic card styles for all card-based components including app cards, server cards,
+ * dashboard status cards, and settings cards. Replaces specific component card CSS.
+ */
+
+/* Base card styles */
+.card-base {
+  @apply bg-card rounded-xl border;
+}
+
+/* Card with hover effects */
+.card-hover {
+  @apply card-base hover:shadow-lg hover:scale-[1.02] transition-all duration-200;
+}
+
+/* Card padding variants */
+.card-sm {
+  @apply p-3;
+}
+
+.card-md {
+  @apply p-4;
+}
+
+.card-lg {
+  @apply p-6;
+}
+
+/* Card layouts */
+.card-flex-col {
+  @apply flex flex-col h-full;
+}
+
+.card-grid {
+  @apply grid gap-4;
+}
+
+/* App card specific styles (from AppCard component) */
+.card-app {
+  @apply card-base p-3 h-full flex flex-col;
+}
+
+.card-app-header {
+  @apply flex items-start justify-between gap-2 mb-2;
+}
+
+.card-app-icon-wrapper {
+  @apply p-1 rounded-md shrink-0;
+}
+
+.card-app-icon {
+  @apply h-3.5 w-3.5;
+}
+
+.card-app-content {
+  @apply flex items-start space-x-2 min-w-0 flex-1;
+}
+
+.card-app-info {
+  @apply space-y-0.5 min-w-0 flex-1;
+}
+
+.card-app-title {
+  @apply font-semibold text-sm leading-tight truncate;
+}
+
+.card-app-description {
+  @apply text-xs text-muted-foreground line-clamp-2;
+}
+
+.card-app-meta {
+  @apply flex items-center justify-between text-xs text-muted-foreground;
+}
+
+.card-app-stats {
+  @apply flex items-center space-x-2;
+}
+
+.card-app-stat {
+  @apply flex items-center space-x-0.5;
+}
+
+.card-app-version {
+  @apply px-1.5 py-0.5 rounded bg-accent text-xs font-medium;
+}
+
+.card-app-tags {
+  @apply flex flex-wrap gap-1;
+}
+
+.card-app-actions {
+  @apply flex items-center space-x-1.5 pt-2;
+}
+
+/* Server card specific styles (from ServerCard component) */
+.card-server {
+  @apply card-base p-6 h-full flex flex-col;
+}
+
+.card-server-header {
+  @apply flex items-start justify-between mb-4;
+}
+
+.card-server-info {
+  @apply flex-1;
+}
+
+.card-server-title-row {
+  @apply flex items-center space-x-3 mb-2;
+}
+
+.card-server-title {
+  @apply text-lg font-semibold;
+}
+
+.card-server-connection {
+  @apply text-sm text-muted-foreground;
+}
+
+.card-server-actions {
+  @apply flex items-center space-x-1;
+}
+
+.card-server-system-info {
+  @apply flex-1 space-y-3;
+}
+
+.card-server-system-grid {
+  @apply grid grid-cols-2 gap-3 text-sm;
+}
+
+.card-server-system-item {
+  /* Use with nested spans for label and value */
+}
+
+.card-server-system-label {
+  @apply text-muted-foreground;
+}
+
+.card-server-system-value {
+  @apply font-medium;
+}
+
+.card-server-footer {
+  @apply pt-4 mt-auto border-t border-border/50;
+}
+
+.card-server-footer-meta {
+  @apply flex items-center justify-between text-xs text-muted-foreground;
+}
+
+/* Dashboard status card styles */
+.card-status {
+  @apply card-base p-6 rounded-xl border;
+}
+
+.card-status-header {
+  @apply flex items-center justify-between mb-4;
+}
+
+.card-status-icon-wrapper {
+  @apply p-2 rounded-lg;
+}
+
+.card-status-icon {
+  @apply w-5 h-5;
+}
+
+.card-status-content {
+  @apply space-y-1;
+}
+
+.card-status-value {
+  @apply text-2xl font-bold;
+}
+
+.card-status-label {
+  @apply text-sm text-muted-foreground;
+}
+
+/* Settings card styles */
+.card-setting {
+  @apply card-base rounded-lg border p-3;
+}
+
+.card-setting-header {
+  @apply text-sm font-semibold mb-3 text-primary;
+}
+
+.card-setting-content {
+  @apply space-y-0;
+}
+
+/* Large feature cards (Dashboard Quick Actions, System Health) */
+.card-feature {
+  @apply card-base p-6 rounded-xl border;
+}
+
+.card-feature-header {
+  @apply flex items-center space-x-3 mb-6;
+}
+
+.card-feature-icon-wrapper {
+  @apply p-2 rounded-lg;
+}
+
+.card-feature-icon {
+  @apply w-5 h-5;
+}
+
+.card-feature-title {
+  @apply text-xl font-semibold;
+}
+
+.card-feature-content {
+  @apply space-y-3;
+}
+
+/* System health specific card */
+.card-health-status {
+  @apply flex items-center justify-between p-3 rounded-lg bg-accent/50;
+}
+
+.card-health-status-label {
+  @apply text-sm font-medium;
+}
+
+.card-health-status-indicator {
+  @apply flex items-center space-x-2;
+}
+
+.card-health-status-dot {
+  @apply w-2 h-2 rounded-full;
+}
+
+.card-health-status-text {
+  @apply text-sm capitalize;
+}
+
+/* Loading card skeleton */
+.card-loading {
+  @apply card-base p-6 rounded-xl border;
+}
+
+.card-loading-content {
+  @apply space-y-3;
+}
+
+.card-loading-icon {
+  @apply w-12 h-12 bg-muted rounded-lg;
+}
+
+.card-loading-title {
+  @apply h-6 bg-muted rounded w-20;
+}
+
+.card-loading-description {
+  @apply h-4 bg-muted rounded w-32;
+}
+
+/* Dialog card styles */
+.card-dialog {
+  @apply card-base p-6 rounded-xl border max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto;
+}
+
+.card-dialog-header {
+  @apply flex items-center justify-between mb-6;
+}
+
+.card-dialog-title {
+  @apply text-xl font-semibold;
+}
+
+.card-dialog-content {
+  @apply space-y-4;
+}
+
+/* Table card wrapper */
+.card-table {
+  @apply card-base rounded-lg border p-0 overflow-hidden;
+}
+
+.card-table-header {
+  @apply p-3 border-b border-border;
+}
+
+.card-table-title {
+  @apply text-sm font-semibold text-primary;
+}
+
+.card-table-content {
+  @apply overflow-x-auto;
+}

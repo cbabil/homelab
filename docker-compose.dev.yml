@@ -1,0 +1,40 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.dev
+    ports:
+      - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - PYTHON_ENV=development
+      - MCP_LOG_LEVEL=DEBUG
+      - DATA_DIRECTORY=/app/data
+      - HOMELAB_MASTER_PASSWORD=dev-master-password
+      - HOMELAB_SALT=dev-salt
+    networks:
+      - homelab
+
+  frontend:
+    image: node:18-alpine
+    working_dir: /app
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    environment:
+      - VITE_MCP_SERVER_URL=http://localhost:8000
+    command: sh -c "yarn install && yarn dev --host 0.0.0.0"
+    depends_on:
+      - backend
+    networks:
+      - homelab
+
+networks:
+  homelab:
+    driver: bridge
