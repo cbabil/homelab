@@ -1,0 +1,33 @@
+# Homelab Assistant Configuration
+
+# Server settings
+server:
+  host: 127.0.0.1
+  port: 8080
+
+# Database
+database:
+  path: /var/lib/homelab-assistant/homelab.db
+
+# Logging
+logging:
+  level: INFO
+  format: json
+  file: /var/log/homelab-assistant/app.log
+
+# Security
+security:
+  session_timeout_minutes: 60
+  max_login_attempts: 5
+  lockout_duration_minutes: 15
+
+# Metrics collection
+metrics:
+  enabled: true
+  collection_interval_seconds: 300
+  retention_days: 30
+
+# App catalog
+catalog:
+  builtin_path: /opt/homelab-assistant/data/catalog
+  custom_path: /var/lib/homelab-assistant/catalog

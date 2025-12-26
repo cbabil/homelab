@@ -1,0 +1,30 @@
+[Unit]
+Description=Homelab Assistant
+Documentation=https://github.com/cbabil/homelab
+After=network.target
+
+[Service]
+Type=simple
+User=homelab
+Group=homelab
+WorkingDirectory=/opt/homelab-assistant
+
+Environment=DATA_DIRECTORY=/var/lib/homelab-assistant
+Environment=LOG_DIRECTORY=/var/log/homelab-assistant
+Environment=CONFIG_FILE=/etc/homelab-assistant/config.yaml
+
+ExecStart=/usr/bin/python3 /opt/homelab-assistant/main.py
+ExecReload=/bin/kill -HUP $MAINPID
+
+Restart=always
+RestartSec=5
+
+# Security hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+ReadWritePaths=/var/lib/homelab-assistant /var/log/homelab-assistant
+
+[Install]
+WantedBy=multi-user.target
