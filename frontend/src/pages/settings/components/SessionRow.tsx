@@ -1,6 +1,6 @@
 /**
  * Session Row Component
- * 
+ *
  * Individual session row with status, actions, and hover tooltip.
  */
 
@@ -9,6 +9,7 @@ import { cn } from '@/utils/cn'
 import type { Session } from '../types'
 import { formatDateTime, formatTimeAgo, getStatusColor } from '../utils'
 import { useAuth } from '@/providers/AuthProvider'
+import { Button } from '@/components/ui/Button'
 
 interface SessionRowProps {
   session: Session
@@ -85,25 +86,29 @@ export function SessionRow({
             <>
               {session.status === 'expired' ? (
                 isAdmin ? (
-                  <button
+                  <Button
                     onClick={() => onRestoreSession(session.id)}
-                    className="inline-flex items-center justify-center p-1.5 text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 transition-colors rounded-md hover:bg-blue-50 dark:hover:bg-blue-950"
+                    variant="ghost"
+                    size="icon"
+                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950"
                     title="Restore session"
                   >
                     <RotateCcw className="h-4 w-4" />
-                  </button>
+                  </Button>
                 ) : (
                   <span className="text-xs text-muted-foreground px-2 py-1">Expired</span>
                 )
               ) : (
                 canTerminate ? (
-                  <button
+                  <Button
                     onClick={() => onTerminateSession(session.id)}
-                    className="inline-flex items-center justify-center p-1.5 text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 transition-colors rounded-md hover:bg-red-50 dark:hover:bg-red-950"
+                    variant="ghost"
+                    size="icon"
+                    className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950"
                     title="Terminate session"
                   >
                     <Trash2 className="h-4 w-4" />
-                  </button>
+                  </Button>
                 ) : (
                   <span className="text-xs text-muted-foreground px-2 py-1">
                     {!isAdmin ? 'Admin Only' : 'Active'}

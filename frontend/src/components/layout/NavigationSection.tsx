@@ -1,12 +1,13 @@
 /**
  * Navigation Section Component
- * 
+ *
  * Grouping component for navigation items with optional header and dividers.
  * Supports collapsible sections and improved visual organization.
  */
 
 import { memo, ReactNode } from 'react'
 import { cn } from '@/utils/cn'
+import { Button } from '@/components/ui/Button'
 
 interface NavigationSectionProps {
   title?: string
@@ -36,13 +37,14 @@ export const NavigationSection = memo(({
       {title && (
         <div className="px-3 mb-2">
           {collapsible ? (
-            <button
+            <Button
+              variant="ghost"
+              size="sm"
               onClick={onToggle}
               className={cn(
-                'flex items-center justify-between w-full px-2 py-1 rounded-md',
+                'flex items-center justify-between w-full px-2 py-1 h-auto',
                 'text-xs font-semibold text-muted-foreground uppercase tracking-wider',
-                'hover:text-foreground transition-colors duration-200',
-                'focus:outline-none focus:ring-2 focus:ring-primary/20'
+                'hover:text-foreground'
               )}
               aria-expanded={!isCollapsed}
               aria-controls={`nav-section-${title.toLowerCase().replace(/\s+/g, '-')}`}
@@ -58,7 +60,7 @@ export const NavigationSection = memo(({
               >
                 <path d="M6 8L2 4h8l-4 4z" />
               </svg>
-            </button>
+            </Button>
           ) : (
             <h3 className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
               {title}

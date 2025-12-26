@@ -1,10 +1,11 @@
 /**
  * Server Card Actions Component
- * 
+ *
  * Action buttons for server card operations (connect, edit, delete).
  */
 
 import { Terminal, Settings, Trash2, Unplug } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
 import { ServerConnection } from '@/types/server'
 
 interface ServerCardActionsProps {
@@ -21,36 +22,41 @@ export function ServerCardActions({ server, onEdit, onDelete, onConnect, onDisco
   return (
     <div className="flex items-center space-x-1">
       {isConnected ? (
-        <button 
+        <Button
           onClick={() => onDisconnect?.(server.id)}
-          className="p-1.5 hover:bg-accent rounded-md"
+          variant="ghost"
+          size="icon"
           title="Disconnect from server"
         >
           <Unplug className="h-3.5 w-3.5" />
-        </button>
+        </Button>
       ) : (
-        <button 
+        <Button
           onClick={() => onConnect(server.id)}
-          className="p-1.5 hover:bg-accent rounded-md"
+          variant="ghost"
+          size="icon"
           title="Connect to server"
         >
           <Terminal className="h-3.5 w-3.5" />
-        </button>
+        </Button>
       )}
-      <button 
+      <Button
         onClick={() => onEdit(server)}
-        className="p-1.5 hover:bg-accent rounded-md"
+        variant="ghost"
+        size="icon"
         title="Edit server"
       >
         <Settings className="h-3.5 w-3.5" />
-      </button>
-      <button 
+      </Button>
+      <Button
         onClick={() => onDelete(server.id)}
-        className="p-1.5 hover:bg-accent rounded-md text-destructive"
+        variant="ghost"
+        size="icon"
+        className="text-destructive"
         title="Delete server"
       >
         <Trash2 className="h-3.5 w-3.5" />
-      </button>
+      </Button>
     </div>
   )
 }

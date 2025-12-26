@@ -1,6 +1,6 @@
 /**
  * Navigation Item Component
- * 
+ *
  * Individual navigation item with icon, label, badge, and sub-items support.
  * Features smooth animations, hover effects, and accessibility support.
  */
@@ -10,6 +10,7 @@ import { Link } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { NavItem, SubNavItem } from '@/hooks/useNavigation'
+import { Button } from '@/components/ui/Button'
 
 interface NavigationItemProps {
   item: NavItem
@@ -48,14 +49,15 @@ export const NavigationItem = memo(({
       {/* Main Navigation Item */}
       <div className="relative">
         {hasSubItems ? (
-          <button
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={handleMainClick}
             className={cn(
-              'group flex items-center justify-between w-full px-3 py-2 rounded-md text-sm',
+              'group flex items-center justify-between w-full',
               'relative overflow-hidden',
-              'focus:outline-none focus:ring-1 focus:ring-primary/30',
               isActive
-                ? 'bg-primary text-white'
+                ? 'bg-primary text-white hover:bg-primary hover:text-white'
                 : 'text-muted-foreground hover:text-white hover:bg-primary'
             )}
             title={item.description}
@@ -78,14 +80,14 @@ export const NavigationItem = memo(({
                 </span>
               )}
             </div>
-            <ChevronRight 
+            <ChevronRight
               className={cn(
                 'h-4 w-4 transition-transform duration-200',
                 isActive ? 'text-white' : 'text-muted-foreground group-hover:text-white',
                 isExpanded && 'rotate-90'
               )}
             />
-          </button>
+          </Button>
         ) : (
           <Link
             to={item.href}

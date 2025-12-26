@@ -1,11 +1,12 @@
 /**
  * Server Grid View Component
- * 
+ *
  * Displays filtered servers in a responsive grid or empty state.
  * Handles both server cards display and empty state messaging.
  */
 
 import { Server } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
 import { ServerConnection } from '@/types/server'
 import { ServerCard } from './ServerCard'
 
@@ -62,19 +63,22 @@ export function ServerGridView({
         }
       </p>
       {!searchTerm ? (
-        <button 
+        <Button
           onClick={onAddServer}
-          className="btn-gradient px-6 py-3 rounded-lg font-medium shadow-sm hover:shadow-md transition-all"
+          variant="primary"
+          size="lg"
+          className="shadow-sm hover:shadow-md"
         >
           Add Your First Server
-        </button>
+        </Button>
       ) : (
-        <button 
+        <Button
           onClick={onClearSearch}
-          className="px-4 py-2 rounded-lg border border-input hover:bg-accent transition-colors text-sm font-medium"
+          variant="outline"
+          size="md"
         >
           Clear Search
-        </button>
+        </Button>
       )}
     </div>
   )

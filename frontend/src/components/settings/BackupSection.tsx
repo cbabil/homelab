@@ -1,6 +1,6 @@
 /**
  * Backup Section Component
- * 
+ *
  * Compact backup and restore functionality for all homelab data
  * including settings, servers, and applications.
  */
@@ -10,6 +10,7 @@ import { Download, Upload, Settings, Server, Package, AlertCircle } from 'lucide
 import { homelabBackupService, RestoreOptions, BackupResult, RestoreResult } from '@/services/homelabBackupService'
 import { useSettings } from '@/hooks/useSettings'
 import { useToast } from '@/components/ui/Toast'
+import { Button } from '@/components/ui/Button'
 
 export function BackupSection() {
   const { settings, isLoading } = useSettings()
@@ -136,29 +137,34 @@ export function BackupSection() {
           Backup or restore all settings, servers, and apps
         </p>
         <div className="flex gap-2">
-          <button
+          <Button
             onClick={handleExport}
             disabled={isExporting || isLoading || !settings}
-            className="px-3 py-1.5 bg-blue-600 text-white text-xs rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
+            variant="primary"
+            size="sm"
+            leftIcon={<Download className="h-3 w-3" />}
+            className="bg-blue-600 hover:bg-blue-700"
           >
-            <Download className="h-3 w-3" />
             {isExporting ? 'Exporting...' : isLoading ? 'Loading...' : 'Export'}
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={handleImport}
             disabled={isImporting}
-            className="px-3 py-1.5 bg-green-600 text-white text-xs rounded hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center gap-1.5"
+            variant="primary"
+            size="sm"
+            leftIcon={<Upload className="h-3 w-3" />}
+            className="bg-green-600 hover:bg-green-700"
           >
-            <Upload className="h-3 w-3" />
             {isImporting ? 'Importing...' : showRestoreOptions ? 'Select File' : 'Import'}
-          </button>
+          </Button>
           {showRestoreOptions && (
-            <button
+            <Button
               onClick={resetRestoreOptions}
-              className="px-2 py-1.5 border border-input bg-background text-xs rounded hover:bg-accent transition-colors"
+              variant="outline"
+              size="sm"
             >
               Cancel
-            </button>
+            </Button>
           )}
         </div>
       </div>

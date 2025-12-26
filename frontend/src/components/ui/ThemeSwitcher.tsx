@@ -1,11 +1,12 @@
 /**
  * Theme Switcher Component
- * 
+ *
  * Simplified theme toggle with Moon/Sun icons for light/dark modes.
  * Features smooth animations and professional styling.
  */
 
 import { Sun, Moon } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
 import { useTheme } from '@/providers/ThemeProvider'
 
 export function ThemeSwitcher() {
@@ -16,9 +17,10 @@ export function ThemeSwitcher() {
   }
 
   return (
-    <button
+    <Button
       onClick={toggleTheme}
-      className="flex items-center justify-center w-10 h-10 rounded-lg focus:outline-none"
+      variant="ghost"
+      size="icon"
       title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
     >
       {theme === 'light' ? (
@@ -26,6 +28,6 @@ export function ThemeSwitcher() {
       ) : (
         <Sun className="h-4 w-4 text-muted-foreground" />
       )}
-    </button>
+    </Button>
   )
 }

@@ -1,10 +1,11 @@
 /**
  * Category Grid Component
- * 
+ *
  * Grid of application categories for filtering.
  */
 
 import { Home } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
 import { AppCategory } from '@/types/app'
 import { cn } from '@/utils/cn'
 
@@ -25,13 +26,14 @@ export function CategoryGrid({
 }: CategoryGridProps) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-      <button
+      <Button
         onClick={() => onCategorySelect(null)}
+        variant="outline"
         className={cn(
-          "p-4 rounded-xl border text-left h-full",
-          selectedCategory === null 
-            ? "border-primary bg-primary/5" 
-            : "border-border"
+          "p-4 rounded-xl text-left h-full justify-start",
+          selectedCategory === null
+            ? "border-primary bg-primary/5"
+            : ""
         )}
       >
         <div className="space-y-2">
@@ -43,19 +45,20 @@ export function CategoryGrid({
             <p className="text-xs text-muted-foreground">{totalApps} available</p>
           </div>
         </div>
-      </button>
+      </Button>
 
       {categories.map((category) => {
         const IconComponent = category.icon
         return (
-          <button
+          <Button
             key={category.id}
             onClick={() => onCategorySelect(category.id)}
+            variant="outline"
             className={cn(
-              "p-4 rounded-xl border text-left h-full",
-              selectedCategory === category.id 
-                ? "border-primary bg-primary/5" 
-                : "border-border"
+              "p-4 rounded-xl text-left h-full justify-start",
+              selectedCategory === category.id
+                ? "border-primary bg-primary/5"
+                : ""
             )}
           >
             <div className="space-y-2">
@@ -69,7 +72,7 @@ export function CategoryGrid({
                 </p>
               </div>
             </div>
-          </button>
+          </Button>
         )
       })}
     </div>

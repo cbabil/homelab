@@ -8,6 +8,7 @@
 import { useState, useEffect } from 'react'
 import { SettingRow, Toggle } from '../components'
 import { useRetentionSettings } from '@/hooks/useRetentionSettings'
+import { Button } from '@/components/ui/Button'
 
 interface SliderWithInputProps {
   value: number
@@ -94,22 +95,20 @@ function ConfirmationDialog({
         <p className="text-sm mb-6 text-muted-foreground">{message}</p>
 
         <div className="flex gap-3 justify-end">
-          <button
+          <Button
             onClick={onClose}
-            className="px-4 py-2 text-sm border rounded hover:bg-muted"
+            variant="outline"
+            size="md"
           >
             Cancel
-          </button>
-          <button
+          </Button>
+          <Button
             onClick={onConfirm}
-            className={`px-4 py-2 text-sm rounded ${
-              isDestructive
-                ? 'bg-red-600 text-white hover:bg-red-700'
-                : 'bg-primary text-primary-foreground hover:bg-primary/90'
-            }`}
+            variant={isDestructive ? 'destructive' : 'primary'}
+            size="md"
           >
             {confirmText}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -271,13 +270,14 @@ export function DataRetentionSettings() {
         />
 
         <div className="pt-3 border-t">
-          <button
+          <Button
             onClick={handlePreviewCleanup}
             disabled={isOperationInProgress}
-            className="px-3 py-1.5 text-sm border rounded hover:bg-muted disabled:opacity-50"
+            variant="outline"
+            size="sm"
           >
             {isOperationInProgress ? 'Analyzing...' : 'Preview Cleanup'}
-          </button>
+          </Button>
         </div>
       </div>
 
@@ -322,22 +322,24 @@ export function DataRetentionSettings() {
             )}
 
             <div className="flex gap-3 justify-end">
-              <button
+              <Button
                 onClick={() => {
                   setShowCleanupConfirm(false)
                   setConfirmationText('')
                 }}
-                className="px-4 py-2 text-sm border rounded hover:bg-muted"
+                variant="outline"
+                size="md"
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 onClick={handleFinalCleanup}
                 disabled={isDangerousOperation && confirmationText !== 'DELETE DATA'}
-                className="px-4 py-2 text-sm rounded bg-red-600 text-white hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                variant="destructive"
+                size="md"
               >
                 Delete Data
-              </button>
+              </Button>
             </div>
           </div>
         </div>

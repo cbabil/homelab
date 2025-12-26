@@ -1,11 +1,12 @@
 /**
  * Filter Dropdown Component
- * 
+ *
  * Dropdown interface for filtering applications by category, status, and other criteria.
  */
 
 import { useState, useRef, useEffect } from 'react'
 import { Filter, Check, X } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
 import { AppCategory, AppFilter, AppStatus } from '@/types/app'
 
 interface FilterDropdownProps {
@@ -49,10 +50,12 @@ export function FilterDropdown({ filter, onFilterChange, categories }: FilterDro
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <button 
+      <Button
         onClick={() => setIsOpen(!isOpen)}
-        className={`flex items-center space-x-1.5 px-2.5 py-1.5 border rounded-md hover:bg-accent transition-colors shrink-0 ${
-          hasActiveFilters ? 'border-primary bg-primary/10' : 'border-input'
+        variant="outline"
+        size="sm"
+        className={`shrink-0 ${
+          hasActiveFilters ? 'border-primary bg-primary/10' : ''
         }`}
       >
         <Filter className="h-3.5 w-3.5" />
@@ -62,20 +65,22 @@ export function FilterDropdown({ filter, onFilterChange, categories }: FilterDro
             {[filter.category, filter.status, filter.featured].filter(Boolean).length}
           </span>
         )}
-      </button>
+      </Button>
 
       {isOpen && (
         <div className="absolute right-0 top-full mt-1 w-72 bg-background border rounded-lg shadow-lg z-50 p-4">
           <div className="flex items-center justify-between mb-3">
             <h3 className="font-medium text-sm">Filter Applications</h3>
             {hasActiveFilters && (
-              <button 
+              <Button
                 onClick={clearAllFilters}
-                className="text-xs text-muted-foreground hover:text-foreground flex items-center space-x-1"
+                variant="ghost"
+                size="sm"
+                className="h-auto p-0 text-xs text-muted-foreground hover:text-foreground hover:bg-transparent"
               >
                 <X className="h-3 w-3" />
                 <span>Clear all</span>
-              </button>
+              </Button>
             )}
           </div>
 
@@ -84,14 +89,16 @@ export function FilterDropdown({ filter, onFilterChange, categories }: FilterDro
             <h4 className="text-xs font-medium text-muted-foreground mb-2">CATEGORY</h4>
             <div className="space-y-1">
               {categories.map(category => (
-                <button
+                <Button
                   key={category.id}
                   onClick={() => handleCategoryChange(category.id)}
-                  className="w-full flex items-center justify-between px-2 py-1 rounded hover:bg-accent text-xs"
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-between h-auto px-2 py-1 text-xs font-normal"
                 >
                   <span>{category.name}</span>
                   {filter.category === category.id && <Check className="h-3 w-3" />}
-                </button>
+                </Button>
               ))}
             </div>
           </div>
@@ -101,14 +108,16 @@ export function FilterDropdown({ filter, onFilterChange, categories }: FilterDro
             <h4 className="text-xs font-medium text-muted-foreground mb-2">STATUS</h4>
             <div className="space-y-1">
               {statuses.map(status => (
-                <button
+                <Button
                   key={status}
                   onClick={() => handleStatusChange(status)}
-                  className="w-full flex items-center justify-between px-2 py-1 rounded hover:bg-accent text-xs capitalize"
+                  variant="ghost"
+                  size="sm"
+                  className="w-full justify-between h-auto px-2 py-1 text-xs font-normal capitalize"
                 >
                   <span>{status}</span>
                   {filter.status === status && <Check className="h-3 w-3" />}
-                </button>
+                </Button>
               ))}
             </div>
           </div>

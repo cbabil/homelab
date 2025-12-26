@@ -1,11 +1,12 @@
 /**
  * Server Page Header Component
- * 
+ *
  * Modern header section with title, description, and Add Server button.
  * Provides clean separation of header functionality from main page logic.
  */
 
 import { Plus, Download, Upload } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
 
 interface ServerPageHeaderProps {
   onAddServer: () => void
@@ -23,27 +24,30 @@ export function ServerPageHeader({ onAddServer, onExportServers, onImportServers
         </p>
       </div>
       <div className="flex items-center space-x-3">
-        <button 
+        <Button
           onClick={onImportServers}
-          className="px-3 py-2 rounded-lg font-medium text-sm flex items-center space-x-2 border border-input bg-background hover:bg-accent transition-colors"
+          variant="outline"
+          size="md"
+          leftIcon={<Upload className="h-4 w-4" />}
         >
-          <Upload className="h-4 w-4" />
-          <span>Import</span>
-        </button>
-        <button 
+          Import
+        </Button>
+        <Button
           onClick={onExportServers}
-          className="px-3 py-2 rounded-lg font-medium text-sm flex items-center space-x-2 border border-input bg-background hover:bg-accent transition-colors"
+          variant="outline"
+          size="md"
+          leftIcon={<Download className="h-4 w-4" />}
         >
-          <Download className="h-4 w-4" />
-          <span>Export</span>
-        </button>
-        <button 
+          Export
+        </Button>
+        <Button
           onClick={onAddServer}
-          className="btn-gradient px-4 py-2.5 rounded-lg font-medium text-sm flex items-center space-x-2 shadow-sm hover:shadow-md transition-all"
+          variant="primary"
+          size="md"
+          leftIcon={<Plus className="h-4 w-4" />}
         >
-          <Plus className="h-4 w-4" />
-          <span>Add Server</span>
-        </button>
+          Add Server
+        </Button>
       </div>
     </div>
   )

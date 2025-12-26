@@ -1,12 +1,13 @@
 /**
  * Settings Tab Navigation Component
- * 
+ *
  * Tab navigation for switching between different settings sections.
  */
 
 import { Server, Monitor, Shield, Bell } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { Tab } from './types'
+import { Button } from '@/components/ui/Button'
 
 const tabs: Tab[] = [
   {
@@ -42,17 +43,18 @@ export function SettingsTabNavigation({ activeTab, onTabChange }: SettingsTabNav
       {tabs.map((tab) => {
         const Icon = tab.icon
         return (
-          <button
+          <Button
             key={tab.id}
+            variant="ghost"
+            size="sm"
             onClick={() => onTabChange(tab.id)}
             className={cn(
-              'flex items-center space-x-2 px-4 py-2 rounded text-sm font-medium transition-colors',
-              activeTab === tab.id ? 'bg-background shadow-sm text-primary' : 'text-muted-foreground hover:text-foreground'
+              activeTab === tab.id && 'bg-background shadow-sm text-primary'
             )}
+            leftIcon={<Icon className="h-4 w-4" />}
           >
-            <Icon className="h-4 w-4" />
-            <span>{tab.label}</span>
-          </button>
+            {tab.label}
+          </Button>
         )
       })}
     </div>

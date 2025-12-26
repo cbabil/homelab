@@ -7,6 +7,7 @@
 import { useState } from 'react'
 import { Check, RotateCcw } from 'lucide-react'
 import { useSettingsContext } from '@/providers/SettingsProvider'
+import { Button } from '@/components/ui/Button'
 
 export function SettingsActionFooter() {
   const { resetSettings } = useSettingsContext()
@@ -32,14 +33,15 @@ export function SettingsActionFooter() {
   return (
     <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border flex-shrink-0">
       <div className="flex space-x-2">
-        <button
+        <Button
           onClick={handleResetToDefaults}
           disabled={isResetting}
-          className="px-4 py-2 text-sm border border-input rounded-lg bg-background hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          variant="outline"
+          size="md"
+          leftIcon={<RotateCcw className={`w-4 h-4 ${isResetting ? 'animate-spin' : ''}`} />}
         >
-          <RotateCcw className={`w-4 h-4 ${isResetting ? 'animate-spin' : ''}`} />
           {isResetting ? 'Resetting...' : 'Reset to Defaults'}
-        </button>
+        </Button>
 
         {resetSuccess && (
           <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 border border-green-200 rounded-lg px-3 py-2">

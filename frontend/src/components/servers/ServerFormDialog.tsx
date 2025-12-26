@@ -1,6 +1,6 @@
 /**
  * Server Form Dialog Component
- * 
+ *
  * Modal dialog for adding or editing server connections.
  */
 
@@ -10,6 +10,7 @@ import { ServerConnection, ServerConnectionInput } from '@/types/server'
 import { ServerBasicFields } from './ServerBasicFields'
 import { AuthenticationSection } from './AuthenticationSection'
 import { useServerForm } from '@/hooks/useServerForm'
+import { Button } from '@/components/ui/Button'
 
 interface ServerFormDialogProps {
   isOpen: boolean
@@ -46,12 +47,13 @@ export function ServerFormDialog({
       <div className="bg-background p-6 rounded-xl border max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold">{title}</h2>
-          <button
+          <Button
             onClick={onClose}
-            className="p-1 hover:bg-accent rounded-md"
+            variant="ghost"
+            size="icon"
           >
             <X className="h-5 w-5" />
-          </button>
+          </Button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -69,19 +71,21 @@ export function ServerFormDialog({
           />
 
           <div className="flex space-x-3 pt-4">
-            <button
+            <Button
               type="button"
               onClick={onClose}
-              className="flex-1 px-4 py-2 border border-input rounded-lg"
+              variant="outline"
+              fullWidth
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              className="flex-1 btn-gradient px-4 py-2 rounded-lg font-medium text-sm"
+              variant="primary"
+              fullWidth
             >
               {server ? 'Update' : 'Add'} Server
-            </button>
+            </Button>
           </div>
         </form>
       </div>

@@ -1,11 +1,12 @@
 /**
  * Notification Dropdown Component
- * 
+ *
  * Displays notification list in a dropdown menu with actions.
  */
 
 import { useState, useRef, useEffect } from 'react'
 import { Bell, Check, X, AlertCircle, CheckCircle, Info, AlertTriangle } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
 import { useNotifications } from '@/providers/NotificationProvider'
 import { cn } from '@/utils/cn'
 
@@ -68,9 +69,11 @@ export function NotificationDropdown() {
 
   return (
     <div className="relative" ref={dropdownRef}>
-      <button
+      <Button
         onClick={() => setIsOpen(!isOpen)}
-        className="p-2 rounded-lg text-muted-foreground hover:text-foreground hover:bg-accent relative"
+        variant="ghost"
+        size="icon"
+        className="relative text-muted-foreground hover:text-foreground"
         title="Notifications"
       >
         <Bell className="h-5 w-5" />
@@ -79,7 +82,7 @@ export function NotificationDropdown() {
             <span className="sr-only">{unreadCount} notifications</span>
           </span>
         )}
-      </button>
+      </Button>
 
       {isOpen && (
         <div className="absolute right-0 mt-2 w-80 bg-background border border-border rounded-lg shadow-lg z-50">
@@ -89,19 +92,23 @@ export function NotificationDropdown() {
               {notifications.length > 0 && (
                 <div className="flex space-x-2">
                   {unreadCount > 0 && (
-                    <button
+                    <Button
                       onClick={markAllAsRead}
-                      className="text-xs text-primary hover:underline"
+                      variant="ghost"
+                      size="sm"
+                      className="h-auto p-0 text-xs text-primary hover:underline hover:bg-transparent"
                     >
                       Mark all read
-                    </button>
+                    </Button>
                   )}
-                  <button
+                  <Button
                     onClick={clearAll}
-                    className="text-xs text-muted-foreground hover:underline"
+                    variant="ghost"
+                    size="sm"
+                    className="h-auto p-0 text-xs text-muted-foreground hover:underline hover:bg-transparent"
                   >
                     Clear all
-                  </button>
+                  </Button>
                 </div>
               )}
             </div>
@@ -141,21 +148,25 @@ export function NotificationDropdown() {
                             </p>
                             <div className="flex items-center space-x-1 ml-2">
                               {!notification.read && (
-                                <button
+                                <Button
                                   onClick={() => markAsRead(notification.id)}
-                                  className="p-1 hover:bg-accent rounded"
+                                  variant="ghost"
+                                  size="icon"
+                                  className="h-6 w-6"
                                   title="Mark as read"
                                 >
                                   <Check className="h-3 w-3" />
-                                </button>
+                                </Button>
                               )}
-                              <button
+                              <Button
                                 onClick={() => removeNotification(notification.id)}
-                                className="p-1 hover:bg-accent rounded text-muted-foreground"
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6 text-muted-foreground"
                                 title="Remove"
                               >
                                 <X className="h-3 w-3" />
-                              </button>
+                              </Button>
                             </div>
                           </div>
                           <p className="text-sm text-muted-foreground mt-1 line-clamp-2">

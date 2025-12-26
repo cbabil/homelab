@@ -1,6 +1,6 @@
 /**
  * Application Form Dialog Component
- * 
+ *
  * Modal dialog for adding custom applications to the marketplace.
  */
 
@@ -11,6 +11,7 @@ import { ApplicationNameFields } from './ApplicationNameFields'
 import { ApplicationMetaFields } from './ApplicationMetaFields'
 import { RequirementsSection } from './RequirementsSection'
 import { useAppForm } from '@/hooks/useAppForm'
+import { Button } from '@/components/ui/Button'
 
 interface ApplicationFormDialogProps {
   isOpen: boolean
@@ -49,12 +50,13 @@ export function ApplicationFormDialog({
       <div className="bg-background p-3 rounded-xl border max-w-4xl w-full mx-4">
         <div className="flex items-center justify-between mb-2">
           <h2 className="text-xl font-semibold text-foreground">{title}</h2>
-          <button
+          <Button
             onClick={onClose}
-            className="p-1 hover:bg-accent rounded-md transition-colors"
+            variant="ghost"
+            size="icon"
           >
             <X className="h-4 w-4" />
-          </button>
+          </Button>
         </div>
 
         <form onSubmit={handleSubmit} className="space-y-3">
@@ -76,19 +78,21 @@ export function ApplicationFormDialog({
           />
 
           <div className="flex justify-end space-x-3 pt-2 border-t">
-            <button
+            <Button
               type="button"
               onClick={onClose}
-              className="px-3 py-1.5 border border-input bg-background text-foreground rounded-md hover:bg-accent transition-colors"
+              variant="outline"
+              size="sm"
             >
               Cancel
-            </button>
-            <button
+            </Button>
+            <Button
               type="submit"
-              className="px-3 py-1.5 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+              variant="primary"
+              size="sm"
             >
               {app ? 'Update App' : 'Add App'}
-            </button>
+            </Button>
           </div>
         </form>
       </div>
