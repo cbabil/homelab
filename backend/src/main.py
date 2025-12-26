@@ -6,8 +6,15 @@ from fastmcp import FastMCP
 from database.connection import db_manager
 from services.app_service import AppService
 from services.auth_service import AuthService
+from services.activity_service import ActivityService
+from services.backup_service import BackupService
+from services.catalog_service import CatalogService
+from services.dashboard_service import DashboardService
 from services.database_service import DatabaseService
+from services.deployment_service import DeploymentService
+from services.metrics_service import MetricsService
 from services.monitoring_service import MonitoringService
+from services.preparation_service import PreparationService
 from services.retention_service import RetentionService
 from services.server_service import ServerService
 from services.settings_service import SettingsService
@@ -42,6 +49,40 @@ server_service = ServerService()
 retention_service = RetentionService(db_service=database_service, auth_service=auth_service)
 settings_service = SettingsService(db_service=database_service)
 
+# Additional services
+catalog_dirs = [str(data_directory / "catalog")]
+catalog_service = CatalogService(catalog_dirs=catalog_dirs)
+catalog_service.load_catalog()
+
+deployment_service = DeploymentService(
+    ssh_service=ssh_service,
+    server_service=server_service,
+    catalog_service=catalog_service,
+    db_service=database_service
+)
+
+backup_service = BackupService(db_service=database_service)
+activity_service = ActivityService(db_service=database_service)
+
+metrics_service = MetricsService(
+    ssh_service=ssh_service,
+    db_service=database_service,
+    server_service=server_service
+)
+
+dashboard_service = DashboardService(
+    server_service=server_service,
+    deployment_service=deployment_service,
+    metrics_service=metrics_service,
+    activity_service=activity_service
+)
+
+preparation_service = PreparationService(
+    ssh_service=ssh_service,
+    server_service=server_service,
+    db_service=database_service
+)
+
 # Create FastMCP app
 app = FastMCP(
     name="homelab-assistant",
@@ -63,6 +104,13 @@ tool_dependencies = {
     "retention_service": retention_service,
     "settings_service": settings_service,
     "database_service": database_service,
+    "catalog_service": catalog_service,
+    "deployment_service": deployment_service,
+    "backup_service": backup_service,
+    "activity_service": activity_service,
+    "metrics_service": metrics_service,
+    "dashboard_service": dashboard_service,
+    "preparation_service": preparation_service,
 }
 
 register_all_tools(app, config, tool_dependencies)
