@@ -2,11 +2,6 @@ name: Create Release
 
 on:
   workflow_dispatch:
-    inputs:
-      release_notes:
-        description: 'Release notes (summary of changes)'
-        required: true
-        type: string
 
 permissions:
   contents: write
@@ -98,12 +93,60 @@ jobs:
           git tag -a "v${{ steps.version.outputs.VERSION }}" -m "Release v${{ steps.version.outputs.VERSION }}"
           git push origin "v${{ steps.version.outputs.VERSION }}"
 
+      - name: Generate release notes
+        id: notes
+        run: |
+          LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -z "$LAST_TAG" ]; then
+            COMMITS=$(git log --pretty=format:"%s" HEAD)
+          else
+            COMMITS=$(git log --pretty=format:"%s" ${LAST_TAG}..HEAD)
+          fi
+
+          cat > RELEASE_NOTES.md << 'HEADER'
+          ## What's New
+          HEADER
+
+          # Features
+          FEATURES=$(echo "$COMMITS" | grep -E "^feat" | sed 's/^feat[^:]*: /- /' || true)
+          if [ -n "$FEATURES" ]; then
+            echo "" >> RELEASE_NOTES.md
+            echo "### Features" >> RELEASE_NOTES.md
+            echo "$FEATURES" >> RELEASE_NOTES.md
+          fi
+
+          # Fixes
+          FIXES=$(echo "$COMMITS" | grep -E "^fix" | sed 's/^fix[^:]*: /- /' || true)
+          if [ -n "$FIXES" ]; then
+            echo "" >> RELEASE_NOTES.md
+            echo "### Bug Fixes" >> RELEASE_NOTES.md
+            echo "$FIXES" >> RELEASE_NOTES.md
+          fi
+
+          # Docs
+          DOCS=$(echo "$COMMITS" | grep -E "^docs" | sed 's/^docs[^:]*: /- /' || true)
+          if [ -n "$DOCS" ]; then
+            echo "" >> RELEASE_NOTES.md
+            echo "### Documentation" >> RELEASE_NOTES.md
+            echo "$DOCS" >> RELEASE_NOTES.md
+          fi
+
+          # Other (ci, chore, refactor, etc.)
+          OTHER=$(echo "$COMMITS" | grep -vE "^(feat|fix|docs)" | sed 's/^[^:]*: /- /' || true)
+          if [ -n "$OTHER" ]; then
+            echo "" >> RELEASE_NOTES.md
+            echo "### Other Changes" >> RELEASE_NOTES.md
+            echo "$OTHER" >> RELEASE_NOTES.md
+          fi
+
+          cat RELEASE_NOTES.md
+
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: v${{ steps.version.outputs.VERSION }}
           name: v${{ steps.version.outputs.VERSION }}
-          body: ${{ inputs.release_notes }}
+          body_path: RELEASE_NOTES.md
           files: release/homelab-assistant-${{ steps.version.outputs.VERSION }}.tar.gz
           draft: false
           prerelease: false
