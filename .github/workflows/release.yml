@@ -1,21 +1,36 @@
-name: Release
+name: Create Release
 
 on:
-  push:
-    tags:
-      - 'v*'
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
-  build:
-    name: Build Release
+  release:
+    name: Build and Release
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Get version from package.json
+        id: version
+        run: |
+          VERSION=$(node -p "require('./frontend/package.json').version")
+          echo "VERSION=$VERSION" >> $GITHUB_OUTPUT
+          echo "Found version: $VERSION"
+
+      - name: Check if tag exists
+        id: check_tag
+        run: |
+          if git rev-parse "v${{ steps.version.outputs.VERSION }}" >/dev/null 2>&1; then
+            echo "::error::Tag v${{ steps.version.outputs.VERSION }} already exists. Update version in frontend/package.json first."
+            exit 1
+          fi
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -28,10 +43,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-
-      - name: Get version from tag
-        id: version
-        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
 
       - name: Install frontend dependencies
         working-directory: frontend
@@ -47,7 +58,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Run backend tests
+      - name: Run tests
         working-directory: backend
         run: |
           pip install pytest pytest-asyncio pytest-cov
@@ -55,40 +66,47 @@ jobs:
 
       - name: Create release archive
         run: |
-          mkdir -p release/homelab-assistant-${{ steps.version.outputs.VERSION }}
+          VERSION=${{ steps.version.outputs.VERSION }}
+          mkdir -p release/homelab-assistant-${VERSION}
 
           # Copy backend
-          cp -r backend/src release/homelab-assistant-${{ steps.version.outputs.VERSION }}/backend
-          cp backend/requirements.txt release/homelab-assistant-${{ steps.version.outputs.VERSION }}/
+          cp -r backend/src release/homelab-assistant-${VERSION}/backend
+          cp backend/requirements.txt release/homelab-assistant-${VERSION}/
 
           # Copy frontend build
-          cp -r frontend/dist release/homelab-assistant-${{ steps.version.outputs.VERSION }}/static
+          cp -r frontend/dist release/homelab-assistant-${VERSION}/static
 
           # Copy packaging files
-          cp -r packaging release/homelab-assistant-${{ steps.version.outputs.VERSION }}/
+          cp -r packaging release/homelab-assistant-${VERSION}/
 
           # Copy docs
-          cp README.md release/homelab-assistant-${{ steps.version.outputs.VERSION }}/
-          cp -r docs release/homelab-assistant-${{ steps.version.outputs.VERSION }}/
+          cp README.md release/homelab-assistant-${VERSION}/
 
           # Create tarball
           cd release
-          tar -czvf homelab-assistant-${{ steps.version.outputs.VERSION }}.tar.gz homelab-assistant-${{ steps.version.outputs.VERSION }}
+          tar -czvf homelab-assistant-${VERSION}.tar.gz homelab-assistant-${VERSION}
+
+      - name: Create tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${{ steps.version.outputs.VERSION }}" -m "Release v${{ steps.version.outputs.VERSION }}"
+          git push origin "v${{ steps.version.outputs.VERSION }}"
 
       - name: Generate changelog
-        id: changelog
         run: |
           echo "## What's Changed" > CHANGELOG.md
           echo "" >> CHANGELOG.md
-          git log $(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD --pretty=format:"- %s" >> CHANGELOG.md || echo "- Initial release" >> CHANGELOG.md
+          git log $(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD --pretty=format:"- %s" >> CHANGELOG.md 2>/dev/null || echo "- Initial release" >> CHANGELOG.md
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
         with:
+          tag_name: v${{ steps.version.outputs.VERSION }}
+          name: v${{ steps.version.outputs.VERSION }}
           body_path: CHANGELOG.md
-          files: |
-            release/homelab-assistant-${{ steps.version.outputs.VERSION }}.tar.gz
+          files: release/homelab-assistant-${{ steps.version.outputs.VERSION }}.tar.gz
           draft: false
-          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
+          prerelease: false
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
