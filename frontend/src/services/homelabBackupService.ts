@@ -350,7 +350,7 @@ class HomelabBackupService {
    */
   private async getApplications(): Promise<App[]> {
     try {
-      const serverUrl = import.meta.env.VITE_MCP_SERVER_URL || 'http://localhost:8000/mcp'
+      const serverUrl = import.meta.env.VITE_MCP_SERVER_URL || '/mcp'
       const client = new HomelabMCPClient(serverUrl)
 
       try {

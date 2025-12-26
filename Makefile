@@ -55,7 +55,8 @@ backend: check-setup ## Start backend server
 
 frontend: check-setup ## Start frontend dev server
 	@echo "Starting frontend on http://localhost:5173..."
-	@cd $(FRONTEND_DIR) && yarn dev
+	@echo "Backend URL: http://localhost:8000/mcp"
+	@cd $(FRONTEND_DIR) && VITE_MCP_SERVER_URL=http://localhost:8000/mcp yarn dev
 
 # Build
 build: ## Build for production
@@ -128,3 +129,19 @@ clean-all: clean ## Clean everything including dependencies
 	@rm -rf $(BACKEND_VENV)
 	@rm -rf $(FRONTEND_DIR)/node_modules
 	@echo "All dependencies removed. Run 'make setup' to reinstall."
+
+# Docker
+docker-dev: ## Run development environment with Docker
+	docker compose -f docker-compose.dev.yml up --build
+
+docker-dev-down: ## Stop Docker development environment
+	docker compose -f docker-compose.dev.yml down
+
+docker-prod: ## Build and run production Docker environment
+	docker compose up --build -d
+
+docker-prod-down: ## Stop production Docker environment
+	docker compose down
+
+docker-logs: ## View Docker logs
+	docker compose logs -f

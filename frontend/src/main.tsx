@@ -28,8 +28,9 @@ const queryClient = new QueryClient({
   },
 })
 
-// Initialize MCP client
-const mcpServerUrl = import.meta.env.VITE_MCP_SERVER_URL || 'http://localhost:8000/mcp'
+// Initialize MCP client - uses relative URL for reverse proxy setup
+// Override with VITE_MCP_SERVER_URL for development without proxy
+const mcpServerUrl = import.meta.env.VITE_MCP_SERVER_URL || '/mcp'
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
