@@ -1,0 +1,17 @@
+id: portainer
+name: Portainer
+description: Docker management UI for managing containers, images, and networks
+category: utility
+image: portainer/portainer-ce:latest
+ports:
+  - container: 9000
+    host: 9000
+  - container: 9443
+    host: 9443
+volumes:
+  - host_path: /var/run/docker.sock
+    container_path: /var/run/docker.sock
+    readonly: false
+  - host_path: /var/portainer/data
+    container_path: /data
+restart_policy: unless-stopped
