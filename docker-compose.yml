@@ -10,8 +10,10 @@ services:
     environment:
       - PYTHON_ENV=production
       - DATA_DIRECTORY=/app/data
-      - HOMELAB_MASTER_PASSWORD=${HOMELAB_MASTER_PASSWORD}
-      - HOMELAB_SALT=${HOMELAB_SALT}
+      - HOMELAB_MASTER_PASSWORD=${HOMELAB_MASTER_PASSWORD:?HOMELAB_MASTER_PASSWORD must be set}
+      - HOMELAB_SALT=${HOMELAB_SALT:?HOMELAB_SALT must be set}
+      - JWT_SECRET_KEY=${JWT_SECRET_KEY:?JWT_SECRET_KEY must be set}
+      - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-}
     networks:
       - homelab
     restart: unless-stopped

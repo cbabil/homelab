@@ -118,18 +118,26 @@ register_all_tools(app, config, tool_dependencies)
 
 if __name__ == "__main__":
     import asyncio
+    import os
     from starlette.middleware.cors import CORSMiddleware
     from starlette.middleware import Middleware
-    
-    # Configure CORS middleware
+
+    # Configure CORS origins from environment variable
+    # Default to localhost for development; override in production
+    default_origins = "http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003"
+    allowed_origins = os.getenv("ALLOWED_ORIGINS", default_origins).split(",")
+    allowed_origins = [origin.strip() for origin in allowed_origins if origin.strip()]
+
+    # Configure CORS middleware with explicit methods and headers
     cors_middleware = Middleware(
         CORSMiddleware,
-        allow_origins=["http://localhost:3000", "http://localhost:3001", "http://localhost:3002", "http://localhost:3003"],
+        allow_origins=allowed_origins,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-        expose_headers=["mcp-session-id"]
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["Content-Type", "Authorization", "mcp-session-id"],
+        expose_headers=["mcp-session-id"],
+        max_age=3600
     )
 
-    logger.info("FastMCP HTTP server initialized", version="0.1.0")
+    logger.info("FastMCP HTTP server initialized", version="0.1.0", allowed_origins=allowed_origins)
     asyncio.run(app.run_http_async(host="0.0.0.0", port=8000, middleware=[cors_middleware]))

@@ -5,6 +5,7 @@ Handles user authentication, JWT token management, and session control.
 Provides secure authentication services for the homelab system.
 """
 
+import os
 from datetime import UTC, datetime
 from typing import Dict, Any, Optional
 import structlog
@@ -27,10 +28,18 @@ class AuthService:
     
     def __init__(
         self,
-        jwt_secret: str = "default-secret-key",
+        jwt_secret: str = None,
         db_service: Optional[DatabaseService] = None,
     ):
         """Initialize authentication service with JWT configuration."""
+        # Require JWT secret from environment in production
+        if jwt_secret is None:
+            jwt_secret = os.getenv("JWT_SECRET_KEY")
+            if not jwt_secret:
+                raise ValueError(
+                    "JWT_SECRET_KEY environment variable must be set. "
+                    "Generate one with: python -c \"import secrets; print(secrets.token_urlsafe(64))\""
+                )
         self.jwt_secret = jwt_secret
         self.jwt_algorithm = "HS256"
         self.token_expiry_hours = 24

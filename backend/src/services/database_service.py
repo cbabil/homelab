@@ -23,6 +23,17 @@ from models.metrics import ServerMetrics, ContainerMetrics, ActivityLog, Activit
 
 logger = structlog.get_logger("database_service")
 
+# Whitelisted columns for dynamic updates (SQL injection prevention)
+ALLOWED_SERVER_COLUMNS = frozenset({
+    'name', 'host', 'port', 'username', 'auth_type', 'status', 'last_connected'
+})
+ALLOWED_PREPARATION_COLUMNS = frozenset({
+    'status', 'current_step', 'detected_os', 'completed_at', 'error_message'
+})
+ALLOWED_INSTALLATION_COLUMNS = frozenset({
+    'status', 'container_id', 'container_name', 'config', 'started_at', 'error_message'
+})
+
 
 class DatabaseService:
     """Async database service for user management operations."""
@@ -496,6 +507,10 @@ class DatabaseService:
             values = []
             for key, value in kwargs.items():
                 if value is not None:
+                    # Validate column name against whitelist (SQL injection prevention)
+                    if key not in ALLOWED_SERVER_COLUMNS:
+                        logger.warning("Rejected invalid column in update_server", column=key)
+                        raise ValueError(f"Invalid column name: {key}")
                     updates.append(f"{key} = ?")
                     values.append(value)
 
@@ -560,6 +575,10 @@ class DatabaseService:
             values = []
             for key, value in kwargs.items():
                 if value is not None:
+                    # Validate column name against whitelist (SQL injection prevention)
+                    if key not in ALLOWED_PREPARATION_COLUMNS:
+                        logger.warning("Rejected invalid column in update_preparation", column=key)
+                        raise ValueError(f"Invalid column name: {key}")
                     updates.append(f"{key} = ?")
                     values.append(value)
 
@@ -702,6 +721,10 @@ class DatabaseService:
             values = []
             for key, value in kwargs.items():
                 if value is not None:
+                    # Validate column name against whitelist (SQL injection prevention)
+                    if key not in ALLOWED_INSTALLATION_COLUMNS:
+                        logger.warning("Rejected invalid column in update_installation", column=key)
+                        raise ValueError(f"Invalid column name: {key}")
                     updates.append(f"{key} = ?")
                     values.append(value)
 
