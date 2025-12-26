@@ -31,12 +31,10 @@ class TestBackupService:
         """Create backup service with mocks."""
         return BackupService(db_service=mock_db_service)
 
-    def test_create_backup_data(self, backup_service, mock_db_service):
+    @pytest.mark.asyncio
+    async def test_create_backup_data(self, backup_service, mock_db_service):
         """Should create backup data structure."""
-        import asyncio
-        data = asyncio.get_event_loop().run_until_complete(
-            backup_service._collect_backup_data()
-        )
+        data = await backup_service._collect_backup_data()
 
         assert "version" in data
         assert "timestamp" in data
