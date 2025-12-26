@@ -1,33 +1,66 @@
 # Homelab Assistant Configuration
+# Location: /etc/homelab-assistant/config.yaml
+#
+# This file is read on service startup. After making changes,
+# restart the service: systemctl restart homelab-assistant
 
 # Server settings
 server:
+  # Backend listens on localhost only (nginx proxies requests)
   host: 127.0.0.1
-  port: 8080
+  port: 8000
 
-# Database
+# Database configuration
 database:
+  # SQLite database path
   path: /var/lib/homelab-assistant/homelab.db
 
-# Logging
+# Logging configuration
 logging:
+  # Log level: DEBUG, INFO, WARNING, ERROR
   level: INFO
+  # Log format: json or text
   format: json
+  # Log file path
   file: /var/log/homelab-assistant/app.log
+  # Maximum log file size (MB) before rotation
+  max_size_mb: 100
+  # Number of backup log files to keep
+  backup_count: 5
 
-# Security
+# Security settings
 security:
+  # Session timeout in minutes (0 = no timeout)
   session_timeout_minutes: 60
+  # Maximum failed login attempts before lockout
   max_login_attempts: 5
+  # Lockout duration in minutes
   lockout_duration_minutes: 15
+  # JWT token expiry in hours
+  jwt_expiry_hours: 24
 
 # Metrics collection
 metrics:
+  # Enable/disable metrics collection
   enabled: true
+  # Collection interval in seconds
   collection_interval_seconds: 300
+  # Data retention in days
   retention_days: 30
 
-# App catalog
+# Application catalog
 catalog:
+  # Built-in catalog location
   builtin_path: /opt/homelab-assistant/data/catalog
+  # Custom catalog location (user-defined apps)
   custom_path: /var/lib/homelab-assistant/catalog
+
+# Backup settings
+backup:
+  # Default backup location
+  default_path: /var/lib/homelab-assistant/backups
+  # Include in backup: servers, apps, settings, logs
+  include:
+    - servers
+    - apps
+    - settings
