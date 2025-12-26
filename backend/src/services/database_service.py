@@ -18,6 +18,7 @@ import structlog
 
 from models.auth import User, UserRole
 from models.preparation import ServerPreparation, PreparationLog, PreparationStatus, PreparationStep
+from models.app_catalog import InstalledApp, InstallationStatus
 
 logger = structlog.get_logger("database_service")
 
@@ -657,3 +658,136 @@ class DatabaseService:
         except Exception as e:
             logger.error("Failed to get preparation logs", error=str(e))
             return []
+
+    async def create_installation(
+        self,
+        id: str,
+        server_id: str,
+        app_id: str,
+        container_name: str,
+        status: str,
+        config: dict,
+        installed_at: str
+    ) -> Optional[InstalledApp]:
+        """Create a new installation record."""
+        try:
+            config_json = json.dumps(config) if config else "{}"
+            async with self.get_connection() as conn:
+                await conn.execute(
+                    """INSERT INTO installed_apps
+                       (id, server_id, app_id, container_name, status, config, installed_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?)""",
+                    (id, server_id, app_id, container_name, status, config_json, installed_at)
+                )
+                await conn.commit()
+
+            return InstalledApp(
+                id=id,
+                server_id=server_id,
+                app_id=app_id,
+                container_name=container_name,
+                status=InstallationStatus(status),
+                config=config,
+                installed_at=installed_at
+            )
+        except Exception as e:
+            logger.error("Failed to create installation", error=str(e))
+            return None
+
+    async def update_installation(self, install_id: str, **kwargs) -> bool:
+        """Update installation record."""
+        try:
+            updates = []
+            values = []
+            for key, value in kwargs.items():
+                if value is not None:
+                    updates.append(f"{key} = ?")
+                    values.append(value)
+
+            if not updates:
+                return True
+
+            values.append(install_id)
+            query = f"UPDATE installed_apps SET {', '.join(updates)} WHERE id = ?"
+
+            async with self.get_connection() as conn:
+                await conn.execute(query, values)
+                await conn.commit()
+            return True
+        except Exception as e:
+            logger.error("Failed to update installation", error=str(e))
+            return False
+
+    async def get_installation(self, server_id: str, app_id: str) -> Optional[InstalledApp]:
+        """Get installation by server and app ID."""
+        try:
+            async with self.get_connection() as conn:
+                cursor = await conn.execute(
+                    """SELECT * FROM installed_apps
+                       WHERE server_id = ? AND app_id = ?""",
+                    (server_id, app_id)
+                )
+                row = await cursor.fetchone()
+
+            if not row:
+                return None
+
+            config = json.loads(row["config"]) if row["config"] else {}
+            return InstalledApp(
+                id=row["id"],
+                server_id=row["server_id"],
+                app_id=row["app_id"],
+                container_id=row["container_id"],
+                container_name=row["container_name"],
+                status=InstallationStatus(row["status"]),
+                config=config,
+                installed_at=row["installed_at"],
+                started_at=row["started_at"],
+                error_message=row["error_message"]
+            )
+        except Exception as e:
+            logger.error("Failed to get installation", error=str(e))
+            return None
+
+    async def get_installations(self, server_id: str) -> list:
+        """Get all installations for a server."""
+        try:
+            async with self.get_connection() as conn:
+                cursor = await conn.execute(
+                    """SELECT * FROM installed_apps WHERE server_id = ?""",
+                    (server_id,)
+                )
+                rows = await cursor.fetchall()
+
+            return [
+                InstalledApp(
+                    id=row["id"],
+                    server_id=row["server_id"],
+                    app_id=row["app_id"],
+                    container_id=row["container_id"],
+                    container_name=row["container_name"],
+                    status=InstallationStatus(row["status"]),
+                    config=json.loads(row["config"]) if row["config"] else {},
+                    installed_at=row["installed_at"],
+                    started_at=row["started_at"],
+                    error_message=row["error_message"]
+                )
+                for row in rows
+            ]
+        except Exception as e:
+            logger.error("Failed to get installations", error=str(e))
+            return []
+
+    async def delete_installation(self, server_id: str, app_id: str) -> bool:
+        """Delete installation record."""
+        try:
+            async with self.get_connection() as conn:
+                await conn.execute(
+                    """DELETE FROM installed_apps WHERE server_id = ? AND app_id = ?""",
+                    (server_id, app_id)
+                )
+                await conn.commit()
+            return True
+        except Exception as e:
+            logger.error("Failed to delete installation", error=str(e))
+            return False
