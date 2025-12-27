@@ -10,39 +10,7 @@ import { Search } from 'lucide-react'
 import type { MarketplaceApp, MarketplaceCategory, SearchFilters } from '@/types/marketplace'
 import * as marketplaceService from '@/services/marketplaceService'
 import { RepoManager } from './RepoManager'
-
-// Placeholder for AppCard component (will be implemented in Task 5.3)
-function AppCardPlaceholder({ app }: { app: MarketplaceApp }) {
-  return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-md transition-shadow">
-      <div className="flex items-start gap-3">
-        <div className="w-12 h-12 bg-gray-100 rounded-lg flex items-center justify-center flex-shrink-0">
-          {app.icon ? (
-            <img src={app.icon} alt={app.name} className="w-full h-full object-cover rounded-lg" />
-          ) : (
-            <span className="text-gray-400 text-xl font-semibold">
-              {app.name.charAt(0).toUpperCase()}
-            </span>
-          )}
-        </div>
-        <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-gray-900 truncate">{app.name}</h3>
-          <p className="text-sm text-gray-600 line-clamp-2">{app.description}</p>
-          <div className="flex items-center gap-2 mt-2">
-            <span className="text-xs px-2 py-1 bg-blue-50 text-blue-700 rounded">
-              {app.category}
-            </span>
-            {app.avgRating && (
-              <span className="text-xs text-gray-500">
-                ★ {app.avgRating.toFixed(1)} ({app.ratingCount})
-              </span>
-            )}
-          </div>
-        </div>
-      </div>
-    </div>
-  )
-}
+import { MarketplaceAppCard } from './MarketplaceAppCard'
 
 type TabType = 'browse' | 'repos'
 
@@ -199,9 +167,9 @@ export function MarketplacePage() {
           {featuredApps.length > 0 && !searchQuery && !selectedCategory && (
             <div className="space-y-3">
               <h2 className="text-lg font-semibold text-gray-900">Featured Apps</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
                 {featuredApps.map((app) => (
-                  <AppCardPlaceholder key={app.id} app={app} />
+                  <MarketplaceAppCard key={app.id} app={app} />
                 ))}
               </div>
             </div>
@@ -211,9 +179,9 @@ export function MarketplacePage() {
           {trendingApps.length > 0 && !searchQuery && !selectedCategory && (
             <div className="space-y-3">
               <h2 className="text-lg font-semibold text-gray-900">Trending Apps</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
                 {trendingApps.map((app) => (
-                  <AppCardPlaceholder key={app.id} app={app} />
+                  <MarketplaceAppCard key={app.id} app={app} />
                 ))}
               </div>
             </div>
@@ -226,9 +194,9 @@ export function MarketplacePage() {
                 {searchResults.length} {searchResults.length === 1 ? 'App' : 'Apps'} Found
               </h2>
               {searchResults.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-3">
                   {searchResults.map((app) => (
-                    <AppCardPlaceholder key={app.id} app={app} />
+                    <MarketplaceAppCard key={app.id} app={app} />
                   ))}
                 </div>
               ) : (
