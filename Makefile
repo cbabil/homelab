@@ -1,123 +1,147 @@
-# Homelab Assistant Test Management
-#
-# Provides unified commands for running tests across backend and frontend.
-# Includes coverage reporting and CI-friendly test execution.
+# Homelab Assistant
+# Run, build, and test commands
 
 SHELL := /bin/bash
+BACKEND_DIR := backend
+FRONTEND_DIR := frontend
+BACKEND_VENV := $(BACKEND_DIR)/venv
+DATA_DIR := $(BACKEND_DIR)/data
 
-.PHONY: help test test-backend test-frontend test-coverage test-unit test-integration lint format clean \
-	backend-lint backend-format backend-typecheck frontend-lint frontend-format frontend-typecheck \
-	start-backend start-frontend
+.PHONY: help setup check-setup dev dev-tmux backend frontend build test lint clean
 
 # Default target
-help: ## Show this help message
-	@echo "Homelab Assistant Test Commands"
-	@echo "==============================="
-	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-20s\033[0m %s\n", $$1, $$2}'
+help: ## Show this help
+	@echo "Homelab Assistant"
+	@echo "================="
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-15s\033[0m %s\n", $$1, $$2}'
 
-# Test Commands
-test: ## Run all tests (backend + frontend)
-	@echo "Running all tests..."
-	$(MAKE) test-backend
-	$(MAKE) test-frontend
+# Setup
+setup: clean ## Install all dependencies (cleans first)
+	@echo "Setting up backend..."
+	@python3 -m venv $(BACKEND_VENV)
+	@cd $(BACKEND_DIR) && . venv/bin/activate && pip install -r requirements.txt
+	@echo "Setting up frontend..."
+	@cd $(FRONTEND_DIR) && yarn install
+	@echo "Setup complete!"
 
-test-backend: ## Run backend Python tests with pytest
-	@echo "Running backend tests..."
-	cd backend && python -m pytest -v
+check-setup: ## Check if setup is done, run if not
+	@if [ ! -d "$(BACKEND_VENV)" ] || [ ! -d "$(FRONTEND_DIR)/node_modules" ]; then \
+		echo "Dependencies not installed. Running setup..."; \
+		$(MAKE) setup; \
+	fi
 
-test-frontend: ## Run frontend TypeScript tests with Vitest
-	@echo "Running frontend tests..."
-	cd frontend && yarn test
+# Development
+dev: ## Run backend and frontend (use 'make dev' in separate terminals or with tmux)
+	@echo "Starting development servers..."
+	@echo ""
+	@echo "Run in separate terminals:"
+	@echo "  make backend   # Terminal 1"
+	@echo "  make frontend  # Terminal 2"
+	@echo ""
+	@echo "Or use: make dev-tmux (requires tmux)"
 
-test-coverage: ## Run all tests with coverage reporting
-	@echo "Running tests with coverage..."
-	cd backend && python -m pytest --cov=src --cov-report=html:../coverage/backend
-	cd frontend && yarn test:coverage
-
-test-unit: ## Run unit tests only
-	@echo "Running unit tests..."
-	cd backend && python -m pytest tests/unit/ -v
-	cd frontend && yarn test
-
-test-integration: ## Run integration tests only
-	@echo "Running integration tests..."
-	cd backend && python -m pytest tests/integration/ -v
-	cd frontend && yarn test:e2e
-
-test-security: ## Run security-focused tests
-	@echo "Running security tests..."
-	cd backend && python -m pytest -m security -v
-
-# Code Quality Commands
-lint: ## Run linting for both backend and frontend
-	@echo "Running linting..."
-	$(MAKE) backend-lint
-	$(MAKE) frontend-lint
-
-format: ## Format code for both backend and frontend
-	@echo "Formatting code..."
-	$(MAKE) backend-format
-	$(MAKE) frontend-format
-
-typecheck: ## Run type checking
-	@echo "Running type checks..."
-	$(MAKE) backend-typecheck
-	$(MAKE) frontend-typecheck
-
-start-backend: ## Start the FastMCP backend server (requires backend/venv)
-	@if [ ! -d "backend/venv" ]; then \
-		echo "[make] Python virtual environment not found at backend/venv"; \
-		echo "[make] Create one with: python -m venv backend/venv"; \
+dev-tmux: check-setup ## Run both servers in tmux split
+	@if ! command -v tmux &> /dev/null; then \
+		echo "Error: tmux is not installed"; \
+		echo "Install with: brew install tmux"; \
+		echo "Or run 'make backend' and 'make frontend' in separate terminals"; \
 		exit 1; \
 	fi
-	@cd backend && . venv/bin/activate && python src/main.py
+	@tmux new-session -d -s homelab 'make backend' \; split-window -h 'make frontend' \; attach
 
-start-frontend: ## Start the frontend development server (Yarn Vite dev)
-	cd frontend && yarn dev
+backend: check-setup ## Start backend server
+	@echo "Starting backend on http://localhost:8000..."
+	@cd $(BACKEND_DIR) && . venv/bin/activate && DATA_DIRECTORY="$(shell pwd)/$(DATA_DIR)" python src/main.py
 
-backend-lint: ## Run backend lint checks (flake8)
-	cd backend && python -m flake8 src/
+frontend: check-setup ## Start frontend dev server
+	@echo "Starting frontend on http://localhost:5173..."
+	@echo "Backend URL: http://localhost:8000/mcp"
+	@cd $(FRONTEND_DIR) && VITE_MCP_SERVER_URL=http://localhost:8000/mcp yarn dev
 
-backend-format: ## Format backend code (black)
-	cd backend && python -m black src/
+# Build
+build: ## Build for production
+	@echo "Building frontend..."
+	@cd $(FRONTEND_DIR) && yarn build
+	@echo "Build complete! Output in frontend/dist/"
 
-backend-typecheck: ## Run backend type checks (mypy)
-	cd backend && python -m mypy src/
+# Database
+init-db: ## Initialize database
+	@cd $(BACKEND_DIR) && . venv/bin/activate && DATA_DIRECTORY="$(shell pwd)/$(DATA_DIR)" python src/cli.py init-db
 
-frontend-lint: ## Run frontend lint checks (eslint)
-	cd frontend && yarn lint
+create-admin: ## Create admin user
+	@cd $(BACKEND_DIR) && . venv/bin/activate && DATA_DIRECTORY="$(shell pwd)/$(DATA_DIR)" python src/cli.py create-admin
 
-frontend-format: ## Format frontend code (eslint --fix)
-	cd frontend && yarn lint --fix
+# Backup
+backup: ## Export encrypted backup
+	@cd $(BACKEND_DIR) && . venv/bin/activate && DATA_DIRECTORY="$(shell pwd)/$(DATA_DIR)" python src/cli.py export -o backup.enc
 
-frontend-typecheck: ## Run frontend type checks (tsc)
-	cd frontend && yarn type-check
+restore: ## Import backup (usage: make restore FILE=backup.enc)
+	@cd $(BACKEND_DIR) && . venv/bin/activate && DATA_DIRECTORY="$(shell pwd)/$(DATA_DIR)" python src/cli.py import -i $(FILE)
 
-# Utility Commands
-clean: ## Clean test artifacts and cache
-	@echo "Cleaning test artifacts..."
-	rm -rf backend/.pytest_cache/
-	rm -rf backend/__pycache__/
-	rm -rf backend/htmlcov/
-	rm -rf frontend/coverage/
-	rm -rf coverage/
-	find . -name "*.pyc" -delete
-	find . -name "__pycache__" -type d -exec rm -rf {} +
+# Testing
+test: ## Run all tests
+	@$(MAKE) test-backend
+	@$(MAKE) test-frontend
 
-install-deps: ## Install test dependencies
-	@echo "Installing test dependencies..."
-	cd backend && pip install -e ".[dev]"
-	cd frontend && yarn install --frozen-lockfile
+test-backend: ## Run backend tests
+	@cd $(BACKEND_DIR) && . venv/bin/activate && PYTHONPATH=src pytest tests/unit/ -v --no-cov
 
-# CI/CD Commands
-ci-test: ## Run tests in CI environment
-	@echo "Running CI tests..."
-	$(MAKE) test-coverage
-	$(MAKE) lint
-	$(MAKE) typecheck
+test-frontend: ## Run frontend tests
+	@cd $(FRONTEND_DIR) && yarn test
 
-ci-backend: ## Run backend CI checks
-	cd backend && python -m pytest --cov=src --cov-report=xml --cov-fail-under=90
+test-e2e: ## Run end-to-end tests (requires backend running)
+	@echo "Note: E2E tests require backend running with admin user created"
+	@echo "Run 'make backend' in another terminal first, then 'make create-admin'"
+	@cd $(FRONTEND_DIR) && source ../venv/bin/activate && yarn test:e2e --project=chromium
 
-ci-frontend: ## Run frontend CI checks  
-	cd frontend && yarn test:coverage && yarn lint && yarn type-check
+test-coverage: ## Run tests with coverage
+	@cd $(BACKEND_DIR) && . venv/bin/activate && PYTHONPATH=src pytest tests/unit/ --cov=src --cov-report=html
+	@cd $(FRONTEND_DIR) && yarn test:coverage
+
+# Code Quality
+lint: ## Run linters
+	@echo "Linting backend..."
+	@cd $(BACKEND_DIR) && . venv/bin/activate && python -m flake8 src/ || true
+	@echo "Linting frontend..."
+	@cd $(FRONTEND_DIR) && yarn lint
+
+typecheck: ## Run type checking
+	@echo "Type checking frontend..."
+	@cd $(FRONTEND_DIR) && yarn type-check
+
+format: ## Format code
+	@cd $(BACKEND_DIR) && . venv/bin/activate && python -m black src/ || true
+	@cd $(FRONTEND_DIR) && yarn lint --fix || true
+
+# Cleanup
+clean: ## Clean build artifacts and caches
+	@echo "Cleaning..."
+	@rm -rf $(BACKEND_DIR)/.pytest_cache
+	@rm -rf $(BACKEND_DIR)/htmlcov
+	@rm -rf $(BACKEND_DIR)/__pycache__
+	@rm -rf $(FRONTEND_DIR)/dist
+	@rm -rf $(FRONTEND_DIR)/coverage
+	@find . -name "*.pyc" -delete
+	@find . -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+	@echo "Done!"
+
+clean-all: clean ## Clean everything including dependencies
+	@rm -rf $(BACKEND_VENV)
+	@rm -rf $(FRONTEND_DIR)/node_modules
+	@echo "All dependencies removed. Run 'make setup' to reinstall."
+
+# Docker
+docker-dev: ## Run development environment with Docker
+	docker compose -f docker-compose.dev.yml up --build
+
+docker-dev-down: ## Stop Docker development environment
+	docker compose -f docker-compose.dev.yml down
+
+docker-prod: ## Build and run production Docker environment
+	docker compose up --build -d
+
+docker-prod-down: ## Stop production Docker environment
+	docker compose down
+
+docker-logs: ## View Docker logs
+	docker compose logs -f

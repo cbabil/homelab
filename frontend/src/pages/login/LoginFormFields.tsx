@@ -1,12 +1,13 @@
 /**
  * Login Form Fields Component
- * 
+ *
  * Individual form fields for the login form.
  * Extracted to maintain 100-line limit per CLAUDE.md rules.
  */
 
 import React from 'react'
 import { Eye, EyeOff, Lock, User } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
 import { LoginFormState } from '@/types/auth'
 import { cn } from '@/utils/cn'
 
@@ -76,9 +77,11 @@ export function LoginFormFields({
               onChange={(e) => onInputChange('password', e.target.value)}
               disabled={formState.isSubmitting}
             />
-            <button
+            <Button
               type="button"
-              className="input-password-toggle"
+              variant="ghost"
+              size="icon"
+              className="input-password-toggle h-9 w-9"
               onClick={onTogglePassword}
               disabled={formState.isSubmitting}
             >
@@ -87,7 +90,7 @@ export function LoginFormFields({
               ) : (
                 <Eye className="h-4 w-4 text-muted-foreground" />
               )}
-            </button>
+            </Button>
           </div>
         </div>
         {formState.password.error && (

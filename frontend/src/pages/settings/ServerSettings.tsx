@@ -1,11 +1,12 @@
 /**
  * Server Settings Component
- * 
+ *
  * SSH connection settings and MCP server configuration.
  */
 
 import { cn } from '@/utils/cn'
 import { Toggle, SettingRow } from './components'
+import { Button } from '@/components/ui/Button'
 
 interface ServerSettingsProps {
   activeServerTab: string
@@ -55,28 +56,26 @@ export function ServerSettings({
   return (
     <div className="space-y-4">
       <div className="flex space-x-1 bg-muted p-1 rounded-lg w-fit">
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={() => onActiveServerTabChange('ssh')}
           className={cn(
-            'px-3 py-1 rounded text-sm font-medium transition-colors',
-            activeServerTab === 'ssh' 
-              ? 'bg-background shadow-sm text-primary' 
-              : 'text-muted-foreground hover:text-foreground'
+            activeServerTab === 'ssh' && 'bg-background shadow-sm text-primary'
           )}
         >
           SSH
-        </button>
-        <button
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={() => onActiveServerTabChange('mcp')}
           className={cn(
-            'px-3 py-1 rounded text-sm font-medium transition-colors',
-            activeServerTab === 'mcp' 
-              ? 'bg-background shadow-sm text-primary' 
-              : 'text-muted-foreground hover:text-foreground'
+            activeServerTab === 'mcp' && 'bg-background shadow-sm text-primary'
           )}
         >
           MCP
-        </button>
+        </Button>
       </div>
 
       <div className="space-y-4 flex-1">
@@ -147,37 +146,39 @@ export function ServerSettings({
               </div>
               <div className="flex items-center space-x-2">
                 {mcpConnectionStatus === 'connected' ? (
-                  <button
+                  <Button
+                    variant="destructive"
+                    size="sm"
                     onClick={onMcpDisconnect}
-                    className="px-3 py-1 text-xs font-medium rounded transition-colors bg-red-600 text-white hover:bg-red-700"
                   >
                     Disconnect
-                  </button>
+                  </Button>
                 ) : (
-                  <button
+                  <Button
+                    variant="primary"
+                    size="sm"
                     onClick={onMcpConnect}
+                    loading={mcpConnectionStatus === 'connecting'}
                     disabled={mcpConnectionStatus === 'connecting'}
                     className={cn(
-                      "px-3 py-1 text-xs font-medium rounded transition-colors",
                       mcpConnectionStatus === 'connecting'
-                        ? "bg-yellow-600 text-white cursor-not-allowed"
-                        : "bg-green-600 text-white hover:bg-green-700"
+                        ? "bg-yellow-600 hover:bg-yellow-700"
+                        : "bg-green-600 hover:bg-green-700"
                     )}
                   >
                     {mcpConnectionStatus === 'connecting' ? 'Connecting...' : 'Connect'}
-                  </button>
+                  </Button>
                 )}
-                <button
+                <Button
+                  variant="primary"
+                  size="sm"
                   onClick={isEditingMcpConfig ? onMcpConfigSave : onMcpConfigEdit}
                   className={cn(
-                    "px-3 py-1 text-xs font-medium rounded transition-colors",
-                    isEditingMcpConfig 
-                      ? "bg-blue-600 text-white hover:bg-blue-700" 
-                      : "bg-primary text-white hover:bg-primary/90"
+                    isEditingMcpConfig && "bg-blue-600 hover:bg-blue-700"
                   )}
                 >
                   {isEditingMcpConfig ? 'Save' : 'Edit'}
-                </button>
+                </Button>
               </div>
             </div>
             

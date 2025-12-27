@@ -23,6 +23,17 @@ from models.metrics import ServerMetrics, ContainerMetrics, ActivityLog, Activit
 
 logger = structlog.get_logger("database_service")
 
+# Whitelisted columns for dynamic updates (SQL injection prevention)
+ALLOWED_SERVER_COLUMNS = frozenset({
+    'name', 'host', 'port', 'username', 'auth_type', 'status', 'last_connected'
+})
+ALLOWED_PREPARATION_COLUMNS = frozenset({
+    'status', 'current_step', 'detected_os', 'completed_at', 'error_message'
+})
+ALLOWED_INSTALLATION_COLUMNS = frozenset({
+    'status', 'container_id', 'container_name', 'config', 'started_at', 'error_message'
+})
+
 
 class DatabaseService:
     """Async database service for user management operations."""
@@ -496,6 +507,10 @@ class DatabaseService:
             values = []
             for key, value in kwargs.items():
                 if value is not None:
+                    # Validate column name against whitelist (SQL injection prevention)
+                    if key not in ALLOWED_SERVER_COLUMNS:
+                        logger.warning("Rejected invalid column in update_server", column=key)
+                        raise ValueError(f"Invalid column name: {key}")
                     updates.append(f"{key} = ?")
                     values.append(value)
 
@@ -560,6 +575,10 @@ class DatabaseService:
             values = []
             for key, value in kwargs.items():
                 if value is not None:
+                    # Validate column name against whitelist (SQL injection prevention)
+                    if key not in ALLOWED_PREPARATION_COLUMNS:
+                        logger.warning("Rejected invalid column in update_preparation", column=key)
+                        raise ValueError(f"Invalid column name: {key}")
                     updates.append(f"{key} = ?")
                     values.append(value)
 
@@ -702,6 +721,10 @@ class DatabaseService:
             values = []
             for key, value in kwargs.items():
                 if value is not None:
+                    # Validate column name against whitelist (SQL injection prevention)
+                    if key not in ALLOWED_INSTALLATION_COLUMNS:
+                        logger.warning("Rejected invalid column in update_installation", column=key)
+                        raise ValueError(f"Invalid column name: {key}")
                     updates.append(f"{key} = ?")
                     values.append(value)
 
@@ -1038,3 +1061,111 @@ class DatabaseService:
         except Exception as e:
             logger.error("Failed to count activity logs", error=str(e))
             return 0
+
+    async def export_users(self) -> list:
+        """Export all users for backup."""
+        try:
+            async with self.get_connection() as conn:
+                cursor = await conn.execute(
+                    "SELECT id, username, email, role, is_active, created_at FROM users"
+                )
+                rows = await cursor.fetchall()
+
+            return [dict(row) for row in rows]
+        except Exception as e:
+            logger.error("Failed to export users", error=str(e))
+            return []
+
+    async def export_servers(self) -> list:
+        """Export all servers for backup (including encrypted credentials)."""
+        try:
+            async with self.get_connection() as conn:
+                cursor = await conn.execute(
+                    "SELECT * FROM servers"
+                )
+                rows = await cursor.fetchall()
+
+            return [dict(row) for row in rows]
+        except Exception as e:
+            logger.error("Failed to export servers", error=str(e))
+            return []
+
+    async def export_settings(self) -> dict:
+        """Export settings for backup."""
+        try:
+            async with self.get_connection() as conn:
+                cursor = await conn.execute("SELECT key, value FROM settings")
+                rows = await cursor.fetchall()
+
+            return {row["key"]: row["value"] for row in rows}
+        except Exception as e:
+            logger.error("Failed to export settings", error=str(e))
+            return {}
+
+    async def import_users(self, users: list, overwrite: bool = False) -> None:
+        """Import users from backup."""
+        try:
+            async with self.get_connection() as conn:
+                for user in users:
+                    if overwrite:
+                        await conn.execute(
+                            "DELETE FROM users WHERE id = ?", (user["id"],)
+                        )
+                    await conn.execute(
+                        """INSERT OR IGNORE INTO users
+                           (id, username, email, role, is_active, created_at)
+                           VALUES (?, ?, ?, ?, ?, ?)""",
+                        (user["id"], user["username"], user.get("email"),
+                         user.get("role", "user"), user.get("is_active", 1),
+                         user.get("created_at"))
+                    )
+                await conn.commit()
+            logger.info("Imported users", count=len(users))
+        except Exception as e:
+            logger.error("Failed to import users", error=str(e))
+            raise
+
+    async def import_servers(self, servers: list, overwrite: bool = False) -> None:
+        """Import servers from backup."""
+        try:
+            async with self.get_connection() as conn:
+                for server in servers:
+                    if overwrite:
+                        await conn.execute(
+                            "DELETE FROM servers WHERE id = ?", (server["id"],)
+                        )
+                    await conn.execute(
+                        """INSERT OR IGNORE INTO servers
+                           (id, name, host, port, username, auth_type, credentials, status)
+                           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
+                        (server["id"], server["name"], server["host"],
+                         server.get("port", 22), server.get("username"),
+                         server.get("auth_type"), server.get("credentials"),
+                         server.get("status", "unknown"))
+                    )
+                await conn.commit()
+            logger.info("Imported servers", count=len(servers))
+        except Exception as e:
+            logger.error("Failed to import servers", error=str(e))
+            raise
+
+    async def import_settings(self, settings: dict, overwrite: bool = False) -> None:
+        """Import settings from backup."""
+        try:
+            async with self.get_connection() as conn:
+                for key, value in settings.items():
+                    if overwrite:
+                        await conn.execute(
+                            "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
+                            (key, value)
+                        )
+                    else:
+                        await conn.execute(
+                            "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)",
+                            (key, value)
+                        )
+                await conn.commit()
+            logger.info("Imported settings", count=len(settings))
+        except Exception as e:
+            logger.error("Failed to import settings", error=str(e))
+            raise

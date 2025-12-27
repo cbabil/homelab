@@ -10,14 +10,18 @@ import structlog
 from fastmcp import Context
 from models.auth import LoginCredentials
 from services.auth_service import AuthService
+from lib.rate_limiter import RateLimiter
 
 
 logger = structlog.get_logger("login_tool")
 
+# Rate limiter for login attempts: 5 attempts per 5 minutes per IP
+login_rate_limiter = RateLimiter(max_requests=5, window_seconds=300)
+
 
 class LoginTool:
     """Login authentication tool."""
-    
+
     def __init__(self, auth_service: AuthService):
         """Initialize login tool with auth service."""
         self.auth_service = auth_service
@@ -35,6 +39,29 @@ class LoginTool:
         """
         logger.info("Login attempt started", credentials_received=list(credentials.keys()))
 
+        # Extract client IP early for rate limiting
+        client_ip = "unknown"
+        user_agent = None
+
+        if ctx:
+            try:
+                request = ctx.get_http_request()
+                client_ip = request.client.host if request.client else "unknown"
+                user_agent = request.headers.get("user-agent")
+            except Exception as e:
+                logger.debug("Could not extract request context", error=str(e))
+
+        # Check rate limit before processing
+        if not login_rate_limiter.is_allowed(client_ip):
+            remaining_seconds = 300  # Window is 5 minutes
+            logger.warning("Rate limit exceeded for login", client_ip=client_ip)
+            return {
+                "success": False,
+                "message": "Too many login attempts. Please try again in a few minutes.",
+                "error": "RATE_LIMIT_EXCEEDED",
+                "retry_after": remaining_seconds
+            }
+
         try:
             # Handle nested credentials structure from frontend
             if "credentials" in credentials:
@@ -44,18 +71,6 @@ class LoginTool:
 
             login_creds = LoginCredentials(**cred_data)
             logger.debug("LoginCredentials created", username=login_creds.username)
-
-            # Extract client IP and user agent from request context if available
-            client_ip = None
-            user_agent = None
-
-            if ctx:
-                try:
-                    request = ctx.get_http_request()
-                    client_ip = request.client.host if request.client else None
-                    user_agent = request.headers.get("user-agent")
-                except Exception as e:
-                    logger.debug("Could not extract request context", error=str(e))
 
             logger.info("Calling auth_service.authenticate_user", username=login_creds.username, client_ip=client_ip)
             response = await self.auth_service.authenticate_user(

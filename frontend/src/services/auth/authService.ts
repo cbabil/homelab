@@ -66,7 +66,8 @@ class AuthService {
   async initialize(): Promise<void> {
     if (!this.isInitialized) {
       await jwtService.initialize()
-      this.mcpClient = new HomelabMCPClient('http://localhost:8000/mcp')
+      const serverUrl = import.meta.env.VITE_MCP_SERVER_URL || '/mcp'
+      this.mcpClient = new HomelabMCPClient(serverUrl)
 
       try {
         await this.mcpClient.connect()

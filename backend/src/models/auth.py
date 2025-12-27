@@ -5,10 +5,11 @@ Defines authentication and user management data models using Pydantic.
 Matches frontend TypeScript interfaces for consistency.
 """
 
+import re
 from datetime import datetime
 from typing import Optional, Dict, Any, List
 from enum import Enum
-from pydantic import BaseModel, Field, EmailStr, model_validator
+from pydantic import BaseModel, Field, EmailStr, model_validator, field_validator
 
 
 class UserRole(str, Enum):
@@ -45,10 +46,28 @@ class RegistrationCredentials(BaseModel):
     """Registration credentials for new user creation."""
     username: str = Field(..., min_length=3, max_length=50, description="Username")
     email: EmailStr = Field(..., description="Email address")
-    password: str = Field(..., min_length=12, description="Password")
+    password: str = Field(..., min_length=12, max_length=128, description="Password")
     confirm_password: str = Field(..., description="Password confirmation")
     role: Optional[UserRole] = Field(UserRole.USER, description="User role")
     accept_terms: bool = Field(..., description="Terms acceptance")
+
+    @field_validator('password')
+    @classmethod
+    def validate_password_strength(cls, v: str) -> str:
+        """Validate password meets complexity requirements."""
+        if len(v) < 12:
+            raise ValueError('Password must be at least 12 characters')
+        if len(v) > 128:
+            raise ValueError('Password must be at most 128 characters')
+        if not re.search(r'[A-Z]', v):
+            raise ValueError('Password must contain at least one uppercase letter')
+        if not re.search(r'[a-z]', v):
+            raise ValueError('Password must contain at least one lowercase letter')
+        if not re.search(r'\d', v):
+            raise ValueError('Password must contain at least one digit')
+        if not re.search(r'[!@#$%^&*(),.?":{}|<>\-_=+\[\]\\;\'`~]', v):
+            raise ValueError('Password must contain at least one special character')
+        return v
 
     @model_validator(mode="after")
     def passwords_match(cls, values: "RegistrationCredentials") -> "RegistrationCredentials":

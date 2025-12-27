@@ -1,163 +1,241 @@
 # Homelab Assistant
 
-A modern web application for managing homelab servers and applications using the Model Context Protocol (MCP).
+A self-hosted web application for managing homelab infrastructure. Connect to remote servers via SSH, deploy Docker applications through an extensible catalog, and monitor your infrastructure.
 
-## Phase 1 Implementation Status ✅
+## Features
 
-This repository contains the Phase 1 foundation implementation as defined in the implementation plan:
+### Server Management
+- **SSH Connection Management** - Connect to servers using password or SSH key authentication
+- **Server Health Monitoring** - Real-time status checks and connectivity testing
+- **Multi-Server Support** - Manage multiple homelab servers from one interface
 
-### ✅ Completed Phase 1 Tasks
+### Application Deployment
+- **App Catalog** - Browse and deploy containerized applications
+- **One-Click Install** - Deploy apps with pre-configured Docker Compose templates
+- **Custom Configuration** - Override environment variables and port mappings
+- **Built-in Apps**: Portainer, Nginx Proxy Manager, Nextcloud, Jellyfin, Pi-hole
 
-- **Project Structure**: Clean monorepo with `frontend/` and `backend/` directories
-- **Backend Foundation**: Python 3.11+ with fastmcp MCP server framework
-- **Dependencies**: Complete `requirements.txt` with all architectural dependencies
-- **MCP Server**: Basic server structure with health check tools
-- **SSH Manager**: Paramiko-based SSH connection management with security
-- **Frontend Foundation**: React 18+ with Vite, TypeScript, and modern tooling
-- **MCP Client**: Type-safe MCP protocol client for frontend-backend communication
-- **Project Standards**: 100-line file limits, ESLint configuration, structured logging
+### Monitoring & Metrics
+- **Server Metrics** - CPU, memory, disk usage monitoring
+- **Container Status** - Track running containers across servers
+- **Activity Logging** - Audit trail of all operations
+- **Dashboard** - Unified view of infrastructure health
 
-### 🏗️ Architecture Highlights
+### Security
+- **AES-256 Credential Encryption** - Secure storage of SSH credentials
+- **JWT Authentication** - Secure user sessions with bcrypt password hashing
+- **Role-Based Access** - Admin and user roles with permission controls
+- **Input Validation** - Protection against injection attacks
+- **Rate Limiting** - Brute force protection on auth endpoints
 
-- **MCP Protocol**: Uses Model Context Protocol for frontend-backend communication
-- **Security-First**: AES-256 credential encryption, secure SSH practices
-- **Type Safety**: Full TypeScript coverage with Pydantic backend models
-- **Modern Stack**: React 18+, Python 3.11+, Vite, TailwindCSS
-- **Development Ready**: Hot reload, linting, structured logging
+### Backup & Recovery
+- **Encrypted Backups** - PBKDF2 + Fernet encryption for backup files
+- **CLI Export/Import** - Command-line backup management
+- **Full Data Backup** - Users, servers, and settings included
 
 ## Quick Start
 
 ### Prerequisites
 
-- Docker and Docker Compose
-- Node.js 18+ and Yarn (for local frontend development)
-- Python 3.11+ (for local backend development)
+- Python 3.11+
+- Node.js 18+ and Yarn
+- Docker (on target servers)
 
 ### Development Setup
 
-1. **Clone and setup**:
-   ```bash
-   git clone <repository-url>
-   cd homelab
-   ./scripts/setup.sh
-   ```
-
-2. **Start development environment**:
-   ```bash
-   docker-compose -f docker-compose.dev.yml up
-   ```
-
-3. **Access the application**:
-   - Frontend: http://localhost:3000
-   - Backend API: http://localhost:8000
-   - Health Check: http://localhost:8000/health
-
-### Local Development
-
-For faster development with hot reload:
-
 ```bash
-# Terminal 1 - Backend
+# Clone repository
+git clone https://github.com/cbabil/homelab.git
+cd homelab
+
+# Backend setup
 cd backend
 python3 -m venv venv
 source venv/bin/activate
 pip install -r requirements.txt
-export PYTHONPATH=$(pwd)/src
-python -m uvicorn src.main:app --reload
 
-# Terminal 2 - Frontend  
+# Start backend
+DATA_DIRECTORY="$(pwd)/data" python src/main.py
+
+# Frontend setup (new terminal)
 cd frontend
 yarn install
 yarn dev
+```
+
+Access the application at http://localhost:5173
+
+### Production Deployment (RPM)
+
+```bash
+# Build RPM package
+rpmbuild -ba packaging/homelab-assistant.spec
+
+# Install
+sudo dnf install homelab-assistant-1.0.0-1.x86_64.rpm
+
+# Start service
+sudo systemctl start homelab-assistant
+sudo systemctl enable homelab-assistant
 ```
 
 ## Project Structure
 
 ```
 homelab/
-├── frontend/                    # React TypeScript frontend
+├── frontend/                 # React TypeScript frontend
 │   ├── src/
-│   │   ├── components/         # UI components
-│   │   ├── services/           # MCP client & services
-│   │   ├── providers/          # React context providers
-│   │   ├── types/              # TypeScript definitions
-│   │   └── pages/              # Application pages
+│   │   ├── components/      # UI components
+│   │   ├── services/        # MCP client & API services
+│   │   ├── hooks/           # Custom React hooks
+│   │   └── pages/           # Application pages
 │   └── package.json
-├── backend/                     # Python MCP server
+├── backend/                  # Python MCP server
 │   ├── src/
-│   │   ├── main.py            # FastMCP server entry
-│   │   ├── tools/             # MCP tool implementations
-│   │   ├── services/          # Business logic services
-│   │   ├── models/            # Pydantic data models
-│   │   └── lib/               # Shared backend helpers
-│   └── requirements.txt
-├── docker/                      # Container configurations
-├── scripts/                     # Setup and build scripts
-└── docs/                       # Architecture documentation
+│   │   ├── main.py          # FastMCP server entry
+│   │   ├── tools/           # MCP tool implementations
+│   │   ├── services/        # Business logic services
+│   │   ├── models/          # Pydantic data models
+│   │   └── lib/             # Security & utilities
+│   ├── data/
+│   │   └── catalog/         # App catalog YAML files
+│   └── tests/               # Unit tests
+├── packaging/                # RPM & systemd files
+│   ├── homelab-assistant.spec
+│   ├── homelab-assistant.service
+│   └── config.yaml.example
+└── docs/                     # Documentation & plans
 ```
 
 ## Technology Stack
 
-### Frontend
-- **React 18+** - Modern functional components with hooks
-- **TypeScript** - Type safety and developer experience
-- **Vite** - Fast development server and optimized builds
-- **TailwindCSS** - Utility-first styling
-- **React Query** - Server state management
+| Layer | Technology |
+|-------|------------|
+| Frontend | React 19, TypeScript, Vite, TailwindCSS |
+| Backend | Python 3.11+, FastMCP, SQLite, Paramiko |
+| Protocol | Model Context Protocol (MCP) |
+| Auth | JWT + bcrypt, AES-256 credential encryption |
+| Deployment | RPM packaging, systemd |
 
-### Backend
-- **Python 3.11+** - Modern Python with performance improvements
-- **fastmcp** - Model Context Protocol server framework
-- **paramiko** - Pure Python SSH client library
-- **Pydantic** - Data validation and settings management
-- **structlog** - Structured logging with JSON output
+## CLI Commands
 
-### Development
-- **Docker** - Containerized development environment
-- **ESLint** - Code linting with 100-line limits enforced
-- **Vitest** - Unit testing framework
+```bash
+# Create admin user
+python src/cli.py create-admin
 
-## Development Guidelines
+# Export encrypted backup
+python src/cli.py export -o backup.enc -p
 
-### Mandatory Rules (Phase 1 Implementation)
+# Import backup
+python src/cli.py import -i backup.enc -p
 
-1. **Testing & Documentation**: All changes must include tests and documentation
-2. **100-Line Limit**: Maximum 100 lines per file AND function (enforced by ESLint)
-3. **Agent Usage**: Development tasks must use specialized agents
-4. **Security Review**: Security-related changes require security review
+# Initialize database
+python src/cli.py init-db
+```
+
+## Configuration
+
+Configuration file: `/etc/homelab-assistant/config.yaml`
+
+```yaml
+server:
+  host: 127.0.0.1
+  port: 8080
+
+security:
+  session_timeout_minutes: 60
+  max_login_attempts: 5
+  lockout_duration_minutes: 15
+
+metrics:
+  enabled: true
+  collection_interval_seconds: 300
+  retention_days: 30
+```
+
+## App Catalog
+
+Add custom apps by creating YAML files in `data/catalog/`:
+
+```yaml
+name: my-app
+description: My custom application
+category: productivity
+docker_compose: |
+  version: '3'
+  services:
+    app:
+      image: myapp:latest
+      ports:
+        - "8080:80"
+env_vars:
+  - name: APP_SECRET
+    description: Application secret key
+    required: true
+```
+
+## API (MCP Tools)
+
+| Tool | Description |
+|------|-------------|
+| `health_check` | System health status |
+| `login` / `logout` | Authentication |
+| `list_servers` / `add_server` | Server management |
+| `test_connection` | SSH connectivity test |
+| `list_apps` / `deploy_app` | App catalog operations |
+| `get_server_metrics` | CPU, memory, disk stats |
+| `get_activity_log` | Audit trail |
+| `export_backup` / `import_backup` | Backup operations |
+
+## Development
+
+### Running Tests
+
+```bash
+# Backend tests
+cd backend
+source venv/bin/activate
+PYTHONPATH=src pytest tests/unit/ -v
+
+# Frontend tests
+cd frontend
+yarn test
+yarn test:e2e
+```
 
 ### Code Quality
 
-- **TypeScript Strict Mode**: All frontend code uses strict TypeScript
-- **Pydantic Models**: All backend data uses validated Pydantic models  
-- **Structured Logging**: JSON-formatted logs with sensitive data filtering
-- **Error Handling**: Comprehensive error handling with user-friendly messages
+```bash
+# Frontend linting
+yarn lint
+yarn type-check
 
-## Next Steps (Phase 2+)
-
-The Phase 1 foundation is now complete and ready for Phase 2 implementation:
-
-- **Server Management**: Complete server preparation and configuration
-- **Application Catalog**: Browse and install containerized applications
-- **Real-time Monitoring**: System resource and application monitoring
-- **Advanced Features**: Backup, cleanup, and maintenance automation
+# Backend type checking
+mypy src/
+```
 
 ## Security Notes
 
-- Credentials are encrypted with AES-256 encryption
-- SSH connections use secure paramiko configuration
-- No sensitive data in logs (automatically filtered)
-- Environment-based configuration for production secrets
+- Credentials encrypted at rest with AES-256
+- Passwords hashed with bcrypt (cost factor 12)
+- JWT tokens with configurable expiration
+- Constant-time comparison for sensitive operations
+- Automatic log sanitization (passwords, tokens masked)
+- Input validation on all endpoints
+- Rate limiting on authentication
 
-## Support
+## Contributing
 
-For issues and questions:
-1. Check the architecture documentation in `docs/`
-2. Review the implementation plan for feature details
-3. Check logs for troubleshooting information
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/amazing`)
+3. Commit changes (`git commit -m 'feat: add amazing feature'`)
+4. Push to branch (`git push origin feature/amazing`)
+5. Open a Pull Request
+
+## License
+
+MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
-**Status**: Phase 1 Complete ✅  
-**Next Phase**: Server Management (Phase 2)  
-**Architecture**: MCP Protocol + React + Python + Docker
+**Repository**: [github.com/cbabil/homelab](https://github.com/cbabil/homelab)

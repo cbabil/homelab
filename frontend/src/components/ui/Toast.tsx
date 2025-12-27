@@ -1,12 +1,13 @@
 /**
  * Toast Notification System
- * 
+ *
  * Modern toast notifications with variants and auto-dismiss.
  * Features smooth animations and customizable duration.
  */
 
 import React, { createContext, useContext, useState, useCallback } from 'react'
 import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
 import { cn } from '@/utils/cn'
 
 interface Toast {
@@ -78,13 +79,15 @@ function ToastItem({ toast, onRemove }: ToastItemProps) {
             <p className="text-sm opacity-90 mt-1">{toast.message}</p>
           )}
         </div>
-        
-        <button
+
+        <Button
           onClick={() => onRemove(toast.id)}
-          className="flex-shrink-0 rounded-md p-1.5 hover:bg-black/10 dark:hover:bg-white/10 transition-colors"
+          variant="ghost"
+          size="icon"
+          className="flex-shrink-0 h-7 w-7 hover:bg-black/10 dark:hover:bg-white/10"
         >
           <X className="h-4 w-4" />
-        </button>
+        </Button>
       </div>
     </div>
   )

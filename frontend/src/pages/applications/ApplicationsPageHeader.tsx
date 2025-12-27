@@ -1,10 +1,11 @@
 /**
  * Applications Page Header Component
- * 
+ *
  * Header section with title, description, and Add App button for the Applications page.
  */
 
 import { Plus } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
 
 interface ApplicationsPageHeaderProps {
   onAddApp: () => void
@@ -19,14 +20,16 @@ export function ApplicationsPageHeader({ onAddApp }: ApplicationsPageHeaderProps
           Discover and install applications for your homelab infrastructure.
         </p>
       </div>
-      
-      <button 
+
+      <Button
         onClick={onAddApp}
-        className="btn-gradient flex items-center space-x-1.5 px-3 py-1.5 rounded-lg font-medium text-sm hover:opacity-90 transition-opacity shrink-0 ml-3"
+        variant="primary"
+        size="sm"
+        leftIcon={<Plus className="h-3.5 w-3.5" />}
+        className="shrink-0 ml-3"
       >
-        <Plus className="h-3.5 w-3.5" />
-        <span>Add App</span>
-      </button>
+        Add App
+      </Button>
     </div>
   )
 }

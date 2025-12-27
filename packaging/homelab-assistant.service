@@ -1,0 +1,51 @@
+[Unit]
+Description=Homelab Assistant - Infrastructure Management Server
+Documentation=https://github.com/cbabil/homelab
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=homelab
+Group=homelab
+WorkingDirectory=/opt/homelab-assistant
+
+# Environment
+Environment=PYTHONPATH=/opt/homelab-assistant
+Environment=DATA_DIRECTORY=/var/lib/homelab-assistant
+Environment=LOG_DIRECTORY=/var/log/homelab-assistant
+Environment=CONFIG_FILE=/etc/homelab-assistant/config.yaml
+Environment=PYTHONUNBUFFERED=1
+
+# Start command using virtual environment
+ExecStart=/opt/homelab-assistant/venv/bin/python /opt/homelab-assistant/main.py
+ExecReload=/bin/kill -HUP $MAINPID
+
+# Restart policy
+Restart=always
+RestartSec=5
+TimeoutStartSec=30
+TimeoutStopSec=30
+
+# Security hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+
+# Allow write access to data and log directories
+ReadWritePaths=/var/lib/homelab-assistant
+ReadWritePaths=/var/log/homelab-assistant
+
+# Limit resources
+MemoryMax=512M
+TasksMax=100
+
+[Install]
+WantedBy=multi-user.target

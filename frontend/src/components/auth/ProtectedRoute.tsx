@@ -1,6 +1,6 @@
 /**
  * Protected Route Component
- * 
+ *
  * Route protection wrapper that handles authentication checks,
  * role-based access control, and secure redirects with loading states.
  */
@@ -10,6 +10,7 @@ import { Navigate, useLocation } from 'react-router-dom'
 import { Loader2, Shield, AlertCircle } from 'lucide-react'
 import { useAuth } from '@/providers/AuthProvider'
 import { User, ProtectedRouteConfig } from '@/types/auth'
+import { Button } from '@/components/ui/Button'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -38,9 +39,9 @@ const AuthLoadingScreen: React.FC = () => (
 )
 
 // Access denied screen for unauthorized users
-const AccessDeniedScreen: React.FC<{ 
-  message?: string 
-  onRetry?: () => void 
+const AccessDeniedScreen: React.FC<{
+  message?: string
+  onRetry?: () => void
 }> = ({ message, onRetry }) => (
   <div className="min-h-screen bg-background flex items-center justify-center p-4">
     <div className="max-w-md w-full text-center">
@@ -54,13 +55,13 @@ const AccessDeniedScreen: React.FC<{
         {message || 'You do not have permission to access this page.'}
       </p>
       {onRetry && (
-        <button
+        <Button
+          variant="ghost"
           onClick={onRetry}
-          className="inline-flex items-center gap-2 text-primary hover:text-primary/80 transition-colors"
+          leftIcon={<Shield className="w-4 h-4" />}
         >
-          <Shield className="w-4 h-4" />
           Try Again
-        </button>
+        </Button>
       )}
     </div>
   </div>
@@ -189,14 +190,12 @@ export function UserRoute({ children, ...props }: Omit<ProtectedRouteProps, 'all
 }
 
 // Public route that redirects authenticated users
-export function PublicRoute({ 
-  children, 
-  redirectTo = '/', 
-  fallback 
-}: { 
+export function PublicRoute({
+  children,
+  redirectTo = '/'
+}: {
   children: React.ReactNode
   redirectTo?: string
-  fallback?: React.ReactNode
 }) {
   const { isAuthenticated } = useAuth()
 

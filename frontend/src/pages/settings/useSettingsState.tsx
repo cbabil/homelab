@@ -44,7 +44,7 @@ export function useSettingsState() {
       "mcpServers": {
         "homelab-assistant": {
           "type": "http",
-          "url": "http://localhost:8000/mcp",
+          "url": import.meta.env.VITE_MCP_SERVER_URL || '/mcp',
           "name": "Homelab Assistant",
           "description": "Local homelab management MCP server"
         }

@@ -1,10 +1,11 @@
 /**
  * Dashboard Quick Actions Component
- * 
+ *
  * Quick action buttons for common dashboard operations.
  */
 
 import { Server, Package, TrendingUp } from 'lucide-react'
+import { Button } from '@/components/ui/Button'
 
 export function DashboardQuickActions() {
   return (
@@ -15,25 +16,23 @@ export function DashboardQuickActions() {
         </div>
         <h2 className="text-xl font-semibold">Quick Actions</h2>
       </div>
-      
+
       <div className="space-y-3">
-        <button className="w-full text-left p-3 rounded-lg hover:bg-accent transition-colors duration-200 group">
-          <div className="flex items-center space-x-3">
-            <Server className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-            <span className="font-medium group-hover:text-foreground transition-colors">
-              Manage Servers
-            </span>
-          </div>
-        </button>
-        
-        <button className="w-full text-left p-3 rounded-lg hover:bg-accent transition-colors duration-200 group">
-          <div className="flex items-center space-x-3">
-            <Package className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
-            <span className="font-medium group-hover:text-foreground transition-colors">
-              Browse Applications
-            </span>
-          </div>
-        </button>
+        <Button
+          variant="ghost"
+          className="w-full justify-start p-3"
+          leftIcon={<Server className="w-4 h-4" />}
+        >
+          Manage Servers
+        </Button>
+
+        <Button
+          variant="ghost"
+          className="w-full justify-start p-3"
+          leftIcon={<Package className="w-4 h-4" />}
+        >
+          Browse Applications
+        </Button>
       </div>
     </div>
   )

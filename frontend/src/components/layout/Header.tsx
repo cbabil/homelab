@@ -1,6 +1,6 @@
 /**
  * Application Header Component
- * 
+ *
  * Modern header with branding, connection status, and theme switcher.
  * Features gradient background and improved visual hierarchy.
  */
@@ -14,6 +14,7 @@ import { useAuth } from '@/providers/AuthProvider'
 import { useToast } from '@/components/ui/Toast'
 import { useDataServices } from '@/hooks/useDataServices'
 import { clearHomelabCaches } from '@/utils/cacheUtils'
+import { Button } from '@/components/ui/Button'
 
 export function Header() {
   const { user, logout } = useAuth()
@@ -70,9 +71,11 @@ export function Header() {
           {/* User Menu Dropdown */}
           {user && (
             <div className="relative">
-              <button
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center space-x-3 p-2 rounded-lg text-foreground hover:bg-accent transition-colors"
+                className="flex items-center space-x-3 h-auto p-2"
                 title="User Menu"
               >
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -83,7 +86,7 @@ export function Header() {
                   <span className="text-xs text-muted-foreground capitalize">{user.role}</span>
                 </div>
                 <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
-              </button>
+              </Button>
               
               {/* Dropdown Menu */}
               {showUserMenu && (
@@ -107,13 +110,15 @@ export function Header() {
                     </div>
                     
                     <div className="py-2">
-                      <button
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={handleClearCache}
-                        className="flex items-center space-x-3 w-full px-3 py-2 text-sm hover:bg-accent transition-colors"
+                        className="flex items-center space-x-3 w-full justify-start"
+                        leftIcon={<Brush className="h-4 w-4 text-muted-foreground" />}
                       >
-                        <Brush className="h-4 w-4 text-muted-foreground" />
-                        <span>Clear Cache</span>
-                      </button>
+                        Clear Cache
+                      </Button>
 
                       <Link
                         to="/settings"
@@ -123,14 +128,16 @@ export function Header() {
                         <Settings className="h-4 w-4 text-muted-foreground" />
                         <span>Settings</span>
                       </Link>
-                      
-                      <button
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
                         onClick={handleLogout}
-                        className="flex items-center space-x-3 w-full px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors"
+                        className="flex items-center space-x-3 w-full justify-start text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50"
+                        leftIcon={<LogOut className="h-4 w-4" />}
                       >
-                        <LogOut className="h-4 w-4" />
-                        <span>Sign Out</span>
-                      </button>
+                        Sign Out
+                      </Button>
                     </div>
                     
                     <div className="px-3 py-2 border-t border-border/50">
