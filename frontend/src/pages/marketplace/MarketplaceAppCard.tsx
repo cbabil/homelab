@@ -13,6 +13,7 @@
 
 import { Star, Download } from 'lucide-react'
 import type { MarketplaceApp } from '@/types/marketplace'
+import { StarRating } from './StarRating'
 
 interface MarketplaceAppCardProps {
   app: MarketplaceApp
@@ -72,15 +73,13 @@ export function MarketplaceAppCard({ app, onInstall }: MarketplaceAppCardProps) 
           <div className="flex items-center space-x-2">
             {/* Rating Display */}
             {app.avgRating !== undefined && app.avgRating !== null && (
-              <div className="flex items-center space-x-0.5">
-                <Star className="h-3 w-3 fill-current text-yellow-500" />
-                <span>{app.avgRating.toFixed(1)}</span>
-                {app.ratingCount > 0 && (
-                  <span className="text-muted-foreground">
-                    ({app.ratingCount})
-                  </span>
-                )}
-              </div>
+              <StarRating
+                rating={app.avgRating}
+                size="sm"
+                interactive={false}
+                showCount={true}
+                ratingCount={app.ratingCount}
+              />
             )}
 
             {/* Install Count */}
