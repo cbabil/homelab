@@ -3,7 +3,11 @@ import pytest
 from datetime import datetime
 from pydantic import ValidationError
 
-from models.marketplace import MarketplaceRepo, RepoType, RepoStatus
+from models.marketplace import (
+    MarketplaceRepo, RepoType, RepoStatus,
+    AppPort, AppVolume, AppEnvVar, DockerConfig,
+    AppRequirements, MarketplaceApp
+)
 
 
 def test_marketplace_repo_model():
@@ -130,4 +134,225 @@ def test_marketplace_repo_validation():
         MarketplaceRepo(
             # Missing required fields
             name="Incomplete Repo"
+        )
+
+
+# Tests for new MarketplaceApp and related models
+
+def test_app_port_model():
+    """Test AppPort model creation and defaults."""
+    port = AppPort(container=8080, host=8080)
+    assert port.container == 8080
+    assert port.host == 8080
+    assert port.protocol == "tcp"  # default
+
+    port_udp = AppPort(container=53, host=53, protocol="udp")
+    assert port_udp.protocol == "udp"
+
+
+def test_app_volume_model():
+    """Test AppVolume model creation and defaults."""
+    volume = AppVolume(host_path="/data", container_path="/app/data")
+    assert volume.host_path == "/data"
+    assert volume.container_path == "/app/data"
+    assert volume.readonly is False  # default
+
+    volume_ro = AppVolume(host_path="/config", container_path="/etc/config", readonly=True)
+    assert volume_ro.readonly is True
+
+
+def test_app_env_var_model():
+    """Test AppEnvVar model creation."""
+    env = AppEnvVar(
+        name="DATABASE_URL",
+        description="Database connection string",
+        required=True,
+        default=None
+    )
+    assert env.name == "DATABASE_URL"
+    assert env.description == "Database connection string"
+    assert env.required is True
+    assert env.default is None
+
+    env_with_default = AppEnvVar(
+        name="LOG_LEVEL",
+        description="Logging level",
+        required=False,
+        default="INFO"
+    )
+    assert env_with_default.default == "INFO"
+
+
+def test_docker_config_model():
+    """Test DockerConfig model with nested models."""
+    docker_config = DockerConfig(
+        image="nginx:latest",
+        ports=[
+            AppPort(container=80, host=8080),
+            AppPort(container=443, host=8443)
+        ],
+        volumes=[
+            AppVolume(host_path="/data", container_path="/usr/share/nginx/html")
+        ],
+        environment=[
+            AppEnvVar(name="NGINX_HOST", description="Host name", required=False, default="localhost")
+        ],
+        restart_policy="unless-stopped",
+        network_mode="bridge",
+        privileged=False,
+        capabilities=["NET_ADMIN"]
+    )
+
+    assert docker_config.image == "nginx:latest"
+    assert len(docker_config.ports) == 2
+    assert docker_config.ports[0].container == 80
+    assert len(docker_config.volumes) == 1
+    assert len(docker_config.environment) == 1
+    assert docker_config.restart_policy == "unless-stopped"
+    assert docker_config.network_mode == "bridge"
+    assert docker_config.privileged is False
+    assert "NET_ADMIN" in docker_config.capabilities
+
+
+def test_app_requirements_model():
+    """Test AppRequirements model."""
+    requirements = AppRequirements(
+        min_ram=512,
+        min_storage=1024,
+        architectures=["amd64", "arm64"]
+    )
+
+    assert requirements.min_ram == 512
+    assert requirements.min_storage == 1024
+    assert len(requirements.architectures) == 2
+    assert "amd64" in requirements.architectures
+
+    # Test optional fields
+    minimal_req = AppRequirements(
+        min_ram=None,
+        min_storage=None,
+        architectures=["amd64"]
+    )
+    assert minimal_req.min_ram is None
+    assert minimal_req.min_storage is None
+
+
+def test_marketplace_app_model():
+    """Test MarketplaceApp model creation with all fields."""
+    now = datetime.now()
+
+    app = MarketplaceApp(
+        id="test-app-1",
+        name="Test Application",
+        description="A test application",
+        long_description="This is a longer description of the test application",
+        version="1.0.0",
+        category="utilities",
+        tags=["test", "demo"],
+        icon="https://example.com/icon.png",
+        author="Test Author",
+        license="MIT",
+        repository="https://github.com/test/app",
+        documentation="https://docs.example.com",
+        repo_id="test-repo-1",
+        docker=DockerConfig(
+            image="test/app:latest",
+            ports=[AppPort(container=3000, host=3000)],
+            volumes=[],
+            environment=[],
+            restart_policy="always",
+            network_mode=None,
+            privileged=False,
+            capabilities=[]
+        ),
+        requirements=AppRequirements(
+            min_ram=256,
+            min_storage=512,
+            architectures=["amd64"]
+        ),
+        install_count=100,
+        avg_rating=4.5,
+        rating_count=20,
+        featured=True,
+        created_at=now,
+        updated_at=now
+    )
+
+    assert app.id == "test-app-1"
+    assert app.name == "Test Application"
+    assert app.version == "1.0.0"
+    assert app.category == "utilities"
+    assert len(app.tags) == 2
+    assert app.repo_id == "test-repo-1"
+    assert app.docker.image == "test/app:latest"
+    assert app.requirements.min_ram == 256
+    assert app.install_count == 100
+    assert app.avg_rating == 4.5
+    assert app.featured is True
+
+
+def test_marketplace_app_camelcase_aliases():
+    """Test MarketplaceApp camelCase field aliases."""
+    now = datetime.now()
+    app_data = {
+        "id": "test-app-2",
+        "name": "Test App",
+        "description": "Short desc",
+        "longDescription": "Long description",  # camelCase
+        "version": "2.0.0",
+        "category": "media",
+        "tags": ["video"],
+        "icon": "https://example.com/icon.png",
+        "author": "Author Name",
+        "license": "Apache-2.0",
+        "repository": "https://github.com/test/app",
+        "documentation": "https://docs.example.com",
+        "repoId": "repo-1",  # camelCase
+        "docker": {
+            "image": "test/app:2.0",
+            "ports": [],
+            "volumes": [],
+            "environment": [],
+            "restartPolicy": "always",  # camelCase
+            "networkMode": None,  # camelCase
+            "privileged": False,
+            "capabilities": []
+        },
+        "requirements": {
+            "minRam": 512,  # camelCase
+            "minStorage": 1024,  # camelCase
+            "architectures": ["arm64"]
+        },
+        "installCount": 50,  # camelCase
+        "avgRating": 4.0,  # camelCase
+        "ratingCount": 10,  # camelCase
+        "featured": False,
+        "createdAt": now.isoformat(),  # camelCase
+        "updatedAt": now.isoformat()  # camelCase
+    }
+
+    app = MarketplaceApp(**app_data)
+    assert app.long_description == "Long description"
+    assert app.repo_id == "repo-1"
+    assert app.install_count == 50
+    assert app.avg_rating == 4.0
+    assert app.rating_count == 10
+
+    # Test serialization to camelCase
+    serialized = app.model_dump(by_alias=True)
+    assert "longDescription" in serialized
+    assert "repoId" in serialized
+    assert "installCount" in serialized
+    assert "avgRating" in serialized
+    assert "ratingCount" in serialized
+    assert "createdAt" in serialized
+    assert "updatedAt" in serialized
+
+
+def test_marketplace_app_validation():
+    """Test MarketplaceApp validation for required fields."""
+    with pytest.raises(ValidationError):
+        MarketplaceApp(
+            # Missing required fields
+            name="Incomplete App"
         )
