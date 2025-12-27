@@ -19,10 +19,14 @@ from lib.git_sync import GitSync
 from models.marketplace import (
     MarketplaceApp,
     MarketplaceRepo,
+    AppRating,
     MarketplaceRepoTable,
     MarketplaceAppTable,
+    AppRatingTable,
     RepoType,
     RepoStatus,
+    DockerConfig,
+    AppRequirements,
 )
 
 logger = structlog.get_logger("marketplace_service")
@@ -339,6 +343,265 @@ class MarketplaceService:
                 )
                 session.add(table_row)
 
+    # ─────────────────────────────────────────────────────────────
+    # App Search & Discovery
+    # ─────────────────────────────────────────────────────────────
+
+    async def search_apps(
+        self,
+        search: Optional[str] = None,
+        category: Optional[str] = None,
+        tags: Optional[List[str]] = None,
+        repo_id: Optional[str] = None,
+        featured: Optional[bool] = None,
+        sort_by: str = "name",
+        sort_order: str = "asc",
+        limit: int = 50,
+        offset: int = 0
+    ) -> List[MarketplaceApp]:
+        """Search marketplace apps with filters.
+
+        Args:
+            search: Search term to match against name or description
+            category: Filter by category
+            tags: Filter by tags (all tags must match)
+            repo_id: Filter by repository ID
+            featured: Filter by featured status
+            sort_by: Sort field (name, rating, popularity, updated)
+            sort_order: Sort order (asc, desc)
+            limit: Maximum number of results
+            offset: Offset for pagination
+
+        Returns:
+            List of matching MarketplaceApp instances
+        """
+        await self._ensure_initialized()
+
+        async with db_manager.get_session() as session:
+            query = select(MarketplaceAppTable, MarketplaceRepoTable).join(
+                MarketplaceRepoTable,
+                MarketplaceAppTable.repo_id == MarketplaceRepoTable.id
+            ).where(MarketplaceRepoTable.enabled == True)  # noqa: E712
+
+            # Apply filters
+            if category:
+                query = query.where(MarketplaceAppTable.category == category)
+            if repo_id:
+                query = query.where(MarketplaceAppTable.repo_id == repo_id)
+            if featured is not None:
+                query = query.where(MarketplaceAppTable.featured == featured)
+
+            result = await session.execute(query)
+            rows = result.all()
+
+        # Convert to models
+        apps = [self._app_from_table(app_row) for app_row, _ in rows]
+
+        # In-memory filtering for search and tags
+        if search:
+            search_lower = search.lower()
+            apps = [
+                a for a in apps
+                if search_lower in a.name.lower() or search_lower in a.description.lower()
+            ]
+
+        if tags:
+            required_tags = set(t.lower() for t in tags)
+            apps = [
+                a for a in apps
+                if required_tags.issubset(set(t.lower() for t in a.tags))
+            ]
+
+        # Sort
+        reverse = sort_order.lower() == "desc"
+        if sort_by == "name":
+            apps.sort(key=lambda a: a.name.lower(), reverse=reverse)
+        elif sort_by == "rating":
+            apps.sort(key=lambda a: a.avg_rating or 0, reverse=reverse)
+        elif sort_by == "popularity":
+            apps.sort(key=lambda a: a.install_count, reverse=reverse)
+        elif sort_by == "updated":
+            apps.sort(key=lambda a: a.updated_at, reverse=reverse)
+
+        # Pagination
+        return apps[offset:offset + limit]
+
+    async def get_app(self, app_id: str) -> Optional[MarketplaceApp]:
+        """Get app by ID.
+
+        Args:
+            app_id: Application identifier
+
+        Returns:
+            MarketplaceApp instance if found, None otherwise
+        """
+        await self._ensure_initialized()
+
+        async with db_manager.get_session() as session:
+            result = await session.execute(
+                select(MarketplaceAppTable).where(MarketplaceAppTable.id == app_id)
+            )
+            row = result.scalar_one_or_none()
+
+        return self._app_from_table(row) if row else None
+
+    async def get_featured_apps(self, limit: int = 10) -> List[MarketplaceApp]:
+        """Get featured apps.
+
+        Args:
+            limit: Maximum number of apps to return
+
+        Returns:
+            List of featured MarketplaceApp instances
+        """
+        return await self.search_apps(featured=True, limit=limit)
+
+    async def get_trending_apps(self, limit: int = 10) -> List[MarketplaceApp]:
+        """Get trending apps by recent popularity.
+
+        Args:
+            limit: Maximum number of apps to return
+
+        Returns:
+            List of trending MarketplaceApp instances sorted by popularity
+        """
+        return await self.search_apps(
+            sort_by="popularity",
+            sort_order="desc",
+            limit=limit
+        )
+
+    async def get_categories(self) -> List[dict]:
+        """Get all categories with app counts.
+
+        Returns:
+            List of dictionaries with category id, name, and count
+        """
+        await self._ensure_initialized()
+
+        async with db_manager.get_session() as session:
+            result = await session.execute(select(MarketplaceAppTable.category))
+            rows = result.all()
+
+        # Count apps per category
+        category_counts: dict = {}
+        for row in rows:
+            cat = row[0]
+            category_counts[cat] = category_counts.get(cat, 0) + 1
+
+        return [
+            {"id": cat, "name": cat.title(), "count": count}
+            for cat, count in sorted(category_counts.items())
+        ]
+
+    # ─────────────────────────────────────────────────────────────
+    # Ratings
+    # ─────────────────────────────────────────────────────────────
+
+    async def rate_app(self, app_id: str, user_id: str, rating: int) -> AppRating:
+        """Rate an app (1-5 stars). Updates existing rating if present.
+
+        Args:
+            app_id: Application identifier
+            user_id: User identifier
+            rating: Rating value (1-5)
+
+        Returns:
+            AppRating instance
+
+        Raises:
+            ValueError: If rating is not between 1 and 5
+        """
+        await self._ensure_initialized()
+
+        if not 1 <= rating <= 5:
+            raise ValueError("Rating must be between 1 and 5")
+
+        rating_id = f"rating-{uuid.uuid4().hex[:8]}"
+        now = datetime.utcnow()
+
+        async with db_manager.get_session() as session:
+            # Check for existing rating
+            result = await session.execute(
+                select(AppRatingTable).where(
+                    AppRatingTable.app_id == app_id,
+                    AppRatingTable.user_id == user_id
+                )
+            )
+            existing = result.scalar_one_or_none()
+
+            if existing:
+                # Update existing
+                await session.execute(
+                    update(AppRatingTable)
+                    .where(AppRatingTable.id == existing.id)
+                    .values(rating=rating, updated_at=now)
+                )
+                rating_id = existing.id
+            else:
+                # Insert new
+                new_rating = AppRatingTable(
+                    id=rating_id,
+                    app_id=app_id,
+                    user_id=user_id,
+                    rating=rating
+                )
+                session.add(new_rating)
+
+            # Flush to ensure the new rating is committed
+            await session.flush()
+
+            # Update app's average rating - query again after flush
+            avg_result = await session.execute(
+                select(AppRatingTable.rating).where(AppRatingTable.app_id == app_id)
+            )
+            all_ratings = [r[0] for r in avg_result.all()]
+            avg_rating = sum(all_ratings) / len(all_ratings) if all_ratings else None
+
+            await session.execute(
+                update(MarketplaceAppTable)
+                .where(MarketplaceAppTable.id == app_id)
+                .values(avg_rating=avg_rating, rating_count=len(all_ratings))
+            )
+
+        logger.info("App rated", app_id=app_id, user_id=user_id, rating=rating)
+
+        return AppRating(
+            id=rating_id,
+            app_id=app_id,
+            user_id=user_id,
+            rating=rating,
+            created_at=now.isoformat(),
+            updated_at=now.isoformat()
+        )
+
+    async def get_user_rating(self, app_id: str, user_id: str) -> Optional[int]:
+        """Get user's rating for an app.
+
+        Args:
+            app_id: Application identifier
+            user_id: User identifier
+
+        Returns:
+            Rating value (1-5) if found, None otherwise
+        """
+        await self._ensure_initialized()
+
+        async with db_manager.get_session() as session:
+            result = await session.execute(
+                select(AppRatingTable.rating).where(
+                    AppRatingTable.app_id == app_id,
+                    AppRatingTable.user_id == user_id
+                )
+            )
+            row = result.scalar_one_or_none()
+
+        return row if row else None
+
+    # ─────────────────────────────────────────────────────────────
+    # Helper Methods
+    # ─────────────────────────────────────────────────────────────
+
     @staticmethod
     def _repo_from_table(row: MarketplaceRepoTable) -> MarketplaceRepo:
         """Convert a table row to a MarketplaceRepo model.
@@ -360,6 +623,44 @@ class MarketplaceService:
             last_synced=row.last_synced,
             app_count=row.app_count,
             error_message=row.error_message,
+            created_at=row.created_at,
+            updated_at=row.updated_at,
+        )
+
+    @staticmethod
+    def _app_from_table(row: MarketplaceAppTable) -> MarketplaceApp:
+        """Convert table row to MarketplaceApp model.
+
+        Args:
+            row: SQLAlchemy MarketplaceAppTable instance
+
+        Returns:
+            MarketplaceApp Pydantic model
+        """
+        docker_config = DockerConfig.model_validate_json(row.docker_config)
+        requirements = AppRequirements.model_validate_json(row.requirements) if row.requirements else AppRequirements(architectures=["amd64", "arm64"])
+        tags = json.loads(row.tags) if row.tags else []
+
+        return MarketplaceApp(
+            id=row.id,
+            name=row.name,
+            description=row.description,
+            long_description=row.long_description,
+            version=row.version,
+            category=row.category,
+            tags=tags,
+            icon=row.icon,
+            author=row.author,
+            license=row.license,
+            repository=row.repository,
+            documentation=row.documentation,
+            repo_id=row.repo_id,
+            docker=docker_config,
+            requirements=requirements,
+            install_count=row.install_count or 0,
+            avg_rating=row.avg_rating or 0.0,
+            rating_count=row.rating_count or 0,
+            featured=row.featured or False,
             created_at=row.created_at,
             updated_at=row.updated_at,
         )
