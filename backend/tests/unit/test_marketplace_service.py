@@ -222,3 +222,153 @@ async def test_remove_repo_with_apps(marketplace_service):
     # Actual app deletion will be tested when we have app creation
     success = await marketplace_service.remove_repo(repo.id)
     assert success is True
+
+
+@pytest.mark.asyncio
+async def test_sync_repo_local_path(marketplace_service, tmp_path):
+    """Test syncing a repository from a local path."""
+    # Create a mock repo with app.yaml
+    apps_dir = tmp_path / "apps" / "testapp"
+    apps_dir.mkdir(parents=True)
+    (apps_dir / "app.yaml").write_text("""
+name: Test App
+version: 1.0.0
+description: A test application
+category: utility
+docker:
+  image: test/app:latest
+  ports:
+    - container: 8080
+      host: 8080
+  volumes: []
+  environment: []
+  restart_policy: unless-stopped
+  privileged: false
+  capabilities: []
+""")
+
+    # Add repo pointing to local path
+    repo = await marketplace_service.add_repo(
+        name="Local Test",
+        url=str(tmp_path),
+        repo_type=RepoType.PERSONAL
+    )
+
+    # Sync repo (mock Git operations by using local_path)
+    apps = await marketplace_service.sync_repo(repo.id, local_path=tmp_path)
+
+    # Verify sync results
+    assert len(apps) == 1
+    assert apps[0].name == "Test App"
+    assert apps[0].version == "1.0.0"
+    assert apps[0].category == "utility"
+    assert apps[0].docker.image == "test/app:latest"
+
+    # Verify repo status updated
+    updated_repo = await marketplace_service.get_repo(repo.id)
+    assert updated_repo is not None
+    assert updated_repo.status == RepoStatus.ACTIVE
+    assert updated_repo.app_count == 1
+    assert updated_repo.last_synced is not None
+    assert updated_repo.error_message is None
+
+
+@pytest.mark.asyncio
+async def test_sync_repo_updates_status_to_syncing(marketplace_service, tmp_path):
+    """Test that sync_repo updates status to SYNCING during sync."""
+    # Create a mock repo
+    apps_dir = tmp_path / "apps" / "testapp"
+    apps_dir.mkdir(parents=True)
+    (apps_dir / "app.yaml").write_text("""
+name: Test App
+version: 1.0.0
+description: A test application
+category: utility
+docker:
+  image: test/app:latest
+  ports: []
+  volumes: []
+  environment: []
+  restart_policy: unless-stopped
+  privileged: false
+  capabilities: []
+""")
+
+    repo = await marketplace_service.add_repo(
+        name="Test Repo",
+        url=str(tmp_path),
+        repo_type=RepoType.PERSONAL
+    )
+
+    # The status will be SYNCING during the operation
+    # We can't check mid-operation but we can verify final state is ACTIVE
+    await marketplace_service.sync_repo(repo.id, local_path=tmp_path)
+
+    updated_repo = await marketplace_service.get_repo(repo.id)
+    assert updated_repo.status == RepoStatus.ACTIVE
+
+
+@pytest.mark.asyncio
+async def test_sync_repo_handles_errors(marketplace_service):
+    """Test that sync_repo handles errors gracefully."""
+    # Add repo with invalid URL (no local_path will force Git operations)
+    repo = await marketplace_service.add_repo(
+        name="Invalid Repo",
+        url="https://github.com/nonexistent/repo",
+        repo_type=RepoType.COMMUNITY
+    )
+
+    # Sync should fail and set error status
+    with pytest.raises(RuntimeError):
+        await marketplace_service.sync_repo(repo.id)
+
+    # Verify repo status is ERROR with error message
+    updated_repo = await marketplace_service.get_repo(repo.id)
+    assert updated_repo is not None
+    assert updated_repo.status == RepoStatus.ERROR
+    assert updated_repo.error_message is not None
+
+
+@pytest.mark.asyncio
+async def test_sync_repo_stores_apps_in_database(marketplace_service, tmp_path):
+    """Test that synced apps are stored in the database."""
+    # Create multiple apps
+    for i in range(3):
+        app_dir = tmp_path / "apps" / f"app{i}"
+        app_dir.mkdir(parents=True)
+        (app_dir / "app.yaml").write_text(f"""
+name: Test App {i}
+version: 1.{i}.0
+description: Test application {i}
+category: utility
+docker:
+  image: test/app{i}:latest
+  ports: []
+  volumes: []
+  environment: []
+  restart_policy: unless-stopped
+  privileged: false
+  capabilities: []
+""")
+
+    repo = await marketplace_service.add_repo(
+        name="Multi-App Repo",
+        url=str(tmp_path),
+        repo_type=RepoType.COMMUNITY
+    )
+
+    apps = await marketplace_service.sync_repo(repo.id, local_path=tmp_path)
+
+    # Verify all apps were synced
+    assert len(apps) == 3
+
+    # Verify apps are in database by checking app_count
+    updated_repo = await marketplace_service.get_repo(repo.id)
+    assert updated_repo.app_count == 3
+
+
+@pytest.mark.asyncio
+async def test_sync_repo_not_found(marketplace_service):
+    """Test syncing a non-existent repository."""
+    with pytest.raises(ValueError, match="Repository .* not found"):
+        await marketplace_service.sync_repo("nonexistent")

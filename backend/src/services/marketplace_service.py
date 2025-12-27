@@ -4,8 +4,10 @@ Provides data access and business logic for marketplace repository management.""
 
 from __future__ import annotations
 
+import json
 import uuid
 from datetime import datetime
+from pathlib import Path
 from typing import List, Optional
 
 import structlog
@@ -13,7 +15,9 @@ from sqlalchemy import delete, select, update
 
 from database.connection import db_manager
 from init_db.schema_marketplace import initialize_marketplace_database
+from lib.git_sync import GitSync
 from models.marketplace import (
+    MarketplaceApp,
     MarketplaceRepo,
     MarketplaceRepoTable,
     MarketplaceAppTable,
@@ -188,6 +192,152 @@ class MarketplaceService:
             logger.warning("Repository not found for toggle", repo_id=repo_id)
 
         return updated
+
+    async def sync_repo(
+        self,
+        repo_id: str,
+        local_path: Optional[Path] = None
+    ) -> List[MarketplaceApp]:
+        """Sync apps from a repository.
+
+        Args:
+            repo_id: Repository identifier
+            local_path: Optional local path for testing (skips Git clone/pull)
+
+        Returns:
+            List of synced MarketplaceApp instances
+
+        Raises:
+            ValueError: If repository not found
+            RuntimeError: If Git operations fail
+        """
+        await self._ensure_initialized()
+
+        repo = await self.get_repo(repo_id)
+        if not repo:
+            raise ValueError(f"Repository {repo_id} not found")
+
+        # Update status to SYNCING
+        async with db_manager.get_session() as session:
+            await session.execute(
+                update(MarketplaceRepoTable)
+                .where(MarketplaceRepoTable.id == repo_id)
+                .values(status=RepoStatus.SYNCING.value)
+            )
+
+        git_sync = GitSync()
+        apps: List[MarketplaceApp] = []
+
+        try:
+            # Use local path for testing or clone from URL
+            if local_path:
+                repo_path = Path(local_path)
+            else:
+                repo_path = git_sync.clone_or_pull(repo.url, repo.branch)
+
+            # Find and parse app files
+            app_files = git_sync.find_app_files(repo_path)
+
+            for app_file in app_files:
+                app = git_sync.load_app_from_file(app_file, repo_id)
+                if app:
+                    apps.append(app)
+                    await self._upsert_app(app)
+
+            # Update repo with success
+            async with db_manager.get_session() as session:
+                await session.execute(
+                    update(MarketplaceRepoTable)
+                    .where(MarketplaceRepoTable.id == repo_id)
+                    .values(
+                        status=RepoStatus.ACTIVE.value,
+                        last_synced=datetime.utcnow(),
+                        app_count=len(apps),
+                        error_message=None
+                    )
+                )
+
+            logger.info("Repository synced", repo_id=repo_id, app_count=len(apps))
+
+        except Exception as e:
+            # Update repo with error
+            async with db_manager.get_session() as session:
+                await session.execute(
+                    update(MarketplaceRepoTable)
+                    .where(MarketplaceRepoTable.id == repo_id)
+                    .values(
+                        status=RepoStatus.ERROR.value,
+                        error_message=str(e)
+                    )
+                )
+            logger.error("Repository sync failed", repo_id=repo_id, error=str(e))
+            raise
+
+        finally:
+            if not local_path:
+                git_sync.cleanup()
+
+        return apps
+
+    async def _upsert_app(self, app: MarketplaceApp) -> None:
+        """Insert or update an app in the database.
+
+        Args:
+            app: MarketplaceApp instance to upsert
+        """
+        docker_json = app.docker.model_dump_json()
+        req_json = app.requirements.model_dump_json()
+        tags_json = json.dumps(app.tags)
+
+        async with db_manager.get_session() as session:
+            # Check if exists
+            result = await session.execute(
+                select(MarketplaceAppTable).where(MarketplaceAppTable.id == app.id)
+            )
+            existing = result.scalar_one_or_none()
+
+            if existing:
+                # Update
+                await session.execute(
+                    update(MarketplaceAppTable)
+                    .where(MarketplaceAppTable.id == app.id)
+                    .values(
+                        name=app.name,
+                        description=app.description,
+                        long_description=app.long_description,
+                        version=app.version,
+                        category=app.category,
+                        tags=tags_json,
+                        icon=app.icon,
+                        author=app.author,
+                        license=app.license,
+                        repository=app.repository,
+                        documentation=app.documentation,
+                        docker_config=docker_json,
+                        requirements=req_json,
+                        updated_at=datetime.utcnow()
+                    )
+                )
+            else:
+                # Insert
+                table_row = MarketplaceAppTable(
+                    id=app.id,
+                    name=app.name,
+                    description=app.description,
+                    long_description=app.long_description,
+                    version=app.version,
+                    category=app.category,
+                    tags=tags_json,
+                    icon=app.icon,
+                    author=app.author,
+                    license=app.license,
+                    repository=app.repository,
+                    documentation=app.documentation,
+                    repo_id=app.repo_id,
+                    docker_config=docker_json,
+                    requirements=req_json
+                )
+                session.add(table_row)
 
     @staticmethod
     def _repo_from_table(row: MarketplaceRepoTable) -> MarketplaceRepo:
