@@ -128,3 +128,16 @@ class MarketplaceApp(BaseModel):
     featured: bool = Field(..., description="Whether app is featured")
     created_at: datetime = Field(..., alias="createdAt", description="App creation timestamp")
     updated_at: datetime = Field(..., alias="updatedAt", description="Last update timestamp")
+
+
+class AppRating(BaseModel):
+    """User rating for a marketplace application."""
+
+    model_config = ConfigDict(populate_by_name=True)
+
+    id: str = Field(..., description="Unique rating identifier")
+    app_id: str = Field(..., alias="appId", description="Application being rated")
+    user_id: str = Field(..., alias="userId", description="User who submitted the rating")
+    rating: int = Field(..., ge=1, le=5, description="Rating value (1-5)")
+    created_at: str = Field(..., alias="createdAt", description="Rating creation timestamp")
+    updated_at: str = Field(..., alias="updatedAt", description="Last update timestamp")

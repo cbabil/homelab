@@ -6,7 +6,7 @@ from pydantic import ValidationError
 from models.marketplace import (
     MarketplaceRepo, RepoType, RepoStatus,
     AppPort, AppVolume, AppEnvVar, DockerConfig,
-    AppRequirements, MarketplaceApp
+    AppRequirements, MarketplaceApp, AppRating
 )
 
 
@@ -355,4 +355,93 @@ def test_marketplace_app_validation():
         MarketplaceApp(
             # Missing required fields
             name="Incomplete App"
+        )
+
+
+def test_app_rating_model():
+    """Test AppRating model creation and validation."""
+    rating = AppRating(
+        id="rating-1",
+        app_id="test-app-1",
+        user_id="user-123",
+        rating=5,
+        created_at="2024-01-01T00:00:00Z",
+        updated_at="2024-01-01T00:00:00Z"
+    )
+
+    assert rating.id == "rating-1"
+    assert rating.app_id == "test-app-1"
+    assert rating.user_id == "user-123"
+    assert rating.rating == 5
+    assert rating.created_at == "2024-01-01T00:00:00Z"
+    assert rating.updated_at == "2024-01-01T00:00:00Z"
+
+
+def test_app_rating_validation_range():
+    """Test AppRating validates rating is between 1 and 5."""
+    # Valid ratings
+    for valid_rating in [1, 2, 3, 4, 5]:
+        rating = AppRating(
+            id=f"rating-{valid_rating}",
+            app_id="test-app-1",
+            user_id="user-123",
+            rating=valid_rating,
+            created_at="2024-01-01T00:00:00Z",
+            updated_at="2024-01-01T00:00:00Z"
+        )
+        assert rating.rating == valid_rating
+
+    # Invalid ratings
+    with pytest.raises(ValidationError):
+        AppRating(
+            id="rating-invalid-low",
+            app_id="test-app-1",
+            user_id="user-123",
+            rating=0,  # Too low
+            created_at="2024-01-01T00:00:00Z",
+            updated_at="2024-01-01T00:00:00Z"
+        )
+
+    with pytest.raises(ValidationError):
+        AppRating(
+            id="rating-invalid-high",
+            app_id="test-app-1",
+            user_id="user-123",
+            rating=6,  # Too high
+            created_at="2024-01-01T00:00:00Z",
+            updated_at="2024-01-01T00:00:00Z"
+        )
+
+
+def test_app_rating_camelcase_aliases():
+    """Test AppRating camelCase field aliases."""
+    rating_data = {
+        "id": "rating-2",
+        "appId": "test-app-2",  # camelCase
+        "userId": "user-456",  # camelCase
+        "rating": 4,
+        "createdAt": "2024-02-01T00:00:00Z",  # camelCase
+        "updatedAt": "2024-02-01T00:00:00Z"  # camelCase
+    }
+
+    rating = AppRating(**rating_data)
+    assert rating.app_id == "test-app-2"
+    assert rating.user_id == "user-456"
+    assert rating.created_at == "2024-02-01T00:00:00Z"
+    assert rating.updated_at == "2024-02-01T00:00:00Z"
+
+    # Test serialization to camelCase
+    serialized = rating.model_dump(by_alias=True)
+    assert "appId" in serialized
+    assert "userId" in serialized
+    assert "createdAt" in serialized
+    assert "updatedAt" in serialized
+
+
+def test_app_rating_required_fields():
+    """Test AppRating validation for required fields."""
+    with pytest.raises(ValidationError):
+        AppRating(
+            # Missing required fields
+            id="rating-incomplete"
         )
