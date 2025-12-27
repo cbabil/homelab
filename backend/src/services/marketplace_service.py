@@ -31,6 +31,11 @@ from models.marketplace import (
 
 logger = structlog.get_logger("marketplace_service")
 
+# Official marketplace configuration
+OFFICIAL_MARKETPLACE_URL = "https://github.com/cbabil/homelab-marketplace"
+OFFICIAL_MARKETPLACE_NAME = "Homelab Marketplace"
+OFFICIAL_MARKETPLACE_BRANCH = "master"
+
 
 class MarketplaceService:
     """Service for managing marketplace repositories."""
@@ -40,10 +45,47 @@ class MarketplaceService:
         logger.info("Marketplace service initialized")
 
     async def _ensure_initialized(self) -> None:
-        """Ensure the marketplace database is initialized."""
+        """Ensure the marketplace database is initialized with official marketplace."""
         if not self._initialized:
             await initialize_marketplace_database()
+            await self._ensure_official_marketplace()
             self._initialized = True
+
+    async def _ensure_official_marketplace(self) -> None:
+        """Add the official marketplace if not already present."""
+        async with db_manager.get_session() as session:
+            # Check if official marketplace exists
+            result = await session.execute(
+                select(MarketplaceRepoTable).where(
+                    MarketplaceRepoTable.repo_type == RepoType.OFFICIAL.value
+                )
+            )
+            existing = result.scalar_one_or_none()
+
+            if not existing:
+                # Add official marketplace
+                repo_id = "official"
+                now = datetime.utcnow()
+                repo_table = MarketplaceRepoTable(
+                    id=repo_id,
+                    name=OFFICIAL_MARKETPLACE_NAME,
+                    url=OFFICIAL_MARKETPLACE_URL,
+                    branch=OFFICIAL_MARKETPLACE_BRANCH,
+                    repo_type=RepoType.OFFICIAL.value,
+                    enabled=True,
+                    status=RepoStatus.ACTIVE.value,
+                    last_synced=None,
+                    app_count=0,
+                    error_message=None,
+                    created_at=now,
+                    updated_at=now,
+                )
+                session.add(repo_table)
+                logger.info(
+                    "Official marketplace added",
+                    repo_id=repo_id,
+                    url=OFFICIAL_MARKETPLACE_URL
+                )
 
     async def add_repo(
         self,
