@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react'
 import { Search } from 'lucide-react'
 import type { MarketplaceApp, MarketplaceCategory, SearchFilters } from '@/types/marketplace'
 import * as marketplaceService from '@/services/marketplaceService'
+import { RepoManager } from './RepoManager'
 
 // Placeholder for AppCard component (will be implemented in Task 5.3)
 function AppCardPlaceholder({ app }: { app: MarketplaceApp }) {
@@ -258,14 +259,7 @@ export function MarketplacePage() {
 
       {/* Manage Repos Tab */}
       {activeTab === 'repos' && (
-        <div className="space-y-4">
-          <div className="bg-white border border-gray-200 rounded-lg p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Repository Management</h2>
-            <p className="text-sm text-gray-600">
-              Repository management interface will be implemented in Task 5.2
-            </p>
-          </div>
-        </div>
+        <RepoManager />
       )}
     </div>
   )
