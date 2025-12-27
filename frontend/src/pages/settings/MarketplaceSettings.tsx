@@ -38,10 +38,13 @@ export function MarketplaceSettings() {
     try {
       setLoading(true)
       const result = await marketplaceService.getRepos()
-      setRepos(result)
+      // Ensure result is an array
+      setRepos(Array.isArray(result) ? result : [])
       setError(null)
     } catch (err) {
-      setError('Failed to load marketplace repositories')
+      console.error('Failed to load repos:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load marketplace repositories')
+      setRepos([])
     } finally {
       setLoading(false)
     }

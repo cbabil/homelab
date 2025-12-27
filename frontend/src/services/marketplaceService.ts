@@ -25,6 +25,16 @@ function getMcpClient(): HomelabMCPClient {
 }
 
 /**
+ * Backend tool response format
+ */
+interface ToolResponse<T> {
+  success: boolean
+  data?: T
+  error?: string
+  message?: string
+}
+
+/**
  * Helper to call MCP tool with auto-connect
  */
 async function callTool<T>(name: string, params: Record<string, unknown>): Promise<T> {
@@ -32,13 +42,28 @@ async function callTool<T>(name: string, params: Record<string, unknown>): Promi
 
   try {
     await client.connect()
-    const response = await client.callTool<T>(name, params)
+    const response = await client.callTool<unknown>(name, params)
 
     if (!response.success) {
-      throw new Error(response.error || response.message || 'Tool call failed')
+      throw new Error(response.error || response.message || 'MCP call failed')
     }
 
-    return response.data as T
+    // The MCP response wraps the tool's response
+    // Tool returns: { success: true, data: <actual_data> }
+    // But sometimes it might return the data directly
+    const toolResponse = response.data as ToolResponse<T> | T
+
+    // Check if it's a wrapped response
+    if (toolResponse && typeof toolResponse === 'object' && 'success' in toolResponse) {
+      const wrapped = toolResponse as ToolResponse<T>
+      if (!wrapped.success) {
+        throw new Error(wrapped.error || wrapped.message || 'Tool call failed')
+      }
+      return wrapped.data as T
+    }
+
+    // Otherwise assume it's the direct data
+    return toolResponse as T
   } finally {
     await client.disconnect()
   }
