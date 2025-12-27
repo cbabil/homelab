@@ -12,6 +12,7 @@ from services.catalog_service import CatalogService
 from services.dashboard_service import DashboardService
 from services.database_service import DatabaseService
 from services.deployment_service import DeploymentService
+from services.marketplace_service import MarketplaceService
 from services.metrics_service import MetricsService
 from services.monitoring_service import MonitoringService
 from services.preparation_service import PreparationService
@@ -83,6 +84,8 @@ preparation_service = PreparationService(
     db_service=database_service
 )
 
+marketplace_service = MarketplaceService()
+
 # Create FastMCP app
 app = FastMCP(
     name="homelab-assistant",
@@ -111,6 +114,7 @@ tool_dependencies = {
     "metrics_service": metrics_service,
     "dashboard_service": dashboard_service,
     "preparation_service": preparation_service,
+    "marketplace_service": marketplace_service,
 }
 
 register_all_tools(app, config, tool_dependencies)
