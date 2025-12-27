@@ -1,4 +1,5 @@
 import pytest
+import subprocess
 import tempfile
 from pathlib import Path
 from unittest.mock import patch, MagicMock
@@ -217,6 +218,38 @@ def test_clone_or_pull_error(mock_run):
 
         with pytest.raises(Exception):
             sync.clone_or_pull("https://github.com/test/repo.git", "main")
+
+
+@patch('subprocess.run')
+def test_clone_or_pull_stderr_decoding(mock_run):
+    # Simulate git error with stderr that needs decoding
+    mock_error = subprocess.CalledProcessError(1, ['git', 'clone'])
+    mock_error.stderr = b"fatal: repository not found"
+    mock_run.side_effect = mock_error
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        sync = GitSync(cache_dir=tmpdir)
+
+        with pytest.raises(RuntimeError) as exc_info:
+            sync.clone_or_pull("https://github.com/test/nonexistent.git", "main")
+
+        assert "fatal: repository not found" in str(exc_info.value)
+
+
+@patch('subprocess.run')
+def test_clone_or_pull_stderr_none(mock_run):
+    # Simulate git error with no stderr
+    mock_error = subprocess.CalledProcessError(1, ['git', 'clone'])
+    mock_error.stderr = None
+    mock_run.side_effect = mock_error
+
+    with tempfile.TemporaryDirectory() as tmpdir:
+        sync = GitSync(cache_dir=tmpdir)
+
+        with pytest.raises(RuntimeError) as exc_info:
+            sync.clone_or_pull("https://github.com/test/nonexistent.git", "main")
+
+        assert "No error message" in str(exc_info.value)
 
 
 def test_cleanup():

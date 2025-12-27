@@ -4,6 +4,7 @@ import os
 import shutil
 import tempfile
 import subprocess
+from datetime import datetime, UTC
 from pathlib import Path
 from typing import List, Optional, Dict, Any
 
@@ -54,8 +55,9 @@ class GitSync:
             return repo_path
 
         except subprocess.CalledProcessError as e:
-            logger.error("Git operation failed", repo=repo_url, error=e.stderr.decode())
-            raise RuntimeError(f"Git operation failed: {e.stderr.decode()}")
+            stderr = e.stderr.decode() if e.stderr else "No error message"
+            logger.error("Git operation failed", repo=repo_url, error=stderr)
+            raise RuntimeError(f"Git operation failed: {stderr}")
 
     def find_app_files(self, repo_path: Path) -> List[Path]:
         """Find all app.yaml files in repository."""
@@ -127,8 +129,13 @@ class GitSync:
                     default=e.get("default")
                 ))
 
+        # Validate docker image is non-empty
+        docker_image = docker_data.get("image", "")
+        if not docker_image:
+            raise ValueError("docker.image is required and cannot be empty")
+
         docker_config = DockerConfig(
-            image=docker_data.get("image", ""),
+            image=docker_image,
             ports=ports,
             volumes=volumes,
             environment=env_vars,
@@ -146,23 +153,21 @@ class GitSync:
             architectures=req_data.get("architectures", ["amd64", "arm64"])
         )
 
-        from datetime import datetime, UTC
-
         now = datetime.now(UTC)
 
         return MarketplaceApp(
             id=data.get("id", data.get("name", "").lower().replace(" ", "-")),
             name=data.get("name", ""),
             description=data.get("description", ""),
-            long_description=data.get("long_description", ""),
+            long_description=data.get("long_description"),
             version=data.get("version", "1.0.0"),
             category=data.get("category", "utility"),
             tags=data.get("tags", []),
-            icon=data.get("icon", ""),
+            icon=data.get("icon"),
             author=data.get("author", "Community"),
             license=data.get("license", "MIT"),
-            repository=data.get("repository", ""),
-            documentation=data.get("documentation", ""),
+            repository=data.get("repository"),
+            documentation=data.get("documentation"),
             repo_id=repo_id,
             docker=docker_config,
             requirements=requirements,
