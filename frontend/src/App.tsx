@@ -12,6 +12,7 @@ import { LoginPage, RegistrationPage, TermsOfServicePage, PrivacyPolicyPage } fr
 import { Dashboard } from '@/pages/dashboard'
 import { ServersPage } from '@/pages/servers'
 import { ApplicationsPage } from '@/pages/applications'
+import { MarketplacePage } from '@/pages/marketplace'
 import { SettingsPage } from '@/pages/settings'
 import { LogsPage } from '@/pages/logs/LogsPage'
 
@@ -54,6 +55,7 @@ export function App() {
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/servers" element={<ServersPage />} />
                 <Route path="/applications" element={<ApplicationsPage />} />
+                <Route path="/marketplace" element={<MarketplacePage />} />
                 <Route path="/logs" element={<LogsPage />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/help" element={<Dashboard />} />
