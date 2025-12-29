@@ -4,7 +4,7 @@
  * Main settings container that manages different settings tabs in a modular architecture.
  */
 
-import { GeneralSettings, SecuritySettings, NotificationSettings, ServerSettings } from './index'
+import { GeneralSettings, SecuritySettings, NotificationSettings, ServerSettings, MarketplaceSettings } from './index'
 import { useSettingsState } from './useSettingsState'
 import { useSettingsHandlers } from './useSettingsHandlers'
 import { SettingsHeader } from './SettingsHeader'
@@ -81,7 +81,10 @@ export function SettingsPage() {
             onUpdateAlertsChange={state.setUpdateAlerts}
           />
         )
-      
+
+      case 'marketplace':
+        return <MarketplaceSettings />
+
       default:
         return null
     }

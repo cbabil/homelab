@@ -9,6 +9,9 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src')
     }
   },
+  optimizeDeps: {
+    exclude: ['ui-toolkit']
+  },
   server: {
     port: 3000,
     host: true,
@@ -17,6 +20,14 @@ export default defineConfig({
         target: 'http://localhost:8000',
         changeOrigin: true,
         rewrite: (path) => path.replace(/^\/api/, '')
+      },
+      '/mcp': {
+        target: 'http://localhost:8000',
+        changeOrigin: true
+      },
+      '/health': {
+        target: 'http://localhost:8000',
+        changeOrigin: true
       }
     }
   },
