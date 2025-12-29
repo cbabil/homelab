@@ -66,3 +66,27 @@ export interface ServerConnectionTest {
     docker_version?: string
   }
 }
+
+export interface ActivityLog {
+  id: string
+  activity_type: string
+  description: string
+  server_id?: string
+  user_id?: string
+  metadata?: Record<string, unknown>
+  created_at: string
+}
+
+export interface DashboardSummary {
+  total_servers: number
+  online_servers: number
+  offline_servers: number
+  total_apps: number
+  running_apps: number
+  stopped_apps: number
+  error_apps: number
+  avg_cpu_percent: number
+  avg_memory_percent: number
+  avg_disk_percent: number
+  recent_activities: ActivityLog[]
+}

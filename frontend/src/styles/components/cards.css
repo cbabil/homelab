@@ -39,7 +39,12 @@
 
 /* App card specific styles (from AppCard component) */
 .card-app {
-  @apply card-base p-3 h-full flex flex-col;
+  @apply card-base p-3 flex flex-col relative;
+  height: 160px;
+}
+
+.card-app:hover {
+  @apply border-primary/50;
 }
 
 .card-app-header {
@@ -67,7 +72,7 @@
 }
 
 .card-app-description {
-  @apply text-xs text-muted-foreground line-clamp-2;
+  @apply text-xs text-muted-foreground line-clamp-2 overflow-hidden;
 }
 
 .card-app-meta {

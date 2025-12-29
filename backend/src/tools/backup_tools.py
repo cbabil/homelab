@@ -4,12 +4,33 @@ Backup MCP Tools
 Provides MCP tools for backup and restore operations.
 """
 
+from datetime import datetime, UTC
 from typing import Dict, Any
+import uuid
 import structlog
 from fastmcp import FastMCP
 from services.backup_service import BackupService
+from services.service_log import log_service
+from models.log import LogEntry
 
 logger = structlog.get_logger("backup_tools")
+
+
+async def _log_backup_event(level: str, message: str, metadata: Dict[str, Any] = None):
+    """Helper to log backup events to the database."""
+    try:
+        entry = LogEntry(
+            id=f"bkp-{uuid.uuid4().hex[:8]}",
+            timestamp=datetime.now(UTC),
+            level=level,
+            source="bkp",
+            message=message,
+            tags=["backup", "data"],
+            metadata=metadata or {}
+        )
+        await log_service.create_log_entry(entry)
+    except Exception as e:
+        logger.error("Failed to create log entry", error=str(e))
 
 
 class BackupTools:
@@ -30,6 +51,11 @@ class BackupTools:
             result = await self.backup_service.export_backup(output_path, password)
 
             if result["success"]:
+                await _log_backup_event("INFO", "Backup exported successfully", {
+                    "path": result["path"],
+                    "size": result["size"],
+                    "checksum": result["checksum"]
+                })
                 return {
                     "success": True,
                     "data": {
@@ -41,6 +67,7 @@ class BackupTools:
                     "message": "Backup exported successfully"
                 }
             else:
+                await _log_backup_event("ERROR", "Backup export failed", {"error": result["error"]})
                 return {
                     "success": False,
                     "message": result["error"],
@@ -49,6 +76,7 @@ class BackupTools:
 
         except Exception as e:
             logger.error("Export backup error", error=str(e))
+            await _log_backup_event("ERROR", "Backup export error", {"error": str(e)})
             return {
                 "success": False,
                 "message": f"Export failed: {str(e)}",
@@ -68,6 +96,11 @@ class BackupTools:
             )
 
             if result["success"]:
+                await _log_backup_event("INFO", "Backup imported successfully", {
+                    "version": result["version"],
+                    "users_imported": result["users_imported"],
+                    "servers_imported": result["servers_imported"]
+                })
                 return {
                     "success": True,
                     "data": {
@@ -79,6 +112,7 @@ class BackupTools:
                     "message": "Backup imported successfully"
                 }
             else:
+                await _log_backup_event("ERROR", "Backup import failed", {"error": result["error"]})
                 return {
                     "success": False,
                     "message": result["error"],
@@ -87,6 +121,7 @@ class BackupTools:
 
         except Exception as e:
             logger.error("Import backup error", error=str(e))
+            await _log_backup_event("ERROR", "Backup import error", {"error": str(e)})
             return {
                 "success": False,
                 "message": f"Import failed: {str(e)}",

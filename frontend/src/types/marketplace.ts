@@ -91,6 +91,7 @@ export interface MarketplaceApp {
   icon?: string
   author: string
   license: string
+  maintainers: string[]
   repository?: string
   documentation?: string
   repoId: string

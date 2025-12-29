@@ -28,7 +28,7 @@ class User(BaseModel):
     """User model representing authenticated user data."""
     id: str = Field(..., description="Unique user identifier")
     username: str = Field(..., min_length=3, max_length=50, description="Username")
-    email: EmailStr = Field(..., description="User email address")
+    email: str = Field(..., description="User email address")  # Allow local domains for homelab
     role: UserRole = Field(default=UserRole.USER, description="User role")
     last_login: str = Field(..., description="Last login timestamp")
     is_active: bool = Field(default=True, description="Account active status")

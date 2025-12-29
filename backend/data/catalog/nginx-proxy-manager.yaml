@@ -1,7 +1,18 @@
 id: nginx-proxy-manager
 name: Nginx Proxy Manager
 description: Easy-to-use reverse proxy with SSL support and web UI
+version: "2.11.3"
+author: Jamie Curnow
+license: MIT
+repository: https://github.com/NginxProxyManager/nginx-proxy-manager
+icon: https://nginxproxymanager.com/logo.svg
 category: networking
+tags:
+  - proxy
+  - reverse-proxy
+  - ssl
+  - nginx
+  - letsencrypt
 image: jc21/nginx-proxy-manager:latest
 ports:
   - container: 80

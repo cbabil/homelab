@@ -1,7 +1,18 @@
 id: nextcloud
 name: Nextcloud
 description: Personal cloud storage and collaboration platform
+version: "29.0.0"
+author: Nextcloud GmbH
+license: AGPL-3.0
+repository: https://github.com/nextcloud/server
+icon: https://nextcloud.com/wp-content/uploads/2022/03/favicon.png
 category: storage
+tags:
+  - cloud
+  - storage
+  - files
+  - collaboration
+  - sync
 image: nextcloud:latest
 ports:
   - container: 80

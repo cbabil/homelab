@@ -1,7 +1,17 @@
 id: portainer
-name: Portainer
+name: Portainer CE
 description: Docker management UI for managing containers, images, and networks
+version: "2.21.0"
+author: Portainer.io
+license: Zlib
+repository: https://github.com/portainer/portainer
+icon: https://www.portainer.io/hubfs/portainer-logo-black.svg
 category: utility
+tags:
+  - docker
+  - containers
+  - management
+  - devops
 image: portainer/portainer-ce:latest
 ports:
   - container: 9000

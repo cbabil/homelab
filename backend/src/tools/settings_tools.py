@@ -2,15 +2,36 @@
 
 from __future__ import annotations
 
+from datetime import datetime, UTC
 from typing import Any, Dict, List, Optional, Tuple
+import uuid
 
 import structlog
 from fastmcp import Context
 
 from models.settings import SettingCategory, SettingsRequest, SettingsUpdateRequest
+from models.log import LogEntry
 from services.settings_service import SettingsService
+from services.service_log import log_service
 
 logger = structlog.get_logger("settings_tools")
+
+
+async def _log_settings_event(level: str, message: str, metadata: Dict[str, Any] = None):
+    """Helper to log settings events to the database."""
+    try:
+        entry = LogEntry(
+            id=f"set-{uuid.uuid4().hex[:8]}",
+            timestamp=datetime.now(UTC),
+            level=level,
+            source="set",
+            message=message,
+            tags=["settings", "configuration"],
+            metadata=metadata or {}
+        )
+        await log_service.create_log_entry(entry)
+    except Exception as e:
+        logger.error("Failed to create log entry", error=str(e))
 
 
 class SettingsTools:
@@ -154,6 +175,20 @@ class SettingsTools:
                 user_agent=user_agent,
             )
             response = await self._settings_service.update_settings(request)
+
+            if response.success:
+                await _log_settings_event("INFO", f"Settings updated by user: {active_user_id}", {
+                    "user_id": active_user_id,
+                    "setting_count": len(settings) if settings else 0,
+                    "change_reason": change_reason,
+                    "client_ip": client_ip
+                })
+            else:
+                await _log_settings_event("WARNING", f"Settings update failed for user: {active_user_id}", {
+                    "user_id": active_user_id,
+                    "error": response.error
+                })
+
             return {
                 "success": response.success,
                 "message": response.message,
@@ -163,6 +198,7 @@ class SettingsTools:
             }
         except Exception as exc:  # pylint: disable=broad-except
             logger.error("Failed to update settings", error=str(exc))
+            await _log_settings_event("ERROR", "Settings update error", {"error": str(exc)})
             return {
                 "success": False,
                 "message": f"Failed to update settings: {exc}",
@@ -220,6 +256,9 @@ class SettingsTools:
         logger.warning(
             "reset_user_settings invoked but not implemented", user_id=active_user_id
         )
+        await _log_settings_event("WARNING", f"Settings reset attempted (not implemented): {active_user_id}", {
+            "user_id": active_user_id
+        })
         return {
             "success": False,
             "message": "Reset user settings is not implemented yet",

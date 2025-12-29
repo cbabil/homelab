@@ -5,15 +5,36 @@ Provides authentication and user management capabilities for the MCP server.
 Implements login, logout, and session management functionality.
 """
 
+from datetime import datetime, UTC
 from typing import Dict, Any
+import uuid
 import structlog
 from fastmcp import FastMCP, Context
 from services.auth_service import AuthService
+from services.service_log import log_service
 from tools.auth.login_tool import LoginTool
 from models.auth import UserRole
+from models.log import LogEntry
 
 
 logger = structlog.get_logger("auth_tools")
+
+
+async def _log_user_event(level: str, message: str, metadata: Dict[str, Any] = None):
+    """Helper to log user management events to the database."""
+    try:
+        entry = LogEntry(
+            id=f"usr-{uuid.uuid4().hex[:8]}",
+            timestamp=datetime.now(UTC),
+            level=level,
+            source="usr",
+            message=message,
+            tags=["user", "management"],
+            metadata=metadata or {}
+        )
+        await log_service.create_log_entry(entry)
+    except Exception as e:
+        logger.error("Failed to create log entry", error=str(e))
 
 
 class AuthTools:
@@ -220,12 +241,22 @@ class AuthTools:
             )
 
             if not new_user:
+                await _log_user_event("ERROR", f"Failed to create user: {username}", {
+                    "username": username,
+                    "created_by": admin_user.username
+                })
                 return {
                     "success": False,
                     "message": "Failed to create user",
                     "error": "CREATE_USER_ERROR"
                 }
 
+            await _log_user_event("INFO", f"User created: {username}", {
+                "username": username,
+                "email": email,
+                "role": role,
+                "created_by": admin_user.username
+            })
             return {
                 "success": True,
                 "data": {"user": new_user.model_dump()},
@@ -234,6 +265,7 @@ class AuthTools:
 
         except Exception as e:
             logger.error("Create user error", error=str(e))
+            await _log_user_event("ERROR", f"User creation failed: {username}", {"error": str(e)})
             return {
                 "success": False,
                 "message": f"Failed to create user: {str(e)}",
@@ -260,6 +292,10 @@ class AuthTools:
             # Get all users
             users = await self.auth_service.get_all_users()
 
+            await _log_user_event("INFO", f"User list accessed by: {admin_user.username}", {
+                "accessed_by": admin_user.username,
+                "user_count": len(users)
+            })
             return {
                 "success": True,
                 "data": {"users": [u.model_dump() for u in users]},
@@ -268,6 +304,7 @@ class AuthTools:
 
         except Exception as e:
             logger.error("List users error", error=str(e))
+            await _log_user_event("ERROR", "User list access failed", {"error": str(e)})
             return {
                 "success": False,
                 "message": f"Failed to list users: {str(e)}",

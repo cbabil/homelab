@@ -179,3 +179,37 @@ export async function rateApp(
     rating
   })
 }
+
+// ────────────────────────────────────────────────────────────────────────────
+// App Import
+// ────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Import result from backend
+ */
+interface ImportResult {
+  app_id: string
+  app_name: string
+  version: string
+  category: string
+}
+
+/**
+ * Import a marketplace app to local applications catalog
+ */
+export async function importApp(
+  appId: string,
+  userId: string
+): Promise<ImportResult> {
+  return await callTool<ImportResult>('import_marketplace_app', {
+    app_id: appId,
+    user_id: userId
+  })
+}
+
+/**
+ * Get list of app IDs already imported to local catalog
+ */
+export async function getImportedAppIds(): Promise<string[]> {
+  return await callTool<string[]>('get_imported_app_ids', {})
+}

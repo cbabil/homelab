@@ -60,19 +60,21 @@ class GitSync:
             raise RuntimeError(f"Git operation failed: {stderr}")
 
     def find_app_files(self, repo_path: Path) -> List[Path]:
-        """Find all app.yaml files in repository."""
+        """Find all app.yaml files in repository.
+
+        Supports multiple directory structures:
+        - apps/<app>/app.yaml (flat structure)
+        - apps/<category>/<app>/app.yaml (category structure)
+        - app.yaml (single-app repo root)
+        """
         app_files = []
 
         # Look for apps/ directory first
         apps_dir = repo_path / "apps"
         if apps_dir.exists():
-            for app_dir in apps_dir.iterdir():
-                if app_dir.is_dir():
-                    for yaml_file in ["app.yaml", "app.yml"]:
-                        yaml_path = app_dir / yaml_file
-                        if yaml_path.exists():
-                            app_files.append(yaml_path)
-                            break
+            # Use glob to find all app.yaml/app.yml files recursively
+            for yaml_file in ["app.yaml", "app.yml"]:
+                app_files.extend(apps_dir.glob(f"**/{yaml_file}"))
 
         # Also check root for single-app repos
         for yaml_file in ["app.yaml", "app.yml"]:
@@ -164,8 +166,9 @@ class GitSync:
             category=data.get("category", "utility"),
             tags=data.get("tags", []),
             icon=data.get("icon"),
-            author=data.get("author", "Community"),
-            license=data.get("license", "MIT"),
+            author=data.get("author", ""),
+            license=data.get("license", ""),
+            maintainers=data.get("maintainers", []),
             repository=data.get("repository"),
             documentation=data.get("documentation"),
             repo_id=repo_id,

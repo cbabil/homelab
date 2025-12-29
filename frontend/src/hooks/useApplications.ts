@@ -191,25 +191,25 @@ export function useApplications() {
   const installApplication = useCallback(async (id: string) => {
     setIsLoading(true)
     setError(null)
-    
+
     try {
       // Set status to installing
-      setApps(prev => prev.map(app => 
+      setApps(prev => prev.map(app =>
         app.id === id ? { ...app, status: 'installing' } : app
       ))
-      
+
       // Simulate installation time
       await new Promise(resolve => setTimeout(resolve, 3000))
-      
+
       // Set status to installed
-      setApps(prev => prev.map(app => 
-        app.id === id 
+      setApps(prev => prev.map(app =>
+        app.id === id
           ? { ...app, status: 'installed', installCount: (app.installCount || 0) + 1 }
           : app
       ))
     } catch (err) {
       setError('Failed to install application')
-      setApps(prev => prev.map(app => 
+      setApps(prev => prev.map(app =>
         app.id === id ? { ...app, status: 'error' } : app
       ))
       throw err
@@ -217,6 +217,86 @@ export function useApplications() {
       setIsLoading(false)
     }
   }, [])
+
+  const removeApplications = useCallback(async (ids: string[]) => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const response = await applicationsService.removeBulk(ids)
+
+      if (response.success && response.data) {
+        // Remove the successfully removed apps from state
+        setApps(prev => prev.filter(app => !response.data!.removed.includes(app.id)))
+        return response.data
+      } else {
+        throw new Error(response.error || 'Failed to remove applications')
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to remove applications'
+      setError(message)
+      throw err
+    } finally {
+      setIsLoading(false)
+    }
+  }, [applicationsService])
+
+  const uninstallApplication = useCallback(async (appId: string, serverId?: string) => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      // Use full uninstall if server ID provided, otherwise just mark as uninstalled
+      const response = serverId
+        ? await applicationsService.uninstall(appId, serverId)
+        : await applicationsService.markUninstalled(appId)
+
+      if (response.success) {
+        // Update app status to available
+        setApps(prev => prev.map(app =>
+          app.id === appId
+            ? { ...app, status: 'available', connectedServerId: undefined }
+            : app
+        ))
+        return true
+      } else {
+        throw new Error(response.error || 'Failed to uninstall application')
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to uninstall application'
+      setError(message)
+      throw err
+    } finally {
+      setIsLoading(false)
+    }
+  }, [applicationsService])
+
+  const uninstallApplications = useCallback(async (ids: string[]) => {
+    setIsLoading(true)
+    setError(null)
+
+    try {
+      const response = await applicationsService.markUninstalledBulk(ids)
+
+      if (response.success && response.data) {
+        // Update uninstalled apps status to available
+        setApps(prev => prev.map(app =>
+          response.data!.uninstalled.includes(app.id)
+            ? { ...app, status: 'available', connectedServerId: undefined }
+            : app
+        ))
+        return response.data
+      } else {
+        throw new Error(response.error || 'Failed to uninstall applications')
+      }
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Failed to uninstall applications'
+      setError(message)
+      throw err
+    } finally {
+      setIsLoading(false)
+    }
+  }, [applicationsService])
 
   const refresh = useCallback(() => fetchApplications(currentFilter), [fetchApplications, currentFilter])
 
@@ -232,6 +312,9 @@ export function useApplications() {
     updateApplication,
     deleteApplication,
     installApplication,
+    uninstallApplication,
+    uninstallApplications,
+    removeApplications,
     refresh
   }
 }

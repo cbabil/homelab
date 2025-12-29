@@ -1,7 +1,17 @@
 id: pihole
 name: Pi-hole
-description: Network-wide ad blocking and DNS server
+description: Network-wide ad blocking via your own DNS server
+version: "2024.07.0"
+author: Pi-hole, LLC
+license: EUPL-1.2
+repository: https://github.com/pi-hole/pi-hole
+icon: https://pi-hole.github.io/graphics/Vortex/Vortex_with_text.svg
 category: networking
+tags:
+  - dns
+  - adblock
+  - privacy
+  - network
 image: pihole/pihole:latest
 ports:
   - container: 53

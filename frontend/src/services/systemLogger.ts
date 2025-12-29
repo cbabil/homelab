@@ -141,3 +141,9 @@ export const securityLogger = {
   warn: (message: string, data?: any) => systemLogger.warn('Security', message, data),
   error: (message: string, data?: any) => systemLogger.error('Security', message, data)
 }
+
+export const marketplaceLogger = {
+  info: (message: string, data?: any) => systemLogger.info('Marketplace', message, data),
+  warn: (message: string, data?: any) => systemLogger.warn('Marketplace', message, data),
+  error: (message: string, data?: any) => systemLogger.error('Marketplace', message, data)
+}

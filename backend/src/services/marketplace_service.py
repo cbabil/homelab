@@ -53,6 +53,8 @@ class MarketplaceService:
 
     async def _ensure_official_marketplace(self) -> None:
         """Add the official marketplace if not already present."""
+        from sqlalchemy.exc import IntegrityError
+
         async with db_manager.get_session() as session:
             # Check if official marketplace exists
             result = await session.execute(
@@ -81,11 +83,17 @@ class MarketplaceService:
                     updated_at=now,
                 )
                 session.add(repo_table)
-                logger.info(
-                    "Official marketplace added",
-                    repo_id=repo_id,
-                    url=OFFICIAL_MARKETPLACE_URL
-                )
+                try:
+                    await session.commit()
+                    logger.info(
+                        "Official marketplace added",
+                        repo_id=repo_id,
+                        url=OFFICIAL_MARKETPLACE_URL
+                    )
+                except IntegrityError:
+                    # Race condition - another process already added it
+                    await session.rollback()
+                    logger.debug("Official marketplace already exists (race condition)")
 
     async def add_repo(
         self,
@@ -357,6 +365,7 @@ class MarketplaceService:
                         icon=app.icon,
                         author=app.author,
                         license=app.license,
+                        maintainers=json.dumps(app.maintainers),
                         repository=app.repository,
                         documentation=app.documentation,
                         docker_config=docker_json,
@@ -377,6 +386,7 @@ class MarketplaceService:
                     icon=app.icon,
                     author=app.author,
                     license=app.license,
+                    maintainers=json.dumps(app.maintainers),
                     repository=app.repository,
                     documentation=app.documentation,
                     repo_id=app.repo_id,
@@ -694,6 +704,7 @@ class MarketplaceService:
             icon=row.icon,
             author=row.author,
             license=row.license,
+            maintainers=json.loads(row.maintainers) if row.maintainers else [],
             repository=row.repository,
             documentation=row.documentation,
             repo_id=row.repo_id,

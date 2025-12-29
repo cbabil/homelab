@@ -14,6 +14,7 @@ import { AuthProvider } from '@/providers/AuthProvider'
 import { SettingsProvider } from '@/providers/SettingsProvider'
 import { ToastProvider } from '@/components/ui/Toast'
 import { App } from '@/App'
+import 'ui-toolkit/dist/style.css'
 import '@/styles/globals.css'
 
 // Create React Query client

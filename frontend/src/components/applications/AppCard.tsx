@@ -1,99 +1,122 @@
 /**
  * Application Card Component
- * 
- * Individual application card with install/manage actions.
+ *
+ * Individual application card with deploy/manage actions.
  */
 
-import { Star, Download, Trash2 } from 'lucide-react'
+import { useState } from 'react'
+import { Download, Trash2, Check, Package, Square, CheckSquare } from 'lucide-react'
+import { Card } from 'ui-toolkit'
 import { App } from '@/types/app'
-import { cn } from '@/utils/cn'
-// Generic component styles now imported globally
+
+// Check if a string is a valid image URL
+function isValidIconUrl(icon: string | undefined): boolean {
+  if (!icon) return false
+  return icon.startsWith('http://') || icon.startsWith('https://') || icon.startsWith('data:image/')
+}
 
 interface AppCardProps {
   app: App
+  isSelected?: boolean
+  onToggleSelect?: (appId: string) => void
+  onUninstall?: (appId: string, serverId?: string) => void
+  onDeploy?: (appId: string) => void
 }
 
-export function AppCard({ app }: AppCardProps) {
-  const handleUninstall = () => {
-    console.log('Uninstall app:', app.name)
+export function AppCard({ app, isSelected = false, onToggleSelect, onUninstall, onDeploy }: AppCardProps) {
+  const [iconError, setIconError] = useState(false)
+
+  const handleDeploy = () => {
+    if (onDeploy) {
+      onDeploy(app.id)
+    }
   }
 
+  const handleUninstall = () => {
+    if (onUninstall) {
+      onUninstall(app.id, app.connectedServerId ?? undefined)
+    }
+  }
+
+  const isInstalled = app.status === 'installed'
+  const hasValidIcon = isValidIconUrl(app.icon) && !iconError
+  const canSelect = onToggleSelect !== undefined
+
   return (
-    <div
-      className="card-app"
+    <Card
+      padding="none"
+      elevation="sm"
+      className={`relative flex flex-col items-center justify-center group aspect-square mt-0.5 p-1.5 ${isSelected ? 'ring-2 ring-primary' : ''}`}
     >
-      <div className="flex-1 space-y-2">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex items-start space-x-2 min-w-0 flex-1">
-            <div className={cn("p-1 rounded-md shrink-0", app.category.color)}>
-              {(() => {
-                const Icon = app.category.icon
-                return <Icon className="h-3.5 w-3.5" />
-              })()}
-            </div>
-            <div className="space-y-0.5 min-w-0 flex-1">
-              <h3 className="font-semibold text-sm leading-tight truncate">{app.name}</h3>
-              <p className="text-xs text-muted-foreground line-clamp-2">{app.description}</p>
-            </div>
-          </div>
-          
-          {app.featured && (
-            <div className="flex items-center space-x-0.5 px-1 py-0.5 rounded bg-yellow-100 dark:bg-yellow-900/50 text-yellow-700 dark:text-yellow-300 text-xs font-medium shrink-0">
-              <Star className="h-2.5 w-2.5 fill-current" />
-            </div>
-          )}
-        </div>
-
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <div className="flex items-center space-x-2">
-            <div className="flex items-center space-x-0.5">
-              <Star className="h-3 w-3 fill-current text-yellow-500" />
-              <span>{app.rating}</span>
-            </div>
-            
-            <div className="flex items-center space-x-0.5">
-              <Download className="h-3 w-3" />
-              <span>{(app.installCount || 0) > 999 ? `${Math.round((app.installCount || 0) / 1000)}k` : (app.installCount || 0)}</span>
-            </div>
-          </div>
-          
-          <span className="px-1.5 py-0.5 rounded bg-accent text-xs font-medium">
-            v{app.version}
-          </span>
-        </div>
-
-        <div className="flex flex-wrap gap-1">
-          {app.tags.slice(0, 2).map(tag => (
-            <span
-              key={tag}
-              className="px-1.5 py-0.5 rounded bg-secondary text-secondary-foreground text-xs font-medium"
-            >
-              {tag}
-            </span>
-          ))}
-        </div>
-      </div>
-
-      <div className="flex items-center space-x-1.5 pt-2">
-        {app.status === 'installed' ? (
+      {/* Top right: Selection checkbox + Status + Actions */}
+      <div className="absolute top-0.5 right-0.5 flex items-center gap-0.5 z-10">
+        {canSelect && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation()
+              onToggleSelect(app.id)
+            }}
+            className="p-0.5 rounded hover:bg-muted/50 transition-colors cursor-pointer"
+            title={isSelected ? 'Deselect' : 'Select for removal'}
+          >
+            {isSelected ? (
+              <CheckSquare className="h-3 w-3 text-primary" />
+            ) : (
+              <Square className="h-3 w-3 text-muted-foreground hover:text-primary transition-colors" />
+            )}
+          </button>
+        )}
+        {isInstalled ? (
           <>
-            <button className="flex-1 flex items-center justify-center px-2 py-1 bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300 rounded text-xs font-medium">
-              Installed
-            </button>
-            <button 
+            <Check className="h-3 w-3 text-green-500" />
+            <button
+              type="button"
               onClick={handleUninstall}
-              className="p-1 rounded hover:bg-red-100 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300 transition-colors" 
+              className="p-0.5 rounded hover:bg-red-500/10 transition-colors cursor-pointer"
               title="Uninstall"
             >
-              <Trash2 className="h-3.5 w-3.5" />
+              <Trash2 className="h-3 w-3 text-muted-foreground hover:text-red-500 transition-colors" />
             </button>
           </>
         ) : (
-          <button className="flex-1 btn-gradient px-2 py-1 rounded font-medium text-xs hover:opacity-90 transition-opacity">
-            Install
+          <button
+            type="button"
+            onClick={handleDeploy}
+            className="p-0.5 rounded hover:bg-muted/50 transition-colors cursor-pointer"
+            title="Deploy"
+          >
+            <Download className="h-3 w-3 text-muted-foreground hover:text-primary transition-colors" />
           </button>
         )}
       </div>
-    </div>
+
+      {/* Icon */}
+      <div className="w-7 h-7 rounded-md bg-muted/50 border border-border/50 flex items-center justify-center mx-auto p-0.5">
+        {hasValidIcon ? (
+          <img
+            src={app.icon}
+            alt=""
+            className="w-full h-full object-contain"
+            onError={() => setIconError(true)}
+            onLoad={(e) => {
+              const img = e.target as HTMLImageElement
+              if (img.naturalWidth === 0) setIconError(true)
+            }}
+          />
+        ) : (
+          <Package className="h-3.5 w-3.5 text-muted-foreground" />
+        )}
+      </div>
+
+      {/* Name */}
+      <p className="text-[10px] font-medium truncate w-full text-center mt-0.5">{app.name}</p>
+
+      {/* Footer: Version + Category */}
+      <div className="flex items-center justify-between mt-0.5">
+        <span className="text-[8px] text-muted-foreground">v{app.version}</span>
+        <span className="text-[8px] px-1 py-0.5 rounded-full bg-primary/10 text-primary">{app.category.name}</span>
+      </div>
+    </Card>
   )
 }

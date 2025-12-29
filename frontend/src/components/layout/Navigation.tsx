@@ -1,72 +1,68 @@
 /**
  * Navigation Sidebar Component
- * 
- * Enhanced modular sidebar with real-time stats, improved UX,
- * and component-based architecture for better maintainability.
+ *
+ * Uses ui-toolkit SideMenu for consistent navigation with
+ * real-time stats and marketplace footer.
  */
 
-import { useState } from 'react'
-import { useNavigation, type NavItem } from '@/hooks/useNavigation'
-import { NavigationSection } from './NavigationSection'
-import { NavigationItem } from './NavigationItem'
+import { useNavigate, useLocation } from 'react-router-dom'
+import { ShoppingCart } from 'lucide-react'
+import { SideMenu, type SideMenuItem } from 'ui-toolkit'
+import { useNavigation } from '@/hooks/useNavigation'
 import { QuickStats } from './QuickStats'
-import packageJson from '../../../package.json'
-
 
 export function Navigation() {
-  const { navigationItems, stats, isActiveItem, isActiveSubItem, shouldExpand } = useNavigation()
-  const [expandedItems, setExpandedItems] = useState<string[]>(['applications'])
-  
-  const handleToggleExpanded = (itemId: string) => {
-    setExpandedItems(prev => 
-      prev.includes(itemId)
-        ? prev.filter(id => id !== itemId)
-        : [...prev, itemId]
-    )
-  }
-  
-  const handleSubItemClick = () => {
-    // Could add analytics or other side effects here
-  }
+  const navigate = useNavigate()
+  const location = useLocation()
+  const { stats, navigationItems: navData } = useNavigation()
 
-  // Auto-expand items when their sub-items are active
-  const isExpanded = (item: NavItem): boolean => {
-    return expandedItems.includes(item.id) || shouldExpand(item)
+  // Build SideMenu items from navigation data (no sub-items)
+  const menuItems: SideMenuItem[] = navData.map((item) => ({
+    label: item.label,
+    value: item.href,
+    icon: <item.icon size={16} />,
+    badge: item.badge !== undefined ? (
+      <span className="text-xs px-1.5 py-0.5 rounded-full bg-destructive text-destructive-foreground">
+        {item.badge}
+      </span>
+    ) : undefined
+  }))
+
+  // Marketplace in footer
+  const footerItems: SideMenuItem[] = [
+    {
+      label: 'Marketplace',
+      value: '/marketplace',
+      icon: <ShoppingCart size={16} />
+    }
+  ]
+
+  const handleSelect = (value: string) => {
+    navigate(value)
   }
 
   return (
     <aside className="w-64 border-r border-border bg-background flex flex-col h-full">
       {/* Main Navigation */}
-      <nav className="flex-1 overflow-y-auto scrollbar-thin scrollbar-track-transparent scrollbar-thumb-border/20 hover:scrollbar-thumb-border/40">
-        <NavigationSection title="Navigation" className="px-3 pt-4 pb-2">
-          <div className="space-y-0.5">
-            {navigationItems.map((item) => (
-              <NavigationItem
-                key={item.id}
-                item={item}
-                isActive={isActiveItem(item)}
-                isExpanded={isExpanded(item)}
-                onToggle={() => handleToggleExpanded(item.id)}
-                onSubItemClick={handleSubItemClick}
-                isActiveSubItem={isActiveSubItem}
-              />
-            ))}
-          </div>
-        </NavigationSection>
-        
-        {/* Quick Stats Section */}
-        <NavigationSection showDivider className="pb-4">
-          <QuickStats stats={stats} />
-        </NavigationSection>
-      </nav>
-      
-      {/* Footer */}
-      <footer className="px-4 py-3 border-t border-border/50 bg-muted/20">
-        <div className="text-xs text-muted-foreground text-center">
-          <div className="font-medium">Homelab Assistant</div>
-          <div className="opacity-60 mt-0.5">v{packageJson.version}</div>
-        </div>
-      </footer>
+      <SideMenu
+        items={menuItems}
+        active={location.pathname}
+        onSelect={handleSelect}
+        header="Navigation"
+      />
+
+      {/* Quick Stats */}
+      <QuickStats stats={stats} />
+
+      {/* Spacer + Marketplace */}
+      <div className="flex-1" />
+      <div className="px-4 pb-4">
+        <SideMenu
+          items={footerItems}
+          active={location.pathname}
+          onSelect={handleSelect}
+        />
+      </div>
     </aside>
   )
 }

@@ -58,12 +58,13 @@ class AuthService:
                                   client_ip: Optional[str] = None, user_agent: Optional[str] = None):
         """Log security events for authentication tracking."""
         try:
+            ip_info = f" from {client_ip}" if client_ip else ""
             log_entry = LogEntry(
                 id=f"sec-{uuid.uuid4().hex[:8]}",
                 timestamp=datetime.now(UTC),
                 level="INFO" if success else "WARNING",
-                source="auth_service",
-                message=f"{event_type} {'successful' if success else 'failed'} for user: {username}",
+                source="sec",
+                message=f"{event_type} {'successful' if success else 'failed'} for user: {username}{ip_info}",
                 tags=["security", "authentication", event_type.lower(), "success" if success else "failure"],
                 metadata={
                     "username": username,

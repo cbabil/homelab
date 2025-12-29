@@ -10,43 +10,6 @@ import type { JWTGenerationOptions } from '@/types/jwt'
 import { jwtService } from './jwtService'
 import { HomelabMCPClient } from '@/services/mcpClient'
 
-interface OfflineUserRecord {
-  id: string
-  username: string
-  email: string
-  role: 'admin' | 'user'
-  passwordHash: string
-  fallbackPassword: string
-  preferences?: User['preferences']
-}
-
-const OFFLINE_USERS: OfflineUserRecord[] = [
-  {
-    id: 'offline-admin',
-    username: 'admin',
-    email: 'admin@homelab.local',
-    role: 'admin',
-    passwordHash: '129e0dbb4444949eaecba34d003b73967be5428e04d8a865b7b63121eb58991e',
-    fallbackPassword: 'HomeLabAdmin123!',
-    preferences: {
-      theme: 'dark',
-      notifications: true
-    }
-  },
-  {
-    id: 'offline-user',
-    username: 'user',
-    email: 'user@homelab.local',
-    role: 'user',
-    passwordHash: '04a3c826a7ef022e17beec74d3dc66653771f98c03463202f8179afe26ec9e4e',
-    fallbackPassword: 'HomeLabUser123!',
-    preferences: {
-      theme: 'light',
-      notifications: true
-    }
-  }
-]
-
 const MCP_CONNECTION_ERROR_PATTERNS = [
   'failed to connect to mcp server',
   'failed to fetch',
@@ -87,38 +50,33 @@ class AuthService {
   async login(credentials: LoginCredentials): Promise<LoginResponse> {
     await this.ensureInitialized()
 
-    const offlineCandidate = await this.authenticateOffline(credentials)
-
-    if (this.offlineMode && !offlineCandidate) {
+    // Try to reconnect if we're in offline mode
+    if (this.offlineMode) {
+      console.log('[AuthService] Currently in offline mode, attempting reconnection...')
       await this.tryReconnect()
     }
 
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500))
+    // Backend authentication is required - no offline fallback for auth
+    if (this.offlineMode) {
+      console.error('[AuthService] Cannot authenticate: backend unavailable')
+      throw new Error('Authentication service unavailable. Please try again later.')
+    }
 
     let user: User | null = null
 
-    if (this.offlineMode && offlineCandidate) {
-      user = offlineCandidate
-    } else {
-      try {
-        user = await this.authenticateWithBackend(credentials)
-        this.offlineMode = false
-      } catch (error) {
-        const connectionFailure = this.isConnectionError(error) || this.offlineMode
+    try {
+      console.log('[AuthService] Authenticating with backend...')
+      user = await this.authenticateWithBackend(credentials)
+      console.log('[AuthService] Backend authentication successful')
+    } catch (error) {
+      console.warn('[AuthService] Backend authentication failed:', error)
+      const connectionFailure = this.isConnectionError(error)
 
-        if (offlineCandidate && connectionFailure) {
-          console.warn('[AuthService] Falling back to offline credentials', error)
-          this.offlineMode = true
-          user = offlineCandidate
-        } else if (offlineCandidate && !connectionFailure) {
-          console.warn('[AuthService] Backend rejected credentials but demo account matched; using offline login')
-          this.offlineMode = true
-          user = offlineCandidate
-        } else {
-          throw error
-        }
+      if (connectionFailure) {
+        this.offlineMode = true
+        throw new Error('Authentication service unavailable. Please try again later.')
       }
+      throw error
     }
 
     if (!user) {
@@ -203,70 +161,32 @@ class AuthService {
    */
   async refreshToken(refreshToken: string): Promise<LoginResponse> {
     await this.ensureInitialized()
-    
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 500))
-    
-    try {
-      // Use JWT service to refresh tokens
-      const tokenPair = await jwtService.refreshToken(refreshToken)
 
-      // Decode the new access token to extract user data
-      const decodedToken = jwtService.decodeToken(tokenPair.accessToken)
-      if (!decodedToken?.payload) {
-        throw new Error('Invalid username or password')
-      }
-      
-      const payload = decodedToken.payload
-      const user: User = {
-        id: payload.id,
-        username: payload.username,
-        email: payload.email,
-        role: payload.role,
-        lastLogin: new Date().toISOString(),
-        isActive: true,
-        preferences: payload.preferences
-      }
-      
-      return {
-        user,
-        token: tokenPair.accessToken,
-        refreshToken: tokenPair.refreshToken,
-        expiresIn: tokenPair.expiresIn
-      }
-    } catch (error) {
-      console.warn('[AuthService] Refresh token failed, issuing new offline tokens', error)
+    // Use JWT service to refresh tokens
+    const tokenPair = await jwtService.refreshToken(refreshToken)
 
-      const user = await this.authenticateOfflineFromRefresh(refreshToken)
-      if (!user) {
-        throw new Error('Invalid username or password')
-      }
+    // Decode the new access token to extract user data
+    const decodedToken = jwtService.decodeToken(tokenPair.accessToken)
+    if (!decodedToken?.payload) {
+      throw new Error('Session expired. Please log in again.')
+    }
 
-      const sessionId = this.generateSessionId()
-      const userAgent = navigator.userAgent
-      const ipAddress = await this.getClientIP()
+    const payload = decodedToken.payload
+    const user: User = {
+      id: payload.id,
+      username: payload.username,
+      email: payload.email,
+      role: payload.role,
+      lastLogin: new Date().toISOString(),
+      isActive: true,
+      preferences: payload.preferences
+    }
 
-      const jwtOptions: JWTGenerationOptions = {
-        userId: user.id,
-        username: user.username,
-        email: user.email,
-        role: user.role,
-        sessionId,
-        userAgent,
-        ipAddress,
-        tokenType: 'access',
-        scope: user.role === 'admin' ? ['read', 'write', 'admin'] : ['read'],
-        preferences: user.preferences
-      }
-
-      const { accessToken, refreshToken: refreshedFallback } = await this.issueTokens(jwtOptions)
-
-      return {
-        user,
-        token: accessToken,
-        refreshToken: refreshedFallback,
-        expiresIn: 3600
-      }
+    return {
+      user,
+      token: tokenPair.accessToken,
+      refreshToken: tokenPair.refreshToken,
+      expiresIn: tokenPair.expiresIn
     }
   }
 
@@ -390,63 +310,6 @@ class AuthService {
     return false
   }
 
-  private async authenticateOffline(credentials: LoginCredentials): Promise<User | null> {
-    const username = credentials.username.trim().toLowerCase()
-    const record = OFFLINE_USERS.find(user => user.username === username)
-
-    if (!record) {
-      return null
-    }
-
-    const isValid = await this.verifyOfflinePassword(credentials.password, record)
-    if (!isValid) {
-      return null
-    }
-
-    return this.mapOfflineUser(record.username)
-  }
-
-  private async verifyOfflinePassword(password: string, record: OfflineUserRecord): Promise<boolean> {
-    try {
-      const hashedInput = await this.hashPassword(password)
-      if (this.timingSafeCompare(hashedInput, record.passwordHash)) {
-        return true
-      }
-    } catch (error) {
-      console.warn('[AuthService] Secure hashing unavailable, falling back to direct comparison', error)
-    }
-
-    return this.timingSafeCompare(password, record.fallbackPassword)
-  }
-
-  private async hashPassword(password: string): Promise<string> {
-    const cryptoObj = typeof globalThis !== 'undefined' ? globalThis.crypto : undefined
-    const subtle = cryptoObj?.subtle || (typeof window !== 'undefined' ? window.crypto?.subtle : undefined)
-
-    if (!subtle) {
-      throw new Error('Subtle crypto unavailable')
-    }
-
-    const encoder = new TextEncoder()
-    const data = encoder.encode(password)
-    const digest = await subtle.digest('SHA-256', data)
-    const bytes = Array.from(new Uint8Array(digest))
-    return bytes.map(byte => byte.toString(16).padStart(2, '0')).join('')
-  }
-
-  private timingSafeCompare(value: string, compareTo: string): boolean {
-    const length = Math.max(value.length, compareTo.length)
-    let mismatch = value.length === compareTo.length ? 0 : 1
-
-    for (let index = 0; index < length; index += 1) {
-      const valueChar = index < value.length ? value.charCodeAt(index) : 0
-      const compareChar = index < compareTo.length ? compareTo.charCodeAt(index) : 0
-      mismatch |= valueChar ^ compareChar
-    }
-
-    return mismatch === 0
-  }
-
   private async issueTokens(options: JWTGenerationOptions): Promise<{ accessToken: string; refreshToken: string }> {
     try {
       const accessToken = await jwtService.generateToken({ ...options, tokenType: 'access' })
@@ -484,44 +347,6 @@ class AuthService {
     return `offline-${tokenType}-${payload.userId}-${payload.issuedAt}`
   }
 
-  private async authenticateOfflineFromRefresh(refreshToken: string): Promise<User | null> {
-    if (!refreshToken.startsWith('offline-refresh-')) {
-      return null
-    }
-
-    try {
-      const encoded = refreshToken.replace('offline-refresh-', '')
-      const decodedString = this.decodeBase64(encoded)
-      if (!decodedString) {
-        return null
-      }
-
-      const payload = JSON.parse(decodedString) as { userId: string; username: string }
-      return this.mapOfflineUser(payload.username)
-    } catch (error) {
-      console.warn('[AuthService] Failed to decode offline refresh token', error)
-      return null
-    }
-  }
-
-  private mapOfflineUser(username: string): User | null {
-    const normalized = username.trim().toLowerCase()
-    const record = OFFLINE_USERS.find(user => user.username === normalized)
-    if (!record) {
-      return null
-    }
-
-    return {
-      id: record.id,
-      username: record.username,
-      email: record.email,
-      role: record.role,
-      lastLogin: new Date().toISOString(),
-      isActive: true,
-      preferences: record.preferences || {}
-    }
-  }
-
   private encodeBase64(value: string): string | null {
     try {
       if (typeof globalThis !== 'undefined' && typeof globalThis.btoa === 'function') {
@@ -529,17 +354,6 @@ class AuthService {
       }
     } catch (error) {
       console.warn('[AuthService] Base64 encode failed', error)
-    }
-    return null
-  }
-
-  private decodeBase64(value: string): string | null {
-    try {
-      if (typeof globalThis !== 'undefined' && typeof globalThis.atob === 'function') {
-        return globalThis.atob(value)
-      }
-    } catch (error) {
-      console.warn('[AuthService] Base64 decode failed', error)
     }
     return null
   }
@@ -555,25 +369,12 @@ class AuthService {
         throw new Error('MCP_CONNECTION_ERROR: offline mode enabled')
       }
 
-      console.log('🔐 Authenticating with backend MCP...')
-      console.log('📝 Credentials:', { username: credentials.username, password: '[REDACTED]' })
-
       const response = await this.mcpClient.callTool('login', {
         credentials: {
           username: credentials.username,
           password: credentials.password
         }
       })
-
-      console.log('🔄 Raw MCP response received:')
-      console.log('📊 Full response object:', JSON.stringify(response, null, 2))
-      console.log('✅ response.success:', response.success)
-      console.log('📋 response.data exists:', !!response.data)
-      console.log('👤 response.data?.user exists:', !!response.data?.user)
-
-      if (response.data) {
-        console.log('📦 response.data contents:', JSON.stringify(response.data, null, 2))
-      }
 
       if (!response.success) {
         const errorMessage = response.error || 'Unknown MCP error'
@@ -584,35 +385,27 @@ class AuthService {
         throw new Error('Invalid username or password')
       }
 
-      // Check the exact condition that's failing - user data is in structuredContent
-      const actualUserData = response.data?.structuredContent?.data?.user
-      const conditionResult = response.success && actualUserData
-      console.log('🎯 Condition (response.success && actualUserData):', conditionResult)
-      console.log('🎯 actualUserData:', actualUserData)
+      // MCP client already extracts structuredContent into response.data
+      // The login tool returns { success: true, data: { user: {...} } }
+      const userData = response.data?.data?.user || response.data?.user
 
-      if (conditionResult) {
-        const userData = actualUserData
-        console.log('👤 User data extracted:', JSON.stringify(userData, null, 2))
-
-        const user = {
-          id: userData.id || userData.username,
-          username: userData.username,
-          email: userData.email || `${userData.username}@homelab.local`,
-          role: userData.role || 'user',
-          lastLogin: new Date().toISOString(),
-          isActive: userData.is_active !== false,
-          preferences: userData.preferences || {}
-        }
-
-        console.log('🎉 Final user object created:', JSON.stringify(user, null, 2))
-        return user
-      } else {
-        console.log('❌ Authentication condition failed - throwing error')
-        console.log('❌ response.success:', response.success)
-        console.log('❌ response.data:', response.data)
-        console.log('❌ response.data?.structuredContent?.data?.user:', response.data?.structuredContent?.data?.user)
+      if (!userData) {
+        console.error('No user data in response:', response.data)
         throw new Error('Invalid username or password')
       }
+
+      const user = {
+        id: userData.id || userData.username,
+        username: userData.username,
+        email: userData.email || `${userData.username}@homelab.local`,
+        role: userData.role || 'user',
+        lastLogin: new Date().toISOString(),
+        isActive: userData.is_active !== false,
+        preferences: userData.preferences || {}
+      }
+
+      console.log('[AuthService] User authenticated:', user.username)
+      return user
     } catch (error) {
       if (this.isConnectionError(error)) {
         const connectionError = error instanceof Error ? error : new Error('MCP_CONNECTION_ERROR')
