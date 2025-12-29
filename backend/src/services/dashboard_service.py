@@ -7,6 +7,7 @@ Aggregates data for dashboard display.
 from typing import List
 import structlog
 from models.metrics import DashboardSummary, ActivityLog
+from models.server import ServerStatus
 
 logger = structlog.get_logger("dashboard_service")
 
@@ -26,9 +27,9 @@ class DashboardService:
         """Get aggregated dashboard summary."""
         try:
             # Get server counts
-            servers = await self.server_service.list_servers()
+            servers = await self.server_service.get_all_servers()
             total_servers = len(servers)
-            online_servers = sum(1 for s in servers if getattr(s, 'status', '') == 'online')
+            online_servers = sum(1 for s in servers if getattr(s, 'status', None) == ServerStatus.CONNECTED or getattr(s, 'status', '') == 'connected')
             offline_servers = total_servers - online_servers
 
             # Get app counts across all servers

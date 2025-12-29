@@ -221,13 +221,19 @@ export class HomelabMCPClient implements MCPClient {
         }
       }
 
-      mcpLogger.info('MCP tool call successful', { 
-        tool: name, 
-        resultType: typeof result.result 
+      // MCP tool calls return: { content: [...], structuredContent: {...}, isError: boolean }
+      // The actual tool response is in structuredContent
+      const toolResult = result.result
+      const actualData = toolResult?.structuredContent ?? toolResult?.content?.[0]?.text ?? toolResult
+
+      mcpLogger.info('MCP tool call successful', {
+        tool: name,
+        resultType: typeof actualData,
+        hasStructuredContent: !!toolResult?.structuredContent
       })
       return {
         success: true,
-        data: result.result,
+        data: actualData,
         message: 'Tool call successful'
       }
 

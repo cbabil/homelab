@@ -5,7 +5,7 @@
  */
 
 import { Plus } from 'lucide-react'
-import { Button } from '@/components/ui/Button'
+import { Button, Typography } from 'ui-toolkit'
 
 interface ApplicationsPageHeaderProps {
   onAddApp: () => void
@@ -15,17 +15,17 @@ export function ApplicationsPageHeader({ onAddApp }: ApplicationsPageHeaderProps
   return (
     <div className="flex items-center justify-between">
       <div className="flex-1 min-w-0">
-        <h1 className="text-xl font-bold tracking-tight">Application Marketplace</h1>
-        <p className="text-muted-foreground text-xs truncate">
-          Discover and install applications for your homelab infrastructure.
-        </p>
+        <Typography variant="h2">Applications</Typography>
+        <Typography variant="small" muted className="truncate">
+          Discover and deploy applications for your homelab infrastructure.
+        </Typography>
       </div>
 
       <Button
         onClick={onAddApp}
         variant="primary"
         size="sm"
-        leftIcon={<Plus className="h-3.5 w-3.5" />}
+        leftIcon={<Plus size={14} />}
         className="shrink-0 ml-3"
       >
         Add App

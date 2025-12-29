@@ -7,7 +7,7 @@
 
 import { useLocation } from 'react-router-dom'
 import { useMemo } from 'react'
-import { Home, Server, Package, ShoppingCart, FileText } from 'lucide-react'
+import { Home, Server, Package, FileText } from 'lucide-react'
 import { serverStorageService } from '@/services/serverStorageService'
 import { useApplications } from '@/hooks/useApplications'
 
@@ -118,13 +118,6 @@ export function useNavigation() {
           count: cat.count
         }))
       ]
-    },
-    {
-      id: 'marketplace',
-      label: 'Marketplace',
-      href: '/marketplace',
-      icon: ShoppingCart,
-      description: 'Browse and discover new apps'
     },
     {
       id: 'logs',

@@ -9,11 +9,13 @@ A self-hosted web application for managing homelab infrastructure. Connect to re
 - **Server Health Monitoring** - Real-time status checks and connectivity testing
 - **Multi-Server Support** - Manage multiple homelab servers from one interface
 
-### Application Deployment
+### Application Marketplace
 - **App Catalog** - Browse and deploy containerized applications
-- **One-Click Install** - Deploy apps with pre-configured Docker Compose templates
+- **Search & Filter** - Find apps by name, category, or status
+- **One-Click Deploy** - Deploy apps to VMs with Docker via SSH
+- **Bulk Operations** - Select multiple apps for bulk uninstall or removal
 - **Custom Configuration** - Override environment variables and port mappings
-- **Built-in Apps**: Portainer, Nginx Proxy Manager, Nextcloud, Jellyfin, Pi-hole
+- **Built-in Apps**: Portainer, Nginx Proxy Manager, Nextcloud, Jellyfin, Pi-hole, n8n
 
 ### Monitoring & Metrics
 - **Server Metrics** - CPU, memory, disk usage monitoring
@@ -182,10 +184,26 @@ env_vars:
 | `login` / `logout` | Authentication |
 | `list_servers` / `add_server` | Server management |
 | `test_connection` | SSH connectivity test |
-| `list_apps` / `deploy_app` | App catalog operations |
+| `search_apps` | Search and filter app catalog |
+| `install_app` / `uninstall_app` | Deploy/remove apps on servers |
+| `mark_app_uninstalled` | Mark app as uninstalled (status only) |
+| `mark_apps_uninstalled_bulk` | Bulk uninstall apps |
+| `remove_app` / `remove_apps_bulk` | Remove apps from catalog |
+| `start_app` / `stop_app` | Start/stop deployed containers |
 | `get_server_metrics` | CPU, memory, disk stats |
 | `get_activity_log` | Audit trail |
 | `export_backup` / `import_backup` | Backup operations |
+
+## Documentation
+
+Detailed documentation is available in the `docs/` folder:
+
+- **[Applications](docs/features/applications.md)** - Deploy and manage apps
+- **[Marketplace](docs/features/marketplace.md)** - Git-based app discovery and import
+- **[Data Retention](docs/features/data-retention-user-guide.md)** - Configure data cleanup policies
+- **[Architecture](docs/ARCHITECTURE.md)** - System design and components
+- **[Security Review](docs/SECURITY_REVIEW.md)** - Security considerations
+- **[MCP Protocol](docs/developer/mcp-protocol.md)** - Developer integration guide
 
 ## Development
 

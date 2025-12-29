@@ -5,24 +5,47 @@ Provides MCP tools for managing marketplace repositories and apps.
 """
 
 from typing import Dict, Any, List, Optional
+from datetime import datetime
+import uuid
 import structlog
 from fastmcp import FastMCP
 from services.marketplace_service import MarketplaceService
+from services.service_log import log_service
 from models.marketplace import RepoType
+from models.log import LogEntry
 
 logger = structlog.get_logger("marketplace_tools")
+
+
+async def _log_marketplace_event(level: str, message: str, metadata: Dict[str, Any] = None):
+    """Helper to log marketplace events to the database."""
+    try:
+        entry = LogEntry(
+            id=f"mkt-{uuid.uuid4().hex[:8]}",
+            timestamp=datetime.utcnow(),
+            level=level,
+            source="mkt",
+            message=message,
+            tags=["marketplace"],
+            metadata=metadata or {}
+        )
+        await log_service.create_log_entry(entry)
+    except Exception as e:
+        logger.error("Failed to create log entry", error=str(e))
 
 
 class MarketplaceTools:
     """Marketplace tools for the MCP server."""
 
-    def __init__(self, marketplace_service: MarketplaceService):
+    def __init__(self, marketplace_service: MarketplaceService, app_service=None):
         """Initialize marketplace tools.
 
         Args:
             marketplace_service: MarketplaceService instance for data operations
+            app_service: AppService instance for local catalog operations
         """
         self.marketplace_service = marketplace_service
+        self.app_service = app_service
         logger.info("Marketplace tools initialized")
 
     # ─────────────────────────────────────────────────────────────
@@ -73,12 +96,14 @@ class MarketplaceTools:
             Dict with success status and created repository data
         """
         try:
+            await _log_marketplace_event("INFO", f"Adding repository: {name}", {"url": url, "type": repo_type})
             repo = await self.marketplace_service.add_repo(
                 name=name,
                 url=url,
                 repo_type=RepoType(repo_type),
                 branch=branch
             )
+            await _log_marketplace_event("INFO", f"Repository added: {name}", {"repo_id": repo.id})
             return {
                 "success": True,
                 "data": repo.model_dump(by_alias=True),
@@ -86,6 +111,7 @@ class MarketplaceTools:
             }
         except Exception as e:
             logger.error("Add repo error", error=str(e))
+            await _log_marketplace_event("ERROR", f"Failed to add repository: {name}", {"error": str(e)})
             return {
                 "success": False,
                 "error": str(e)
@@ -104,13 +130,17 @@ class MarketplaceTools:
             Dict with success status and message
         """
         try:
+            await _log_marketplace_event("INFO", f"Removing repository: {repo_id}")
             removed = await self.marketplace_service.remove_repo(repo_id)
+            if removed:
+                await _log_marketplace_event("INFO", f"Repository removed: {repo_id}")
             return {
                 "success": removed,
                 "message": "Repository removed" if removed else "Repository not found"
             }
         except Exception as e:
             logger.error("Remove repo error", error=str(e))
+            await _log_marketplace_event("ERROR", f"Failed to remove repository: {repo_id}", {"error": str(e)})
             return {
                 "success": False,
                 "error": str(e)
@@ -129,14 +159,17 @@ class MarketplaceTools:
             Dict with success status and sync results
         """
         try:
+            await _log_marketplace_event("INFO", f"Syncing repository: {repo_id}")
             apps = await self.marketplace_service.sync_repo(repo_id)
+            await _log_marketplace_event("INFO", f"Repository synced: {repo_id}", {"app_count": len(apps)})
             return {
                 "success": True,
-                "data": {"app_count": len(apps)},
+                "data": {"appCount": len(apps)},
                 "message": f"Synced {len(apps)} apps"
             }
         except Exception as e:
             logger.error("Sync repo error", error=str(e))
+            await _log_marketplace_event("ERROR", f"Failed to sync repository: {repo_id}", {"error": str(e)})
             return {
                 "success": False,
                 "error": str(e)
@@ -318,6 +351,11 @@ class MarketplaceTools:
         """
         try:
             result = await self.marketplace_service.rate_app(app_id, user_id, rating)
+            await _log_marketplace_event("INFO", f"App rated: {app_id}", {
+                "app_id": app_id,
+                "user_id": user_id,
+                "rating": rating
+            })
             return {
                 "success": True,
                 "data": result.model_dump(by_alias=True),
@@ -330,20 +368,144 @@ class MarketplaceTools:
             }
         except Exception as e:
             logger.error("Rate app error", error=str(e))
+            await _log_marketplace_event("ERROR", f"Failed to rate app: {app_id}", {"error": str(e)})
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
+    async def import_marketplace_app(
+        self,
+        app_id: str,
+        user_id: str
+    ) -> Dict[str, Any]:
+        """Import a marketplace app to the local applications catalog.
+
+        Copies app definition from marketplace to local catalog for deployment.
+        This action is logged for audit purposes.
+
+        Args:
+            app_id: Application identifier from marketplace
+            user_id: User performing the import
+
+        Returns:
+            Dict with success status and import confirmation
+        """
+        try:
+            # Get app details from marketplace
+            mkt_app = await self.marketplace_service.get_app(app_id)
+            if not mkt_app:
+                return {
+                    "success": False,
+                    "error": "App not found in marketplace"
+                }
+
+            # Check if app_service is available
+            if not self.app_service:
+                return {
+                    "success": False,
+                    "error": "App service not configured"
+                }
+
+            # Convert marketplace app to local catalog format
+            app_data = {
+                "id": mkt_app.id,
+                "name": mkt_app.name,
+                "description": mkt_app.description,
+                "long_description": mkt_app.long_description,
+                "version": mkt_app.version,
+                "category": mkt_app.category,
+                "tags": mkt_app.tags,
+                "icon": mkt_app.icon,
+                "author": mkt_app.author,
+                "license": mkt_app.license,
+                "repository": mkt_app.repository,
+                "documentation": mkt_app.documentation,
+                "requirements": {
+                    "min_ram": mkt_app.requirements.min_ram if mkt_app.requirements else None,
+                    "min_storage": mkt_app.requirements.min_storage if mkt_app.requirements else None,
+                    "architectures": mkt_app.requirements.architectures if mkt_app.requirements else []
+                },
+                "avg_rating": mkt_app.avg_rating,
+                "featured": mkt_app.featured
+            }
+
+            # Add to local catalog
+            await self.app_service.add_app(app_data)
+
+            # Log the import action
+            await _log_marketplace_event("INFO", f"App imported: {mkt_app.name}", {
+                "app_id": app_id,
+                "app_name": mkt_app.name,
+                "user_id": user_id,
+                "category": mkt_app.category,
+                "version": mkt_app.version
+            })
+
+            return {
+                "success": True,
+                "data": {
+                    "app_id": app_id,
+                    "app_name": mkt_app.name,
+                    "version": mkt_app.version,
+                    "category": mkt_app.category
+                },
+                "message": f"App '{mkt_app.name}' imported successfully"
+            }
+        except ValueError as e:
+            # Handle "already exists" error gracefully
+            return {
+                "success": False,
+                "error": str(e)
+            }
+        except Exception as e:
+            logger.error("Import app error", error=str(e))
+            await _log_marketplace_event("ERROR", f"App import failed: {app_id}", {
+                "app_id": app_id,
+                "user_id": user_id,
+                "error": str(e)
+            })
             return {
                 "success": False,
                 "error": str(e)
             }
 
 
-def register_marketplace_tools(app: FastMCP, marketplace_service: MarketplaceService):
+    async def get_imported_app_ids(self) -> Dict[str, Any]:
+        """Get list of app IDs already imported to local catalog.
+
+        Returns:
+            Dict with success status and list of imported app IDs
+        """
+        try:
+            if not self.app_service:
+                return {
+                    "success": True,
+                    "data": []
+                }
+
+            app_ids = await self.app_service.get_app_ids()
+            return {
+                "success": True,
+                "data": app_ids
+            }
+        except Exception as e:
+            logger.error("Get imported app IDs error", error=str(e))
+            return {
+                "success": False,
+                "error": str(e)
+            }
+
+
+def register_marketplace_tools(app: FastMCP, marketplace_service: MarketplaceService, app_service=None):
     """Register marketplace tools with FastMCP app.
 
     Args:
         app: FastMCP application instance
         marketplace_service: MarketplaceService instance
+        app_service: AppService instance for local catalog operations
     """
-    tools = MarketplaceTools(marketplace_service)
+    tools = MarketplaceTools(marketplace_service, app_service)
 
     app.tool(tools.list_repos)
     app.tool(tools.add_repo)
@@ -355,5 +517,7 @@ def register_marketplace_tools(app: FastMCP, marketplace_service: MarketplaceSer
     app.tool(tools.get_featured_apps)
     app.tool(tools.get_trending_apps)
     app.tool(tools.rate_marketplace_app)
+    app.tool(tools.import_marketplace_app)
+    app.tool(tools.get_imported_app_ids)
 
     logger.info("Marketplace tools registered")

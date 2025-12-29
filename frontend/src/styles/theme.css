@@ -52,46 +52,48 @@
   }
 
   .dark {
-    /* Base colors - Dark with subtle purple undertones */
-    --background: 255 10% 4%;
-    --foreground: 270 20% 98%;
-    --card: 255 15% 6%;
-    --card-foreground: 270 20% 98%;
-    --popover: 255 15% 6%;
-    --popover-foreground: 270 20% 98%;
-    
-    /* Primary colors - Purple #8b5cf6 for dark mode */
-    --primary: 258 90% 66%;
-    --primary-foreground: 255 10% 4%;
-    
+    /* Base colors - Blue-tinted dark theme (projecthub style) */
+    /* #0f172a background */
+    --background: 222 47% 11%;
+    --foreground: 214 32% 91%;
+    /* Slightly lighter surface for cards */
+    --card: 217 33% 14%;
+    --card-foreground: 214 32% 91%;
+    --popover: 217 33% 14%;
+    --popover-foreground: 214 32% 91%;
+
+    /* Primary colors - Indigo/Purple #6a5acd / #4f46e5 */
+    --primary: 243 75% 59%;
+    --primary-foreground: 0 0% 100%;
+
     /* Secondary colors */
-    --secondary: 270 10% 12%;
-    --secondary-foreground: 270 20% 98%;
-    
+    --secondary: 215 28% 17%;
+    --secondary-foreground: 214 32% 91%;
+
     /* Muted colors */
-    --muted: 270 10% 12%;
-    --muted-foreground: 270 15% 65%;
-    
+    --muted: 215 28% 17%;
+    --muted-foreground: 215 20% 65%;
+
     /* Accent colors */
-    --accent: 270 15% 15%;
-    --accent-foreground: 270 20% 98%;
-    
+    --accent: 217 33% 20%;
+    --accent-foreground: 214 32% 91%;
+
     /* Status colors */
-    --destructive: 0 62.8% 30.6%;
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
-    --success: 142.1 70.6% 45.3%;
-    --success-foreground: 144.9 80.4% 10%;
-    --warning: 35.5 91.7% 32.9%;
-    --warning-foreground: 20.9 83.7% 7.1%;
-    
+    --success: 152 69% 40%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 0%;
+
     /* UI elements */
-    --border: 270 15% 20%;
-    --input: 270 15% 20%;
-    --ring: 258 90% 66%;
-    
-    /* Purple gradient variables for dark mode - #8b5cf6 */
-    --purple-gradient-from: 258 90% 66%;
-    --purple-gradient-to: 258 90% 66%;
-    --purple-glow: 258 90% 76%;
+    --border: 215 28% 20%;
+    --input: 215 28% 20%;
+    --ring: 243 75% 59%;
+
+    /* Gradient variables */
+    --purple-gradient-from: 243 75% 59%;
+    --purple-gradient-to: 248 53% 58%;
+    --purple-glow: 228 89% 63%;
   }
 }

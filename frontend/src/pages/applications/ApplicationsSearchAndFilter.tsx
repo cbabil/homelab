@@ -1,10 +1,11 @@
 /**
  * Applications Search and Filter Component
- * 
+ *
  * Search input and filter controls for the Applications page.
  */
 
-import { Search } from 'lucide-react'
+import { useState } from 'react'
+import { Search } from 'ui-toolkit'
 import { AppCategory, AppFilter } from '@/types/app'
 import { FilterDropdown } from '@/components/applications/FilterDropdown'
 
@@ -15,27 +16,31 @@ interface ApplicationsSearchAndFilterProps {
   categories: AppCategory[]
 }
 
-export function ApplicationsSearchAndFilter({ 
-  filter, 
-  onFilterChange, 
+export function ApplicationsSearchAndFilter({
+  filter,
+  onFilterChange,
   onSearch,
   categories
 }: ApplicationsSearchAndFilterProps) {
+  const [searchValue, setSearchValue] = useState(filter.search || '')
+
+  const handleSearchChange = (value: string) => {
+    setSearchValue(value)
+    onSearch(value)
+  }
+
   return (
     <div className="flex items-center space-x-2">
-      <div className="relative flex-1 max-w-xs">
-        <Search className="absolute left-2.5 top-1/2 transform -translate-y-1/2 text-muted-foreground h-3.5 w-3.5" />
-        <input
-          type="text"
-          placeholder="Search applications..."
-          className="w-full pl-8 pr-3 py-1.5 border border-input rounded-md bg-background focus:outline-none focus:ring-1 focus:ring-primary/20 text-sm"
-          onChange={(e) => onSearch(e.target.value)}
-        />
-      </div>
-      
-      <FilterDropdown 
-        filter={filter} 
-        onFilterChange={onFilterChange} 
+      <Search
+        value={searchValue}
+        onChange={handleSearchChange}
+        placeholder="Search applications..."
+        className="flex-1 max-w-xs"
+      />
+
+      <FilterDropdown
+        filter={filter}
+        onFilterChange={onFilterChange}
         categories={categories}
       />
     </div>

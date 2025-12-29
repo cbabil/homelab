@@ -5,17 +5,38 @@ Provides MCP tools for data retention management with comprehensive security con
 admin-only access verification, and mandatory dry-run capabilities.
 """
 
+from datetime import datetime, UTC
 from typing import Dict, Any, Optional
+import uuid
 import structlog
 from fastmcp import FastMCP, Context
 from models.retention import (
     DataRetentionSettings, CleanupRequest, CleanupResult, CleanupPreview,
     RetentionType, SecurityValidationResult
 )
+from models.log import LogEntry
 from services.retention_service import RetentionService
+from services.service_log import log_service
 
 
 logger = structlog.get_logger("retention_tools")
+
+
+async def _log_retention_event(level: str, message: str, metadata: Dict[str, Any] = None):
+    """Helper to log retention events to the database."""
+    try:
+        entry = LogEntry(
+            id=f"ret-{uuid.uuid4().hex[:8]}",
+            timestamp=datetime.now(UTC),
+            level=level,
+            source="ret",
+            message=message,
+            tags=["retention", "data"],
+            metadata=metadata or {}
+        )
+        await log_service.create_log_entry(entry)
+    except Exception as e:
+        logger.error("Failed to create log entry", error=str(e))
 
 
 class RetentionTools:
@@ -94,12 +115,20 @@ class RetentionTools:
             # Update settings
             success = await self.retention_service.update_retention_settings(user_id, settings)
             if not success:
+                await _log_retention_event("ERROR", f"Failed to update retention settings for user: {user_id}", {
+                    "user_id": user_id
+                })
                 return {
                     "success": False,
                     "message": "Failed to update retention settings",
                     "error": "UPDATE_FAILED"
                 }
 
+            await _log_retention_event("INFO", f"Retention settings updated by user: {user_id}", {
+                "user_id": user_id,
+                "log_retention_days": settings.log_retention_days,
+                "user_data_retention_days": settings.user_data_retention_days
+            })
             return {
                 "success": True,
                 "data": settings.model_dump(),
@@ -108,6 +137,7 @@ class RetentionTools:
 
         except Exception as e:
             logger.error("Failed to update retention settings", user_id=user_id, error=str(e))
+            await _log_retention_event("ERROR", "Retention settings update error", {"error": str(e)})
             return {
                 "success": False,
                 "message": f"Failed to update retention settings: {str(e)}",
@@ -204,11 +234,24 @@ class RetentionTools:
             # Execute cleanup operation
             result = await self.retention_service.perform_cleanup(request)
             if result is None:
+                await _log_retention_event("ERROR", "Cleanup execution failed", {
+                    "retention_type": request.retention_type.value if request.retention_type else None,
+                    "dry_run": request.dry_run
+                })
                 return {
                     "success": False,
                     "message": "Failed to execute cleanup operation",
                     "error": "CLEANUP_EXECUTION_FAILED"
                 }
+
+            # Log cleanup result
+            log_level = "INFO" if request.dry_run else "WARNING"
+            await _log_retention_event(log_level, f"Data cleanup {'preview' if request.dry_run else 'executed'}", {
+                "retention_type": request.retention_type.value if request.retention_type else None,
+                "dry_run": request.dry_run,
+                "items_affected": result.items_deleted if hasattr(result, 'items_deleted') else 0,
+                "admin_user_id": request.admin_user_id
+            })
 
             # Return comprehensive result
             response_data = result.model_dump()
@@ -220,6 +263,7 @@ class RetentionTools:
 
         except Exception as e:
             logger.error("Failed to execute cleanup", error=str(e))
+            await _log_retention_event("ERROR", "Cleanup execution error", {"error": str(e)})
             return {
                 "success": False,
                 "message": f"Failed to execute cleanup: {str(e)}",

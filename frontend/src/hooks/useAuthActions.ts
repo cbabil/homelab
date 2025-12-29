@@ -6,7 +6,8 @@
  */
 
 import { useCallback } from 'react'
-import type { AuthState, LoginCredentials, RegistrationCredentials, AUTH_STORAGE_KEYS } from '@/types/auth'
+import type { AuthState, LoginCredentials, RegistrationCredentials } from '@/types/auth'
+import { AUTH_STORAGE_KEYS } from '@/types/auth'
 import { authService } from '@/services/auth/authService'
 import { sessionService } from '@/services/auth/sessionService'
 import { settingsService } from '@/services/settingsService'

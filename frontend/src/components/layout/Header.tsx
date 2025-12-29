@@ -14,7 +14,6 @@ import { useAuth } from '@/providers/AuthProvider'
 import { useToast } from '@/components/ui/Toast'
 import { useDataServices } from '@/hooks/useDataServices'
 import { clearHomelabCaches } from '@/utils/cacheUtils'
-import { Button } from '@/components/ui/Button'
 
 export function Header() {
   const { user, logout } = useAuth()
@@ -71,11 +70,9 @@ export function Header() {
           {/* User Menu Dropdown */}
           {user && (
             <div className="relative">
-              <Button
-                variant="ghost"
-                size="sm"
+              <button
                 onClick={() => setShowUserMenu(!showUserMenu)}
-                className="flex items-center space-x-3 h-auto p-2"
+                className="flex items-center gap-3 p-2 rounded-lg hover:bg-accent transition-colors"
                 title="User Menu"
               >
                 <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary/10 text-primary">
@@ -86,7 +83,7 @@ export function Header() {
                   <span className="text-xs text-muted-foreground capitalize">{user.role}</span>
                 </div>
                 <ChevronDown className={`h-4 w-4 text-muted-foreground transition-transform ${showUserMenu ? 'rotate-180' : ''}`} />
-              </Button>
+              </button>
               
               {/* Dropdown Menu */}
               {showUserMenu && (
@@ -95,8 +92,8 @@ export function Header() {
                     className="fixed inset-0 z-40" 
                     onClick={() => setShowUserMenu(false)}
                   />
-                  <div className="absolute right-0 mt-2 w-56 bg-card/95 backdrop-blur border border-border/50 rounded-lg shadow-xl z-50">
-                    <div className="p-3 border-b border-border/50">
+                  <div className="absolute right-0 mt-2 w-56 bg-card border border-border rounded-lg shadow-xl z-50">
+                    <div className="p-3 border-b border-border">
                       <div className="flex items-center space-x-3">
                         <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
                           <User className="h-5 w-5" />
@@ -109,38 +106,34 @@ export function Header() {
                       </div>
                     </div>
                     
-                    <div className="py-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                    <div className="py-1">
+                      <button
                         onClick={handleClearCache}
-                        className="flex items-center space-x-3 w-full justify-start"
-                        leftIcon={<Brush className="h-4 w-4 text-muted-foreground" />}
+                        className="flex items-center gap-3 w-full px-3 py-2 text-sm hover:bg-accent transition-colors"
                       >
-                        Clear Cache
-                      </Button>
+                        <Brush className="h-4 w-4 text-muted-foreground" />
+                        <span>Clear Cache</span>
+                      </button>
 
                       <Link
                         to="/settings"
-                        className="flex items-center space-x-3 px-3 py-2 text-sm hover:bg-accent transition-colors"
+                        className="flex items-center gap-3 w-full px-3 py-2 text-sm hover:bg-accent transition-colors"
                         onClick={() => setShowUserMenu(false)}
                       >
                         <Settings className="h-4 w-4 text-muted-foreground" />
                         <span>Settings</span>
                       </Link>
 
-                      <Button
-                        variant="ghost"
-                        size="sm"
+                      <button
                         onClick={handleLogout}
-                        className="flex items-center space-x-3 w-full justify-start text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50"
-                        leftIcon={<LogOut className="h-4 w-4" />}
+                        className="flex items-center gap-3 w-full px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 transition-colors"
                       >
-                        Sign Out
-                      </Button>
+                        <LogOut className="h-4 w-4" />
+                        <span>Sign Out</span>
+                      </button>
                     </div>
                     
-                    <div className="px-3 py-2 border-t border-border/50">
+                    <div className="px-3 py-2 border-t border-border">
                       <p className="text-xs text-muted-foreground">
                         Last login: {new Date(user.lastLogin).toLocaleDateString()}
                       </p>

@@ -4,13 +4,34 @@ Server Preparation Tools
 Provides MCP tools for server preparation workflow.
 """
 
+from datetime import datetime, UTC
 from typing import Dict, Any
+import uuid
 import structlog
 from fastmcp import FastMCP
 from services.preparation_service import PreparationService
+from services.service_log import log_service
+from models.log import LogEntry
 
 
 logger = structlog.get_logger("preparation_tools")
+
+
+async def _log_preparation_event(level: str, message: str, metadata: Dict[str, Any] = None):
+    """Helper to log preparation events to the database."""
+    try:
+        entry = LogEntry(
+            id=f"prp-{uuid.uuid4().hex[:8]}",
+            timestamp=datetime.now(UTC),
+            level=level,
+            source="prp",
+            message=message,
+            tags=["preparation", "infrastructure"],
+            metadata=metadata or {}
+        )
+        await log_service.create_log_entry(entry)
+    except Exception as e:
+        logger.error("Failed to create log entry", error=str(e))
 
 
 class PreparationTools:
@@ -27,12 +48,19 @@ class PreparationTools:
             preparation = await self.preparation_service.start_preparation(server_id)
 
             if not preparation:
+                await _log_preparation_event("ERROR", f"Server preparation failed to start: {server_id}", {
+                    "server_id": server_id
+                })
                 return {
                     "success": False,
                     "message": "Failed to start preparation",
                     "error": "PREPARATION_START_FAILED"
                 }
 
+            await _log_preparation_event("INFO", f"Server preparation started: {server_id}", {
+                "server_id": server_id,
+                "preparation_id": preparation.id
+            })
             logger.info("Preparation started", server_id=server_id, prep_id=preparation.id)
             return {
                 "success": True,
@@ -41,6 +69,7 @@ class PreparationTools:
             }
         except Exception as e:
             logger.error("Prepare server error", error=str(e))
+            await _log_preparation_event("ERROR", f"Server preparation error: {server_id}", {"error": str(e)})
             return {
                 "success": False,
                 "message": f"Failed to prepare server: {str(e)}",
@@ -121,12 +150,19 @@ class PreparationTools:
             preparation = await self.preparation_service.start_preparation(server_id)
 
             if not preparation:
+                await _log_preparation_event("ERROR", f"Server preparation retry failed: {server_id}", {
+                    "server_id": server_id
+                })
                 return {
                     "success": False,
                     "message": "Failed to retry preparation",
                     "error": "RETRY_FAILED"
                 }
 
+            await _log_preparation_event("INFO", f"Server preparation retry started: {server_id}", {
+                "server_id": server_id,
+                "preparation_id": preparation.id
+            })
             return {
                 "success": True,
                 "data": {"preparation_id": preparation.id},
@@ -134,6 +170,7 @@ class PreparationTools:
             }
         except Exception as e:
             logger.error("Retry preparation error", error=str(e))
+            await _log_preparation_event("ERROR", f"Server preparation retry error: {server_id}", {"error": str(e)})
             return {
                 "success": False,
                 "message": f"Failed to retry: {str(e)}",

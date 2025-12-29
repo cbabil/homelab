@@ -56,6 +56,7 @@ class MarketplaceAppTable(Base):
     icon = Column(String, nullable=True)
     author = Column(String, nullable=False)
     license = Column(String, nullable=False)
+    maintainers = Column(Text, nullable=True)  # JSON array stored as text
     repository = Column(String, nullable=True)
     documentation = Column(String, nullable=True)
     repo_id = Column(String, ForeignKey("marketplace_repos.id"), nullable=False, index=True)
@@ -199,6 +200,7 @@ class MarketplaceApp(BaseModel):
     icon: Optional[str] = Field(None, description="Icon URL")
     author: str = Field(..., description="Application author")
     license: str = Field(..., description="Software license")
+    maintainers: List[str] = Field(default_factory=list, description="Package maintainers")
     repository: Optional[str] = Field(None, description="Source code repository URL")
     documentation: Optional[str] = Field(None, description="Documentation URL")
     repo_id: str = Field(..., alias="repoId", description="Source marketplace repository ID")

@@ -14,8 +14,10 @@ from database.connection import db_manager
 from init_db.schema_apps import initialize_app_database
 from models.app import (
     App,
+    AppCategory,
     AppFilter,
     AppInstallation,
+    AppRequirements,
     AppSearchResult,
     AppStatus,
     ApplicationTable,
@@ -161,6 +163,225 @@ class AppService:
         app = App.from_table(row[0], row[1])
         logger.debug("Retrieved application", app_id=app_id)
         return app
+
+    async def add_app(self, app_data: Dict[str, Any]) -> App:
+        """Add an application to the catalog from marketplace import.
+
+        Args:
+            app_data: Dictionary with app fields (from marketplace import)
+
+        Returns:
+            Created App instance
+        """
+        await self._ensure_initialized()
+
+        # Get or create category
+        category_id = app_data.get("category_id") or app_data.get("category")
+
+        async with db_manager.get_session() as session:
+            # Check if app already exists
+            existing = await session.execute(
+                select(ApplicationTable).where(ApplicationTable.id == app_data["id"])
+            )
+            if existing.first():
+                raise ValueError(f"Application {app_data['id']} already exists")
+
+            # Get the category
+            cat_result = await session.execute(
+                select(AppCategoryTable).where(AppCategoryTable.id == category_id)
+            )
+            cat_row = cat_result.first()
+
+            if not cat_row:
+                # Create a simple category if it doesn't exist
+                new_cat = AppCategoryTable(
+                    id=category_id,
+                    name=category_id.title(),
+                    description=f"Applications in the {category_id} category",
+                    icon="Package",
+                    color="text-primary"
+                )
+                session.add(new_cat)
+                await session.flush()
+                cat_row = (new_cat,)
+
+            category = AppCategory.from_table(cat_row[0])
+
+            # Build requirements
+            req_data = app_data.get("requirements", {})
+            requirements = AppRequirements(
+                min_ram=req_data.get("min_ram"),
+                min_storage=req_data.get("min_storage"),
+                supported_architectures=req_data.get("architectures", [])
+            )
+
+            now = datetime.now(UTC).isoformat()
+
+            app = App(
+                id=app_data["id"],
+                name=app_data["name"],
+                description=app_data["description"],
+                long_description=app_data.get("long_description"),
+                version=app_data["version"],
+                category=category,
+                tags=app_data.get("tags", []),
+                icon=app_data.get("icon"),
+                screenshots=app_data.get("screenshots"),
+                author=app_data["author"],
+                repository=app_data.get("repository"),
+                documentation=app_data.get("documentation"),
+                license=app_data["license"],
+                requirements=requirements,
+                status=AppStatus.AVAILABLE,
+                install_count=0,
+                rating=app_data.get("avg_rating"),
+                featured=app_data.get("featured", False),
+                created_at=now,
+                updated_at=now,
+            )
+
+            session.add(app.to_table_model())
+            logger.info("Application created from import", app_id=app.id, name=app.name)
+
+        return app
+
+    async def remove_app(self, app_id: str) -> bool:
+        """Remove an application from the catalog.
+
+        Only allows removing apps that are not installed.
+
+        Args:
+            app_id: Application ID to remove
+
+        Returns:
+            True if removed, False if not found
+
+        Raises:
+            ValueError: If app is installed
+        """
+        await self._ensure_initialized()
+
+        async with db_manager.get_session() as session:
+            # Check if app exists and get its status
+            result = await session.execute(
+                select(ApplicationTable).where(ApplicationTable.id == app_id)
+            )
+            app_row = result.first()
+
+            if not app_row:
+                return False
+
+            app = app_row[0]
+            if app.status == 'installed':
+                raise ValueError(f"Cannot remove installed app '{app_id}'. Uninstall it first.")
+
+            await session.execute(
+                ApplicationTable.__table__.delete().where(ApplicationTable.id == app_id)
+            )
+            logger.info("Application removed from catalog", app_id=app_id)
+
+        return True
+
+    async def remove_apps_bulk(self, app_ids: List[str]) -> Dict[str, Any]:
+        """Remove multiple applications from the catalog.
+
+        Only removes apps that are not installed. Skips installed apps.
+
+        Args:
+            app_ids: List of application IDs to remove
+
+        Returns:
+            Dict with removed count, skipped count, and details
+        """
+        await self._ensure_initialized()
+
+        removed = []
+        skipped = []
+
+        for app_id in app_ids:
+            try:
+                success = await self.remove_app(app_id)
+                if success:
+                    removed.append(app_id)
+                else:
+                    skipped.append({"id": app_id, "reason": "not found"})
+            except ValueError as e:
+                skipped.append({"id": app_id, "reason": str(e)})
+
+        return {
+            "removed": removed,
+            "removed_count": len(removed),
+            "skipped": skipped,
+            "skipped_count": len(skipped)
+        }
+
+    async def get_app_ids(self) -> List[str]:
+        """Get all application IDs in the catalog.
+
+        Returns:
+            List of application IDs
+        """
+        await self._ensure_initialized()
+
+        async with db_manager.get_session() as session:
+            result = await session.execute(select(ApplicationTable.id))
+            return [row[0] for row in result.all()]
+
+    async def mark_app_uninstalled(self, app_id: str) -> bool:
+        """Mark an application as uninstalled (update status to available).
+
+        Args:
+            app_id: Application ID to update
+
+        Returns:
+            True if updated, False if not found
+        """
+        await self._ensure_initialized()
+
+        async with db_manager.get_session() as session:
+            result = await session.execute(
+                select(ApplicationTable).where(ApplicationTable.id == app_id)
+            )
+            app_row = result.first()
+
+            if not app_row:
+                return False
+
+            app = app_row[0]
+            app.status = 'available'
+            app.connected_server_id = None
+            logger.info("Application marked as uninstalled", app_id=app_id)
+
+        return True
+
+    async def mark_apps_uninstalled_bulk(self, app_ids: List[str]) -> Dict[str, Any]:
+        """Mark multiple applications as uninstalled.
+
+        Args:
+            app_ids: List of application IDs to uninstall
+
+        Returns:
+            Dict with uninstalled count and details
+        """
+        uninstalled = []
+        skipped = []
+
+        for app_id in app_ids:
+            try:
+                success = await self.mark_app_uninstalled(app_id)
+                if success:
+                    uninstalled.append(app_id)
+                else:
+                    skipped.append({"id": app_id, "reason": "not found"})
+            except Exception as e:
+                skipped.append({"id": app_id, "reason": str(e)})
+
+        return {
+            "uninstalled": uninstalled,
+            "uninstalled_count": len(uninstalled),
+            "skipped": skipped,
+            "skipped_count": len(skipped)
+        }
 
     async def install_app(self, app_id: str, config: Optional[Dict[str, Any]] = None) -> AppInstallation:
         """Simulate application installation and track status in memory."""

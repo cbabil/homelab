@@ -5,11 +5,14 @@ Provides system monitoring, log management, and metrics collection for the MCP s
 Implements comprehensive observability features for homelab infrastructure.
 """
 
+from datetime import datetime, UTC
 from typing import Dict, Any, Optional
+import uuid
 
 from fastmcp import Context
 import structlog
 from services.monitoring_service import MonitoringService
+from models.log import LogEntry
 
 
 logger = structlog.get_logger("monitoring_tools")
@@ -125,6 +128,21 @@ def register_monitoring_tools(app, monitoring_service: MonitoringService):
 
             deleted = await log_service.purge_logs()
             logger.info("Logs purged via MCP tool", deleted=deleted)
+
+            # Log the purge action itself (this goes to new empty log)
+            try:
+                entry = LogEntry(
+                    id=f"mon-{uuid.uuid4().hex[:8]}",
+                    timestamp=datetime.now(UTC),
+                    level="WARNING",
+                    source="mon",
+                    message=f"Logs purged: {deleted} entries deleted",
+                    tags=["monitoring", "purge"],
+                    metadata={"deleted_count": deleted}
+                )
+                await log_service.create_log_entry(entry)
+            except Exception as log_err:
+                logger.error("Failed to log purge action", error=str(log_err))
 
             return {
                 "success": True,

@@ -253,4 +253,214 @@ export class ApplicationsDataService extends BaseDataService {
       message: 'Application retrieved'
     }
   }
+
+  /**
+   * Remove an application from the catalog (unimport).
+   * Only works for non-installed apps.
+   */
+  async remove(appId: string): Promise<ServiceResponse<void>> {
+    const result = await this.callTool<any>('remove_app', { app_id: appId })
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error || 'Failed to remove application',
+        message: result.message || 'Failed to remove application'
+      }
+    }
+
+    const payload = result.data as { success: boolean; error?: string; message?: string }
+    if (!payload?.success) {
+      return {
+        success: false,
+        error: payload?.error || 'Failed to remove application',
+        message: payload?.message || 'Failed to remove application'
+      }
+    }
+
+    // Clear cache after removal
+    this.clearCache()
+
+    return {
+      success: true,
+      message: payload.message || 'Application removed'
+    }
+  }
+
+  /**
+   * Mark an application as uninstalled (without server interaction).
+   */
+  async markUninstalled(appId: string): Promise<ServiceResponse<void>> {
+    const result = await this.callTool<any>('mark_app_uninstalled', { app_id: appId })
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error || 'Failed to mark application as uninstalled',
+        message: result.message || 'Failed to mark application as uninstalled'
+      }
+    }
+
+    const payload = result.data as { success: boolean; error?: string; message?: string }
+    if (!payload?.success) {
+      return {
+        success: false,
+        error: payload?.error || 'Failed to mark application as uninstalled',
+        message: payload?.message || 'Failed to mark application as uninstalled'
+      }
+    }
+
+    // Clear cache after status change
+    this.clearCache()
+
+    return {
+      success: true,
+      message: payload.message || 'Application marked as uninstalled'
+    }
+  }
+
+  /**
+   * Mark multiple applications as uninstalled (bulk).
+   */
+  async markUninstalledBulk(appIds: string[]): Promise<ServiceResponse<{
+    uninstalled: string[]
+    uninstalledCount: number
+    skipped: Array<{ id: string; reason: string }>
+    skippedCount: number
+  }>> {
+    const result = await this.callTool<any>('mark_apps_uninstalled_bulk', { app_ids: appIds })
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error || 'Failed to uninstall applications',
+        message: result.message || 'Failed to uninstall applications'
+      }
+    }
+
+    const payload = result.data as {
+      success: boolean
+      data?: {
+        uninstalled: string[]
+        uninstalled_count: number
+        skipped: Array<{ id: string; reason: string }>
+        skipped_count: number
+      }
+      error?: string
+      message?: string
+    }
+
+    if (!payload?.success) {
+      return {
+        success: false,
+        error: payload?.error || 'Failed to uninstall applications',
+        message: payload?.message || 'Failed to uninstall applications'
+      }
+    }
+
+    // Clear cache after uninstall
+    this.clearCache()
+
+    return {
+      success: true,
+      data: {
+        uninstalled: payload.data?.uninstalled || [],
+        uninstalledCount: payload.data?.uninstalled_count || 0,
+        skipped: payload.data?.skipped || [],
+        skippedCount: payload.data?.skipped_count || 0
+      },
+      message: payload.message || 'Applications uninstalled'
+    }
+  }
+
+  /**
+   * Uninstall an application from a server.
+   */
+  async uninstall(appId: string, serverId: string, removeData: boolean = false): Promise<ServiceResponse<void>> {
+    const result = await this.callTool<any>('uninstall_app', {
+      app_id: appId,
+      server_id: serverId,
+      remove_data: removeData
+    })
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error || 'Failed to uninstall application',
+        message: result.message || 'Failed to uninstall application'
+      }
+    }
+
+    const payload = result.data as { success: boolean; error?: string; message?: string }
+    if (!payload?.success) {
+      return {
+        success: false,
+        error: payload?.error || 'Failed to uninstall application',
+        message: payload?.message || 'Failed to uninstall application'
+      }
+    }
+
+    // Clear cache after uninstall
+    this.clearCache()
+
+    return {
+      success: true,
+      message: payload.message || 'Application uninstalled'
+    }
+  }
+
+  /**
+   * Remove multiple applications from the catalog (bulk unimport).
+   * Only removes non-installed apps, skips installed ones.
+   */
+  async removeBulk(appIds: string[]): Promise<ServiceResponse<{
+    removed: string[]
+    removedCount: number
+    skipped: Array<{ id: string; reason: string }>
+    skippedCount: number
+  }>> {
+    const result = await this.callTool<any>('remove_apps_bulk', { app_ids: appIds })
+
+    if (!result.success) {
+      return {
+        success: false,
+        error: result.error || 'Failed to remove applications',
+        message: result.message || 'Failed to remove applications'
+      }
+    }
+
+    const payload = result.data as {
+      success: boolean
+      data?: {
+        removed: string[]
+        removed_count: number
+        skipped: Array<{ id: string; reason: string }>
+        skipped_count: number
+      }
+      error?: string
+      message?: string
+    }
+
+    if (!payload?.success) {
+      return {
+        success: false,
+        error: payload?.error || 'Failed to remove applications',
+        message: payload?.message || 'Failed to remove applications'
+      }
+    }
+
+    // Clear cache after removal
+    this.clearCache()
+
+    return {
+      success: true,
+      data: {
+        removed: payload.data?.removed || [],
+        removedCount: payload.data?.removed_count || 0,
+        skipped: payload.data?.skipped || [],
+        skippedCount: payload.data?.skipped_count || 0
+      },
+      message: payload.message || 'Applications removed'
+    }
+  }
 }

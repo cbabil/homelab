@@ -6,50 +6,22 @@
  */
 
 import { useEffect, useState } from 'react'
-import { Plus, RefreshCw, Trash2, X, AlertCircle, CheckCircle, Clock } from 'lucide-react'
+import { Plus, RefreshCw, Trash2, GitBranch, Globe, Package } from 'lucide-react'
+import { Button, Input, Badge, Card, Modal, Dropdown, Alert, EmptyState, type DropdownOption } from 'ui-toolkit'
 import type { MarketplaceRepo, RepoType } from '@/types/marketplace'
 import * as marketplaceService from '@/services/marketplaceService'
+import { marketplaceLogger } from '@/services/systemLogger'
 
 /**
- * Status badge component with appropriate colors and icons
+ * Get badge variant for status
  */
-function StatusBadge({ status }: { status: string }) {
-  const variants = {
-    active: {
-      bg: 'bg-green-50',
-      text: 'text-green-700',
-      border: 'border-green-200',
-      icon: CheckCircle
-    },
-    syncing: {
-      bg: 'bg-yellow-50',
-      text: 'text-yellow-700',
-      border: 'border-yellow-200',
-      icon: Clock
-    },
-    error: {
-      bg: 'bg-red-50',
-      text: 'text-red-700',
-      border: 'border-red-200',
-      icon: AlertCircle
-    },
-    disabled: {
-      bg: 'bg-gray-50',
-      text: 'text-gray-700',
-      border: 'border-gray-200',
-      icon: AlertCircle
-    }
+function getStatusVariant(status: string): 'success' | 'warning' | 'danger' | 'neutral' {
+  switch (status) {
+    case 'active': return 'success'
+    case 'syncing': return 'warning'
+    case 'error': return 'danger'
+    default: return 'neutral'
   }
-
-  const variant = variants[status as keyof typeof variants] || variants.active
-  const Icon = variant.icon
-
-  return (
-    <span className={`inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium border ${variant.bg} ${variant.text} ${variant.border}`}>
-      <Icon className="h-3 w-3" />
-      {status}
-    </span>
-  )
 }
 
 /**
@@ -69,8 +41,15 @@ function AddRepoModal({ isOpen, onClose, onAdd }: AddRepoModalProps) {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
+  const repoTypeOptions: DropdownOption[] = [
+    { label: 'Official', value: 'official' },
+    { label: 'Community', value: 'community' },
+    { label: 'Personal', value: 'personal' }
+  ]
+
+  const handleSubmit = async () => {
+    if (!name || !url) return
+
     setIsSubmitting(true)
     setError(null)
 
@@ -89,116 +68,75 @@ function AddRepoModal({ isOpen, onClose, onAdd }: AddRepoModalProps) {
     }
   }
 
-  if (!isOpen) return null
+  const handleClose = () => {
+    setName('')
+    setUrl('')
+    setRepoType('community')
+    setBranch('main')
+    setError(null)
+    onClose()
+  }
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg border border-gray-200 max-w-md w-full mx-4">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-xl font-semibold text-gray-900">Add Repository</h2>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 transition-colors"
-            type="button"
-          >
-            <X className="h-5 w-5" />
-          </button>
+    <Modal
+      open={isOpen}
+      onClose={handleClose}
+      title="Add Repository"
+      size="sm"
+      footer={
+        <div className="flex justify-end gap-2">
+          <Button variant="ghost" onClick={handleClose} disabled={isSubmitting}>
+            Cancel
+          </Button>
+          <Button onClick={handleSubmit} disabled={isSubmitting || !name || !url}>
+            {isSubmitting ? 'Adding...' : 'Add Repository'}
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-4">
+        <div>
+          <label className="block text-sm font-medium mb-1.5">Repository Name</label>
+          <Input
+            value={name}
+            onChange={(value) => setName(value)}
+            placeholder="e.g., Official Apps"
+          />
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {/* Name Field */}
-          <div>
-            <label htmlFor="repo-name" className="block text-sm font-medium text-gray-700 mb-1">
-              Repository Name
-            </label>
-            <input
-              id="repo-name"
-              type="text"
-              value={name}
-              onChange={(e) => setName(e.target.value)}
-              required
-              placeholder="e.g., Official Apps"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
+        <div>
+          <label className="block text-sm font-medium mb-1.5">Git Repository URL</label>
+          <Input
+            value={url}
+            onChange={(value) => setUrl(value)}
+            placeholder="https://github.com/user/repo"
+          />
+        </div>
 
-          {/* URL Field */}
-          <div>
-            <label htmlFor="repo-url" className="block text-sm font-medium text-gray-700 mb-1">
-              Git Repository URL
-            </label>
-            <input
-              id="repo-url"
-              type="url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              required
-              placeholder="https://github.com/user/repo"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
+        <div>
+          <label className="block text-sm font-medium mb-1.5">Repository Type</label>
+          <Dropdown
+            options={repoTypeOptions}
+            value={repoType}
+            onChange={(value) => setRepoType(value as RepoType)}
+            placeholder="Select type"
+          />
+        </div>
 
-          {/* Repository Type */}
-          <div>
-            <label htmlFor="repo-type" className="block text-sm font-medium text-gray-700 mb-1">
-              Repository Type
-            </label>
-            <select
-              id="repo-type"
-              value={repoType}
-              onChange={(e) => setRepoType(e.target.value as RepoType)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="official">Official</option>
-              <option value="community">Community</option>
-              <option value="personal">Personal</option>
-            </select>
-          </div>
+        <div>
+          <label className="block text-sm font-medium mb-1.5">Branch</label>
+          <Input
+            value={branch}
+            onChange={(value) => setBranch(value)}
+            placeholder="main"
+          />
+        </div>
 
-          {/* Branch Field */}
-          <div>
-            <label htmlFor="repo-branch" className="block text-sm font-medium text-gray-700 mb-1">
-              Branch
-            </label>
-            <input
-              id="repo-branch"
-              type="text"
-              value={branch}
-              onChange={(e) => setBranch(e.target.value)}
-              required
-              placeholder="main"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-            />
-          </div>
-
-          {/* Error Message */}
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-md p-3">
-              <p className="text-sm text-red-800">{error}</p>
-            </div>
-          )}
-
-          {/* Actions */}
-          <div className="flex justify-end gap-3 pt-2 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-              disabled={isSubmitting}
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? 'Adding...' : 'Add Repository'}
-            </button>
-          </div>
-        </form>
+        {error && (
+          <Alert variant="danger">{error}</Alert>
+        )}
       </div>
-    </div>
+    </Modal>
   )
 }
 
@@ -238,33 +176,33 @@ function RepoListItem({ repo, onSync, onRemove }: RepoListItemProps) {
   }
 
   return (
-    <div className="bg-white border border-gray-200 rounded-lg p-4 hover:shadow-sm transition-shadow">
+    <Card className="p-4 max-w-xl">
       <div className="flex items-start justify-between gap-4">
         {/* Repo Info */}
         <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-2">
-            <h3 className="font-semibold text-gray-900 truncate">{repo.name}</h3>
-            <StatusBadge status={repo.status} />
-            <span className="text-xs px-2 py-1 bg-gray-100 text-gray-700 rounded">
-              {repo.repoType}
-            </span>
+          <div className="flex items-center gap-2 mb-2 flex-wrap">
+            <h3 className="font-semibold truncate">{repo.name}</h3>
+            <Badge variant={getStatusVariant(repo.status)}>{repo.status}</Badge>
+            <Badge variant="neutral">{repo.repoType}</Badge>
           </div>
 
-          <div className="space-y-1">
-            <p className="text-sm text-gray-600 truncate">
-              <span className="font-medium">URL:</span> {repo.url}
+          <div className="space-y-1 text-sm text-muted-foreground">
+            <p className="flex items-center gap-1.5 truncate">
+              <Globe className="h-3.5 w-3.5 shrink-0" />
+              <span className="truncate">{repo.url}</span>
             </p>
-            <p className="text-sm text-gray-600">
-              <span className="font-medium">Branch:</span> {repo.branch}
+            <p className="flex items-center gap-1.5">
+              <GitBranch className="h-3.5 w-3.5 shrink-0" />
+              {repo.branch}
             </p>
-            <div className="flex items-center gap-4 text-sm text-gray-600">
-              <span>
-                <span className="font-medium">Apps:</span> {repo.appCount}
+            <div className="flex items-center gap-4">
+              <span className="flex items-center gap-1.5">
+                <Package className="h-3.5 w-3.5 shrink-0" />
+                {repo.appCount} apps
               </span>
               {repo.lastSynced && (
-                <span>
-                  <span className="font-medium">Last Synced:</span>{' '}
-                  {new Date(repo.lastSynced).toLocaleString()}
+                <span className="text-xs">
+                  Synced: {new Date(repo.lastSynced).toLocaleString()}
                 </span>
               )}
             </div>
@@ -272,33 +210,38 @@ function RepoListItem({ repo, onSync, onRemove }: RepoListItemProps) {
 
           {/* Error Message */}
           {repo.errorMessage && (
-            <div className="mt-2 bg-red-50 border border-red-200 rounded-md p-2">
-              <p className="text-xs text-red-800">{repo.errorMessage}</p>
-            </div>
+            <Alert variant="danger" className="mt-2 text-xs">
+              {repo.errorMessage}
+            </Alert>
           )}
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-2">
-          <button
+        <div className="flex items-center gap-1">
+          <Button
+            variant="ghost"
+            size="sm"
             onClick={handleSync}
             disabled={isSyncing || repo.status === 'syncing' || isRemoving}
-            className="p-2 text-blue-600 hover:bg-blue-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             title="Sync repository"
           >
             <RefreshCw className={`h-4 w-4 ${isSyncing || repo.status === 'syncing' ? 'animate-spin' : ''}`} />
-          </button>
-          <button
-            onClick={handleRemove}
-            disabled={isRemoving || isSyncing || repo.status === 'syncing'}
-            className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Remove repository"
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
+          </Button>
+          {repo.repoType !== 'official' && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleRemove}
+              disabled={isRemoving || isSyncing || repo.status === 'syncing'}
+              title="Remove repository"
+              className="text-destructive hover:text-destructive"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </div>
-    </div>
+    </Card>
   )
 }
 
@@ -319,29 +262,37 @@ export function RepoManager() {
   const loadRepos = async () => {
     setIsLoading(true)
     setError(null)
+    marketplaceLogger.info('Loading repositories')
 
     try {
       const data = await marketplaceService.getRepos()
       setRepos(data)
+      marketplaceLogger.info(`Loaded ${data.length} repositories`)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load repositories')
-      console.error('Failed to load repos:', err)
+      const errorMsg = err instanceof Error ? err.message : 'Failed to load repositories'
+      setError(errorMsg)
+      marketplaceLogger.error(errorMsg)
     } finally {
       setIsLoading(false)
     }
   }
 
   const handleAddRepo = async (name: string, url: string, repoType: RepoType, branch: string) => {
+    marketplaceLogger.info(`Adding repository: ${name}`)
     const newRepo = await marketplaceService.addRepo(name, url, repoType, branch)
     setRepos((prev) => [...prev, newRepo])
+    marketplaceLogger.info(`Repository added: ${name}`)
   }
 
   const handleSyncRepo = async (repoId: string) => {
+    const repo = repos.find(r => r.id === repoId)
+    marketplaceLogger.info(`Syncing repository: ${repo?.name || repoId}`)
+
     try {
       // Optimistically update UI
       setRepos((prev) =>
-        prev.map((repo) =>
-          repo.id === repoId ? { ...repo, status: 'syncing' as const } : repo
+        prev.map((r) =>
+          r.id === repoId ? { ...r, status: 'syncing' as const } : r
         )
       )
 
@@ -350,9 +301,10 @@ export function RepoManager() {
       // Reload repos to get updated status and app count
       await loadRepos()
 
-      console.log(`Synced ${result.appCount} apps from repository`)
+      marketplaceLogger.info(`Synced ${result.appCount} apps from ${repo?.name || repoId}`)
     } catch (err) {
-      console.error('Failed to sync repo:', err)
+      const errorMsg = err instanceof Error ? err.message : 'Failed to sync repository'
+      marketplaceLogger.error(`Sync failed for ${repo?.name || repoId}: ${errorMsg}`)
       // Reload to get actual status
       await loadRepos()
       throw err
@@ -360,49 +312,49 @@ export function RepoManager() {
   }
 
   const handleRemoveRepo = async (repoId: string) => {
+    const repo = repos.find(r => r.id === repoId)
+    marketplaceLogger.info(`Removing repository: ${repo?.name || repoId}`)
     await marketplaceService.removeRepo(repoId)
-    setRepos((prev) => prev.filter((repo) => repo.id !== repoId))
+    setRepos((prev) => prev.filter((r) => r.id !== repoId))
+    marketplaceLogger.info(`Repository removed: ${repo?.name || repoId}`)
   }
 
   return (
     <div className="space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-lg font-semibold text-gray-900">Marketplace Repositories</h2>
-          <p className="text-sm text-gray-600">
-            Manage Git-based application repositories
-          </p>
-        </div>
-        <button
-          onClick={() => setIsAddModalOpen(true)}
-          className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md hover:bg-blue-700 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Add Repository
-        </button>
+        <p className="text-sm text-muted-foreground">
+          Manage Git-based application repositories
+        </p>
+        <Button onClick={() => setIsAddModalOpen(true)} className="px-6">
+          <span className="inline-flex items-center gap-1.5">
+            <Plus className="h-4 w-4" />
+            Add
+          </span>
+        </Button>
       </div>
 
       {/* Repository List */}
       {isLoading && repos.length === 0 ? (
         <div className="flex justify-center py-12">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
       ) : error ? (
-        <div className="bg-red-50 border border-red-200 rounded-md p-4">
-          <p className="text-sm text-red-800">{error}</p>
-        </div>
+        <Alert variant="danger">{error}</Alert>
       ) : repos.length === 0 ? (
-        <div className="text-center py-12 bg-gray-50 rounded-lg border border-gray-200">
-          <p className="text-gray-600 mb-4">No repositories configured</p>
-          <button
-            onClick={() => setIsAddModalOpen(true)}
-            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-600 hover:text-blue-700"
-          >
-            <Plus className="h-4 w-4" />
-            Add your first repository
-          </button>
-        </div>
+        <EmptyState
+          icon={Package}
+          title="No repositories"
+          message="Add a repository to start browsing apps"
+          action={
+            <Button onClick={() => setIsAddModalOpen(true)} className="px-6">
+              <span className="inline-flex items-center gap-1.5">
+                <Plus className="h-4 w-4" />
+                Add
+              </span>
+            </Button>
+          }
+        />
       ) : (
         <div className="space-y-3">
           {repos.map((repo) => (

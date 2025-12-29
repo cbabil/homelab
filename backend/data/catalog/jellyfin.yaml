@@ -1,7 +1,18 @@
 id: jellyfin
 name: Jellyfin
-description: Free media server for movies, TV, and music
+description: Free and open-source media server for movies, TV shows, and music
+version: "10.9.11"
+author: Jellyfin Contributors
+license: GPL-2.0
+repository: https://github.com/jellyfin/jellyfin
+icon: https://jellyfin.org/images/logo.svg
 category: media
+tags:
+  - media
+  - streaming
+  - movies
+  - music
+  - tv
 image: jellyfin/jellyfin:latest
 ports:
   - container: 8096

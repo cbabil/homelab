@@ -4,7 +4,7 @@
  * Tab navigation for switching between different settings sections.
  */
 
-import { Server, Monitor, Shield, Bell, ShoppingCart } from 'lucide-react'
+import { Server, Monitor, Shield, Bell } from 'lucide-react'
 import { cn } from '@/utils/cn'
 import { Tab } from './types'
 import { Button } from '@/components/ui/Button'
@@ -29,11 +29,6 @@ const tabs: Tab[] = [
     id: 'servers',
     label: 'Servers',
     icon: Server
-  },
-  {
-    id: 'marketplace',
-    label: 'Marketplace',
-    icon: ShoppingCart
   }
 ]
 
