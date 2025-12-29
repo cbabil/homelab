@@ -51,9 +51,11 @@ coverage/
 playwright-report/
 test-results/
 playwright/.cache/
+.playwright-mcp/
 
 # Temporary files
 .tmp/
 temp/
 
-# Documentation - NOT ignored, included in repo
+# Documentation
+docs/
