@@ -8,7 +8,6 @@ from services.app_service import AppService
 from services.auth_service import AuthService
 from services.activity_service import ActivityService
 from services.backup_service import BackupService
-from services.catalog_service import CatalogService
 from services.dashboard_service import DashboardService
 from services.database_service import DatabaseService
 from services.deployment_service import DeploymentService
@@ -49,16 +48,12 @@ monitoring_service = MonitoringService()
 server_service = ServerService()
 retention_service = RetentionService(db_service=database_service, auth_service=auth_service)
 settings_service = SettingsService(db_service=database_service)
-
-# Additional services
-catalog_dirs = [str(data_directory / "catalog")]
-catalog_service = CatalogService(catalog_dirs=catalog_dirs)
-catalog_service.load_catalog()
+marketplace_service = MarketplaceService()
 
 deployment_service = DeploymentService(
     ssh_service=ssh_service,
     server_service=server_service,
-    catalog_service=catalog_service,
+    marketplace_service=marketplace_service,
     db_service=database_service
 )
 
@@ -84,8 +79,6 @@ preparation_service = PreparationService(
     db_service=database_service
 )
 
-marketplace_service = MarketplaceService()
-
 # Create FastMCP app
 app = FastMCP(
     name="homelab-assistant",
@@ -107,7 +100,6 @@ tool_dependencies = {
     "retention_service": retention_service,
     "settings_service": settings_service,
     "database_service": database_service,
-    "catalog_service": catalog_service,
     "deployment_service": deployment_service,
     "backup_service": backup_service,
     "activity_service": activity_service,

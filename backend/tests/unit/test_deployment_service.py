@@ -1,10 +1,39 @@
 """Tests for deployment service."""
 import pytest
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 from services.deployment_service import DeploymentService
-from models.app_catalog import (
-    AppDefinition, AppPort, AppVolume, AppCategory, InstallationStatus
+from models.app_catalog import InstallationStatus
+from models.marketplace import (
+    MarketplaceApp, DockerConfig, AppPort, AppVolume, AppEnvVar, AppRequirements
 )
+
+
+def _make_mock_app(app_id="testapp", image="test:latest", ports=None, volumes=None):
+    """Create a mock MarketplaceApp."""
+    return MarketplaceApp(
+        id=app_id,
+        name="Test App",
+        description="Test",
+        version="1.0.0",
+        category="utility",
+        tags=["test"],
+        author="Test",
+        license="MIT",
+        repo_id="official",
+        docker=DockerConfig(
+            image=image,
+            ports=ports or [AppPort(container=80, host=8080)],
+            volumes=volumes or [],
+            environment=[],
+            restart_policy="unless-stopped",
+            privileged=False,
+            capabilities=[]
+        ),
+        requirements=AppRequirements(architectures=["amd64"]),
+        created_at=datetime.utcnow(),
+        updated_at=datetime.utcnow()
+    )
 
 
 class TestDeploymentService:
@@ -26,19 +55,10 @@ class TestDeploymentService:
         return svc
 
     @pytest.fixture
-    def mock_catalog_service(self):
-        """Create mock catalog service."""
+    def mock_marketplace_service(self):
+        """Create mock marketplace service."""
         svc = MagicMock()
-        svc.get_app = MagicMock(return_value=AppDefinition(
-            id="testapp",
-            name="Test App",
-            description="Test",
-            category=AppCategory.UTILITY,
-            image="test:latest",
-            ports=[AppPort(container=80, host=8080)],
-            volumes=[],
-            env_vars=[]
-        ))
+        svc.get_app = AsyncMock(return_value=_make_mock_app())
         return svc
 
     @pytest.fixture
@@ -53,30 +73,29 @@ class TestDeploymentService:
         return db
 
     @pytest.fixture
-    def deployment_service(self, mock_ssh_service, mock_server_service, mock_catalog_service, mock_db_service):
+    def deployment_service(self, mock_ssh_service, mock_server_service, mock_marketplace_service, mock_db_service):
         """Create deployment service with mocks."""
         return DeploymentService(
             ssh_service=mock_ssh_service,
             server_service=mock_server_service,
-            catalog_service=mock_catalog_service,
+            marketplace_service=mock_marketplace_service,
             db_service=mock_db_service
         )
 
     def test_build_docker_run_command(self, deployment_service):
         """Should build correct docker run command."""
-        app = AppDefinition(
-            id="myapp",
-            name="My App",
-            description="Test",
-            category=AppCategory.UTILITY,
+        docker_config = DockerConfig(
             image="myapp:latest",
             ports=[AppPort(container=80, host=8080)],
             volumes=[AppVolume(host_path="/data", container_path="/app/data")],
-            env_vars=[]
+            environment=[],
+            restart_policy="unless-stopped",
+            privileged=False,
+            capabilities=[]
         )
         config = {"env": {"MY_VAR": "value"}}
 
-        cmd = deployment_service._build_docker_run_command(app, "myapp-container", config)
+        cmd = deployment_service._build_docker_run_command(docker_config, "myapp-container", config)
 
         assert "docker run" in cmd
         assert "-p 8080:80" in cmd
@@ -86,19 +105,18 @@ class TestDeploymentService:
 
     def test_build_docker_run_with_env(self, deployment_service):
         """Should include environment variables."""
-        app = AppDefinition(
-            id="myapp",
-            name="My App",
-            description="Test",
-            category=AppCategory.UTILITY,
+        docker_config = DockerConfig(
             image="myapp:latest",
             ports=[],
             volumes=[],
-            env_vars=[]
+            environment=[],
+            restart_policy="unless-stopped",
+            privileged=False,
+            capabilities=[]
         )
         config = {"env": {"DB_HOST": "localhost", "DB_PORT": "5432"}}
 
-        cmd = deployment_service._build_docker_run_command(app, "myapp", config)
+        cmd = deployment_service._build_docker_run_command(docker_config, "myapp", config)
 
         assert "-e DB_HOST=localhost" in cmd
         assert "-e DB_PORT=5432" in cmd

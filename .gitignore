@@ -35,10 +35,7 @@ Thumbs.db
 logs/
 
 # Data and config
-data/*
-!data/catalog/
-data/catalog/*
-!data/catalog/*.yaml
+data/
 config/
 *.enc
 

@@ -8,9 +8,8 @@ import uuid
 from datetime import datetime, UTC
 from typing import Dict, Any, Optional, List
 import structlog
-from models.app_catalog import (
-    AppDefinition, InstallationStatus, InstalledApp
-)
+from models.app_catalog import InstallationStatus, InstalledApp
+from models.marketplace import MarketplaceApp, DockerConfig
 
 logger = structlog.get_logger("deployment_service")
 
@@ -18,17 +17,17 @@ logger = structlog.get_logger("deployment_service")
 class DeploymentService:
     """Service for deploying apps to servers."""
 
-    def __init__(self, ssh_service, server_service, catalog_service, db_service):
+    def __init__(self, ssh_service, server_service, marketplace_service, db_service):
         """Initialize deployment service."""
         self.ssh_service = ssh_service
         self.server_service = server_service
-        self.catalog_service = catalog_service
+        self.marketplace_service = marketplace_service
         self.db_service = db_service
         logger.info("Deployment service initialized")
 
     def _build_docker_run_command(
         self,
-        app: AppDefinition,
+        docker: DockerConfig,
         container_name: str,
         config: Dict[str, Any]
     ) -> str:
@@ -39,15 +38,15 @@ class DeploymentService:
         parts.append(f"--name {container_name}")
 
         # Restart policy
-        parts.append(f"--restart {app.restart_policy}")
+        parts.append(f"--restart {docker.restart_policy}")
 
         # Port mappings
-        for port in app.ports:
+        for port in docker.ports:
             host_port = config.get("ports", {}).get(str(port.container), port.host)
             parts.append(f"-p {host_port}:{port.container}/{port.protocol}")
 
         # Volume mappings
-        for volume in app.volumes:
+        for volume in docker.volumes:
             host_path = config.get("volumes", {}).get(volume.container_path, volume.host_path)
             ro = ":ro" if volume.readonly else ""
             parts.append(f"-v {host_path}:{volume.container_path}{ro}")
@@ -57,19 +56,19 @@ class DeploymentService:
             parts.append(f"-e {key}={value}")
 
         # Network mode
-        if app.network_mode:
-            parts.append(f"--network {app.network_mode}")
+        if docker.network_mode:
+            parts.append(f"--network {docker.network_mode}")
 
         # Privileged mode
-        if app.privileged:
+        if docker.privileged:
             parts.append("--privileged")
 
         # Capabilities
-        for cap in app.capabilities:
+        for cap in docker.capabilities:
             parts.append(f"--cap-add {cap}")
 
         # Image
-        parts.append(app.image)
+        parts.append(docker.image)
 
         return " ".join(parts)
 
@@ -83,10 +82,10 @@ class DeploymentService:
         config = config or {}
 
         try:
-            # Get app definition
-            app = self.catalog_service.get_app(app_id)
+            # Get app from marketplace
+            app = await self.marketplace_service.get_app(app_id)
             if not app:
-                logger.error("App not found", app_id=app_id)
+                logger.error("App not found in marketplace", app_id=app_id)
                 return None
 
             # Get server
@@ -114,7 +113,7 @@ class DeploymentService:
             await self.db_service.update_installation(
                 install_id, status=InstallationStatus.PULLING.value
             )
-            pull_cmd = f"docker pull {app.image}"
+            pull_cmd = f"docker pull {app.docker.image}"
             exit_code, stdout, stderr = await self.ssh_service.execute_command(
                 server_id, pull_cmd
             )
@@ -130,7 +129,7 @@ class DeploymentService:
             await self.db_service.update_installation(
                 install_id, status=InstallationStatus.CREATING.value
             )
-            run_cmd = self._build_docker_run_command(app, container_name, config)
+            run_cmd = self._build_docker_run_command(app.docker, container_name, config)
             exit_code, stdout, stderr = await self.ssh_service.execute_command(
                 server_id, run_cmd
             )

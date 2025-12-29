@@ -10,7 +10,7 @@ import uuid
 import structlog
 from fastmcp import FastMCP
 from services.app_service import AppService
-from services.catalog_service import CatalogService
+from services.marketplace_service import MarketplaceService
 from services.deployment_service import DeploymentService
 from services.service_log import log_service
 from models.log import LogEntry
@@ -39,10 +39,10 @@ async def _log_app_event(level: str, message: str, metadata: Dict[str, Any] = No
 class AppTools:
     """App tools for the MCP server."""
 
-    def __init__(self, app_service: AppService, catalog_service: CatalogService, deployment_service: DeploymentService):
+    def __init__(self, app_service: AppService, marketplace_service: MarketplaceService, deployment_service: DeploymentService):
         """Initialize app tools."""
         self.app_service = app_service
-        self.catalog_service = catalog_service
+        self.marketplace_service = marketplace_service
         self.deployment_service = deployment_service
         logger.info("App tools initialized")
 
@@ -224,9 +224,9 @@ class AppTools:
             }
 
     async def list_catalog(self, category: str = None) -> Dict[str, Any]:
-        """List all available apps in the catalog."""
+        """List all available apps in the marketplace catalog."""
         try:
-            apps = self.catalog_service.list_apps(category=category)
+            apps = await self.marketplace_service.search_apps(category=category)
             return {
                 "success": True,
                 "data": {
@@ -235,8 +235,8 @@ class AppTools:
                             "id": app.id,
                             "name": app.name,
                             "description": app.description,
-                            "category": app.category.value,
-                            "image": app.image
+                            "category": app.category,
+                            "image": app.docker.image
                         }
                         for app in apps
                     ],
@@ -253,9 +253,9 @@ class AppTools:
             }
 
     async def get_app_definition(self, app_id: str) -> Dict[str, Any]:
-        """Get full app definition by ID."""
+        """Get full app definition by ID from marketplace."""
         try:
-            app = self.catalog_service.get_app(app_id)
+            app = await self.marketplace_service.get_app(app_id)
             if not app:
                 return {
                     "success": False,
@@ -269,13 +269,13 @@ class AppTools:
                     "id": app.id,
                     "name": app.name,
                     "description": app.description,
-                    "category": app.category.value,
-                    "image": app.image,
-                    "ports": [p.model_dump() for p in app.ports],
-                    "volumes": [v.model_dump() for v in app.volumes],
-                    "env_vars": [e.model_dump() for e in app.env_vars],
-                    "restart_policy": app.restart_policy,
-                    "privileged": app.privileged
+                    "category": app.category,
+                    "image": app.docker.image,
+                    "ports": [p.model_dump() for p in app.docker.ports],
+                    "volumes": [v.model_dump() for v in app.docker.volumes],
+                    "env_vars": [e.model_dump() for e in app.docker.environment],
+                    "restart_policy": app.docker.restart_policy,
+                    "privileged": app.docker.privileged
                 },
                 "message": "App definition retrieved"
             }
@@ -461,9 +461,9 @@ class AppTools:
             }
 
 
-def register_app_tools(app: FastMCP, app_service: AppService, catalog_service: CatalogService, deployment_service: DeploymentService):
+def register_app_tools(app: FastMCP, app_service: AppService, marketplace_service: MarketplaceService, deployment_service: DeploymentService):
     """Register app tools with FastMCP app."""
-    tools = AppTools(app_service, catalog_service, deployment_service)
+    tools = AppTools(app_service, marketplace_service, deployment_service)
 
     app.tool(tools.search_apps)
     app.tool(tools.remove_app)
