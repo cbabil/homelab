@@ -4,8 +4,9 @@
  * Action buttons for server card operations (connect, edit, delete).
  */
 
+import { useTranslation } from 'react-i18next'
 import { Terminal, Settings, Trash2, Unplug } from 'lucide-react'
-import { Button } from '@/components/ui/Button'
+import { Box, IconButton } from '@mui/material'
 import { ServerConnection } from '@/types/server'
 
 interface ServerCardActionsProps {
@@ -17,46 +18,63 @@ interface ServerCardActionsProps {
 }
 
 export function ServerCardActions({ server, onEdit, onDelete, onConnect, onDisconnect }: ServerCardActionsProps) {
+  const { t } = useTranslation()
   const isConnected = server.status === 'connected'
-  
+
   return (
-    <div className="flex items-center space-x-1">
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
       {isConnected ? (
-        <Button
+        <IconButton
           onClick={() => onDisconnect?.(server.id)}
-          variant="ghost"
-          size="icon"
-          title="Disconnect from server"
+          size="small"
+          title={t('servers.actions.disconnectFromServer')}
+          sx={{
+            p: 0.5,
+            borderRadius: 1,
+            '&:hover': { bgcolor: 'action.hover' }
+          }}
         >
-          <Unplug className="h-3.5 w-3.5" />
-        </Button>
+          <Unplug style={{ width: 14, height: 14 }} />
+        </IconButton>
       ) : (
-        <Button
+        <IconButton
           onClick={() => onConnect(server.id)}
-          variant="ghost"
-          size="icon"
-          title="Connect to server"
+          size="small"
+          title={t('servers.actions.connectToServer')}
+          sx={{
+            p: 0.5,
+            borderRadius: 1,
+            '&:hover': { bgcolor: 'action.hover' }
+          }}
         >
-          <Terminal className="h-3.5 w-3.5" />
-        </Button>
+          <Terminal style={{ width: 14, height: 14 }} />
+        </IconButton>
       )}
-      <Button
+      <IconButton
         onClick={() => onEdit(server)}
-        variant="ghost"
-        size="icon"
-        title="Edit server"
+        size="small"
+        title={t('servers.actions.editServer')}
+        sx={{
+          p: 0.5,
+          borderRadius: 1,
+          '&:hover': { bgcolor: 'action.hover' }
+        }}
       >
-        <Settings className="h-3.5 w-3.5" />
-      </Button>
-      <Button
+        <Settings style={{ width: 14, height: 14 }} />
+      </IconButton>
+      <IconButton
         onClick={() => onDelete(server.id)}
-        variant="ghost"
-        size="icon"
-        className="text-destructive"
-        title="Delete server"
+        size="small"
+        title={t('servers.actions.deleteServer')}
+        sx={{
+          p: 0.5,
+          borderRadius: 1,
+          color: 'error.main',
+          '&:hover': { bgcolor: 'action.hover' }
+        }}
       >
-        <Trash2 className="h-3.5 w-3.5" />
-      </Button>
-    </div>
+        <Trash2 style={{ width: 14, height: 14 }} />
+      </IconButton>
+    </Box>
   )
 }

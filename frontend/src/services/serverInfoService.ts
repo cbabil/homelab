@@ -1,8 +1,8 @@
 /**
  * Server Info Service
- * 
+ *
  * Handles fetching system information from remote servers via SSH.
- * Provides methods for retrieving OS, architecture, uptime, and Docker version.
+ * Uses MCP backend to execute SSH commands and retrieve system info.
  */
 
 import { SystemInfo, ServerConnection } from '@/types/server'
@@ -10,30 +10,95 @@ import { SystemInfo, ServerConnection } from '@/types/server'
 export interface ServerInfoFetchResult {
   success: boolean
   system_info?: SystemInfo
+  docker_installed?: boolean
   error?: string
   message: string
 }
 
-export interface SSHCommandResult {
-  stdout: string
-  stderr: string
-  exitCode: number
+// MCP client type for dependency injection
+interface MCPClient {
+  callTool: <T>(name: string, params: Record<string, unknown>) => Promise<{
+    success: boolean
+    data?: T
+    error?: string
+    message?: string
+  }>
+}
+
+interface TestConnectionResponse {
+  success?: boolean
+  system_info?: SystemInfo
+  docker_installed?: boolean
+  agent_installed?: boolean
+  message?: string
+  error?: string
 }
 
 class ServerInfoService {
+  private mcpClient: MCPClient | null = null
+
+  /**
+   * Set the MCP client for backend communication
+   * Must be called before using fetchServerInfo
+   */
+  setMCPClient(client: MCPClient | null) {
+    this.mcpClient = client
+  }
+
   /**
    * Fetch comprehensive system information from a server
+   * Uses the backend test_connection tool to get real system info
    */
   async fetchServerInfo(server: ServerConnection): Promise<ServerInfoFetchResult> {
-    try {
-      // In a real implementation, this would connect to a backend API
-      // that executes SSH commands on the target server
-      const systemInfo = await this.executeServerInfoCommands(server)
-      
+    return this.fetchServerInfoById(server.id)
+  }
+
+  /**
+   * Fetch system information by server ID
+   * Used when testing connection before adding server to localStorage
+   */
+  async fetchServerInfoById(serverId: string): Promise<ServerInfoFetchResult> {
+    if (!this.mcpClient) {
       return {
-        success: true,
-        system_info: systemInfo,
-        message: 'Server information retrieved successfully'
+        success: false,
+        error: 'MCP client not available',
+        message: 'Backend connection not established'
+      }
+    }
+
+    try {
+      // Call the backend test_connection tool which fetches system info via SSH
+      const response = await this.mcpClient.callTool<TestConnectionResponse>('test_connection', {
+        server_id: serverId
+      })
+
+      if (response.success && response.data) {
+        const backendResponse = response.data
+
+        // Check tool-level success (not just MCP wrapper success)
+        if (!backendResponse.success) {
+          return {
+            success: false,
+            error: backendResponse.error || backendResponse.message || 'Connection failed',
+            message: backendResponse.message || 'Failed to fetch server information'
+          }
+        }
+
+        const systemInfo = backendResponse.system_info
+        const dockerInstalled = backendResponse.docker_installed ?? false
+
+        return {
+          success: true,
+          system_info: systemInfo,
+          docker_installed: dockerInstalled,
+          message: 'Server information retrieved successfully'
+        }
+      }
+
+      return {
+        success: false,
+        error: response.error || 'Unknown error',
+        message: 'Failed to fetch server information'
       }
     } catch (error) {
       return {
@@ -43,26 +108,6 @@ class ServerInfoService {
       }
     }
   }
-
-  /**
-   * Execute SSH commands to gather system information
-   * Returns placeholder indicating real implementation needed
-   */
-  private async executeServerInfoCommands(server: ServerConnection): Promise<SystemInfo> {
-    // Simulate network delay for realistic UX
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    
-    // Return data unavailable indicators instead of mock data
-    // In real implementation, this would execute actual SSH commands
-    return {
-      os: undefined, // Will show "OS information unavailable"
-      kernel: undefined,
-      architecture: undefined, // Will show "Architecture unavailable"
-      uptime: undefined, // Will show "Uptime unavailable"
-      docker_version: undefined // Will show "Docker not installed"
-    }
-  }
-
 }
 
 export const serverInfoService = new ServerInfoService()

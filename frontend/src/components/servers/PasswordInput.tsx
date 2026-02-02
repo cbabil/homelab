@@ -1,11 +1,13 @@
 /**
  * Password Input Component
- * 
+ *
  * Password input field with show/hide functionality.
+ * Uses MUI TextField for consistency with other form fields.
  */
 
 import { useState } from 'react'
-import { Eye, EyeOff } from 'lucide-react'
+import { TextField, InputAdornment, IconButton } from '@mui/material'
+import { VisibilityOutlined, VisibilityOffOutlined } from '@mui/icons-material'
 
 interface PasswordInputProps {
   label: string
@@ -13,6 +15,7 @@ interface PasswordInputProps {
   onChange: (value: string) => void
   placeholder: string
   required?: boolean
+  disabled?: boolean
 }
 
 export function PasswordInput({
@@ -20,30 +23,38 @@ export function PasswordInput({
   value,
   onChange,
   placeholder,
-  required = false
+  required = false,
+  disabled = false
 }: PasswordInputProps) {
   const [showPassword, setShowPassword] = useState(false)
 
   return (
-    <div>
-      <label className="block text-sm font-medium mb-1">{label}</label>
-      <div className="relative">
-        <input
-          type={showPassword ? 'text' : 'password'}
-          value={value}
-          onChange={(e) => onChange(e.target.value)}
-          className="w-full px-3 py-2 pr-10 border border-input rounded-lg bg-background focus:outline-none"
-          placeholder={placeholder}
-          required={required}
-        />
-        <button
-          type="button"
-          onClick={() => setShowPassword(!showPassword)}
-          className="absolute right-3 top-1/2 transform -translate-y-1/2"
-        >
-          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-        </button>
-      </div>
-    </div>
+    <TextField
+      label={label}
+      type={showPassword ? 'text' : 'password'}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      placeholder={placeholder}
+      required={required}
+      disabled={disabled}
+      fullWidth
+      size="small"
+      slotProps={{
+        input: {
+          endAdornment: (
+            <InputAdornment position="end">
+              <IconButton
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                onClick={() => setShowPassword(!showPassword)}
+                edge="end"
+                size="small"
+              >
+                {showPassword ? <VisibilityOutlined fontSize="small" /> : <VisibilityOffOutlined fontSize="small" />}
+              </IconButton>
+            </InputAdornment>
+          ),
+        },
+      }}
+    />
   )
 }

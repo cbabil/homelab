@@ -1,9 +1,10 @@
 /**
  * Application Meta Fields Component
- * 
+ *
  * Form fields for category, tags, author, and license.
  */
 
+import { Stack, Typography, TextField, Select, MenuItem, FormControl, Grid } from '@mui/material'
 import { App, AppCategory } from '@/types/app'
 
 interface ApplicationMetaFieldsProps {
@@ -13,11 +14,11 @@ interface ApplicationMetaFieldsProps {
   categories: AppCategory[]
 }
 
-export function ApplicationMetaFields({ 
-  formData, 
-  onChange, 
+export function ApplicationMetaFields({
+  formData,
+  onChange,
   onCategoryChange,
-  categories 
+  categories
 }: ApplicationMetaFieldsProps) {
   const handleCategorySelect = (categoryId: string) => {
     const category = categories.find(cat => cat.id === categoryId)
@@ -32,59 +33,64 @@ export function ApplicationMetaFields({
   }
 
   return (
-    <div className="space-y-3">
+    <Stack spacing={1.5}>
       <div>
-        <label className="block text-sm font-medium text-foreground mb-1">Category</label>
-        <select
-          value={formData.category?.id || ''}
-          onChange={(e) => handleCategorySelect(e.target.value)}
-          className="w-full px-3 py-1.5 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20"
-          required
-        >
-          <option value="">Select category</option>
-          {categories.map(cat => (
-            <option key={cat.id} value={cat.id}>{cat.name}</option>
-          ))}
-        </select>
+        <Typography variant="body2" fontWeight={500} sx={{ mb: 0.5 }}>Category</Typography>
+        <FormControl fullWidth size="small" required>
+          <Select
+            value={formData.category?.id || ''}
+            onChange={(e) => handleCategorySelect(e.target.value)}
+          >
+            <MenuItem value="">Select category</MenuItem>
+            {categories.map(cat => (
+              <MenuItem key={cat.id} value={cat.id}>{cat.name}</MenuItem>
+            ))}
+          </Select>
+        </FormControl>
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-foreground mb-1">Tags</label>
-        <input
+        <Typography variant="body2" fontWeight={500} sx={{ mb: 0.5 }}>Tags</Typography>
+        <TextField
           type="text"
+          size="small"
+          fullWidth
           value={formData.tags?.join(', ') || ''}
           onChange={(e) => handleTagsChange(e.target.value)}
-          className="w-full px-3 py-1.5 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20"
           placeholder="web, docker, self-hosted"
         />
-        <p className="text-xs text-muted-foreground mt-1">Separate tags with commas</p>
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+          Separate tags with commas
+        </Typography>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-medium text-foreground mb-1">Author</label>
-          <input
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Typography variant="body2" fontWeight={500} sx={{ mb: 0.5 }}>Author</Typography>
+          <TextField
             type="text"
+            size="small"
+            fullWidth
             value={formData.author || ''}
             onChange={(e) => onChange('author', e.target.value)}
-            className="w-full px-3 py-1.5 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20"
             placeholder="Author name"
             required
           />
-        </div>
+        </Grid>
 
-        <div>
-          <label className="block text-sm font-medium text-foreground mb-1">License</label>
-          <input
+        <Grid size={{ xs: 12, md: 6 }}>
+          <Typography variant="body2" fontWeight={500} sx={{ mb: 0.5 }}>License</Typography>
+          <TextField
             type="text"
+            size="small"
+            fullWidth
             value={formData.license || ''}
             onChange={(e) => onChange('license', e.target.value)}
-            className="w-full px-3 py-1.5 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20"
             placeholder="MIT, GPL-3.0, etc."
             required
           />
-        </div>
-      </div>
-    </div>
+        </Grid>
+      </Grid>
+    </Stack>
   )
 }

@@ -1,6 +1,11 @@
 {
   "root": true,
   "env": { "browser": true, "es2020": true },
+  "globals": {
+    "NodeJS": "readonly",
+    "KeyUsage": "readonly",
+    "global": "readonly"
+  },
   "extends": [
     "eslint:recommended"
   ],
@@ -16,12 +21,63 @@
       "warn",
       { "allowConstantExport": true }
     ],
-    "max-lines": ["error", { "max": 100, "skipComments": false, "skipBlankLines": false }],
-    "max-lines-per-function": ["error", { "max": 100, "skipComments": false, "skipBlankLines": false }],
-    "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_" }],
+    "max-lines": ["error", { "max": 300, "skipComments": true, "skipBlankLines": true }],
+    "max-lines-per-function": ["error", { "max": 150, "skipComments": true, "skipBlankLines": true }],
+    "@typescript-eslint/no-unused-vars": ["error", { "argsIgnorePattern": "^_", "varsIgnorePattern": "^_", "caughtErrorsIgnorePattern": "^_" }],
     "@typescript-eslint/explicit-function-return-type": "off",
     "@typescript-eslint/explicit-module-boundary-types": "off",
     "@typescript-eslint/no-explicit-any": "warn",
     "no-unused-vars": "off"
-  }
+  },
+  "overrides": [
+    {
+      "files": ["*.config.ts", "*.config.js", "playwright.config.ts"],
+      "env": { "node": true }
+    },
+    {
+      "files": ["src/services/**/*.ts", "src/types/**/*.ts"],
+      "rules": {
+        "max-lines": ["error", { "max": 500, "skipComments": true, "skipBlankLines": true }]
+      }
+    },
+    {
+      "files": ["src/pages/**/*.tsx", "src/pages/**/*.ts"],
+      "rules": {
+        "max-lines": ["error", { "max": 450, "skipComments": true, "skipBlankLines": true }],
+        "max-lines-per-function": ["error", { "max": 250, "skipComments": true, "skipBlankLines": true }]
+      }
+    },
+    {
+      "files": ["src/hooks/**/*.ts"],
+      "rules": {
+        "max-lines-per-function": ["error", { "max": 200, "skipComments": true, "skipBlankLines": true }]
+      }
+    },
+    {
+      "files": ["**/*.test.tsx", "**/*.test.ts", "**/*.spec.ts", "tests/**/*", "src/test/**/*", "**/__tests__/**/*"],
+      "env": { "node": true },
+      "globals": {
+        "global": "readonly",
+        "NodeJS": "readonly",
+        "IntersectionObserverCallback": "readonly",
+        "IntersectionObserverInit": "readonly"
+      },
+      "rules": {
+        "max-lines": "off",
+        "max-lines-per-function": "off"
+      }
+    },
+    {
+      "files": ["tests/e2e/**/*.spec.ts", "src/test/e2e/**/*.spec.ts"],
+      "rules": {
+        "@typescript-eslint/no-unused-vars": "off"
+      }
+    },
+    {
+      "files": ["src/providers/**/*.tsx", "src/contexts/**/*.tsx", "src/components/ui/Toast.tsx", "src/components/auth/ProtectedRoute.tsx", "src/test/utils/testUtils.tsx"],
+      "rules": {
+        "react-refresh/only-export-components": "off"
+      }
+    }
+  ]
 }

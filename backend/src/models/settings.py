@@ -7,18 +7,19 @@ audit trail protection, and runtime input sanitization.
 
 import json
 import hashlib
-from datetime import datetime
-from typing import Dict, Any, Optional, List, Union
+from typing import Dict, Any, Optional, List
 from enum import Enum
 from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class SettingCategory(str, Enum):
-    """Setting category definitions with security validation."""
-    UI = "ui"
-    SECURITY = "security"
-    SYSTEM = "system"
-    RETENTION = "retention"
+    """Setting category definitions matching frontend UserSettings structure."""
+    UI = "ui"                    # Theme, language, timezone
+    SECURITY = "security"        # Session settings, 2FA, password policies
+    SYSTEM = "system"            # Auto-refresh, debug mode, data retention
+    APPLICATIONS = "applications" # Docker status refresh settings
+    SERVERS = "servers"          # SSH connection settings, MCP config
+    NOTIFICATIONS = "notifications" # Alert preferences
 
 
 class SettingScope(str, Enum):
@@ -98,7 +99,8 @@ class SystemSetting(BaseModel):
 
     id: Optional[int] = Field(None, description="Database ID")
     setting_key: str = Field(..., min_length=1, max_length=255, description="Hierarchical setting key")
-    setting_value: SettingValue = Field(..., description="Setting value with validation")
+    setting_value: SettingValue = Field(..., description="Current setting value")
+    default_value: SettingValue = Field(..., description="Factory default value for reset")
     category: SettingCategory = Field(..., description="Setting category")
     scope: SettingScope = Field(..., description="Setting scope for access control")
     data_type: SettingDataType = Field(..., description="Data type for validation")

@@ -8,7 +8,7 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useSettingsHandlers } from './useSettingsHandlers'
-import { HomelabMCPClient } from '@/services/mcpClient'
+import { TomoMCPClient } from '@/services/mcpClient'
 
 // Mock MCP client
 vi.mock('@/services/mcpClient')
@@ -27,7 +27,7 @@ Object.defineProperty(window, 'localStorage', {
 
 describe('useSettingsHandlers', () => {
   const mockProps = {
-    mcpConfigText: '{"mcpServers":{"homelab-assistant":{"url":"http://localhost:8000"}}}',
+    mcpConfigText: '{"mcpServers":{"tomo":{"type":"http","url":"http://localhost:8000"}}}',
     setMcpConfig: vi.fn(),
     setMcpConfigError: vi.fn(),
     setIsEditingMcpConfig: vi.fn(),
@@ -38,7 +38,7 @@ describe('useSettingsHandlers', () => {
     setSessions: vi.fn(),
     sortBy: 'lastActivity' as const,
     sortOrder: 'desc' as const,
-    mcpConfig: { mcpServers: { 'homelab-assistant': { url: 'http://localhost:8000' } } },
+    mcpConfig: { mcpServers: { 'tomo': { type: 'http' as const, url: 'http://localhost:8000' } } },
     originalMcpConfig: '',
     setMcpConnectionStatus: vi.fn(),
     setMcpConnectionError: vi.fn()
@@ -61,12 +61,12 @@ describe('useSettingsHandlers', () => {
 
     it('should set new column with ascending order', () => {
       const { result } = renderHook(() => useSettingsHandlers(mockProps))
-      
+
       act(() => {
-        result.current.handleSort('id')
+        result.current.handleSort('userId')
       })
 
-      expect(mockProps.setSortBy).toHaveBeenCalledWith('id')
+      expect(mockProps.setSortBy).toHaveBeenCalledWith('userId')
       expect(mockProps.setSortOrder).toHaveBeenCalledWith('asc')
     })
   })
@@ -131,15 +131,24 @@ describe('useSettingsHandlers', () => {
 
   describe('MCP Config Save', () => {
     it('should save valid config successfully', () => {
-      const validConfig = '{"mcpServers":{"test":{"url":"http://test"}}}'
+      const validConfig = '{"mcpServers":{"test":{"type":"http","url":"http://test"}}}'
       const propsWithValidConfig = { ...mockProps, mcpConfigText: validConfig }
       const { result } = renderHook(() => useSettingsHandlers(propsWithValidConfig))
-      
+
       act(() => {
         result.current.handleMcpConfigSave()
       })
 
-      expect(mockProps.setMcpConfig).toHaveBeenCalledWith(JSON.parse(validConfig))
+      expect(mockProps.setMcpConfig).toHaveBeenCalledWith(
+        expect.objectContaining({
+          mcpServers: expect.objectContaining({
+            test: expect.objectContaining({
+              type: 'http',
+              url: 'http://test'
+            })
+          })
+        })
+      )
       expect(mockProps.setMcpConfigError).toHaveBeenCalledWith('')
       expect(mockProps.setIsEditingMcpConfig).toHaveBeenCalledWith(false)
       expect(mockProps.setOriginalMcpConfig).toHaveBeenCalledWith('')
@@ -177,12 +186,12 @@ describe('useSettingsHandlers', () => {
   describe('MCP Connection', () => {
     it('should connect successfully', async () => {
       const mockConnect = vi.fn().mockResolvedValue(undefined)
-      vi.mocked(HomelabMCPClient).mockImplementation(() => ({
+      vi.mocked(TomoMCPClient).mockImplementation(() => ({
         connect: mockConnect
       } as any))
 
       const { result } = renderHook(() => useSettingsHandlers(mockProps))
-      
+
       await act(async () => {
         await result.current.handleMcpConnect()
       })
@@ -194,12 +203,12 @@ describe('useSettingsHandlers', () => {
 
     it('should handle connection error', async () => {
       const mockConnect = vi.fn().mockRejectedValue(new Error('Connection failed'))
-      vi.mocked(HomelabMCPClient).mockImplementation(() => ({
+      vi.mocked(TomoMCPClient).mockImplementation(() => ({
         connect: mockConnect
       } as any))
 
       const { result } = renderHook(() => useSettingsHandlers(mockProps))
-      
+
       await act(async () => {
         await result.current.handleMcpConnect()
       })
@@ -212,10 +221,10 @@ describe('useSettingsHandlers', () => {
     it('should handle missing server URL', async () => {
       const propsWithoutUrl = {
         ...mockProps,
-        mcpConfig: { mcpServers: { 'homelab-assistant': {} } }
+        mcpConfig: { mcpServers: { 'tomo': { type: 'http' as const } } } as const
       }
-      const { result } = renderHook(() => useSettingsHandlers(propsWithoutUrl))
-      
+      const { result } = renderHook(() => useSettingsHandlers(propsWithoutUrl as any))
+
       await act(async () => {
         await result.current.handleMcpConnect()
       })

@@ -18,7 +18,7 @@ interface StoredKeyData {
 }
 
 class KeyManager implements SecureKeyStorage {
-  private readonly dbName = 'homelab-jwt-keys'
+  private readonly dbName = 'tomo-jwt-keys'
   private readonly dbVersion = 3 // Incremented to force key regeneration
   private readonly keyStoreName = 'keys'
   private readonly fingerprintVersion = 'v3' // Track fingerprint method version
@@ -277,7 +277,7 @@ class KeyManager implements SecureKeyStorage {
         screen.width.toString(),
         screen.height.toString(),
         this.fingerprintVersion, // Version tracking for consistency
-        'homelab-assistant-stable-key' // Static application salt
+        'tomo-stable-key' // Static application salt
       ].join('|')
 
       const hashBuffer = await crypto.subtle.digest(
@@ -291,7 +291,7 @@ class KeyManager implements SecureKeyStorage {
     } catch (error) {
       console.error('Failed to generate master password:', error)
       // Fallback to a simpler deterministic key
-      return 'homelab-fallback-key-' + this.fingerprintVersion
+      return 'tomo-fallback-key-' + this.fingerprintVersion
     }
   }
 

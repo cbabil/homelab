@@ -123,7 +123,7 @@ class TestMetricsModels:
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_metrics_models.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_metrics_models.py -v --no-cov
 ```
 
 Expected: FAIL - `ModuleNotFoundError: No module named 'models.metrics'`
@@ -319,7 +319,7 @@ def get_metrics_schema() -> str:
 **Step 5: Run test to verify it passes**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_metrics_models.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_metrics_models.py -v --no-cov
 ```
 
 Expected: PASS
@@ -447,7 +447,7 @@ Mem:        8192000     4096000     2048000"""
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_metrics_service.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_metrics_service.py -v --no-cov
 ```
 
 Expected: FAIL
@@ -701,7 +701,7 @@ class MetricsService:
 **Step 4: Run test to verify it passes**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_metrics_service.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_metrics_service.py -v --no-cov
 ```
 
 Expected: PASS
@@ -813,7 +813,7 @@ class TestActivityService:
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_activity_service.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_activity_service.py -v --no-cov
 ```
 
 Expected: FAIL
@@ -935,7 +935,7 @@ class ActivityService:
 **Step 4: Run test to verify it passes**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_activity_service.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_activity_service.py -v --no-cov
 ```
 
 Expected: PASS
@@ -1093,7 +1093,7 @@ class TestMetricsDatabaseOperations:
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_metrics_database.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_metrics_database.py -v --no-cov
 ```
 
 Expected: FAIL
@@ -1357,7 +1357,7 @@ async def count_activity_logs(
 **Step 4: Run test to verify it passes**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_metrics_database.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_metrics_database.py -v --no-cov
 ```
 
 Expected: PASS
@@ -1494,7 +1494,7 @@ class TestDashboardService:
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_dashboard_service.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_dashboard_service.py -v --no-cov
 ```
 
 Expected: FAIL
@@ -1597,7 +1597,7 @@ class DashboardService:
 **Step 4: Run test to verify it passes**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_dashboard_service.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_dashboard_service.py -v --no-cov
 ```
 
 Expected: PASS
@@ -1724,7 +1724,7 @@ class TestGetDashboardSummary:
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_metrics_tools.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_metrics_tools.py -v --no-cov
 ```
 
 Expected: FAIL
@@ -1918,7 +1918,7 @@ def register_metrics_tools(
 **Step 4: Run test to verify it passes**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_metrics_tools.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_metrics_tools.py -v --no-cov
 ```
 
 Expected: PASS
@@ -1937,13 +1937,13 @@ git commit -m "feat(metrics): add monitoring MCP tools"
 **Step 1: Run all Phase 5 tests**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_metrics*.py tests/unit/test_activity*.py tests/unit/test_dashboard*.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_metrics*.py tests/unit/test_activity*.py tests/unit/test_dashboard*.py -v --no-cov
 ```
 
 **Step 2: Run all project tests to ensure no regressions**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_auth*.py tests/unit/test_server*.py tests/unit/test_preparation*.py tests/unit/test_app*.py tests/unit/test_catalog*.py tests/unit/test_deployment*.py tests/unit/test_metrics*.py tests/unit/test_activity*.py tests/unit/test_dashboard*.py tests/unit/test_health*.py tests/unit/test_cli.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_auth*.py tests/unit/test_server*.py tests/unit/test_preparation*.py tests/unit/test_app*.py tests/unit/test_catalog*.py tests/unit/test_deployment*.py tests/unit/test_metrics*.py tests/unit/test_activity*.py tests/unit/test_dashboard*.py tests/unit/test_health*.py tests/unit/test_cli.py -v --no-cov
 ```
 
 **Step 3: Commit if any fixes needed**

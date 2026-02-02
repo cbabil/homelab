@@ -46,7 +46,7 @@ async def test_database_authentication():
     # Test admin authentication
     admin_creds = LoginCredentials(
         username="admin",
-        password="HomeLabAdmin123!",
+        password="TomoAdmin123!",
         remember_me=False
     )
 
@@ -71,7 +71,7 @@ async def test_database_authentication():
     # Test user authentication
     user_creds = LoginCredentials(
         username="user",
-        password="HomeLabUser123!",
+        password="TomoUser123!",
         remember_me=False
     )
 

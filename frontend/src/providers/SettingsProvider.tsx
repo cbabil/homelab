@@ -7,16 +7,39 @@
 
 import React, { createContext, useContext } from 'react'
 import { useSettings } from '@/hooks/useSettings'
-import { UserSettings, SettingsUpdateResult } from '@/types/settings'
+import {
+  UserSettings,
+  SettingsUpdateResult,
+  SecuritySettings,
+  UISettings,
+  SystemSettings,
+  ApplicationSettings,
+  NotificationSettings,
+  ServerConnectionSettings,
+  AgentConnectionSettings,
+} from '@/types/settings'
+
+// Type for section updates - maps section key to its partial type
+type SettingsSectionUpdates = {
+  security: Partial<SecuritySettings>
+  ui: Partial<UISettings>
+  system: Partial<SystemSettings>
+  applications: Partial<ApplicationSettings>
+  notifications: Partial<NotificationSettings>
+  servers: Partial<ServerConnectionSettings>
+  agent: Partial<AgentConnectionSettings>
+}
+
+type SettingsSectionKey = keyof Omit<UserSettings, 'lastUpdated' | 'version'>
 
 interface SettingsContextType {
   settings: UserSettings | null
   isLoading: boolean
   error: string | null
   isUsingDatabase: boolean
-  updateSettings: (
-    section: keyof Omit<UserSettings, 'lastUpdated' | 'version'>,
-    updates: any
+  updateSettings: <K extends SettingsSectionKey>(
+    section: K,
+    updates: SettingsSectionUpdates[K]
   ) => Promise<SettingsUpdateResult>
   resetSettings: () => Promise<SettingsUpdateResult>
   syncFromDatabase: () => Promise<SettingsUpdateResult>

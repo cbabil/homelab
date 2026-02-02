@@ -6,7 +6,6 @@ Simple initialization approach for SQLite database setup.
 """
 
 from database.connection import db_manager, Base
-from models.log import LogEntryTable
 import structlog
 
 logger = structlog.get_logger("schema_logs")

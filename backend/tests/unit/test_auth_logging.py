@@ -209,7 +209,7 @@ class TestAuthenticateUserLogging:
         user = User(
             id="user-123",
             username="admin",
-            email="admin@homelab.local",
+            email="admin@tomo.local",
             role=UserRole.ADMIN,
             last_login=datetime.now(UTC).isoformat(),
             is_active=True
@@ -327,7 +327,7 @@ class TestLogServiceDatabasePath:
         expected_path = db_manager.database_path
 
         # Verify it's pointing to the expected location
-        assert "homelab.db" in expected_path
+        assert "tomo.db" in expected_path
 
     @pytest.mark.asyncio
     async def test_log_entries_table_exists(self):

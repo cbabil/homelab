@@ -34,7 +34,7 @@ test.describe('Version Display in Navigation', () => {
     
     // Fill in admin credentials and submit
     await page.fill('input[autocomplete="username"]', 'admin')
-    await page.fill('input[autocomplete="current-password"]', 'HomeLabAdmin123!')
+    await page.fill('input[autocomplete="current-password"]', 'TomoAdmin123!')
     await page.click('button[type="submit"]')
     
     // Wait for successful login and redirect to dashboard
@@ -57,7 +57,7 @@ test.describe('Version Display in Navigation', () => {
     // Login
     await page.goto('/login')
     await page.fill('input[autocomplete="username"]', 'admin')
-    await page.fill('input[autocomplete="current-password"]', 'HomeLabAdmin123!')
+    await page.fill('input[autocomplete="current-password"]', 'TomoAdmin123!')
     await page.click('button[type="submit"]')
     
     // Wait for login
@@ -78,7 +78,7 @@ test.describe('Version Display in Navigation', () => {
     // Login
     await page.goto('/login')
     await page.fill('input[autocomplete="username"]', 'admin')
-    await page.fill('input[autocomplete="current-password"]', 'HomeLabAdmin123!')
+    await page.fill('input[autocomplete="current-password"]', 'TomoAdmin123!')
     await page.click('button[type="submit"]')
     
     // Wait for login
@@ -106,7 +106,7 @@ test.describe('Version Display in Navigation', () => {
     // Login
     await page.goto('/login')
     await page.fill('input[autocomplete="username"]', 'admin')
-    await page.fill('input[autocomplete="current-password"]', 'HomeLabAdmin123!')
+    await page.fill('input[autocomplete="current-password"]', 'TomoAdmin123!')
     await page.click('button[type="submit"]')
     
     // Wait for login

@@ -1,69 +1,80 @@
 /**
  * Login Page Component
- * 
- * Comprehensive login page with form validation, security features,
- * and excellent user experience. Refactored to maintain 100-line limit per CLAUDE.md rules.
+ *
+ * Login page with MUI components and form validation.
+ * Auth redirect is handled by LoginPageWrapper to avoid re-renders.
  */
 
-import React from 'react'
-import { Navigate, useLocation, Link } from 'react-router-dom'
-import { Shield } from 'lucide-react'
-import { useAuth } from '@/providers/AuthProvider'
+import { Link as RouterLink } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import Box from '@mui/material/Box'
+import Card from '@mui/material/Card'
+import CardContent from '@mui/material/CardContent'
+import Typography from '@mui/material/Typography'
+import Link from '@mui/material/Link'
 import { LoginForm } from './LoginForm'
+import { CopyrightFooter } from '@/components/ui/CopyrightFooter'
+import TomoLogo from '../../../../assets/tomo_logo_minimal.png'
 
 export function LoginPage() {
-  const { isAuthenticated } = useAuth()
-  const location = useLocation()
-  
-  // Redirect to intended destination after login
-  const from = (location.state as any)?.from?.pathname || '/'
-
-  // If already authenticated, redirect to intended destination
-  if (isAuthenticated) {
-    return <Navigate to={from} replace />
-  }
+  const { t } = useTranslation()
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
+    <Box
+      sx={{
+        minHeight: '100vh',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        p: 2,
+        background: (theme) =>
+          theme.palette.mode === 'dark'
+            ? 'linear-gradient(135deg, #0f172a 0%, #1e293b 100%)'
+            : 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+      }}
+    >
+      <Box sx={{ width: '100%', maxWidth: 420 }}>
         {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-2xl mb-4">
-            <Shield className="w-8 h-8 text-primary" />
-          </div>
-          <h1 className="text-2xl font-bold text-foreground mb-2">
-            Welcome Back
-          </h1>
-          <p className="text-muted-foreground">
-            Sign in to your Homelab Assistant
-          </p>
-        </div>
+        <Box sx={{ textAlign: 'center', mb: 4 }}>
+          <Box
+            component="img"
+            src={TomoLogo}
+            alt="Tomo Logo"
+            sx={{
+              width: 80,
+              height: 80,
+              mx: 'auto',
+              mb: 2,
+            }}
+          />
+          <Typography variant="h4" fontWeight={700} gutterBottom>
+            {t('auth.welcomeBack')}
+          </Typography>
+          <Typography variant="body1" color="text.secondary">
+            {t('auth.loginSubtitle')}
+          </Typography>
+        </Box>
 
-        {/* Login Form */}
-        <div className="bg-card/50 backdrop-blur border border-border/50 rounded-2xl p-6 shadow-xl">
-          <LoginForm />
-        </div>
+        {/* Login Form Card */}
+        <Card elevation={8} sx={{ borderRadius: 3, transition: 'none' }}>
+          <CardContent sx={{ p: 4 }}>
+            <LoginForm />
+          </CardContent>
+        </Card>
 
         {/* Registration Link */}
-        <div className="text-center mt-6">
-          <p className="text-sm text-muted-foreground">
-            Don't have an account?{' '}
-            <Link 
-              to="/register" 
-              className="text-primary hover:text-primary/80 transition-colors font-medium"
-            >
-              Create one
-            </Link>
-          </p>
-        </div>
+        <Typography variant="body2" color="text.secondary" align="center" sx={{ mt: 3 }}>
+          {t('auth.noAccount')}{' '}
+          <Link component={RouterLink} to="/register" underline="none" fontWeight={500}>
+            {t('auth.createAccount')}
+          </Link>
+        </Typography>
 
         {/* Footer */}
-        <div className="text-center mt-4">
-          <p className="text-sm text-muted-foreground">
-            Homelab Assistant v1.0 - Secure Access
-          </p>
-        </div>
-      </div>
-    </div>
+        <Box sx={{ mt: 2 }}>
+          <CopyrightFooter />
+        </Box>
+      </Box>
+    </Box>
   )
 }

@@ -12,7 +12,7 @@ services:
       - backend
       - frontend-dev
     networks:
-      - homelab
+      - tomo
 
   backend:
     build:
@@ -31,11 +31,11 @@ services:
       - PYTHON_ENV=development
       - MCP_LOG_LEVEL=DEBUG
       - DATA_DIRECTORY=/app/data
-      - HOMELAB_MASTER_PASSWORD=${HOMELAB_MASTER_PASSWORD:?HOMELAB_MASTER_PASSWORD must be set in .env}
-      - HOMELAB_SALT=${HOMELAB_SALT:?HOMELAB_SALT must be set in .env}
+      - TOMO_MASTER_PASSWORD=${TOMO_MASTER_PASSWORD:?TOMO_MASTER_PASSWORD must be set in .env}
+      - TOMO_SALT=${TOMO_SALT:?TOMO_SALT must be set in .env}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:?JWT_SECRET_KEY must be set in .env}
     networks:
-      - homelab
+      - tomo
 
   frontend-dev:
     image: node:20-alpine
@@ -47,8 +47,8 @@ services:
     depends_on:
       - backend
     networks:
-      - homelab
+      - tomo
 
 networks:
-  homelab:
+  tomo:
     driver: bridge

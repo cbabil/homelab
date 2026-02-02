@@ -5,9 +5,9 @@
  */
 
 import { Home } from 'lucide-react'
+import { Box, Grid, Stack, Typography } from '@mui/material'
 import { Button } from '@/components/ui/Button'
 import { AppCategory } from '@/types/app'
-import { cn } from '@/utils/cn'
 
 interface CategoryGridProps {
   categories: AppCategory[]
@@ -17,64 +17,95 @@ interface CategoryGridProps {
   totalApps: number
 }
 
-export function CategoryGrid({ 
-  categories, 
-  selectedCategory, 
-  onCategorySelect, 
-  appCounts, 
-  totalApps 
+export function CategoryGrid({
+  categories,
+  selectedCategory,
+  onCategorySelect,
+  appCounts,
+  totalApps
 }: CategoryGridProps) {
   return (
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
-      <Button
-        onClick={() => onCategorySelect(null)}
-        variant="outline"
-        className={cn(
-          "p-4 rounded-xl text-left h-full justify-start",
-          selectedCategory === null
-            ? "border-primary bg-primary/5"
-            : ""
-        )}
-      >
-        <div className="space-y-2">
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10">
-            <Home className="h-5 w-5 text-primary" />
-          </div>
-          <div className="space-y-1">
-            <p className="font-medium text-sm">All Apps</p>
-            <p className="text-xs text-muted-foreground">{totalApps} available</p>
-          </div>
-        </div>
-      </Button>
+    <Grid container spacing={2}>
+      <Grid size={{ xs: 6, md: 4, lg: 2 }}>
+        <Button
+          onClick={() => onCategorySelect(null)}
+          variant="outline"
+          sx={{
+            p: 2,
+            borderRadius: 3,
+            textAlign: 'left',
+            height: '100%',
+            justifyContent: 'flex-start',
+            borderColor: selectedCategory === null ? 'primary.main' : undefined,
+            bgcolor: selectedCategory === null ? 'primary.light' : undefined,
+            '&:hover': {
+              bgcolor: selectedCategory === null ? 'primary.light' : undefined
+            }
+          }}
+        >
+          <Stack spacing={1}>
+            <Box sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              width: 32,
+              height: 32,
+              borderRadius: 1,
+              bgcolor: 'primary.light'
+            }}>
+              <Home className="h-5 w-5 text-primary" />
+            </Box>
+            <Stack spacing={0.5}>
+              <Typography variant="body2" fontWeight={500}>All Apps</Typography>
+              <Typography variant="caption" color="text.secondary">{totalApps} available</Typography>
+            </Stack>
+          </Stack>
+        </Button>
+      </Grid>
 
       {categories.map((category) => {
         const IconComponent = category.icon
         return (
-          <Button
-            key={category.id}
-            onClick={() => onCategorySelect(category.id)}
-            variant="outline"
-            className={cn(
-              "p-4 rounded-xl text-left h-full justify-start",
-              selectedCategory === category.id
-                ? "border-primary bg-primary/5"
-                : ""
-            )}
-          >
-            <div className="space-y-2">
-              <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-primary/10">
-                <IconComponent className="h-5 w-5 text-primary" />
-              </div>
-              <div className="space-y-1">
-                <p className="font-medium text-sm">{category.name}</p>
-                <p className="text-xs text-muted-foreground">
-                  {appCounts[category.id] || 0} apps
-                </p>
-              </div>
-            </div>
-          </Button>
+          <Grid key={category.id} size={{ xs: 6, md: 4, lg: 2 }}>
+            <Button
+              onClick={() => onCategorySelect(category.id)}
+              variant="outline"
+              sx={{
+                p: 2,
+                borderRadius: 3,
+                textAlign: 'left',
+                height: '100%',
+                justifyContent: 'flex-start',
+                borderColor: selectedCategory === category.id ? 'primary.main' : undefined,
+                bgcolor: selectedCategory === category.id ? 'primary.light' : undefined,
+                '&:hover': {
+                  bgcolor: selectedCategory === category.id ? 'primary.light' : undefined
+                }
+              }}
+            >
+              <Stack spacing={1}>
+                <Box sx={{
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  width: 32,
+                  height: 32,
+                  borderRadius: 1,
+                  bgcolor: 'primary.light'
+                }}>
+                  <IconComponent className="h-5 w-5 text-primary" />
+                </Box>
+                <Stack spacing={0.5}>
+                  <Typography variant="body2" fontWeight={500}>{category.name}</Typography>
+                  <Typography variant="caption" color="text.secondary">
+                    {appCounts[category.id] || 0} apps
+                  </Typography>
+                </Stack>
+              </Stack>
+            </Button>
+          </Grid>
         )
       })}
-    </div>
+    </Grid>
   )
 }

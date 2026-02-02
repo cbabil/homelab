@@ -5,42 +5,77 @@
  * Features tab navigation, search, filtering, and showcases featured/trending apps.
  */
 
-import { useEffect, useState, useMemo } from 'react'
-import { TrendingUp, Package, Filter } from 'lucide-react'
-import { Tabs, Search, Dropdown, EmptyState, Alert, Typography, Button, Carousel, Pagination, type DropdownOption } from 'ui-toolkit'
+import { useEffect, useState, useMemo, useCallback, useRef } from 'react'
+import { Tabs, Tab, Box } from '@mui/material'
+import { useTranslation } from 'react-i18next'
+import { PageHeader } from '@/components/layout/PageHeader'
 import { useToast } from '@/components/ui/Toast'
-import type { MarketplaceApp, MarketplaceCategory, SearchFilters } from '@/types/marketplace'
+import type { MarketplaceApp, MarketplaceCategory, MarketplaceRepo, SearchFilters } from '@/types/marketplace'
 import * as marketplaceService from '@/services/marketplaceService'
-import { RepoManager } from './RepoManager'
-import { MarketplaceAppCard } from './MarketplaceAppCard'
+import { RepoManagerRef } from './RepoManager'
+import { BrowseTabActions, ReposTabActions } from './MarketplacePageHeader'
+import { BrowseTabContent, ReposTabContent } from './MarketplaceTabContent'
 import { marketplaceLogger } from '@/services/systemLogger'
 import { useAuth } from '@/providers/AuthProvider'
+import { useServers } from '@/hooks/useServers'
+import { useDeploymentModal } from '@/hooks/useDeploymentModal'
+import { DeploymentModal } from '@/components/deployment/DeploymentModal'
+import { useDynamicRowCount } from '@/hooks/useDynamicRowCount'
 
 type TabType = 'browse' | 'repos'
 
-const tabItems = [
-  { label: 'Browse Apps', value: 'browse' },
-  { label: 'Manage Repos', value: 'repos' }
-]
-
-const ITEMS_PER_PAGE = 12
-
 export function MarketplacePage() {
+  const { t } = useTranslation()
   const [activeTab, setActiveTab] = useState<TabType>('browse')
   const [searchQuery, setSearchQuery] = useState('')
   const [selectedCategory, setSelectedCategory] = useState<string | undefined>()
+  const [selectedRepoId, setSelectedRepoId] = useState<string | undefined>()
+  const [showTrending, setShowTrending] = useState(false)
   const [showFilters, setShowFilters] = useState(false)
   const [categories, setCategories] = useState<MarketplaceCategory[]>([])
-  const [featuredApps, setFeaturedApps] = useState<MarketplaceApp[]>([])
+  const [repos, setRepos] = useState<MarketplaceRepo[]>([])
   const [trendingApps, setTrendingApps] = useState<MarketplaceApp[]>([])
   const [allApps, setAllApps] = useState<MarketplaceApp[]>([])
   const [searchResults, setSearchResults] = useState<MarketplaceApp[]>([])
-  const [importedAppIds, setImportedAppIds] = useState<Set<string>>(new Set())
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [currentPage, setCurrentPage] = useState(1)
   const { addToast } = useToast()
   const { user } = useAuth()
+
+  // Repo manager state
+  const repoManagerRef = useRef<RepoManagerRef>(null)
+  const [repoSearchQuery, setRepoSearchQuery] = useState('')
+  const [isRepoLoading, setIsRepoLoading] = useState(false)
+
+  // Table container ref for dynamic row calculation (same settings as AuditLogsPage)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const itemsPerPage = useDynamicRowCount(containerRef, {
+    rowHeight: 32,
+    headerHeight: 40,
+    paginationHeight: 0
+  })
+
+  const [isAddRepoModalOpen, setIsAddRepoModalOpen] = useState(false)
+
+  const tabItems = [
+    { label: t('marketplace.tabs.browseApps'), value: 'browse' },
+    { label: t('marketplace.tabs.manageRepos'), value: 'repos' }
+  ]
+
+  // Server and deployment state
+  const { servers } = useServers()
+  const deploymentModal = useDeploymentModal()
+
+  // Handle deploy from marketplace
+  const handleDeployApp = useCallback((app: MarketplaceApp) => {
+    if (!user) {
+      addToast({ type: 'error', title: t('marketplace.errors.loginRequired') })
+      return
+    }
+    marketplaceLogger.info(`Opening deployment modal for: ${app.name}`)
+    deploymentModal.openModalForMarketplace(app)
+  }, [user, addToast, deploymentModal, t])
 
   // Load initial data
   useEffect(() => {
@@ -60,12 +95,12 @@ export function MarketplacePage() {
     if (activeTab === 'browse') {
       performSearch()
     }
-  }, [searchQuery, selectedCategory, activeTab])
+  }, [searchQuery, selectedCategory, selectedRepoId, activeTab])
 
-  // Reset page when search/filter changes
+  // Reset page when search/filter/items per page changes
   useEffect(() => {
     setCurrentPage(1)
-  }, [searchQuery, selectedCategory])
+  }, [searchQuery, selectedCategory, selectedRepoId, showTrending, itemsPerPage])
 
   const loadInitialData = async () => {
     setIsLoading(true)
@@ -73,19 +108,17 @@ export function MarketplacePage() {
     marketplaceLogger.info('Loading marketplace data')
 
     try {
-      const [categoriesData, featuredData, trendingData, allAppsData, importedIds] = await Promise.all([
+      const [categoriesData, trendingData, allAppsData, reposData] = await Promise.all([
         marketplaceService.getCategories(),
-        marketplaceService.getFeaturedApps(6),
-        marketplaceService.getTrendingApps(6),
+        marketplaceService.getTrendingApps(50),
         marketplaceService.searchApps({ sortBy: 'name' }),
-        marketplaceService.getImportedAppIds()
+        marketplaceService.getRepos()
       ])
 
       setCategories(categoriesData)
-      setFeaturedApps(featuredData)
       setTrendingApps(trendingData)
       setAllApps(allAppsData.apps)
-      setImportedAppIds(new Set(importedIds))
+      setRepos(reposData)
       marketplaceLogger.info(`Loaded ${allAppsData.apps.length} apps from marketplace`)
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : 'Failed to load marketplace data'
@@ -104,6 +137,7 @@ export function MarketplacePage() {
       const filters: SearchFilters = {
         search: searchQuery || undefined,
         category: selectedCategory,
+        repoId: selectedRepoId,
         sortBy: 'name'
       }
 
@@ -118,187 +152,157 @@ export function MarketplacePage() {
 
   const handleSearchChange = (value: string) => {
     setSearchQuery(value)
+    if (value) {
+      setShowTrending(false)
+    }
   }
 
   const handleCategoryChange = (categoryId: string | undefined) => {
     setSelectedCategory(categoryId)
+    setShowTrending(false)
     setShowFilters(false)
   }
 
-  const handleImportApp = async (app: MarketplaceApp) => {
-    if (!user) {
-      addToast({ type: 'error', title: 'Please log in to import apps' })
-      return
-    }
-
-    if (importedAppIds.has(app.id)) {
-      addToast({ type: 'info', title: `${app.name} is already imported` })
-      return
-    }
-
-    try {
-      marketplaceLogger.info(`Importing app: ${app.name}`)
-      await marketplaceService.importApp(app.id, user.id)
-      setImportedAppIds(prev => new Set([...prev, app.id]))
-      addToast({ type: 'success', title: `${app.name} imported successfully` })
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Failed to import app'
-      addToast({ type: 'error', title: errorMsg })
-    }
+  const handleRepoChange = (repoId: string | undefined) => {
+    setSelectedRepoId(repoId)
+    setShowTrending(false)
+    setShowFilters(false)
   }
 
+  const handleTrendingFilter = () => {
+    setShowTrending(!showTrending)
+    setSelectedCategory(undefined)
+    setShowFilters(false)
+  }
+
+  // Create a map of repoId -> repoName for display
+  const repoMap = useMemo(() => {
+    const map = new Map<string, string>()
+    repos.forEach(repo => map.set(repo.id, repo.name))
+    return map
+  }, [repos])
+
   // Determine which apps to display
-  const displayApps = (searchQuery || selectedCategory) ? searchResults : allApps
+  const displayApps = showTrending ? trendingApps : (searchQuery || selectedCategory || selectedRepoId) ? searchResults : allApps
   const totalApps = displayApps.length
-  const totalPages = Math.ceil(totalApps / ITEMS_PER_PAGE)
+  const totalPages = Math.ceil(totalApps / itemsPerPage)
 
   // Paginated apps
   const paginatedApps = useMemo(() => {
-    const start = (currentPage - 1) * ITEMS_PER_PAGE
-    return displayApps.slice(start, start + ITEMS_PER_PAGE)
+    const start = (currentPage - 1) * itemsPerPage
+    return displayApps.slice(start, start + itemsPerPage)
   }, [displayApps, currentPage])
 
   // Build dropdown options from categories
-  const categoryOptions: DropdownOption[] = [
-    { label: 'All Categories', value: '' },
+  const categoryOptions = useMemo(() => [
+    { label: t('marketplace.allCategories'), value: '' },
     ...categories.map((cat) => ({
       label: `${cat.name} (${cat.count})`,
       value: cat.id
     }))
-  ]
+  ], [categories, t])
+
+  // Build dropdown options from repos
+  const repoOptions = useMemo(() => [
+    { label: t('marketplace.filters.allSources'), value: '' },
+    ...repos.filter(r => r.enabled).map((repo) => ({
+      label: `${repo.name} (${repo.appCount})`,
+      value: repo.id
+    }))
+  ], [repos, t])
 
   return (
-    <div className="flex flex-col h-full">
-      {/* Header Row: Title + Tabs + Search */}
-      <div className="flex flex-col lg:flex-row lg:items-center gap-3 mb-4">
-        <div className="shrink-0 mr-4">
-          <Typography variant="h2">Marketplace</Typography>
-        </div>
+    <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      {/* Header - same structure as AuditLogsHeader */}
+      <PageHeader
+        title={t('marketplace.title')}
+        subtitle={t('marketplace.subtitle')}
+        actions={activeTab === 'browse' ? (
+          <BrowseTabActions
+            searchQuery={searchQuery}
+            onSearchChange={handleSearchChange}
+            showFilters={showFilters}
+            onToggleFilters={() => setShowFilters(!showFilters)}
+            showTrending={showTrending}
+            selectedRepoId={selectedRepoId}
+            selectedCategory={selectedCategory}
+            repoOptions={repoOptions}
+            categoryOptions={categoryOptions}
+            onTrendingFilter={handleTrendingFilter}
+            onRepoChange={handleRepoChange}
+            onCategoryChange={handleCategoryChange}
+          />
+        ) : activeTab === 'repos' ? (
+          <ReposTabActions
+            searchQuery={repoSearchQuery}
+            onSearchChange={setRepoSearchQuery}
+            isLoading={isRepoLoading}
+            onRefresh={() => {
+              setIsRepoLoading(true)
+              repoManagerRef.current?.refresh().finally(() => setIsRepoLoading(false))
+            }}
+            onAddRepo={() => setIsAddRepoModalOpen(true)}
+          />
+        ) : undefined}
+      />
 
+      {/* Tab Navigation - same structure as AuditLogsPage */}
+      <Box sx={{ mt: 3, mb: 2 }}>
         <Tabs
-          items={tabItems}
-          active={activeTab}
-          onChange={(value) => setActiveTab(value as TabType)}
-          variant="underline"
-        />
+          value={activeTab}
+          onChange={(_e, value) => setActiveTab(value as TabType)}
+          sx={{ minHeight: 36 }}
+        >
+          {tabItems.map((item) => (
+            <Tab key={item.value} label={item.label} value={item.value} sx={{ minHeight: 36, py: 1 }} />
+          ))}
+        </Tabs>
+      </Box>
 
-        {activeTab === 'browse' && (
-          <div className="flex gap-2 lg:ml-auto items-center">
-            <Search
-              value={searchQuery}
-              onChange={handleSearchChange}
-              placeholder="Search apps..."
-            />
-            <div className="relative">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowFilters(!showFilters)}
-                className="p-2"
-              >
-                <Filter className="h-4 w-4" />
-              </Button>
-              {showFilters && (
-                <div className="absolute right-0 top-full mt-1 z-20 bg-popover border border-border rounded-lg shadow-lg p-2 min-w-[200px]">
-                  <p className="text-xs text-muted-foreground mb-2 px-2">Category</p>
-                  {categoryOptions.map((opt) => (
-                    <button
-                      key={opt.value}
-                      onClick={() => handleCategoryChange(opt.value || undefined)}
-                      className={`w-full text-left px-2 py-1.5 text-sm rounded hover:bg-muted ${selectedCategory === opt.value || (!selectedCategory && !opt.value) ? 'bg-primary/10 text-primary' : ''}`}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Browse Apps Tab */}
+      {/* Browse Apps Tab - Main Content Area */}
       {activeTab === 'browse' && (
-        <div className="flex-1 overflow-auto space-y-4">
-          {/* Trending Apps Carousel */}
-          {!searchQuery && !selectedCategory && (trendingApps.length > 0 || allApps.length > 0) && (
-            <section className="px-4">
-              <Typography variant="small" muted className="flex items-center gap-1.5 mb-2 font-semibold">
-                <TrendingUp className="h-4 w-4 text-green-500" />
-                Trending
-              </Typography>
-              <Carousel gap={8}>
-                {(trendingApps.length > 0 ? trendingApps : allApps.slice(0, 10)).map((app) => (
-                  <div key={app.id} className="w-[100px]">
-                    <MarketplaceAppCard app={app} onImport={handleImportApp} isImported={importedAppIds.has(app.id)} />
-                  </div>
-                ))}
-              </Carousel>
-            </section>
-          )}
-
-          {/* All Apps */}
-          {totalApps > 0 && (
-            <section>
-              <Typography variant="small" muted className="mb-6 font-semibold">
-                {searchQuery || selectedCategory ? `${totalApps} ${totalApps === 1 ? 'App' : 'Apps'} Found` : `All Apps (${totalApps})`}
-              </Typography>
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 2xl:grid-cols-12 gap-2 pt-2">
-                {paginatedApps.map((app) => (
-                  <MarketplaceAppCard key={app.id} app={app} onImport={handleImportApp} isImported={importedAppIds.has(app.id)} />
-                ))}
-              </div>
-            </section>
-          )}
-
-          {/* Empty State */}
-          {!isLoading && totalApps === 0 && !searchQuery && !selectedCategory && (
-            <EmptyState
-              icon={Package}
-              title="No apps available"
-              message="Sync a repository to get started"
-            />
-          )}
-
-          {!isLoading && totalApps === 0 && (searchQuery || selectedCategory) && (
-            <div className="text-center py-8 bg-muted rounded-lg border border-border">
-              <Typography variant="small" muted>No apps found matching your criteria</Typography>
-            </div>
-          )}
-
-          {/* Loading */}
-          {isLoading && (
-            <div className="flex justify-center py-8">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-            </div>
-          )}
-
-          {/* Error */}
-          {error && (
-            <Alert variant="danger" title="Error">
-              {error}
-            </Alert>
-          )}
-        </div>
+        <BrowseTabContent
+          containerRef={containerRef}
+          isLoading={isLoading}
+          error={error}
+          apps={paginatedApps}
+          onDeploy={handleDeployApp}
+          repoMap={repoMap}
+          currentPage={currentPage}
+          totalPages={totalPages}
+          onPageChange={setCurrentPage}
+        />
       )}
 
       {/* Manage Repos Tab */}
       {activeTab === 'repos' && (
-        <div className="flex-1 overflow-auto">
-          <RepoManager />
-        </div>
+        <ReposTabContent
+          repoManagerRef={repoManagerRef}
+          searchQuery={repoSearchQuery}
+          isAddModalOpen={isAddRepoModalOpen}
+          onAddModalClose={() => setIsAddRepoModalOpen(false)}
+        />
       )}
 
-      {/* Pagination - Fixed at bottom */}
-      {activeTab === 'browse' && totalPages > 0 && (
-        <div className="shrink-0 mt-auto">
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={setCurrentPage}
-          />
-        </div>
-      )}
-    </div>
+      {/* Deployment Modal */}
+      <DeploymentModal
+        isOpen={deploymentModal.isOpen}
+        onClose={deploymentModal.closeModal}
+        app={deploymentModal.selectedApp}
+        servers={servers}
+        step={deploymentModal.step}
+        setStep={deploymentModal.setStep}
+        selectedServerIds={deploymentModal.selectedServerIds}
+        setSelectedServerIds={deploymentModal.setSelectedServerIds}
+        isDeploying={deploymentModal.isDeploying}
+        error={deploymentModal.error}
+        deploymentResult={deploymentModal.deploymentResult}
+        onDeploy={() => deploymentModal.deploy(servers)}
+        onRetry={() => deploymentModal.retryDeployment(servers)}
+        onCleanup={deploymentModal.cleanup}
+        installationStatus={deploymentModal.installationStatus}
+        targetServerStatuses={deploymentModal.targetServerStatuses}
+      />
+    </Box>
   )
 }

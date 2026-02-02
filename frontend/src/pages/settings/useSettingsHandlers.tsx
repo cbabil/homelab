@@ -4,14 +4,14 @@
  * Custom hook to manage settings page event handlers.
  */
 
-import { SortKey, Session } from './types'
+import { SortKey, Session, McpConfig } from './types'
 import { validateMcpConfig } from './utils'
-import { HomelabMCPClient } from '@/services/mcpClient'
+import { TomoMCPClient } from '@/services/mcpClient'
 import { settingsLogger } from '@/services/systemLogger'
 
 interface UseSettingsHandlersProps {
   mcpConfigText: string
-  setMcpConfig: (config: any) => void
+  setMcpConfig: (config: McpConfig | null) => void
   setMcpConfigError: (error: string) => void
   setIsEditingMcpConfig: (editing: boolean) => void
   setOriginalMcpConfig: (config: string) => void
@@ -21,7 +21,7 @@ interface UseSettingsHandlersProps {
   setSessions: (sessions: Session[] | ((prev: Session[]) => Session[])) => void
   sortBy: SortKey
   sortOrder: 'asc' | 'desc'
-  mcpConfig: any
+  mcpConfig: McpConfig | null
   originalMcpConfig: string
   setMcpConnectionStatus: (status: 'disconnected' | 'connecting' | 'connected' | 'error') => void
   setMcpConnectionError: (error: string) => void
@@ -116,16 +116,21 @@ export function useSettingsHandlers({
     try {
       setMcpConnectionStatus('connecting')
       setMcpConnectionError('')
-      
+
       // Get the server URL from config
-      const serverConfig = mcpConfig.mcpServers?.['homelab-assistant']
+      if (!mcpConfig) {
+        settingsLogger.error('MCP config not loaded')
+        throw new Error('MCP config not loaded')
+      }
+
+      const serverConfig = mcpConfig.mcpServers?.['tomo']
       if (!serverConfig?.url) {
         settingsLogger.error('No MCP server URL configured')
         throw new Error('No MCP server URL configured')
       }
       
       settingsLogger.info('Connecting to MCP server', { url: serverConfig.url })
-      const client = new HomelabMCPClient(serverConfig.url)
+      const client = new TomoMCPClient(serverConfig.url)
       await client.connect()
       
       setMcpConnectionStatus('connected')

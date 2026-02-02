@@ -7,10 +7,13 @@
 
 import React from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
-import { Loader2, Shield, AlertCircle } from 'lucide-react'
+import { Shield, AlertCircle } from 'lucide-react'
+import Box from '@mui/material/Box'
+import Typography from '@mui/material/Typography'
+import CircularProgress from '@mui/material/CircularProgress'
+import MuiButton from '@mui/material/Button'
 import { useAuth } from '@/providers/AuthProvider'
 import { User, ProtectedRouteConfig } from '@/types/auth'
-import { Button } from '@/components/ui/Button'
 
 interface ProtectedRouteProps {
   children: React.ReactNode
@@ -23,19 +26,39 @@ interface ProtectedRouteProps {
 
 // Loading screen component for authentication checks
 const AuthLoadingScreen: React.FC = () => (
-  <div className="min-h-screen bg-background flex items-center justify-center">
-    <div className="text-center">
-      <div className="inline-flex items-center justify-center w-16 h-16 bg-primary/10 rounded-2xl mb-4">
-        <Loader2 className="w-8 h-8 text-primary animate-spin" />
-      </div>
-      <h2 className="text-lg font-semibold text-foreground mb-2">
+  <Box
+    sx={{
+      minHeight: '100vh',
+      bgcolor: 'background.default',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+    }}
+  >
+    <Box sx={{ textAlign: 'center' }}>
+      <Box
+        sx={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 64,
+          height: 64,
+          bgcolor: 'primary.main',
+          opacity: 0.1,
+          borderRadius: 3,
+          mb: 2,
+        }}
+      >
+        <CircularProgress size={32} sx={{ color: 'primary.main' }} />
+      </Box>
+      <Typography variant="h6" fontWeight={600} gutterBottom>
         Authenticating
-      </h2>
-      <p className="text-sm text-muted-foreground">
+      </Typography>
+      <Typography variant="body2" color="text.secondary">
         Please wait while we verify your credentials...
-      </p>
-    </div>
-  </div>
+      </Typography>
+    </Box>
+  </Box>
 )
 
 // Access denied screen for unauthorized users
@@ -43,28 +66,49 @@ const AccessDeniedScreen: React.FC<{
   message?: string
   onRetry?: () => void
 }> = ({ message, onRetry }) => (
-  <div className="min-h-screen bg-background flex items-center justify-center p-4">
-    <div className="max-w-md w-full text-center">
-      <div className="inline-flex items-center justify-center w-16 h-16 bg-red-100 dark:bg-red-900/50 rounded-2xl mb-4">
-        <AlertCircle className="w-8 h-8 text-red-600 dark:text-red-400" />
-      </div>
-      <h2 className="text-xl font-bold text-foreground mb-2">
+  <Box
+    sx={{
+      minHeight: '100vh',
+      bgcolor: 'background.default',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      p: 2,
+    }}
+  >
+    <Box sx={{ maxWidth: 448, width: '100%', textAlign: 'center' }}>
+      <Box
+        sx={{
+          display: 'inline-flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          width: 64,
+          height: 64,
+          bgcolor: (theme) =>
+            theme.palette.mode === 'dark' ? 'rgba(239, 68, 68, 0.5)' : 'rgba(252, 165, 165, 1)',
+          borderRadius: 3,
+          mb: 2,
+        }}
+      >
+        <AlertCircle size={32} color="currentColor" style={{ color: '#ef4444' }} />
+      </Box>
+      <Typography variant="h5" fontWeight={700} gutterBottom>
         Access Denied
-      </h2>
-      <p className="text-muted-foreground mb-6">
+      </Typography>
+      <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
         {message || 'You do not have permission to access this page.'}
-      </p>
+      </Typography>
       {onRetry && (
-        <Button
-          variant="ghost"
+        <MuiButton
+          variant="text"
           onClick={onRetry}
-          leftIcon={<Shield className="w-4 h-4" />}
+          startIcon={<Shield size={16} />}
         >
           Try Again
-        </Button>
+        </MuiButton>
       )}
-    </div>
-  </div>
+    </Box>
+  </Box>
 )
 
 export function ProtectedRoute({

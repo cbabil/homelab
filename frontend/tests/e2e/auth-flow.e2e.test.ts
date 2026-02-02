@@ -24,15 +24,15 @@ test.describe('Authentication Flow', () => {
       // Should be redirected to login
       await expect(page).toHaveURL('/login')
       await expect(page.getByRole('heading', { name: /welcome back/i })).toBeVisible()
-      await expect(page.getByText(/sign in to your homelab assistant/i)).toBeVisible()
+      await expect(page.getByText(/sign in to your tomo assistant/i)).toBeVisible()
     })
 
     test('should show demo credentials information', async ({ page }) => {
       await page.goto('/login')
       
       await expect(page.getByText(/demo credentials/i)).toBeVisible()
-      await expect(page.getByText(/admin \/ HomeLabAdmin123!/)).toBeVisible()
-      await expect(page.getByText(/user \/ HomeLabUser123!/)).toBeVisible()
+      await expect(page.getByText(/admin \/ TomoAdmin123!/)).toBeVisible()
+      await expect(page.getByText(/user \/ TomoUser123!/)).toBeVisible()
     })
 
     test('should validate form fields', async ({ page }) => {
@@ -48,7 +48,7 @@ test.describe('Authentication Flow', () => {
       await expect(submitButton).toBeDisabled()
       
       // Fill password
-      await page.fill('[data-testid="password-input"]', 'HomeLabAdmin123!')
+      await page.fill('[data-testid="password-input"]', 'TomoAdmin123!')
       await expect(submitButton).not.toBeDisabled()
     })
 
@@ -62,7 +62,7 @@ test.describe('Authentication Flow', () => {
       await expect(page.getByText(/password strength/i)).toBeVisible()
       
       // Type stronger password
-      await passwordInput.fill('HomeLabAdmin123!')
+      await passwordInput.fill('TomoAdmin123!')
       await expect(page.getByText(/strong/i)).toBeVisible()
     })
 
@@ -93,14 +93,14 @@ test.describe('Authentication Flow', () => {
       
       // Fill in admin credentials
       await page.fill('input[autocomplete="username"]', 'admin')
-      await page.fill('input[autocomplete="current-password"]', 'HomeLabAdmin123!')
+      await page.fill('input[autocomplete="current-password"]', 'TomoAdmin123!')
       
       // Submit form
       await page.click('button[type="submit"]')
       
       // Should redirect to dashboard after successful login
       await expect(page).toHaveURL('/')
-      await expect(page.getByText(/homelab assistant/i)).toBeVisible()
+      await expect(page.getByText(/tomo assistant/i)).toBeVisible()
       
       // Should show user info in header
       await expect(page.getByText('admin')).toBeVisible()
@@ -111,7 +111,7 @@ test.describe('Authentication Flow', () => {
       
       // Fill in user credentials
       await page.fill('input[autocomplete="username"]', 'user')
-      await page.fill('input[autocomplete="current-password"]', 'HomeLabUser123!')
+      await page.fill('input[autocomplete="current-password"]', 'TomoUser123!')
       
       // Submit form
       await page.click('button[type="submit"]')
@@ -146,7 +146,7 @@ test.describe('Authentication Flow', () => {
       
       // Fill credentials and login
       await page.fill('input[autocomplete="username"]', 'admin')
-      await page.fill('input[autocomplete="current-password"]', 'HomeLabAdmin123!')
+      await page.fill('input[autocomplete="current-password"]', 'TomoAdmin123!')
       await page.click('button[type="submit"]')
       
       // Should be logged in
@@ -154,7 +154,7 @@ test.describe('Authentication Flow', () => {
       
       // Verify localStorage has persistent data
       const hasRememberMe = await page.evaluate(() => {
-        return localStorage.getItem('homelab-remember-me') === 'true'
+        return localStorage.getItem('tomo-remember-me') === 'true'
       })
       expect(hasRememberMe).toBe(true)
     })
@@ -193,7 +193,7 @@ test.describe('Authentication Flow', () => {
       // Login first
       await page.goto('/login')
       await page.fill('input[autocomplete="username"]', 'admin')
-      await page.fill('input[autocomplete="current-password"]', 'HomeLabAdmin123!')
+      await page.fill('input[autocomplete="current-password"]', 'TomoAdmin123!')
       await page.click('button[type="submit"]')
       
       // Verify we can access protected routes
@@ -213,7 +213,7 @@ test.describe('Authentication Flow', () => {
       // Login
       await page.goto('/login')
       await page.fill('input[autocomplete="username"]', 'admin')
-      await page.fill('input[autocomplete="current-password"]', 'HomeLabAdmin123!')
+      await page.fill('input[autocomplete="current-password"]', 'TomoAdmin123!')
       await page.click('button[type="submit"]')
       
       // Should show user info in header
@@ -224,7 +224,7 @@ test.describe('Authentication Flow', () => {
       await page.click('[data-testid="user-menu-button"]')
       
       // Should show dropdown menu
-      await expect(page.getByText('admin@homelab.local')).toBeVisible()
+      await expect(page.getByText('admin@tomo.local')).toBeVisible()
       await expect(page.getByText(/admin • active/i)).toBeVisible()
       await expect(page.getByRole('button', { name: /sign out/i })).toBeVisible()
     })
@@ -233,7 +233,7 @@ test.describe('Authentication Flow', () => {
       // Login as user
       await page.goto('/login')
       await page.fill('input[autocomplete="username"]', 'user')
-      await page.fill('input[autocomplete="current-password"]', 'HomeLabUser123!')
+      await page.fill('input[autocomplete="current-password"]', 'TomoUser123!')
       await page.click('button[type="submit"]')
       
       // Click user dropdown
@@ -241,7 +241,7 @@ test.describe('Authentication Flow', () => {
       
       // Should show user role
       await expect(page.getByText(/user • active/i)).toBeVisible()
-      await expect(page.getByText('user@homelab.local')).toBeVisible()
+      await expect(page.getByText('user@tomo.local')).toBeVisible()
     })
   })
 
@@ -250,7 +250,7 @@ test.describe('Authentication Flow', () => {
       // Login first
       await page.goto('/login')
       await page.fill('input[autocomplete="username"]', 'admin')
-      await page.fill('input[autocomplete="current-password"]', 'HomeLabAdmin123!')
+      await page.fill('input[autocomplete="current-password"]', 'TomoAdmin123!')
       await page.click('button[type="submit"]')
       
       // Verify logged in
@@ -265,7 +265,7 @@ test.describe('Authentication Flow', () => {
       
       // Verify localStorage is cleared
       const hasToken = await page.evaluate(() => {
-        return localStorage.getItem('homelab-auth-token') !== null
+        return localStorage.getItem('tomo-auth-token') !== null
       })
       expect(hasToken).toBe(false)
     })
@@ -274,7 +274,7 @@ test.describe('Authentication Flow', () => {
       // Login and logout
       await page.goto('/login')
       await page.fill('input[autocomplete="username"]', 'admin')
-      await page.fill('input[autocomplete="current-password"]', 'HomeLabAdmin123!')
+      await page.fill('input[autocomplete="current-password"]', 'TomoAdmin123!')
       await page.click('button[type="submit"]')
       
       await page.click('[data-testid="user-menu-button"]')
@@ -292,7 +292,7 @@ test.describe('Authentication Flow', () => {
       await page.goto('/login')
       await page.check('input[type="checkbox"]')
       await page.fill('input[autocomplete="username"]', 'admin')
-      await page.fill('input[autocomplete="current-password"]', 'HomeLabAdmin123!')
+      await page.fill('input[autocomplete="current-password"]', 'TomoAdmin123!')
       await page.click('button[type="submit"]')
       
       // Verify logged in
@@ -313,7 +313,7 @@ test.describe('Authentication Flow', () => {
       // Login without remember me
       await page.goto('/login')
       await page.fill('input[autocomplete="username"]', 'admin')
-      await page.fill('input[autocomplete="current-password"]', 'HomeLabAdmin123!')
+      await page.fill('input[autocomplete="current-password"]', 'TomoAdmin123!')
       await page.click('button[type="submit"]')
       
       // Verify logged in
@@ -334,7 +334,7 @@ test.describe('Authentication Flow', () => {
       
       await page.goto('/login')
       await page.fill('input[autocomplete="username"]', 'admin')
-      await page.fill('input[autocomplete="current-password"]', 'HomeLabAdmin123!')
+      await page.fill('input[autocomplete="current-password"]', 'TomoAdmin123!')
       await page.click('button[type="submit"]')
       
       // Should show appropriate error message
@@ -349,7 +349,7 @@ test.describe('Authentication Flow', () => {
       
       // Login
       await page.fill('input[autocomplete="username"]', 'admin')
-      await page.fill('input[autocomplete="current-password"]', 'HomeLabAdmin123!')
+      await page.fill('input[autocomplete="current-password"]', 'TomoAdmin123!')
       await page.click('button[type="submit"]')
       
       // Should redirect to originally intended page
@@ -362,11 +362,11 @@ test.describe('Authentication Flow', () => {
       await page.goto('/login')
       
       // Fill password
-      await page.fill('input[autocomplete="current-password"]', 'HomeLabAdmin123!')
+      await page.fill('input[autocomplete="current-password"]', 'TomoAdmin123!')
       
       // Verify password is not visible in DOM when hidden
       const passwordValue = await page.inputValue('input[autocomplete="current-password"]')
-      expect(passwordValue).toBe('HomeLabAdmin123!')
+      expect(passwordValue).toBe('TomoAdmin123!')
       
       // But the input type should be password
       const inputType = await page.getAttribute('input[autocomplete="current-password"]', 'type')
@@ -377,7 +377,7 @@ test.describe('Authentication Flow', () => {
       // Login
       await page.goto('/login')
       await page.fill('input[autocomplete="username"]', 'admin')
-      await page.fill('input[autocomplete="current-password"]', 'HomeLabAdmin123!')
+      await page.fill('input[autocomplete="current-password"]', 'TomoAdmin123!')
       await page.click('button[type="submit"]')
       
       // Try to access login page while authenticated
@@ -402,7 +402,7 @@ test.describe('Authentication Flow', () => {
       // Fill form using keyboard
       await page.keyboard.type('admin')
       await page.keyboard.press('Tab')
-      await page.keyboard.type('HomeLabAdmin123!')
+      await page.keyboard.type('TomoAdmin123!')
       
       // Navigate to and activate submit button
       await page.keyboard.press('Tab') // Password toggle

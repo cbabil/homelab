@@ -1,14 +1,72 @@
 /**
  * Session Warning Component
- * 
+ *
  * Displays session expiry warnings with configurable actions.
  * Shows countdown and allows session extension or logout.
  */
 
-import React from 'react'
-import { AlertTriangle, Clock, X } from 'lucide-react'
-import { cn } from '@/utils/cn'
+import Box from '@mui/material/Box'
+import Paper from '@mui/material/Paper'
+import Typography from '@mui/material/Typography'
+import Button from '@mui/material/Button'
+import IconButton from '@mui/material/IconButton'
+import { Warning, Schedule, Close } from '@mui/icons-material'
 import { SessionWarning as SessionWarningType } from '@/types/auth'
+
+type WarningLevel = SessionWarningType['warningLevel']
+
+interface SeverityStyle {
+  bgcolor: (theme: any) => string
+  borderColor: (theme: any) => string
+  iconColor: string
+  textColor: (theme: any) => string
+  buttonColor: 'error' | 'warning' | 'info'
+}
+
+function getSeverityStyle(warningLevel: WarningLevel): SeverityStyle {
+  switch (warningLevel) {
+    case 'critical':
+      return {
+        bgcolor: (theme: any) =>
+          theme.palette.mode === 'dark' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(254, 226, 226, 1)',
+        borderColor: (theme: any) =>
+          theme.palette.mode === 'dark' ? 'rgba(239, 68, 68, 0.5)' : 'rgba(252, 165, 165, 1)',
+        iconColor: 'error.main',
+        textColor: (theme: any) => (theme.palette.mode === 'dark' ? 'error.light' : 'error.dark'),
+        buttonColor: 'error',
+      }
+    case 'warning':
+      return {
+        bgcolor: (theme: any) =>
+          theme.palette.mode === 'dark' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(254, 243, 199, 1)',
+        borderColor: (theme: any) =>
+          theme.palette.mode === 'dark' ? 'rgba(245, 158, 11, 0.5)' : 'rgba(252, 211, 77, 1)',
+        iconColor: 'warning.main',
+        textColor: (theme: any) =>
+          theme.palette.mode === 'dark' ? 'warning.light' : 'warning.dark',
+        buttonColor: 'warning',
+      }
+    default:
+      return {
+        bgcolor: (theme: any) =>
+          theme.palette.mode === 'dark' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(219, 234, 254, 1)',
+        borderColor: (theme: any) =>
+          theme.palette.mode === 'dark' ? 'rgba(59, 130, 246, 0.5)' : 'rgba(147, 197, 253, 1)',
+        iconColor: 'info.main',
+        textColor: (theme: any) => (theme.palette.mode === 'dark' ? 'info.light' : 'info.dark'),
+        buttonColor: 'info',
+      }
+  }
+}
+
+function formatTimeRemaining(minutesRemaining: number): string {
+  if (minutesRemaining <= 0) {
+    return 'Session has expired'
+  } else if (minutesRemaining === 1) {
+    return '1 minute remaining'
+  }
+  return `${minutesRemaining} minutes remaining`
+}
 
 interface SessionWarningProps {
   warning: SessionWarningType
@@ -17,114 +75,116 @@ interface SessionWarningProps {
   onDismiss?: () => void
 }
 
-export function SessionWarning({ 
-  warning, 
-  onExtendSession, 
-  onLogout, 
-  onDismiss 
+export function SessionWarning({
+  warning,
+  onExtendSession,
+  onLogout,
+  onDismiss
 }: SessionWarningProps) {
   if (!warning.isShowing) {
     return null
   }
 
-  const getWarningStyles = () => {
-    switch (warning.warningLevel) {
-      case 'critical':
-        return {
-          container: 'bg-red-50 border-red-200 dark:bg-red-950 dark:border-red-800',
-          icon: 'text-red-600 dark:text-red-400',
-          text: 'text-red-800 dark:text-red-200',
-          button: 'bg-red-600 hover:bg-red-700 text-white'
-        }
-      case 'warning':
-        return {
-          container: 'bg-orange-50 border-orange-200 dark:bg-orange-950 dark:border-orange-800',
-          icon: 'text-orange-600 dark:text-orange-400',
-          text: 'text-orange-800 dark:text-orange-200',
-          button: 'bg-orange-600 hover:bg-orange-700 text-white'
-        }
-      default:
-        return {
-          container: 'bg-blue-50 border-blue-200 dark:bg-blue-950 dark:border-blue-800',
-          icon: 'text-blue-600 dark:text-blue-400',
-          text: 'text-blue-800 dark:text-blue-200',
-          button: 'bg-blue-600 hover:bg-blue-700 text-white'
-        }
-    }
-  }
-
-  const styles = getWarningStyles()
+  const severity = getSeverityStyle(warning.warningLevel)
   const isUrgent = warning.minutesRemaining <= 1
 
-  const formatTimeRemaining = () => {
-    if (warning.minutesRemaining <= 0) {
-      return 'Session has expired'
-    } else if (warning.minutesRemaining === 1) {
-      return '1 minute remaining'
-    } else {
-      return `${warning.minutesRemaining} minutes remaining`
-    }
-  }
-
   return (
-    <div className={cn(
-      'fixed top-4 right-4 max-w-md w-full border rounded-lg p-4 shadow-lg z-50',
-      'animate-in slide-in-from-right-4 fade-in duration-300',
-      styles.container
-    )}>
-      <div className="flex items-start space-x-3">
-        <div className="flex-shrink-0">
+    <Paper
+      elevation={8}
+      sx={{
+        position: 'fixed',
+        top: 16,
+        right: 16,
+        maxWidth: 448,
+        width: '100%',
+        bgcolor: severity.bgcolor,
+        borderLeft: 4,
+        borderColor: severity.borderColor,
+        p: 2,
+        zIndex: 9999,
+        animation: 'slideInRight 0.3s ease-out',
+        '@keyframes slideInRight': {
+          '0%': {
+            transform: 'translateX(100%)',
+            opacity: 0,
+          },
+          '100%': {
+            transform: 'translateX(0)',
+            opacity: 1,
+          },
+        },
+      }}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'flex-start', gap: 1.5 }}>
+        <Box sx={{ flexShrink: 0, pt: 0.5 }}>
           {isUrgent ? (
-            <AlertTriangle className={cn("h-5 w-5", styles.icon)} />
+            <Warning sx={{ fontSize: 20, color: severity.iconColor }} />
           ) : (
-            <Clock className={cn("h-5 w-5", styles.icon)} />
+            <Schedule sx={{ fontSize: 20, color: severity.iconColor }} />
           )}
-        </div>
-        
-        <div className="flex-1 min-w-0">
-          <h3 className={cn("text-sm font-medium", styles.text)}>
+        </Box>
+
+        <Box sx={{ flex: 1, minWidth: 0 }}>
+          <Typography variant="body2" fontWeight={600} sx={{ color: severity.textColor }}>
             {isUrgent ? 'Session Expired' : 'Session Expiring Soon'}
-          </h3>
-          <p className={cn("text-sm mt-1", styles.text)}>
-            {formatTimeRemaining()}
-          </p>
-          
-          <div className="flex items-center space-x-2 mt-3">
+          </Typography>
+          <Typography variant="caption" sx={{ color: severity.textColor, mt: 0.5, display: 'block' }}>
+            {formatTimeRemaining(warning.minutesRemaining)}
+          </Typography>
+
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 1.5 }}>
             {!isUrgent && onExtendSession && (
-              <button
+              <Button
+                size="small"
+                variant="contained"
+                color={severity.buttonColor}
                 onClick={onExtendSession}
-                className={cn(
-                  'px-3 py-1 text-xs font-medium rounded transition-colors',
-                  styles.button
-                )}
+                sx={{ fontSize: '0.75rem', py: 0.5, px: 1.5 }}
               >
                 Extend Session
-              </button>
+              </Button>
             )}
-            
+
             {onLogout && (
-              <button
+              <Button
+                size="small"
+                variant="outlined"
                 onClick={onLogout}
-                className="px-3 py-1 text-xs font-medium rounded border border-gray-300 bg-white text-gray-700 hover:bg-gray-50 dark:bg-gray-800 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700 transition-colors"
+                sx={{
+                  fontSize: '0.75rem',
+                  py: 0.5,
+                  px: 1.5,
+                  borderColor: 'grey.400',
+                  color: 'text.primary',
+                  '&:hover': {
+                    borderColor: 'grey.500',
+                    bgcolor: 'action.hover',
+                  },
+                }}
               >
                 {isUrgent ? 'Login Again' : 'Logout'}
-              </button>
+              </Button>
             )}
-          </div>
-        </div>
-        
+          </Box>
+        </Box>
+
         {onDismiss && !isUrgent && (
-          <button
+          <IconButton
+            size="small"
             onClick={onDismiss}
-            className={cn(
-              "flex-shrink-0 p-1 hover:bg-black/5 dark:hover:bg-white/5 rounded transition-colors",
-              styles.text
-            )}
+            sx={{
+              flexShrink: 0,
+              color: severity.textColor,
+              p: 0.5,
+              '&:hover': {
+                bgcolor: 'action.hover',
+              },
+            }}
           >
-            <X className="h-4 w-4" />
-          </button>
+            <Close sx={{ fontSize: 16 }} />
+          </IconButton>
         )}
-      </div>
-    </div>
+      </Box>
+    </Paper>
   )
 }

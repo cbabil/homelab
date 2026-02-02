@@ -8,7 +8,14 @@
 import { BaseDataService } from './baseDataService'
 import { MCPClient } from '@/types/mcp'
 import { ServiceResponse, DataServiceOptions, BaseDataService as IBaseDataService } from '@/types/dataService'
-import { LogEntry, DatabaseLogEntry, LogsResponse, LogFilterOptions } from '@/types/logs'
+import { LogEntry, DatabaseLogEntry, LogFilterOptions } from '@/types/logs'
+
+// MCP tool response structure
+interface MCPToolContentResponse {
+  content?: Array<{ text?: string }>
+  logs?: DatabaseLogEntry[]
+  deleted?: number
+}
 
 export class LogsDataService extends BaseDataService implements IBaseDataService<LogEntry, LogFilterOptions> {
   constructor(client: MCPClient, options?: DataServiceOptions) {
@@ -63,9 +70,7 @@ export class LogsDataService extends BaseDataService implements IBaseDataService
     if (filter?.limit) params.limit = filter.limit
     if (filter?.page) params.offset = (filter.page - 1) * (filter.limit || 100)
 
-    const result = await this.callTool<any>('get_logs', params)
-
-    console.log('MCP Response:', JSON.stringify(result, null, 2))
+    const result = await this.callTool<MCPToolContentResponse>('get_logs', params)
 
     if (!result.success) {
       return {
@@ -75,38 +80,50 @@ export class LogsDataService extends BaseDataService implements IBaseDataService
       }
     }
 
-    const rawData = result.data
+    // Use unknown type since result.data can be various shapes
+    const rawData = result.data as unknown
 
-    let toolResponse: any = null
+    interface ParsedLogsResponse {
+      success?: boolean
+      data?: { logs?: DatabaseLogEntry[] }
+      logs?: DatabaseLogEntry[]
+      error?: string
+      message?: string
+    }
 
-    if (rawData?.content?.[0]?.text) {
-      const textPayload = rawData.content[0].text.trim()
+    let toolResponse: ParsedLogsResponse | null = null
 
-      if (textPayload.startsWith('{') || textPayload.startsWith('[')) {
-        try {
-          toolResponse = JSON.parse(textPayload)
-        } catch (error) {
-          console.error('Failed to parse logs response:', error)
+    // Check if it has content array structure
+    if (rawData && typeof rawData === 'object' && 'content' in rawData) {
+      const contentData = rawData as MCPToolContentResponse
+      if (contentData.content?.[0]?.text) {
+        const textPayload = contentData.content[0].text
+        const trimmed = textPayload.trim()
+
+        if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+          try {
+            toolResponse = JSON.parse(trimmed) as ParsedLogsResponse
+          } catch (error) {
+            console.error('Failed to parse logs response:', error)
+            return {
+              success: false,
+              error: 'Failed to parse response',
+              message: 'Invalid response format'
+            }
+          }
+        } else {
           return {
             success: false,
-            error: 'Failed to parse response',
-            message: 'Invalid response format'
+            error: trimmed,
+            message: trimmed
           }
         }
-      } else {
-        return {
-          success: false,
-          error: textPayload,
-          message: textPayload
-        }
       }
-    } else if (rawData && typeof rawData === 'object') {
-      toolResponse = rawData
     } else if (typeof rawData === 'string') {
       const trimmed = rawData.trim()
       if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
         try {
-          toolResponse = JSON.parse(trimmed)
+          toolResponse = JSON.parse(trimmed) as ParsedLogsResponse
         } catch (error) {
           console.error('Failed to parse logs response:', error)
           return {
@@ -122,10 +139,12 @@ export class LogsDataService extends BaseDataService implements IBaseDataService
           message: trimmed
         }
       }
+    } else if (rawData && typeof rawData === 'object') {
+      toolResponse = rawData as ParsedLogsResponse
     }
 
     if (toolResponse?.success && toolResponse.data?.logs) {
-      const mappedLogs = toolResponse.data.logs.map(log => this.mapDatabaseLogToFrontend(log))
+      const mappedLogs = toolResponse.data.logs.map((log: DatabaseLogEntry) => this.mapDatabaseLogToFrontend(log))
       return {
         success: true,
         data: mappedLogs,
@@ -133,7 +152,6 @@ export class LogsDataService extends BaseDataService implements IBaseDataService
       }
     }
 
-    console.log('Tool response failed:', toolResponse)
     return {
       success: false,
       error: toolResponse?.error || 'Failed to fetch logs',
@@ -158,16 +176,15 @@ export class LogsDataService extends BaseDataService implements IBaseDataService
   /**
    * Refresh logs data and clear cache
    */
-  async refresh(): Promise<ServiceResponse<PaginatedResponse<LogEntry>>> {
+  async refresh(): Promise<void> {
     this.clearCache()
-    return await this.getAll()
   }
 
   /**
    * Purge all log entries via MCP tool
    */
   async purge(): Promise<ServiceResponse<{ deleted?: number }>> {
-    const result = await this.callTool<any>('purge_logs')
+    const result = await this.callTool<MCPToolContentResponse>('purge_logs')
 
     if (!result.success) {
       return {
@@ -177,39 +194,50 @@ export class LogsDataService extends BaseDataService implements IBaseDataService
       }
     }
 
-    const rawData = result.data
-    let toolResponse: any = null
+    // Use unknown type since result.data can be various shapes
+    const rawData = result.data as unknown
+
+    interface ParsedPurgeResponse {
+      success?: boolean
+      deleted?: number
+      error?: string
+      message?: string
+    }
+
+    let toolResponse: ParsedPurgeResponse | null = null
 
     // Handle streamed text payloads (content array)
-    if (rawData?.content?.[0]?.text) {
-      const textPayload = rawData.content[0].text.trim()
+    if (rawData && typeof rawData === 'object' && 'content' in rawData) {
+      const contentData = rawData as MCPToolContentResponse
+      if (contentData.content?.[0]?.text) {
+        const textPayload = contentData.content[0].text
+        const trimmed = textPayload.trim()
 
-      if (textPayload.startsWith('{') || textPayload.startsWith('[')) {
-        try {
-          toolResponse = JSON.parse(textPayload)
-        } catch (error) {
-          console.error('Failed to parse purge logs response:', error)
+        if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
+          try {
+            toolResponse = JSON.parse(trimmed) as ParsedPurgeResponse
+          } catch (error) {
+            console.error('Failed to parse purge logs response:', error)
+            return {
+              success: false,
+              error: 'Failed to parse response',
+              message: 'Invalid response format'
+            }
+          }
+        } else {
+          // Treat plain text response as backend error message
           return {
             success: false,
-            error: 'Failed to parse response',
-            message: 'Invalid response format'
+            error: trimmed,
+            message: trimmed
           }
         }
-      } else {
-        // Treat plain text response as backend error message
-        return {
-          success: false,
-          error: textPayload,
-          message: textPayload
-        }
       }
-    } else if (rawData && typeof rawData === 'object') {
-      toolResponse = rawData
     } else if (typeof rawData === 'string') {
       const trimmed = rawData.trim()
       if (trimmed.startsWith('{') || trimmed.startsWith('[')) {
         try {
-          toolResponse = JSON.parse(trimmed)
+          toolResponse = JSON.parse(trimmed) as ParsedPurgeResponse
         } catch (error) {
           console.error('Failed to parse purge logs response:', error)
           return {
@@ -225,6 +253,8 @@ export class LogsDataService extends BaseDataService implements IBaseDataService
           message: trimmed
         }
       }
+    } else if (rawData && typeof rawData === 'object') {
+      toolResponse = rawData as ParsedPurgeResponse
     }
 
     if (toolResponse?.success) {

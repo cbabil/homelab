@@ -18,7 +18,7 @@ from pathlib import Path
 async def temp_db():
     """Create temporary database for testing."""
     temp_dir = tempfile.mkdtemp()
-    db_path = os.path.join(temp_dir, "test_homelab.db")
+    db_path = os.path.join(temp_dir, "test_tomo.db")
 
     # Read and execute schema
     schema_path = Path(__file__).parent.parent.parent / "sql" / "init_settings_schema.sql"

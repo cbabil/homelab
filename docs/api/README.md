@@ -1,6 +1,6 @@
 # API Reference
 
-This document provides comprehensive API reference for the Homelab Assistant MCP tools.
+This document provides comprehensive API reference for the Tomo MCP tools.
 
 ## Table of Contents
 
@@ -15,7 +15,7 @@ This document provides comprehensive API reference for the Homelab Assistant MCP
 
 ## Overview
 
-The Homelab Assistant API is implemented using the Model Context Protocol (MCP). All functionality is exposed through "tools" that can be called with structured parameters and return standardized responses.
+The Tomo API is implemented using the Model Context Protocol (MCP). All functionality is exposed through "tools" that can be called with structured parameters and return standardized responses.
 
 ### Base URL
 
@@ -607,9 +607,9 @@ Future versions will support webhooks for real-time notifications:
 ### TypeScript/JavaScript
 
 ```typescript
-import { HomelabMCPClient } from '@homelab/mcp-client'
+import { TomoMCPClient } from '@tomo/mcp-client'
 
-const client = new HomelabMCPClient('http://localhost:8000')
+const client = new TomoMCPClient('http://localhost:8000')
 
 // Test server connection
 const result = await client.callTool('test_server_connection', {
@@ -625,9 +625,9 @@ console.log(result.data)
 ### Python
 
 ```python
-from homelab_client import HomelabClient
+from tomo_client import TomoClient
 
-client = HomelabClient('http://localhost:8000')
+client = TomoClient('http://localhost:8000')
 
 # Install application
 result = await client.install_app(

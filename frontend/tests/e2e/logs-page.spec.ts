@@ -9,11 +9,23 @@
 
 import { test, expect, Page } from '@playwright/test'
 
+interface LogEntry {
+  id: string
+  timestamp: string
+  level: string
+  source: string
+  message: string
+  category: string
+  tags: string[]
+  metadata: Record<string, unknown>
+  created_at: string
+}
+
 // Helper function to login as admin
 async function loginAsAdmin(page: Page) {
   await page.goto('/login')
   await page.fill('input[autocomplete="username"]', 'admin')
-  await page.fill('input[autocomplete="current-password"]', 'HomeLabAdmin123!')
+  await page.fill('input[autocomplete="current-password"]', 'TomoAdmin123!')
   await page.click('button[type="submit"]')
   await expect(page).toHaveURL('/')
 }
@@ -39,7 +51,7 @@ function setupConsoleErrorCapture(page: Page) {
 }
 
 // Helper function to mock successful logs API response
-async function mockLogsApiSuccess(page: Page, logs: any[] = []) {
+async function mockLogsApiSuccess(page: Page, logs: LogEntry[] = []) {
   const defaultLogs = logs.length > 0 ? logs : [
     {
       id: '1',
@@ -498,7 +510,7 @@ test.describe('Logs Page End-to-End Tests', () => {
       const download = await downloadPromise
 
       // Verify download was triggered
-      expect(download.suggestedFilename()).toMatch(/homelab-logs-.*\.json/)
+      expect(download.suggestedFilename()).toMatch(/tomo-logs-.*\.json/)
 
       // Verify no errors during export
       expect(jsErrors).toHaveLength(0)

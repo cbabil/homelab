@@ -10,7 +10,7 @@ import { timezoneService } from '@/services/timezoneService'
 import { useSettingsContext } from '@/providers/SettingsProvider'
 import { TimezoneInfo, TimezoneGroup } from '@/types/timezone'
 
-interface UseTimezoneReturn {
+export interface UseTimezoneReturn {
   isInitialized: boolean
   isLoading: boolean
   error: string | null

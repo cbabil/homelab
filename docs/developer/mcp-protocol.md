@@ -1,6 +1,6 @@
 # MCP Protocol Implementation Guide
 
-This document provides detailed information about the Model Context Protocol (MCP) implementation in the Homelab Assistant project.
+This document provides detailed information about the Model Context Protocol (MCP) implementation in the Tomo project.
 
 ## Table of Contents
 
@@ -15,7 +15,7 @@ This document provides detailed information about the Model Context Protocol (MC
 
 ## Overview
 
-The Homelab Assistant uses the Model Context Protocol (MCP) for all frontend-backend communication. MCP provides a standardized way to expose backend functionality as "tools" that can be called from the frontend with type safety and consistent error handling.
+The Tomo uses the Model Context Protocol (MCP) for all frontend-backend communication. MCP provides a standardized way to expose backend functionality as "tools" that can be called from the frontend with type safety and consistent error handling.
 
 ### Why MCP?
 
@@ -95,9 +95,9 @@ from tools.health_tools import register_health_tools
 from lib.config import load_config
 
 app = FastMCP(
-    name="homelab-assistant",
+    name="tomo",
     version="0.1.0",
-    instructions="Homelab management and automation server",
+    instructions="Tomo management and automation server",
 )
 
 config = load_config()
@@ -243,7 +243,7 @@ The frontend uses a custom MCP client implementation:
 // frontend/src/services/mcpClient.ts
 import { MCPClient, MCPRequest, MCPResponse } from '@/types/mcp'
 
-export class HomelabMCPClient implements MCPClient {
+export class TomoMCPClient implements MCPClient {
   private baseUrl: string
   private connected: boolean = false
 
@@ -308,10 +308,10 @@ export class HomelabMCPClient implements MCPClient {
 ```typescript
 // frontend/src/providers/MCPProvider.tsx
 import React, { createContext, useContext, useEffect, useState } from 'react'
-import { HomelabMCPClient } from '@/services/mcpClient'
+import { TomoMCPClient } from '@/services/mcpClient'
 
 interface MCPContextType {
-  client: HomelabMCPClient | null
+  client: TomoMCPClient | null
   isConnected: boolean
   error: string | null
 }
@@ -323,7 +323,7 @@ const MCPContext = createContext<MCPContextType>({
 })
 
 export function MCPProvider({ children }: { children: React.ReactNode }) {
-  const [client] = useState(() => new HomelabMCPClient(
+  const [client] = useState(() => new TomoMCPClient(
     import.meta.env.VITE_MCP_SERVER_URL || 'http://localhost:8000'
   ))
   const [isConnected, setIsConnected] = useState(false)
@@ -797,7 +797,7 @@ export class MCPError extends Error {
 }
 
 // Enhanced MCP client with error handling
-export class HomelabMCPClient {
+export class TomoMCPClient {
   async callTool<T>(name: string, params: Record<string, unknown>): Promise<T> {
     const response = await this.callToolRaw<T>(name, params)
     
@@ -952,4 +952,4 @@ export function useServerMonitoring(serverId: string) {
 
 ---
 
-This MCP protocol implementation provides a solid foundation for extending the Homelab Assistant with new capabilities while maintaining consistency, type safety, and reliability across the entire system.
+This MCP protocol implementation provides a solid foundation for extending the Tomo with new capabilities while maintaining consistency, type safety, and reliability across the entire system.

@@ -2,7 +2,7 @@
 import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock
-from tools.app_tools import AppTools
+from tools.app.tools import AppTools
 from models.marketplace import MarketplaceApp, DockerConfig, AppPort, AppVolume, AppEnvVar, AppRequirements
 
 

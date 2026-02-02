@@ -11,7 +11,8 @@ export function getStatusSortOrder(status: string): number {
     case 'active': return 1
     case 'idle': return 2
     case 'expired': return 3
-    default: return 4
+    case 'terminated': return 4
+    default: return 5
   }
 }
 
@@ -59,6 +60,8 @@ export function getStatusColor(status: string): string {
       return 'bg-orange-500'
     case 'expired':
       return 'bg-red-500'
+    case 'terminated':
+      return 'bg-gray-500'
     default:
       return 'bg-gray-400'
   }

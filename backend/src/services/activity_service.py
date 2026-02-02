@@ -6,7 +6,7 @@ Tracks user actions and system events.
 
 import uuid
 from datetime import datetime, UTC
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, List
 import structlog
 from models.metrics import ActivityLog, ActivityType
 

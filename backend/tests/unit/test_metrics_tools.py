@@ -1,7 +1,7 @@
 """Tests for metrics MCP tools."""
 import pytest
 from unittest.mock import AsyncMock, MagicMock
-from tools.metrics_tools import MetricsTools
+from tools.monitoring.tools import MonitoringTools
 from models.metrics import DashboardSummary
 
 

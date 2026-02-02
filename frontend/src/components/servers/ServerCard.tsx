@@ -1,14 +1,19 @@
 /**
  * Server Card Component
- * 
+ *
  * Displays individual server information with status and actions.
+ * Clean, modern design matching dashboard card patterns.
  */
 
-import { Wifi, WifiOff, AlertCircle, Clock } from 'lucide-react'
-import { ServerConnection } from '@/types/server'
-import { cn } from '@/utils/cn'
-import { ServerInfoDisplay } from './ServerInfoDisplay'
+import React, { useState } from 'react'
+import { useTranslation } from 'react-i18next'
+import { RefreshCw, Wifi } from 'lucide-react'
+import { Box, Stack, Typography } from '@mui/material'
+import { LinuxIcon, DockerIcon } from './ServerIcons'
+import { ServerConnection, AgentInfo } from '@/types/server'
+import { Button } from '@/components/ui/Button'
 import { ServerCardActions } from './ServerCardActions'
+import { AgentStatusBadge } from './AgentStatusBadge'
 
 interface ServerCardProps {
   server: ServerConnection
@@ -16,79 +21,205 @@ interface ServerCardProps {
   onDelete: (serverId: string) => void
   onConnect: (serverId: string) => void
   onDisconnect?: (serverId: string) => void
+  onInstallDocker?: (serverId: string) => Promise<void>
+  isSelected?: boolean
+  onSelect?: (serverId: string) => void
+  agentInfo?: AgentInfo | null
+  isAgentLoading?: boolean
+  onInstallAgent?: () => void
+  onUninstallAgent?: () => void
+  onRefreshAgent?: () => void
+}
+
+interface ServerStatusInfoProps {
+  server: ServerConnection
+  statusLabelKey: string
+  agentInfo?: AgentInfo | null
+  isAgentLoading?: boolean
+  onInstallAgent?: () => void
+  onUninstallAgent?: () => void
+  onRefreshAgent?: () => void
+  onConnect: (serverId: string) => void
+  onInstallDocker?: () => void
+  isInstalling: boolean
 }
 
 const statusConfig = {
   connected: {
-    icon: Wifi,
-    color: 'text-green-600 dark:text-green-400',
-    bg: 'bg-green-50 dark:bg-green-950/50',
-    label: 'Connected'
+    labelKey: 'servers.statusLabels.online',
+    color: '#10b981',
+    accentColor: 'linear-gradient(to right, #10b981, #34d399)'
   },
   disconnected: {
-    icon: WifiOff, 
-    color: 'text-gray-600 dark:text-gray-400',
-    bg: 'bg-gray-50 dark:bg-gray-950/50',
-    label: 'Disconnected'
+    labelKey: 'servers.statusLabels.offline',
+    color: '#f59e0b',
+    accentColor: 'linear-gradient(to right, #f59e0b, #fbbf24)'
   },
   error: {
-    icon: AlertCircle,
-    color: 'text-red-600 dark:text-red-400', 
-    bg: 'bg-red-50 dark:bg-red-950/50',
-    label: 'Error'
+    labelKey: 'servers.statusLabels.error',
+    color: '#ef4444',
+    accentColor: 'linear-gradient(to right, #ef4444, #f87171)'
   },
   preparing: {
-    icon: Clock,
-    color: 'text-yellow-600 dark:text-yellow-400',
-    bg: 'bg-yellow-50 dark:bg-yellow-950/50', 
-    label: 'Preparing'
+    labelKey: 'servers.statusLabels.preparing',
+    color: '#3b82f6',
+    accentColor: 'linear-gradient(to right, #3b82f6, #60a5fa)'
   }
 }
 
-export function ServerCard({ server, onEdit, onDelete, onConnect, onDisconnect }: ServerCardProps) {
-  const status = statusConfig[server.status]
-  const StatusIcon = status.icon
+function ServerStatusInfo({
+  server, statusLabelKey, agentInfo, isAgentLoading, onInstallAgent,
+  onUninstallAgent, onRefreshAgent, onConnect, onInstallDocker, isInstalling
+}: ServerStatusInfoProps) {
+  const { t } = useTranslation()
+  const dockerNotInstalled = !server.system_info?.docker_version ||
+    server.system_info.docker_version.toLowerCase() === 'not installed'
+
+  const handleInstallClick = async (e: React.MouseEvent) => {
+    e.stopPropagation()
+    if (onInstallDocker && !isInstalling) await onInstallDocker()
+  }
+
+  if (server.status === 'connected' && server.system_info) {
+    return (
+      <Stack spacing={1}>
+        <Stack direction="row" spacing={2} alignItems="center">
+          <Stack direction="row" spacing={0.5} alignItems="center">
+            <LinuxIcon style={{ width: 14, height: 14, color: '#d97706' }} />
+            <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10 }}>
+              {server.system_info.os?.split(' ')[0] || 'Linux'}
+            </Typography>
+          </Stack>
+          <Stack direction="row" spacing={0.5} alignItems="center">
+            <DockerIcon style={{ width: 14, height: 14, color: !dockerNotInstalled ? '#3b82f6' : 'rgba(128,128,128,0.4)' }} />
+            {dockerNotInstalled ? (
+              <Box
+                component="button"
+                onClick={handleInstallClick}
+                disabled={isInstalling}
+                sx={{ fontSize: 10, color: 'primary.main', background: 'none', border: 'none', cursor: 'pointer', p: 0 }}
+              >
+                {isInstalling ? t('servers.installing') : t('servers.install')}
+              </Box>
+            ) : (
+              <Typography variant="caption" sx={{ fontSize: 10, color: '#3b82f6' }}>
+                {server.system_info.docker_version}
+              </Typography>
+            )}
+          </Stack>
+          <AgentStatusBadge
+            agentInfo={agentInfo ?? null}
+            isLoading={isAgentLoading}
+            onInstall={onInstallAgent}
+            onUninstall={onUninstallAgent}
+            onRefresh={onRefreshAgent}
+            compact
+          />
+        </Stack>
+      </Stack>
+    )
+  }
+
+  if (server.status === 'error') {
+    return (
+      <Stack spacing={1}>
+        <Typography variant="caption" color="error.main" sx={{ fontSize: 10 }}>
+          {server.error_message || t('servers.connectionFailed')}
+        </Typography>
+        <Button
+          onClick={(e) => { e.stopPropagation(); onConnect(server.id) }}
+          variant="outline"
+          size="sm"
+          leftIcon={<RefreshCw style={{ width: 10, height: 10 }} />}
+          sx={{ fontSize: '0.65rem', py: 0.25, px: 1, minHeight: 22, alignSelf: 'flex-start' }}
+        >
+          {t('servers.retry')}
+        </Button>
+      </Stack>
+    )
+  }
 
   return (
-    <div className="bg-card p-4 rounded-xl border h-full flex flex-col">
-      <div className="flex items-start justify-between mb-3">
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center space-x-2 mb-1">
-            <h3 className="text-base font-semibold truncate">{server.name}</h3>
-            <div className={cn("flex items-center space-x-1 px-2 py-0.5 rounded-full text-xs font-medium", status.bg, status.color)}>
-              <StatusIcon className="h-3 w-3" />
-              <span>{status.label}</span>
-            </div>
-          </div>
-          <p className="text-xs text-muted-foreground truncate">
-            {server.username}@{server.host}:{server.port}
-          </p>
-        </div>
-        
-        <ServerCardActions 
+    <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10 }}>
+      {t(statusLabelKey)}
+    </Typography>
+  )
+}
+
+export function ServerCard({
+  server, onEdit, onDelete, onConnect, onDisconnect, onInstallDocker,
+  isSelected, onSelect, agentInfo, isAgentLoading, onInstallAgent, onUninstallAgent, onRefreshAgent,
+}: ServerCardProps) {
+  const { t } = useTranslation()
+  const [isInstalling, setIsInstalling] = useState(false)
+  const status = statusConfig[server.status]
+
+  const handleInstallDocker = async () => {
+    if (!onInstallDocker || isInstalling) return
+    setIsInstalling(true)
+    try {
+      await onInstallDocker(server.id)
+    } catch (error) {
+      console.error('Docker install error:', error)
+    } finally {
+      setIsInstalling(false)
+    }
+  }
+
+  const handleCardClick = () => onSelect?.(server.id)
+
+  return (
+    <Box
+      onClick={handleCardClick}
+      sx={{
+        position: 'relative', p: 2, width: 260, borderRadius: 2, bgcolor: 'background.paper',
+        border: 1, borderColor: isSelected ? 'primary.main' : 'divider',
+        cursor: onSelect ? 'pointer' : 'default', transition: 'all 0.15s',
+        '&:hover': { borderColor: 'primary.main', bgcolor: 'action.hover' }
+      }}
+    >
+      <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 0.5, pr: 1 }}>
+        <Typography variant="body2" fontWeight={600} noWrap sx={{ flexShrink: 1, minWidth: 0 }}>
+          {server.name}
+        </Typography>
+        {server.status === 'connected' ? (
+          <Stack direction="row" alignItems="center" spacing={0.5} sx={{ flexShrink: 0 }}>
+            <Wifi size={14} color="#10b981" />
+            <Typography variant="caption" sx={{ color: '#10b981', fontWeight: 500, fontSize: 11 }}>
+              {t('servers.statusLabels.connected')}
+            </Typography>
+          </Stack>
+        ) : (
+          <Box sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: status.color, flexShrink: 0 }} />
+        )}
+      </Stack>
+
+      <Typography variant="caption" color="text.secondary" noWrap sx={{ display: 'block', mb: 1.5 }}>
+        {server.username}@{server.host}:{server.port}
+      </Typography>
+
+      <ServerStatusInfo
+        server={server}
+        statusLabelKey={status.labelKey}
+        agentInfo={agentInfo}
+        isAgentLoading={isAgentLoading}
+        onInstallAgent={onInstallAgent}
+        onUninstallAgent={onUninstallAgent}
+        onRefreshAgent={onRefreshAgent}
+        onConnect={onConnect}
+        onInstallDocker={onInstallDocker ? handleInstallDocker : undefined}
+        isInstalling={isInstalling}
+      />
+
+      <Box onClick={(e) => e.stopPropagation()} sx={{ position: 'absolute', bottom: 8, right: 8 }}>
+        <ServerCardActions
           server={server}
           onEdit={onEdit}
           onDelete={onDelete}
           onConnect={onConnect}
           onDisconnect={onDisconnect}
         />
-      </div>
-
-      <div className="flex-1">
-        <ServerInfoDisplay 
-          systemInfo={server.system_info}
-          status={server.status}
-        />
-      </div>
-
-      <div className="pt-3 mt-auto border-t border-border/50">
-        <div className="flex items-center justify-between text-xs text-muted-foreground">
-          <span>Auth: {server.auth_type}</span>
-          {server.last_connected && (
-            <span>Last: {new Date(server.last_connected).toLocaleDateString()}</span>
-          )}
-        </div>
-      </div>
-    </div>
+      </Box>
+    </Box>
   )
 }

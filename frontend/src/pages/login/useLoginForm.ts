@@ -5,13 +5,13 @@
  * Extracted to maintain 100-line limit per CLAUDE.md rules.
  */
 
-import { useState } from 'react'
+import React, { useState } from 'react'
 import { useAuth } from '@/providers/AuthProvider'
 import { LoginCredentials, LoginFormState } from '@/types/auth'
 import { validateLoginField } from './loginValidation'
 
 export function useLoginForm() {
-  const { login, error } = useAuth()
+  const { login } = useAuth()
   const [showPassword, setShowPassword] = useState(false)
   const [formState, setFormState] = useState<LoginFormState>({
     username: { value: '', error: '', isValid: false },
@@ -78,10 +78,12 @@ export function useLoginForm() {
       await login(credentials)
       setFormState(prev => ({ ...prev, isSubmitting: false, submitError: '' }))
     } catch (err) {
+      // Use the actual error message from the backend
+      const errorMessage = err instanceof Error ? err.message : 'Invalid username or password'
       setFormState(prev => ({
         ...prev,
         isSubmitting: false,
-        submitError: 'Invalid username or password'
+        submitError: errorMessage
       }))
     }
   }
@@ -91,7 +93,6 @@ export function useLoginForm() {
   return {
     formState,
     showPassword,
-    error,
     isFormValid,
     handleInputChange,
     handleRememberMeChange,

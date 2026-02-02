@@ -5,7 +5,7 @@
  * Handles validation, renewal, and timeout with real JWT tokens.
  */
 
-import { cookieUtils, DEFAULT_SESSION_CONFIG } from './cookieUtils'
+import { cookieUtils } from './cookieUtils'
 import { settingsService } from '../settingsService'
 import { jwtService } from './jwtService'
 
@@ -36,7 +36,6 @@ export interface CreateSessionOptions {
 }
 
 class SessionService {
-  private readonly sessionCookieName = DEFAULT_SESSION_CONFIG.name
   private currentSession: SessionMetadata | null = null
   private timeoutWarningTimer: NodeJS.Timeout | null = null
   private sessionExpiryTimer: NodeJS.Timeout | null = null

@@ -1,54 +1,72 @@
 /**
  * Server Page Header Component
  *
- * Modern header section with title, description, and Add Server button.
+ * Modern header section with title, description, search, and action buttons.
  * Provides clean separation of header functionality from main page logic.
  */
 
+import { useTranslation } from 'react-i18next'
 import { Plus, Download, Upload } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
+import { PageHeader } from '@/components/layout/PageHeader'
+import { SearchInput } from '@/components/ui/SearchInput'
 
 interface ServerPageHeaderProps {
   onAddServer: () => void
   onExportServers: () => void
   onImportServers: () => void
+  searchTerm: string
+  onSearchChange: (term: string) => void
 }
 
-export function ServerPageHeader({ onAddServer, onExportServers, onImportServers }: ServerPageHeaderProps) {
+export function ServerPageHeader({
+  onAddServer,
+  onExportServers,
+  onImportServers,
+  searchTerm,
+  onSearchChange,
+}: ServerPageHeaderProps) {
+  const { t } = useTranslation()
+
   return (
-    <div className="flex items-center justify-between">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Servers</h1>
-        <p className="text-muted-foreground mt-1">
-          Manage your homelab server connections and configurations.
-        </p>
-      </div>
-      <div className="flex items-center space-x-3">
-        <Button
-          onClick={onImportServers}
-          variant="outline"
-          size="md"
-          leftIcon={<Upload className="h-4 w-4" />}
-        >
-          Import
-        </Button>
-        <Button
-          onClick={onExportServers}
-          variant="outline"
-          size="md"
-          leftIcon={<Download className="h-4 w-4" />}
-        >
-          Export
-        </Button>
-        <Button
-          onClick={onAddServer}
-          variant="primary"
-          size="md"
-          leftIcon={<Plus className="h-4 w-4" />}
-        >
-          Add Server
-        </Button>
-      </div>
-    </div>
+    <PageHeader
+      title={t('servers.title')}
+      actions={
+        <>
+          <SearchInput
+            value={searchTerm}
+            onChange={onSearchChange}
+            placeholder={t('servers.searchPlaceholder')}
+          />
+          <Button
+            onClick={onImportServers}
+            variant="outline"
+            size="sm"
+            leftIcon={<Upload style={{ width: 12, height: 12 }} />}
+            sx={{ fontSize: '0.7rem', py: 0.25, px: 1.5, minHeight: 26 }}
+          >
+            {t('servers.import')}
+          </Button>
+          <Button
+            onClick={onExportServers}
+            variant="outline"
+            size="sm"
+            leftIcon={<Download style={{ width: 12, height: 12 }} />}
+            sx={{ fontSize: '0.7rem', py: 0.25, px: 1.5, minHeight: 26 }}
+          >
+            {t('servers.export')}
+          </Button>
+          <Button
+            onClick={onAddServer}
+            variant="primary"
+            size="sm"
+            leftIcon={<Plus style={{ width: 12, height: 12 }} />}
+            sx={{ fontSize: '0.7rem', py: 0.25, px: 1.5, minHeight: 26 }}
+          >
+            {t('common.add')}
+          </Button>
+        </>
+      }
+    />
   )
 }

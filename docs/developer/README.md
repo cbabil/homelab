@@ -1,6 +1,6 @@
 # Developer Documentation
 
-Welcome to the Homelab Assistant Developer Documentation. This guide provides comprehensive information for developers working on or extending the Homelab Assistant project.
+Welcome to the Tomo Developer Documentation. This guide provides comprehensive information for developers working on or extending the Tomo project.
 
 ## Table of Contents
 
@@ -27,7 +27,7 @@ Welcome to the Homelab Assistant Developer Documentation. This guide provides co
 ```bash
 # Clone the repository
 git clone <repository-url>
-cd homelab
+cd tomo
 
 # Start development environment
 make setup
@@ -39,7 +39,7 @@ make dev
 ## Project Structure
 
 ```
-homelab/
+tomo/
 ├── frontend/                    # React + Vite + TypeScript
 │   ├── src/
 │   │   ├── components/          # React components
@@ -132,8 +132,8 @@ SSH_CONNECTION_TIMEOUT=30
 MAX_CONCURRENT_CONNECTIONS=10
 
 # Security
-HOMELAB_MASTER_KEY=your-secure-master-key-here
-HOMELAB_SALT=your-unique-salt-here
+TOMO_MASTER_KEY=your-secure-master-key-here
+TOMO_SALT=your-unique-salt-here
 
 # Development
 PYTHON_ENV=development
@@ -154,7 +154,7 @@ NODE_ENV=development
 
 ### System Design
 
-The Homelab Assistant follows a modern three-tier architecture:
+The Tomo follows a modern three-tier architecture:
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
@@ -482,8 +482,8 @@ make run-prod
 docker-compose up -d
 
 # Using Docker directly
-docker build -t homelab-assistant .
-docker run -p 80:80 -v homelab_data:/app/data homelab-assistant
+docker build -t tomo .
+docker run -p 80:80 -v tomo_data:/app/data tomo
 ```
 
 For detailed deployment instructions, see [Technical Documentation](../technical/deployment.md).

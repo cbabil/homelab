@@ -1,42 +1,44 @@
 /**
  * LoginPage Clean State Test
- * 
+ *
  * Tests to verify that the login page loads without any error messages
  * and only shows errors after user interaction and form submission.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
+import { userEvent } from '@testing-library/user-event'
 import { BrowserRouter } from 'react-router-dom'
 import { LoginPage } from './LoginPage'
 import { AuthProvider } from '@/providers/AuthProvider'
 
-// Mock auth services to simulate clean initial state
-vi.mock('@/services/auth/authService', () => ({
-  authService: {
-    initialize: vi.fn().mockResolvedValue(undefined),
-    login: vi.fn().mockRejectedValue(new Error('Invalid username or password')),
-    validateToken: vi.fn().mockResolvedValue(false)
+// Mock the auth hook for controlled testing
+const { mockLogin, getMockAuthState, setMockAuthState } = vi.hoisted(() => {
+  const mockLogin = vi.fn()
+  let mockAuthState = {
+    isAuthenticated: false,
+    isLoading: false,
+    error: null,
+    user: null
   }
-}))
 
-vi.mock('@/services/auth/sessionService', () => ({
-  sessionService: {
-    initialize: vi.fn().mockResolvedValue(undefined),
-    validateSession: vi.fn().mockResolvedValue({
-      isValid: false,
-      reason: 'Authentication required'
-    }),
-    createSession: vi.fn().mockRejectedValue(new Error('Mock session error'))
+  return {
+    mockLogin,
+    getMockAuthState: () => mockAuthState,
+    setMockAuthState: (newState: Record<string, unknown>) => { mockAuthState = { ...mockAuthState, ...newState } }
   }
-}))
+})
 
-vi.mock('@/services/settingsService', () => ({
-  settingsService: {
-    initialize: vi.fn().mockResolvedValue(undefined),
-    getSessionTimeoutMs: vi.fn().mockReturnValue(3600000)
+vi.mock('@/providers/AuthProvider', async () => {
+  const actual = (await vi.importActual('@/providers/AuthProvider')) as Record<string, unknown>
+  return {
+    ...actual,
+    useAuth: () => ({
+      login: mockLogin,
+      ...getMockAuthState()
+    })
   }
-}))
+})
 
 const renderLoginPage = () => {
   return render(
@@ -48,9 +50,21 @@ const renderLoginPage = () => {
   )
 }
 
+// Helper to get password field by placeholder
+function getPasswordField() {
+  return screen.getByPlaceholderText('Password')
+}
+
 describe('LoginPage Clean Initial State', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockLogin.mockResolvedValue(undefined)
+    setMockAuthState({
+      isAuthenticated: false,
+      isLoading: false,
+      error: null,
+      user: null
+    })
   })
 
   it('should load without any error messages initially', async () => {
@@ -63,44 +77,49 @@ describe('LoginPage Clean Initial State', () => {
 
     // Verify no error messages are present initially
     expect(screen.queryByText(/invalid username or password/i)).not.toBeInTheDocument()
-    expect(screen.queryByText(/error/i)).not.toBeInTheDocument()
-    expect(screen.queryByText(/failed/i)).not.toBeInTheDocument()
-    
+
     // Check that no error alert is shown
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
-    
+
     // Verify form is in clean state
-    expect(screen.getByLabelText(/username/i)).toHaveValue('')
-    expect(screen.getByLabelText(/password/i)).toHaveValue('')
-    
-    // Demo credentials should be shown (this is informational, not an error)
-    expect(screen.getByText(/demo credentials/i)).toBeInTheDocument()
+    expect(screen.getByRole('textbox', { name: /username/i })).toHaveValue('')
+    expect(getPasswordField()).toHaveValue('')
   })
 
   it('should show error only after form submission with invalid credentials', async () => {
+    const user = userEvent.setup()
+
+    // Mock login failure
+    mockLogin.mockRejectedValue(new Error('Invalid username or password'))
+
     renderLoginPage()
 
     // Wait for form to be ready
     await waitFor(() => {
-      expect(screen.getByLabelText(/username/i)).toBeInTheDocument()
+      expect(screen.getByRole('textbox', { name: /username/i })).toBeInTheDocument()
     })
 
     // Initially no errors
     expect(screen.queryByText(/invalid username or password/i)).not.toBeInTheDocument()
 
     // Fill form with valid-format but wrong credentials
-    const usernameInput = screen.getByLabelText(/username/i)
-    const passwordInput = screen.getByLabelText(/password/i)
-    
-    fireEvent.change(usernameInput, { target: { value: 'wronguser' } })
-    fireEvent.change(passwordInput, { target: { value: 'WrongPassword123!' } })
+    const usernameInput = screen.getByRole('textbox', { name: /username/i })
+    const passwordInput = getPasswordField()
+
+    await user.type(usernameInput, 'wronguser')
+    await user.type(passwordInput, 'WrongPassword123!')
 
     // Still no errors before submission
     expect(screen.queryByText(/invalid username or password/i)).not.toBeInTheDocument()
 
     // Submit the form
-    const submitButton = screen.getByRole('button', { name: /sign in|signing in/i })
-    fireEvent.click(submitButton)
+    const submitButton = screen.getByRole('button', { name: /sign in/i })
+
+    await waitFor(() => {
+      expect(submitButton).not.toBeDisabled()
+    })
+
+    await user.click(submitButton)
 
     // Now error should appear after submission
     await waitFor(() => {
@@ -116,46 +135,32 @@ describe('LoginPage Clean Initial State', () => {
       expect(screen.getByRole('heading', { name: /welcome back/i })).toBeInTheDocument()
     })
 
-    // Even if auth context has errors, they should not be displayed initially
-    // Only form submission errors should be shown
-    const errorElements = screen.queryAllByText(/error|fail|invalid|expired|session/i)
-    
-    // Filter out expected non-error text
-    const actualErrors = errorElements.filter(element => {
-      const text = element.textContent?.toLowerCase() || ''
-      // These are expected UI text, not errors
-      return !text.includes('demo') && 
-             !text.includes('forgot') && 
-             !text.includes('remember') &&
-             !text.includes('sign') &&
-             !text.includes('welcome') &&
-             !text.includes('homelab')
-    })
-
-    expect(actualErrors).toHaveLength(0)
+    // Verify no error alert is shown initially
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 
   it('should maintain clean state during typing', async () => {
+    const user = userEvent.setup()
     renderLoginPage()
 
     await waitFor(() => {
-      expect(screen.getByLabelText(/username/i)).toBeInTheDocument()
+      expect(screen.getByRole('textbox', { name: /username/i })).toBeInTheDocument()
     })
 
-    const usernameInput = screen.getByLabelText(/username/i)
-    const passwordInput = screen.getByLabelText(/password/i)
+    const usernameInput = screen.getByRole('textbox', { name: /username/i })
+    const passwordInput = getPasswordField()
 
     // Type in fields
-    fireEvent.change(usernameInput, { target: { value: 'test' } })
-    fireEvent.change(passwordInput, { target: { value: 'test123' } })
+    await user.type(usernameInput, 'test')
+    await user.type(passwordInput, 'test123')
 
     // No errors should appear while typing
     expect(screen.queryByText(/invalid username or password/i)).not.toBeInTheDocument()
-    expect(screen.queryByText(/error/i)).not.toBeInTheDocument()
-    
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+
     // Clear fields
-    fireEvent.change(usernameInput, { target: { value: '' } })
-    fireEvent.change(passwordInput, { target: { value: '' } })
+    await user.clear(usernameInput)
+    await user.clear(passwordInput)
 
     // Still no errors should appear
     expect(screen.queryByText(/invalid username or password/i)).not.toBeInTheDocument()

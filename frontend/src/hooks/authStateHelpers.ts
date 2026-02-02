@@ -5,7 +5,7 @@
  * and initialization with JWT token support.
  */
 
-import { AuthState } from '@/types/auth'
+import type { AuthState, User } from '@/types/auth'
 
 /**
  * Create initial auth state
@@ -26,7 +26,7 @@ export function createInitialAuthState(): AuthState {
  * Create authenticated state from auth data
  */
 export function createAuthenticatedState(
-  user: any,
+  user: User,
   sessionExpiry: string,
   tokenType: 'JWT' | 'Bearer' = 'JWT'
 ): Partial<AuthState> {

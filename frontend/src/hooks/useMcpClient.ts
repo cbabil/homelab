@@ -1,14 +1,28 @@
 /**
  * MCP Client Hook
  * 
- * React hook wrapper for the HomelabMCPClient.
+ * React hook wrapper for the TomoMCPClient.
  * Designed specifically for FastMCP Streamable-HTTP transport.
  */
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useToast } from '@/components/ui/Toast'
-import { HomelabMCPClient } from '@/services/mcpClient'
-import type { MCPResponse } from '@/types/mcp'
+import { TomoMCPClient } from '@/services/mcpClient'
+import type { MCPResponse, MCPToolDefinition } from '@/types/mcp'
+
+// MCP resource/prompt types (placeholder until full MCP spec implementation)
+interface MCPResource {
+  uri: string
+  name: string
+  description?: string
+  mimeType?: string
+}
+
+interface MCPPrompt {
+  name: string
+  description?: string
+  arguments?: Array<{ name: string; description?: string; required?: boolean }>
+}
 
 interface UseMcpClientOptions {
   serverUrl: string
@@ -22,43 +36,38 @@ interface UseMcpClientReturn {
   isConnected: boolean
   isConnecting: boolean
   error: string | null
-  
-  // MCP capabilities  
-  tools: any[]
-  resources: any[]
-  prompts: any[]
-  
+
+  // MCP capabilities
+  tools: MCPToolDefinition[]
+  resources: MCPResource[]
+  prompts: MCPPrompt[]
+
   // Actions
   callTool: <T>(name: string, params: Record<string, unknown>) => Promise<MCPResponse<T>>
-  readResource: (uri: string) => Promise<any>
-  getPrompt: (name: string, args?: Record<string, unknown>) => Promise<any>
+  readResource: (uri: string) => Promise<MCPResource>
+  getPrompt: (name: string, args?: Record<string, unknown>) => Promise<MCPPrompt>
   authenticate: () => Promise<void>
 }
 
-export function useMcpClient({ 
-  serverUrl, 
-  clientName = 'Homelab Assistant',
-  autoReconnect = true,
-  transportType = 'http'
+export function useMcpClient({
+  serverUrl,
+  autoReconnect = true
 }: UseMcpClientOptions): UseMcpClientReturn {
   const { addToast } = useToast()
-  const clientRef = useRef<HomelabMCPClient | null>(null)
+  const clientRef = useRef<TomoMCPClient | null>(null)
   const [isConnected, setIsConnected] = useState(false)
   const [isConnecting, setIsConnecting] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const hasShownConnectionError = useRef(false)
+  const hasShownConnectionSuccess = useRef(false)
 
   const handleConnectionSuccess = useCallback(() => {
     setIsConnected(true)
     setError(null)
     hasShownConnectionError.current = false
-    addToast({
-      type: 'success',
-      title: 'Connected',
-      message: 'Successfully connected to homelab server.',
-      duration: 3000
-    })
-  }, [addToast])
+    hasShownConnectionSuccess.current = true
+    // No success toast - only show toasts for connection errors
+  }, [])
 
   const handleConnectionFailure = useCallback((message: string) => {
     setError(message)
@@ -77,7 +86,7 @@ export function useMcpClient({
 
   // Initialize client
   useEffect(() => {
-    clientRef.current = new HomelabMCPClient(serverUrl)
+    clientRef.current = new TomoMCPClient(serverUrl)
   }, [serverUrl])
 
   // Connection state management
@@ -98,32 +107,33 @@ export function useMcpClient({
     }
   }, [handleConnectionFailure, handleConnectionSuccess, isConnecting, isConnected])
 
-  // Auto-connect on mount - immediate attempt
+  // Auto-connect on mount - runs once
   useEffect(() => {
+    let mounted = true
+    let hasAttempted = false
+
     const attemptConnection = async () => {
-      if (!clientRef.current || isConnecting || isConnected) return
-      
+      if (!clientRef.current || hasAttempted) return
+      hasAttempted = true
+
       setIsConnecting(true)
       setError(null)
-      
+
       try {
         await clientRef.current.connect()
-        handleConnectionSuccess()
+        if (mounted) handleConnectionSuccess()
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'Connection failed'
-        handleConnectionFailure(errorMessage)
+        if (mounted) handleConnectionFailure(errorMessage)
       } finally {
-        setIsConnecting(false)
+        if (mounted) setIsConnecting(false)
       }
     }
-    
-    // Try connecting immediately
+
     attemptConnection()
-    
-    // Also try after a delay to ensure client is ready
-    const timer = setTimeout(attemptConnection, 1000)
-    return () => clearTimeout(timer)
-  }, [handleConnectionFailure, handleConnectionSuccess])
+
+    return () => { mounted = false }
+  }, [serverUrl]) // Only re-run if serverUrl changes
 
   // Reconnection logic
   useEffect(() => {
@@ -153,16 +163,16 @@ export function useMcpClient({
   }, [])
 
   // Placeholder functions for compatibility
-  const readResource = useCallback(async (uri: string) => {
+  const readResource = useCallback(async (_uri: string) => {
     throw new Error('Resource reading not yet implemented')
   }, [])
 
-  const getPrompt = useCallback(async (name: string, args?: Record<string, unknown>) => {
+  const getPrompt = useCallback(async (_name: string, _args?: Record<string, unknown>) => {
     throw new Error('Prompt retrieval not yet implemented')
   }, [])
 
   const authenticate = useCallback(async () => {
-    // Authentication handled automatically in HomelabMCPClient
+    // Authentication handled automatically in TomoMCPClient
     return connect()
   }, [connect])
 

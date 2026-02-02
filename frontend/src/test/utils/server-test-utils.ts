@@ -28,6 +28,8 @@ export function createMockFile(content: string, name: string, type = 'text/plain
 export function simulateFileLoad(content: string) {
   mockFileReader.result = content
   setTimeout(() => {
-    mockFileReader.onload?.()
+    if (typeof mockFileReader.onload === 'function') {
+      mockFileReader.onload()
+    }
   }, 0)
 }

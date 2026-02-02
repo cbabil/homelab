@@ -263,7 +263,7 @@ export const PASSWORD_SECURITY = {
   
   policies: {
     preventReuse: false, // Not implemented in this phase
-    enforceExpiration: false, // Not required for homelab
+    enforceExpiration: false, // Not required for tomo
     requireChange: false // Not required for initial registration
   }
 } as const

@@ -25,6 +25,7 @@ class InstallationStatus(str, Enum):
     PENDING = "pending"
     PULLING = "pulling"
     CREATING = "creating"
+    STARTING = "starting"
     RUNNING = "running"
     STOPPED = "stopped"
     ERROR = "error"
@@ -81,3 +82,8 @@ class InstalledApp(BaseModel):
     installed_at: Optional[str] = Field(None)
     started_at: Optional[str] = Field(None)
     error_message: Optional[str] = Field(None)
+    step_durations: Optional[Dict[str, int]] = Field(default=None, description="Duration in seconds for each step")
+    step_started_at: Optional[str] = Field(default=None, description="When current step started")
+    networks: Optional[List[str]] = Field(default=None, description="Docker networks")
+    named_volumes: Optional[List[Dict[str, str]]] = Field(default=None, description="Named volume mounts")
+    bind_mounts: Optional[List[Dict[str, str]]] = Field(default=None, description="Bind mounts")

@@ -6,11 +6,6 @@ import structlog
 from sqlalchemy import text
 
 from database.connection import Base, db_manager
-from models.marketplace import (
-    MarketplaceRepoTable,
-    MarketplaceAppTable,
-    AppRatingTable,
-)
 
 logger = structlog.get_logger("schema_marketplace")
 

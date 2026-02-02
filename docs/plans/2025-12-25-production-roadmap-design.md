@@ -1,10 +1,10 @@
-# Homelab Assistant v1.0 - Production Roadmap
+# Tomo v1.0 - Production Roadmap
 
 ## Product Overview
 
-A self-hosted web application for managing homelab infrastructure. Users install via RPM package, connect to remote servers via SSH, and deploy Docker applications through a curated + extensible catalog.
+A self-hosted web application for managing tomo infrastructure. Users install via RPM package, connect to remote servers via SSH, and deploy Docker applications through a curated + extensible catalog.
 
-**Target Users:** Homelab enthusiasts, sysadmins managing multiple servers
+**Target Users:** Tomo enthusiasts, sysadmins managing multiple servers
 
 **Deployment Model:**
 - Packaged as `.rpm` (RHEL/Fedora/Rocky)
@@ -82,7 +82,7 @@ Admin can install the app, create first account via CLI, log in via browser, and
 
 ## Phase 2: Server Management
 
-**Goal:** Users can add, test, and manage SSH connections to their homelab servers.
+**Goal:** Users can add, test, and manage SSH connections to their tomo servers.
 
 ### Backend Deliverables
 - Server model (id, name, host, port, username, auth_type, status)
@@ -294,10 +294,10 @@ User sees dashboard with server health, drills into metrics, browses activity lo
 - OWASP Top 10 review and fixes
 
 ### Backup & Restore
-- Export command: `homelab-assistant export --output backup.enc`
+- Export command: `tomo export --output backup.enc`
   - Exports: users, servers, credentials, settings, app configs
   - Encrypted with user-provided password
-- Import command: `homelab-assistant import backup.enc`
+- Import command: `tomo import backup.enc`
   - Validates backup integrity
   - Handles conflicts (overwrite vs skip)
 - UI: Settings → Export/Import buttons
@@ -306,12 +306,12 @@ User sees dashboard with server health, drills into metrics, browses activity lo
 - Spec file for rpmbuild
 - Systemd service unit
 - Post-install script:
-  - Creates homelab user
+  - Creates tomo user
   - Sets up data directory
   - Initializes database
-- Config file: `/etc/homelab-assistant/config.yaml`
-- Log location: `/var/log/homelab-assistant/`
-- Data location: `/var/lib/homelab-assistant/`
+- Config file: `/etc/tomo/config.yaml`
+- Log location: `/var/log/tomo/`
+- Data location: `/var/lib/tomo/`
 
 ### Documentation
 - Installation guide (RPM + manual)

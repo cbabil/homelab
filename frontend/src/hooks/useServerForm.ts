@@ -1,21 +1,23 @@
 /**
  * Server Form Hook
- * 
+ *
  * Custom hook for managing server form state and handlers.
  */
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { ServerConnection, ServerConnectionInput, AuthType } from '@/types/server'
 
+const INITIAL_FORM_DATA: ServerConnectionInput = {
+  name: '',
+  host: '',
+  port: 22,
+  username: '',
+  auth_type: 'password',
+  credentials: {}
+}
+
 export function useServerForm(server?: ServerConnection) {
-  const [formData, setFormData] = useState<ServerConnectionInput>({
-    name: '',
-    host: '',
-    port: 22,
-    username: '',
-    auth_type: 'password',
-    credentials: {}
-  })
+  const [formData, setFormData] = useState<ServerConnectionInput>(INITIAL_FORM_DATA)
 
   useEffect(() => {
     if (server) {
@@ -31,14 +33,7 @@ export function useServerForm(server?: ServerConnection) {
         }
       })
     } else {
-      setFormData({
-        name: '',
-        host: '',
-        port: 22,
-        username: '',
-        auth_type: 'password',
-        credentials: {}
-      })
+      setFormData(INITIAL_FORM_DATA)
     }
   }, [server])
 
@@ -57,10 +52,15 @@ export function useServerForm(server?: ServerConnection) {
     }))
   }
 
+  const resetForm = useCallback(() => {
+    setFormData(INITIAL_FORM_DATA)
+  }, [])
+
   return {
     formData,
     handleInputChange,
     handleAuthTypeChange,
-    handleCredentialChange
+    handleCredentialChange,
+    resetForm
   }
 }

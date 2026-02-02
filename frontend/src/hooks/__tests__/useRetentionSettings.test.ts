@@ -3,7 +3,7 @@
  *
  * Unit tests for the retention settings hook including:
  * - Settings initialization and state management
- * - Settings service integration
+ * - MCP backend integration
  * - Preview cleanup operations and validation
  * - Settings validation
  */
@@ -11,111 +11,69 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { useRetentionSettings } from '../useRetentionSettings'
+import type { RetentionSettings, RetentionOperationResult } from '@/types/settings'
 
-// Mock settings service with proper structure
-vi.mock('@/services/settingsService', () => ({
-  settingsService: {
-    initialize: vi.fn().mockResolvedValue({
-      system: {
-        dataRetention: {
-          logRetentionDays: 14,
-          otherDataRetentionDays: 14,
-          autoCleanupEnabled: false,
-          lastCleanupDate: undefined
-        }
-      }
-    }),
-    getSettings: vi.fn().mockReturnValue({
-      system: {
-        dataRetention: {
-          logRetentionDays: 14,
-          otherDataRetentionDays: 14,
-          autoCleanupEnabled: false,
-          lastCleanupDate: undefined
-        }
-      }
-    }),
-    updateSettings: vi.fn().mockResolvedValue({
-      success: true,
-      settings: {
-        system: {
-          dataRetention: {
-            logRetentionDays: 14,
-            otherDataRetentionDays: 14,
-            autoCleanupEnabled: false,
-            lastCleanupDate: undefined
-          }
-        }
-      }
-    })
+// Mock MCP client
+const mockCallTool = vi.fn()
+const mockMcpClient = {
+  callTool: mockCallTool
+}
+
+// Mock MCP Provider
+vi.mock('@/providers/MCPProvider', () => ({
+  useMCP: vi.fn(() => ({
+    client: mockMcpClient,
+    isConnected: true
+  }))
+}))
+
+// Mock system logger
+vi.mock('@/services/systemLogger', () => ({
+  mcpLogger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn()
   }
 }))
 
-// Import the mocked service
-import { settingsService } from '@/services/settingsService'
-const mockSettingsService = vi.mocked(settingsService)
+// Default retention settings for tests
+const defaultSettings: RetentionSettings = {
+  log_retention: 30,
+  data_retention: 90,
+  last_updated: new Date().toISOString(),
+  updated_by_user_id: 'test-user'
+}
 
 describe('useRetentionSettings', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-
-    // Reset settings service mock to default state
-    mockSettingsService.initialize.mockResolvedValue({
-      system: {
-        dataRetention: {
-          logRetentionDays: 14,
-          otherDataRetentionDays: 14,
-          autoCleanupEnabled: false,
-          lastCleanupDate: undefined
-        }
-      }
-    })
-
-    mockSettingsService.getSettings.mockReturnValue({
-      system: {
-        dataRetention: {
-          logRetentionDays: 14,
-          otherDataRetentionDays: 14,
-          autoCleanupEnabled: false,
-          lastCleanupDate: undefined
-        }
-      }
-    })
-
-    mockSettingsService.updateSettings.mockResolvedValue({
+    // Default successful response for get_retention_settings
+    mockCallTool.mockResolvedValue({
       success: true,
-      settings: {
-        system: {
-          dataRetention: {
-            logRetentionDays: 14,
-            otherDataRetentionDays: 14,
-            autoCleanupEnabled: false,
-            lastCleanupDate: undefined
-          }
-        }
-      }
+      data: { data: defaultSettings }
     })
   })
 
-  describe('Settings Initialization', () => {
-    it('should initialize with loading state', () => {
+  describe('Initialization', () => {
+    it('should load settings from MCP backend on mount', async () => {
       const { result } = renderHook(() => useRetentionSettings())
 
       expect(result.current.isLoading).toBe(true)
-      expect(result.current.settings).toBeNull()
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false)
+      })
+
+      expect(mockCallTool).toHaveBeenCalledWith('get_retention_settings', { params: {} })
+      expect(result.current.settings).toEqual(defaultSettings)
       expect(result.current.error).toBeNull()
     })
 
-    it('should load settings successfully', async () => {
-      mockSettingsService.getSettings.mockReturnValue({
-        system: {
-          dataRetention: {
-            logRetentionDays: 30,
-            otherDataRetentionDays: 365,
-            autoCleanupEnabled: false,
-            lastCleanupDate: undefined
-          }
-        }
+    it('should use default settings when MCP fails', async () => {
+      mockCallTool.mockResolvedValue({
+        success: false,
+        error: 'Failed to load'
       })
 
       const { result } = renderHook(() => useRetentionSettings())
@@ -125,100 +83,92 @@ describe('useRetentionSettings', () => {
       })
 
       expect(result.current.settings).toEqual({
-        logRetentionDays: 30,
-        otherDataRetentionDays: 365,
-        autoCleanupEnabled: false,
-        lastCleanupDate: undefined
+        log_retention: 30,
+        data_retention: 90
       })
-      expect(result.current.error).toBeNull()
-      expect(mockSettingsService.initialize).toHaveBeenCalled()
-      expect(mockSettingsService.getSettings).toHaveBeenCalled()
     })
 
-    it('should handle settings loading errors', async () => {
-      // Mock initialize to reject
-      mockSettingsService.initialize.mockRejectedValue(new Error('Failed to load settings'))
-
+    it('should report backend connected status', async () => {
       const { result } = renderHook(() => useRetentionSettings())
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
       })
 
-      expect(result.current.settings).toBeNull()
-      expect(result.current.error).toBe('Failed to load settings')
+      expect(result.current.isBackendConnected).toBe(true)
     })
   })
 
-  describe('Settings Updates', () => {
-    beforeEach(() => {
-      // Initialize with default settings
-      mockSettingsService.getSettings.mockReturnValue({
-        system: {
-          dataRetention: {
-            logRetentionDays: 30,
-            otherDataRetentionDays: 365,
-            autoCleanupEnabled: false,
-            lastCleanupDate: undefined
-          }
-        }
-      })
-    })
+  describe('Update Settings', () => {
+    it('should update log retention via MCP', async () => {
+      const updatedSettings: RetentionSettings = {
+        ...defaultSettings,
+        log_retention: 60
+      }
 
-    it('should update settings successfully', async () => {
+      mockCallTool
+        .mockResolvedValueOnce({ success: true, data: { data: defaultSettings } }) // Initial load
+        .mockResolvedValueOnce({ success: true, data: { data: updatedSettings } }) // Update
+
       const { result } = renderHook(() => useRetentionSettings())
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
       })
 
-      // Mock successful update
-      mockSettingsService.updateSettings.mockResolvedValue({
-        success: true,
-        settings: {
-          system: {
-            dataRetention: {
-              logRetentionDays: 60,
-              otherDataRetentionDays: 365,
-              autoCleanupEnabled: false,
-              lastCleanupDate: undefined
-            }
-          }
+      await act(async () => {
+        await result.current.updateRetentionSettings({ log_retention: 60 })
+      })
+
+      expect(mockCallTool).toHaveBeenCalledWith('update_retention_settings', {
+        params: {
+          log_retention: 60,
+          data_retention: 90
         }
+      })
+
+      expect(result.current.settings?.log_retention).toBe(60)
+    })
+
+    it('should update data retention via MCP', async () => {
+      const updatedSettings: RetentionSettings = {
+        ...defaultSettings,
+        data_retention: 180
+      }
+
+      mockCallTool
+        .mockResolvedValueOnce({ success: true, data: { data: defaultSettings } })
+        .mockResolvedValueOnce({ success: true, data: { data: updatedSettings } })
+
+      const { result } = renderHook(() => useRetentionSettings())
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false)
       })
 
       await act(async () => {
-        await result.current.updateRetentionSettings({ logRetentionDays: 60 })
+        await result.current.updateRetentionSettings({ data_retention: 180 })
       })
 
-      expect(mockSettingsService.updateSettings).toHaveBeenCalledWith('system', {
-        dataRetention: {
-          logRetentionDays: 60,
-          otherDataRetentionDays: 365,
-          autoCleanupEnabled: false,
-          lastCleanupDate: undefined
-        }
-      })
-
-      expect(result.current.settings?.logRetentionDays).toBe(60)
+      expect(result.current.settings?.data_retention).toBe(180)
     })
 
     it('should handle update failures', async () => {
+      mockCallTool
+        .mockResolvedValueOnce({ success: true, data: { data: defaultSettings } })
+        .mockResolvedValueOnce({ success: false, data: { error: 'Update failed' } })
+
       const { result } = renderHook(() => useRetentionSettings())
 
       await waitFor(() => {
         expect(result.current.isLoading).toBe(false)
       })
 
-      mockSettingsService.updateSettings.mockResolvedValue({
-        success: false,
-        error: 'Update failed'
+      const updateResult = await act(async () => {
+        return result.current.updateRetentionSettings({ log_retention: 60 })
       })
 
-      await act(async () => {
-        await result.current.updateRetentionSettings({ logRetentionDays: 60 })
-      })
-
+      expect(updateResult?.success).toBe(false)
       expect(result.current.error).toBe('Update failed')
     })
 
@@ -229,51 +179,120 @@ describe('useRetentionSettings', () => {
         expect(result.current.isLoading).toBe(false)
       })
 
+      // Clear the initial load call
+      mockCallTool.mockClear()
+
       // Try to update with invalid values (below minimum)
       await act(async () => {
-        await result.current.updateRetentionSettings({ logRetentionDays: 5 })
+        await result.current.updateRetentionSettings({ log_retention: 5 })
       })
 
-      // Should not call update service with invalid values
-      expect(mockSettingsService.updateSettings).not.toHaveBeenCalled()
+      // Should not call update tool with invalid values
+      expect(mockCallTool).not.toHaveBeenCalled()
+      expect(result.current.error).toContain('Log retention must be between')
     })
   })
 
   describe('Preview Cleanup Operations', () => {
-    beforeEach(() => {
-      // Initialize with settings
-      mockSettingsService.getSettings.mockReturnValue({
-        system: {
-          dataRetention: {
-            logRetentionDays: 30,
-            otherDataRetentionDays: 365,
-            autoCleanupEnabled: false,
-            lastCleanupDate: undefined
-          }
+    it('should call preview cleanup via MCP', async () => {
+      const previewResult = {
+        retention_type: 'access_logs',
+        affected_records: 150,
+        oldest_record_date: '2024-01-01T00:00:00Z',
+        newest_record_date: '2024-01-15T00:00:00Z',
+        estimated_space_freed_mb: 0.15,
+        cutoff_date: '2024-01-01T00:00:00Z'
+      }
+
+      mockCallTool
+        .mockResolvedValueOnce({ success: true, data: { data: defaultSettings } })
+        .mockResolvedValueOnce({ success: true, data: { data: previewResult } })
+
+      const { result } = renderHook(() => useRetentionSettings())
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false)
+      })
+
+      let previewResponse: RetentionOperationResult | undefined
+      await act(async () => {
+        previewResponse = await result.current.previewCleanup('access_logs')
+      })
+
+      expect(mockCallTool).toHaveBeenCalledWith('preview_retention_cleanup', {
+        params: { retention_type: 'access_logs' }
+      })
+
+      expect(previewResponse!.success).toBe(true)
+      expect(result.current.previewResult?.logEntriesAffected).toBe(150)
+    })
+
+    it('should handle preview failure', async () => {
+      mockCallTool
+        .mockResolvedValueOnce({ success: true, data: { data: defaultSettings } })
+        .mockResolvedValueOnce({ success: false, data: { message: 'Preview failed' } })
+
+      const { result } = renderHook(() => useRetentionSettings())
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false)
+      })
+
+      let previewResponse: RetentionOperationResult | undefined
+      await act(async () => {
+        previewResponse = await result.current.previewCleanup()
+      })
+
+      expect(previewResponse!.success).toBe(false)
+      expect(result.current.error).toBe('Preview failed')
+    })
+  })
+
+  describe('Perform Cleanup Operations', () => {
+    it('should get CSRF token and perform cleanup', async () => {
+      const csrfToken = 'test-csrf-token-12345678901234567890'
+      const cleanupResult = {
+        operation_id: 'cleanup-123',
+        retention_type: 'access_logs',
+        records_affected: 150,
+        space_freed_mb: 0.15,
+        duration_seconds: 2.5,
+        start_time: '2024-01-01T00:00:00Z',
+        end_time: '2024-01-01T00:00:03Z'
+      }
+
+      mockCallTool
+        .mockResolvedValueOnce({ success: true, data: { data: defaultSettings } }) // Load
+        .mockResolvedValueOnce({ success: true, data: { data: { csrf_token: csrfToken } } }) // CSRF
+        .mockResolvedValueOnce({ success: true, data: { data: cleanupResult } }) // Cleanup
+
+      const { result } = renderHook(() => useRetentionSettings())
+
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false)
+      })
+
+      let cleanupResponse: RetentionOperationResult | undefined
+      await act(async () => {
+        cleanupResponse = await result.current.performCleanup('access_logs')
+      })
+
+      expect(mockCallTool).toHaveBeenCalledWith('get_csrf_token', { params: {} })
+      expect(mockCallTool).toHaveBeenCalledWith('perform_retention_cleanup', {
+        params: {
+          retention_type: 'access_logs',
+          csrf_token: csrfToken
         }
       })
+
+      expect(cleanupResponse!.success).toBe(true)
+      expect(cleanupResponse!.deletedCounts?.access_logs).toBe(150)
     })
 
-    it('should preview cleanup successfully', async () => {
-      const { result } = renderHook(() => useRetentionSettings())
-
-      await waitFor(() => {
-        expect(result.current.isLoading).toBe(false)
-      })
-
-      let previewResult
-      await act(async () => {
-        previewResult = await result.current.previewCleanup()
-      })
-
-      expect(previewResult.success).toBe(true)
-      expect(result.current.previewResult).toBeDefined()
-      expect(result.current.previewResult?.logEntriesAffected).toBeGreaterThanOrEqual(0)
-      expect(result.current.previewResult?.otherDataAffected).toBeGreaterThanOrEqual(0)
-    })
-
-    it('should handle preview when settings not loaded', async () => {
-      mockSettingsService.getSettings.mockReturnValue(null)
+    it('should fail if CSRF token cannot be obtained', async () => {
+      mockCallTool
+        .mockResolvedValueOnce({ success: true, data: { data: defaultSettings } })
+        .mockResolvedValueOnce({ success: false }) // CSRF fails
 
       const { result } = renderHook(() => useRetentionSettings())
 
@@ -281,25 +300,29 @@ describe('useRetentionSettings', () => {
         expect(result.current.isLoading).toBe(false)
       })
 
-      let previewResult
+      let cleanupResponse: RetentionOperationResult | undefined
       await act(async () => {
-        previewResult = await result.current.previewCleanup()
+        cleanupResponse = await result.current.performCleanup()
       })
 
-      expect(previewResult.success).toBe(false)
-      expect(previewResult.error).toBe('Settings not loaded')
+      expect(cleanupResponse!.success).toBe(false)
+      expect(cleanupResponse!.error).toContain('CSRF token')
     })
   })
 
   describe('Data Validation and Limits', () => {
-    it('should provide correct validation limits', () => {
+    it('should provide correct validation limits', async () => {
       const { result } = renderHook(() => useRetentionSettings())
 
+      await waitFor(() => {
+        expect(result.current.isLoading).toBe(false)
+      })
+
       expect(result.current.limits).toEqual({
-        LOG_MIN_DAYS: 14,
-        LOG_MAX_DAYS: 365,
-        OTHER_DATA_MIN_DAYS: 14,
-        OTHER_DATA_MAX_DAYS: 365
+        LOG_MIN: 7,
+        LOG_MAX: 365,
+        DATA_MIN: 7,
+        DATA_MAX: 365
       })
     })
 
@@ -310,47 +333,45 @@ describe('useRetentionSettings', () => {
         expect(result.current.isLoading).toBe(false)
       })
 
-      // Test log retention validation
+      // Test log retention validation - below minimum
       let validation = result.current.validateRetentionSettings({
-        logRetentionDays: 5,
-        otherDataRetentionDays: 14,
-        autoCleanupEnabled: false
+        log_retention: 5,
+        data_retention: 30
       })
       expect(validation.valid).toBe(false)
 
+      // Test log retention validation - above maximum
       validation = result.current.validateRetentionSettings({
-        logRetentionDays: 400,
-        otherDataRetentionDays: 14,
-        autoCleanupEnabled: false
+        log_retention: 400,
+        data_retention: 30
       })
       expect(validation.valid).toBe(false)
 
+      // Test valid log retention
       validation = result.current.validateRetentionSettings({
-        logRetentionDays: 30,
-        otherDataRetentionDays: 14,
-        autoCleanupEnabled: false
+        log_retention: 30,
+        data_retention: 30
       })
       expect(validation.valid).toBe(true)
 
-      // Test other data retention validation
+      // Test data retention validation - below minimum
       validation = result.current.validateRetentionSettings({
-        logRetentionDays: 14,
-        otherDataRetentionDays: 5,
-        autoCleanupEnabled: false
+        log_retention: 30,
+        data_retention: 5
       })
       expect(validation.valid).toBe(false)
 
+      // Test data retention validation - above maximum
       validation = result.current.validateRetentionSettings({
-        logRetentionDays: 14,
-        otherDataRetentionDays: 400,
-        autoCleanupEnabled: false
+        log_retention: 30,
+        data_retention: 400
       })
       expect(validation.valid).toBe(false)
 
+      // Test valid data retention
       validation = result.current.validateRetentionSettings({
-        logRetentionDays: 14,
-        otherDataRetentionDays: 365,
-        autoCleanupEnabled: false
+        log_retention: 30,
+        data_retention: 365
       })
       expect(validation.valid).toBe(true)
     })

@@ -1,11 +1,13 @@
 /**
  * Single Password Input Component
- * 
+ *
  * Reusable password input with toggle visibility functionality.
  */
 
-import { Eye, EyeOff, Lock } from 'lucide-react'
-import { cn } from '@/utils/cn'
+import TextField from '@mui/material/TextField'
+import InputAdornment from '@mui/material/InputAdornment'
+import IconButton from '@mui/material/IconButton'
+import { VisibilityOutlined, VisibilityOffOutlined, Lock } from '@mui/icons-material'
 
 interface PasswordFieldInputProps {
   id: string
@@ -28,56 +30,55 @@ export function PasswordFieldInput({
   placeholder,
   showPassword,
   error,
-  isValid,
   isSubmitting,
   autoComplete,
   onChange,
   onToggleVisibility
 }: PasswordFieldInputProps) {
   return (
-    <div className="form-group">
-      <label htmlFor={id} className="form-label">
-        {label}
-      </label>
-      <div className="input-password-wrapper">
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Lock className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <input
-            id={id}
-            type={showPassword ? 'text' : 'password'}
-            autoComplete={autoComplete}
-            required
-            className={cn(
-              'input-base input-password pl-10',
-              error && 'input-error',
-              isValid && value && 'form-field-valid'
-            )}
-            placeholder={placeholder}
-            value={value}
-            onChange={(e) => onChange(e.target.value)}
-            disabled={isSubmitting}
-          />
-          <button
-            type="button"
-            className="input-password-toggle"
-            onClick={onToggleVisibility}
-            disabled={isSubmitting}
-          >
-            {showPassword ? (
-              <EyeOff className="h-4 w-4 text-muted-foreground" />
-            ) : (
-              <Eye className="h-4 w-4 text-muted-foreground" />
-            )}
-          </button>
-        </div>
-      </div>
-      {error && (
-        <div className="form-error-message">
-          {error}
-        </div>
-      )}
-    </div>
+    <TextField
+      id={id}
+      label={label}
+      type={showPassword ? 'text' : 'password'}
+      autoComplete={autoComplete}
+      required
+      fullWidth
+      placeholder={placeholder}
+      value={value}
+      onChange={(e) => onChange(e.target.value)}
+      disabled={isSubmitting}
+      error={!!error}
+      helperText={error}
+      slotProps={{
+        input: {
+          startAdornment: (
+            <InputAdornment position="start">
+              <Lock color="action" />
+            </InputAdornment>
+          ),
+          endAdornment: (
+            <InputAdornment position="end">
+              <IconButton
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                onClick={onToggleVisibility}
+                disabled={isSubmitting}
+                edge="end"
+                disableRipple
+                sx={{
+                  color: 'hsl(250 76% 72%)',
+                  '&:hover': {
+                    backgroundColor: 'transparent',
+                    color: 'hsl(250 85% 80%)'
+                  }
+                }}
+              >
+                {showPassword ? <VisibilityOutlined /> : <VisibilityOffOutlined />}
+              </IconButton>
+            </InputAdornment>
+          ),
+        },
+      }}
+      sx={{ mb: 2 }}
+    />
   )
 }

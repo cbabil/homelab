@@ -1,259 +1,295 @@
-# Homelab Assistant
+<p align="center">
+  <img src="assets/logo.png" alt="Tomo" width="200">
+</p>
 
-A self-hosted web application for managing homelab infrastructure. Connect to remote servers via SSH, deploy Docker applications through an extensible catalog, and monitor your infrastructure.
+<h1 align="center">Tomo</h1>
+
+<p align="center">
+  <strong>A self-hosted platform for managing your tomo infrastructure</strong>
+</p>
+
+<p align="center">
+  <a href="https://github.com/cbabil/tomo/actions/workflows/test.yml">
+    <img src="https://github.com/cbabil/tomo/actions/workflows/test.yml/badge.svg" alt="CI Status">
+  </a>
+  <a href="https://codecov.io/gh/cbabil/tomo">
+    <img src="https://codecov.io/gh/cbabil/tomo/branch/main/graph/badge.svg" alt="Coverage">
+  </a>
+  <img src="https://img.shields.io/badge/python-3.12+-blue.svg" alt="Python 3.12+">
+  <img src="https://img.shields.io/badge/typescript-5.0+-blue.svg" alt="TypeScript 5.0+">
+  <img src="https://img.shields.io/badge/license-Proprietary-red.svg" alt="License">
+</p>
+
+<p align="center">
+  <a href="#features">Features</a> •
+  <a href="#quick-start">Quick Start</a> •
+  <a href="#installation">Installation</a> •
+  <a href="#documentation">Documentation</a>
+</p>
+
+---
+
+## Overview
+
+Tomo is a web-based management platform for tomo infrastructure. Connect to remote servers via SSH, deploy Docker applications from a marketplace, monitor system health, and manage everything from a single dashboard.
+
+<p align="center">
+  <img src="assets/screenshot-dashboard.png" alt="Dashboard Screenshot" width="800">
+</p>
 
 ## Features
 
 ### Server Management
-- **SSH Connection Management** - Connect to servers using password or SSH key authentication
-- **Server Health Monitoring** - Real-time status checks and connectivity testing
-- **Multi-Server Support** - Manage multiple homelab servers from one interface
+- **SSH Connection Management** - Password or SSH key authentication
+- **Real-time Health Monitoring** - CPU, memory, disk usage
+- **Automated Provisioning** - Guided Docker and Agent installation
+- **Multi-Server Support** - Manage all your servers from one place
 
 ### Application Marketplace
-- **App Catalog** - Browse and deploy containerized applications
-- **Search & Filter** - Find apps by name, category, or status
-- **One-Click Deploy** - Deploy apps to VMs with Docker via SSH
-- **Bulk Operations** - Select multiple apps for bulk uninstall or removal
-- **Custom Configuration** - Override environment variables and port mappings
-- **Built-in Apps**: Portainer, Nginx Proxy Manager, Nextcloud, Jellyfin, Pi-hole, n8n
-
-### Monitoring & Metrics
-- **Server Metrics** - CPU, memory, disk usage monitoring
-- **Container Status** - Track running containers across servers
-- **Activity Logging** - Audit trail of all operations
-- **Dashboard** - Unified view of infrastructure health
+- **Git-based App Catalog** - Browse and deploy containerized apps
+- **One-Click Deploy** - Deploy to any connected server
+- **Custom Configuration** - Override environment variables and ports
+- **Built-in Apps** - Portainer, Nginx Proxy Manager, Nextcloud, Jellyfin, and more
 
 ### Security
-- **AES-256 Credential Encryption** - Secure storage of SSH credentials
-- **JWT Authentication** - Secure user sessions with bcrypt password hashing
-- **Role-Based Access** - Admin and user roles with permission controls
-- **Input Validation** - Protection against injection attacks
-- **Rate Limiting** - Brute force protection on auth endpoints
+- **AES-256 Encryption** - Secure credential storage
+- **JWT Authentication** - With bcrypt password hashing
+- **NIST SP 800-63B Compliance** - Password policy with blocklist
+- **Rate Limiting** - Brute force protection
+- **Session Management** - View and revoke active sessions
 
-### Backup & Recovery
-- **Encrypted Backups** - PBKDF2 + Fernet encryption for backup files
-- **CLI Export/Import** - Command-line backup management
-- **Full Data Backup** - Users, servers, and settings included
+### Remote Agent
+- **WebSocket-based Agent** - Runs on remote servers
+- **Secure Command Execution** - Allowlist-based validation
+- **Token Rotation** - Automatic security token refresh
+- **Docker Integration** - Container management via agent
 
-## Quick Start
+---
 
-### Prerequisites
+## Installation
 
-- Python 3.11+
-- Node.js 18+ and Yarn
-- Docker (on target servers)
+### Option 1: DEB Package (Debian/Ubuntu) - Recommended
 
-### Development Setup
+**Requirements:** Debian 12+ or Ubuntu 22.04+
+
+```bash
+# Download latest release
+wget https://github.com/cbabil/tomo/releases/latest/download/tomo_1.0.0-1_amd64.deb
+
+# Install (automatically installs dependencies)
+sudo apt install ./tomo_1.0.0-1_amd64.deb
+
+# Start service
+sudo systemctl start tomo
+
+# Create admin account
+tomo admin create
+
+# Access web UI
+open http://localhost
+```
+
+The package installs Python, Node.js, Nginx, and all dependencies automatically.
+
+### Option 2: Docker
+
+**Requirements:** Docker and Docker Compose
+
+```bash
+git clone https://github.com/cbabil/tomo.git
+cd tomo
+docker compose up -d
+```
+
+### Option 3: From Source (Development)
+
+**Requirements:**
+
+| Tool | Version | Install |
+|------|---------|---------|
+| **Python** | 3.12+ | [python.org](https://python.org) |
+| **uv** | latest | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
+| **Bun** | latest | `curl -fsSL https://bun.sh/install \| bash` |
+| **Git** | any | [git-scm.com](https://git-scm.com) |
 
 ```bash
 # Clone repository
-git clone https://github.com/cbabil/homelab.git
-cd homelab
+git clone https://github.com/cbabil/tomo.git
+cd tomo
 
-# Backend setup
+# Backend
 cd backend
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+uv sync --all-extras
+
+# Frontend (new terminal)
+cd frontend
+bun install
+bun run dev
 
 # Start backend
-DATA_DIRECTORY="$(pwd)/data" python src/main.py
-
-# Frontend setup (new terminal)
-cd frontend
-yarn install
-yarn dev
+cd backend
+uv run python src/main.py
 ```
 
-Access the application at http://localhost:5173
+Access the application at **http://localhost:5173**
 
-### Production Deployment (RPM)
+### Using Make (Development)
 
 ```bash
-# Build RPM package
-rpmbuild -ba packaging/homelab-assistant.spec
-
-# Install
-sudo dnf install homelab-assistant-1.0.0-1.x86_64.rpm
-
-# Start service
-sudo systemctl start homelab-assistant
-sudo systemctl enable homelab-assistant
+make setup      # Install all dependencies
+make backend    # Start backend server
+make frontend   # Start frontend dev server
+make test       # Run all tests
 ```
+
+See [Installation Guide](docs/INSTALLATION.md) for detailed instructions.
+
+---
 
 ## Project Structure
 
 ```
-homelab/
-├── frontend/                 # React TypeScript frontend
+tomo/
+├── backend/              # Python MCP server
 │   ├── src/
-│   │   ├── components/      # UI components
-│   │   ├── services/        # MCP client & API services
-│   │   ├── hooks/           # Custom React hooks
-│   │   └── pages/           # Application pages
-│   └── package.json
-├── backend/                  # Python MCP server
+│   │   ├── main.py       # FastMCP entry point
+│   │   ├── tools/        # MCP tool implementations
+│   │   ├── services/     # Business logic
+│   │   ├── models/       # Pydantic models
+│   │   └── lib/          # Utilities & security
+│   ├── pyproject.toml
+│   └── uv.lock
+├── frontend/             # React TypeScript SPA
 │   ├── src/
-│   │   ├── main.py          # FastMCP server entry
-│   │   ├── tools/           # MCP tool implementations
-│   │   ├── services/        # Business logic services
-│   │   ├── models/          # Pydantic data models
-│   │   └── lib/             # Security & utilities
-│   ├── data/
-│   │   └── catalog/         # App catalog YAML files
-│   └── tests/               # Unit tests
-├── packaging/                # RPM & systemd files
-│   ├── homelab-assistant.spec
-│   ├── homelab-assistant.service
-│   └── config.yaml.example
-└── docs/                     # Documentation & plans
+│   │   ├── components/   # UI components
+│   │   ├── pages/        # Route pages
+│   │   ├── hooks/        # Custom hooks
+│   │   ├── services/     # API clients
+│   │   └── providers/    # Context providers
+│   ├── package.json
+│   └── bun.lock
+├── cli/                  # Command-line interface
+│   ├── src/
+│   │   ├── commands/     # CLI commands
+│   │   └── lib/          # MCP client
+│   ├── package.json
+│   └── bun.lock
+├── agent/                # Remote server agent
+│   ├── src/
+│   │   ├── rpc/          # WebSocket RPC
+│   │   └── collectors/   # Metrics collectors
+│   ├── pyproject.toml
+│   └── uv.lock
+├── packaging/            # DEB/RPM packaging
+└── docs/                 # Documentation
 ```
+
+---
 
 ## Technology Stack
 
-| Layer | Technology |
-|-------|------------|
-| Frontend | React 19, TypeScript, Vite, TailwindCSS |
-| Backend | Python 3.11+, FastMCP, SQLite, Paramiko |
-| Protocol | Model Context Protocol (MCP) |
-| Auth | JWT + bcrypt, AES-256 credential encryption |
-| Deployment | RPM packaging, systemd |
+| Component | Technologies |
+|-----------|-------------|
+| **Backend** | Python 3.12, FastMCP, SQLite, Paramiko |
+| **Frontend** | React 19, TypeScript, Vite, TailwindCSS |
+| **CLI** | TypeScript, Ink (React for CLI) |
+| **Agent** | Python, WebSockets, Docker SDK |
+| **Package Managers** | uv (Python), Bun (JavaScript) |
+| **Protocol** | Model Context Protocol (MCP) |
+
+---
 
 ## CLI Commands
 
 ```bash
-# Create admin user
-python src/cli.py create-admin
+# Admin management
+tomo admin create              # Create admin user
+tomo admin reset-password      # Reset admin password
 
-# Export encrypted backup
-python src/cli.py export -o backup.enc -p
+# User management
+tomo user list                 # List all users
+tomo user create               # Create new user
 
-# Import backup
-python src/cli.py import -i backup.enc -p
+# Backup & restore
+tomo backup export             # Export encrypted backup
+tomo backup import             # Import backup
 
-# Initialize database
-python src/cli.py init-db
+# Agent management
+tomo agent list                # List connected agents
+tomo agent rotate-token        # Rotate agent tokens
+
+# Updates
+tomo update                    # Check for updates
 ```
 
-## Configuration
-
-Configuration file: `/etc/homelab-assistant/config.yaml`
-
-```yaml
-server:
-  host: 127.0.0.1
-  port: 8080
-
-security:
-  session_timeout_minutes: 60
-  max_login_attempts: 5
-  lockout_duration_minutes: 15
-
-metrics:
-  enabled: true
-  collection_interval_seconds: 300
-  retention_days: 30
-```
-
-## App Catalog
-
-Add custom apps by creating YAML files in `data/catalog/`:
-
-```yaml
-name: my-app
-description: My custom application
-category: productivity
-docker_compose: |
-  version: '3'
-  services:
-    app:
-      image: myapp:latest
-      ports:
-        - "8080:80"
-env_vars:
-  - name: APP_SECRET
-    description: Application secret key
-    required: true
-```
-
-## API (MCP Tools)
-
-| Tool | Description |
-|------|-------------|
-| `health_check` | System health status |
-| `login` / `logout` | Authentication |
-| `list_servers` / `add_server` | Server management |
-| `test_connection` | SSH connectivity test |
-| `search_apps` | Search and filter app catalog |
-| `install_app` / `uninstall_app` | Deploy/remove apps on servers |
-| `mark_app_uninstalled` | Mark app as uninstalled (status only) |
-| `mark_apps_uninstalled_bulk` | Bulk uninstall apps |
-| `remove_app` / `remove_apps_bulk` | Remove apps from catalog |
-| `start_app` / `stop_app` | Start/stop deployed containers |
-| `get_server_metrics` | CPU, memory, disk stats |
-| `get_activity_log` | Audit trail |
-| `export_backup` / `import_backup` | Backup operations |
+---
 
 ## Documentation
 
-Detailed documentation is available in the `docs/` folder:
+| Document | Description |
+|----------|-------------|
+| [Installation Guide](docs/INSTALLATION.md) | Detailed installation instructions |
+| [CLI Reference](docs/CLI_REFERENCE.md) | All CLI commands |
+| [Environment Variables](docs/ENV_REFERENCE.md) | Configuration options |
+| [Troubleshooting](docs/TROUBLESHOOTING.md) | Common issues & solutions |
+| [MCP Tools Reference](docs/MCP_TOOLS_REFERENCE.md) | API documentation |
 
-- **[Applications](docs/features/applications.md)** - Deploy and manage apps
-- **[Marketplace](docs/features/marketplace.md)** - Git-based app discovery and import
-- **[Data Retention](docs/features/data-retention-user-guide.md)** - Configure data cleanup policies
-- **[Architecture](docs/ARCHITECTURE.md)** - System design and components
-- **[Security Review](docs/SECURITY_REVIEW.md)** - Security considerations
-- **[MCP Protocol](docs/developer/mcp-protocol.md)** - Developer integration guide
+---
 
 ## Development
 
 ### Running Tests
 
 ```bash
-# Backend tests
+# Backend
 cd backend
-source venv/bin/activate
-PYTHONPATH=src pytest tests/unit/ -v
+uv run pytest tests/unit/ -v
 
-# Frontend tests
+# Frontend
 cd frontend
-yarn test
-yarn test:e2e
+bun run test
+bun run test:e2e
+
+# All tests
+make test
 ```
 
 ### Code Quality
 
 ```bash
-# Frontend linting
-yarn lint
-yarn type-check
+# Lint
+make backend-lint    # Ruff
+make frontend-lint   # ESLint
 
-# Backend type checking
-mypy src/
+# Format
+make backend-format  # Ruff
+make frontend-format # Prettier
+
+# Type check
+make typecheck
 ```
-
-## Security Notes
-
-- Credentials encrypted at rest with AES-256
-- Passwords hashed with bcrypt (cost factor 12)
-- JWT tokens with configurable expiration
-- Constant-time comparison for sensitive operations
-- Automatic log sanitization (passwords, tokens masked)
-- Input validation on all endpoints
-- Rate limiting on authentication
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing`)
-3. Commit changes (`git commit -m 'feat: add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing`)
-5. Open a Pull Request
-
-## License
-
-MIT License - see [LICENSE](LICENSE) for details.
 
 ---
 
-**Repository**: [github.com/cbabil/homelab](https://github.com/cbabil/homelab)
+## Security
+
+- **Encryption**: AES-256 for credentials, PBKDF2 for backups
+- **Authentication**: JWT with bcrypt (cost 12)
+- **Password Policy**: NIST SP 800-63B compliant with blocklist
+- **Session Security**: HttpOnly cookies, CSRF protection
+- **Rate Limiting**: Brute force protection on auth endpoints
+- **Audit Logging**: All operations logged with sanitization
+
+---
+
+## License
+
+**Proprietary** - All rights reserved.
+
+See [LICENSE](LICENSE) for details. For licensing inquiries, contact christophe@babilotte.com.
+
+---
+
+<p align="center">
+  <strong>Tomo</strong> • Built by <a href="https://github.com/cbabil">Christophe Babilotte</a>
+</p>

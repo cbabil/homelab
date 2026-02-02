@@ -1,74 +1,129 @@
 /**
  * Unit tests for Header Component
- * 
- * Tests header rendering with MCP connection status.
- * Covers connected and disconnected states with proper context.
+ *
+ * Tests header rendering with user menu and navigation.
+ * Covers authenticated user state with proper context.
  */
 
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { BrowserRouter } from 'react-router-dom'
 import { Header } from './Header'
-import { useMCP } from '@/providers/MCPProvider'
-import { ThemeProvider } from '@/providers/ThemeProvider'
-import { MCPClient } from '@/types/mcp'
+import { ToastProvider } from '@/components/ui/Toast'
 
-// Mock the MCP provider hook
-vi.mock('@/providers/MCPProvider', async () => {
-  const actual = await vi.importActual('@/providers/MCPProvider') as any
+// Mock localStorage
+const localStorageMock = {
+  getItem: vi.fn(() => null),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn()
+}
+Object.defineProperty(window, 'localStorage', { value: localStorageMock })
+
+// Mock data services
+vi.mock('@/hooks/useDataServices', () => ({
+  useDataServices: () => ({
+    factory: {
+      clearDataCaches: vi.fn(),
+      clearServiceCache: vi.fn()
+    }
+  })
+}))
+
+// Mock cache utils
+vi.mock('@/utils/cacheUtils', () => ({
+  clearTomoCaches: vi.fn()
+}))
+
+// Mock ThemeSwitcher to avoid localStorage issues
+vi.mock('@/components/ui/ThemeSwitcher', () => ({
+  ThemeSwitcher: () => <div data-testid="theme-switcher" />
+}))
+
+// Mock NotificationDropdown
+vi.mock('@/components/ui/NotificationDropdown', () => ({
+  NotificationDropdown: () => <div data-testid="notification-dropdown" />
+}))
+
+const mockUser = {
+  id: 1,
+  username: 'testuser',
+  email: 'test@example.com',
+  role: 'admin',
+  isActive: true,
+  lastLogin: new Date().toISOString()
+}
+
+const mockAuthContext = {
+  user: mockUser,
+  isAuthenticated: true,
+  login: vi.fn(),
+  logout: vi.fn(),
+  register: vi.fn(),
+  loading: false
+}
+
+vi.mock('@/providers/AuthProvider', async () => {
+  const actual = await vi.importActual<typeof import('@/providers/AuthProvider')>('@/providers/AuthProvider')
   return {
     ...actual,
-    useMCP: vi.fn()
+    useAuth: () => mockAuthContext
   }
 })
 
-const mockUseMCP = vi.mocked(useMCP)
-const mockClient = {} as MCPClient
-
-const renderHeaderWithProviders = () => render(
-  <ThemeProvider><Header /></ThemeProvider>
-)
+function renderHeader() {
+  return render(
+    <BrowserRouter>
+      <ToastProvider>
+        <Header />
+      </ToastProvider>
+    </BrowserRouter>
+  )
+}
 
 describe('Header Component', () => {
-  it('should render title and connected status', () => {
-    mockUseMCP.mockReturnValue({ client: mockClient, isConnected: true, error: null })
-    
-    renderHeaderWithProviders()
-    
-    expect(screen.getByText('Homelab Assistant')).toBeInTheDocument()
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it('should render title and branding', () => {
+    renderHeader()
+
+    // Uses translations now
+    expect(screen.getByText('Tomo')).toBeInTheDocument()
     expect(screen.getByText('Professional Edition')).toBeInTheDocument()
-    expect(screen.getByText('Connected')).toBeInTheDocument()
-    
-    const statusElement = screen.getByText('Connected').parentElement
-    expect(statusElement?.querySelector('svg')).toBeInTheDocument()
+    expect(screen.getByAltText('Tomo Logo')).toBeInTheDocument()
   })
 
-  it('should show disconnected status when MCP is disconnected', () => {
-    mockUseMCP.mockReturnValue({
-      client: mockClient, isConnected: false, error: 'Connection failed'
-    })
+  it('should render user menu when user is authenticated', () => {
+    renderHeader()
 
-    renderHeaderWithProviders()
-    expect(screen.getByText('Disconnected')).toBeInTheDocument()
+    expect(screen.getByText('testuser')).toBeInTheDocument()
+    expect(screen.getByText('admin')).toBeInTheDocument()
   })
 
-  it('should have proper header structure', () => {
-    mockUseMCP.mockReturnValue({ client: mockClient, isConnected: true, error: null })
-    renderHeaderWithProviders()
+  it('should have proper header structure with MUI components', () => {
+    renderHeader()
 
     const header = screen.getByRole('banner')
-    expect(header).toHaveClass('sticky', 'top-0', 'z-50')
+    expect(header).toBeInTheDocument()
   })
 
-  it('should handle MCP provider context errors', () => {
-    mockUseMCP.mockImplementation(() => {
-      throw new Error('useMCP must be used within an MCPProvider')
-    })
+  it('should render theme switcher and notification dropdown', () => {
+    renderHeader()
 
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    expect(screen.getByTestId('theme-switcher')).toBeInTheDocument()
+    expect(screen.getByTestId('notification-dropdown')).toBeInTheDocument()
+  })
 
-    expect(() => renderHeaderWithProviders())
-      .toThrow('useMCP must be used within an MCPProvider')
+  it('should render user role in header', () => {
+    renderHeader()
 
-    consoleSpy.mockRestore()
+    // User role is visible in the header
+    expect(screen.getByText('admin')).toBeInTheDocument()
   })
 })

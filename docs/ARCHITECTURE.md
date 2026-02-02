@@ -1,4 +1,4 @@
-# Homelab Assistant System Architecture
+# Tomo System Architecture
 
 ## Table of Contents
 1. [Architecture Overview](#architecture-overview)
@@ -37,7 +37,7 @@ graph TB
     end
     
     subgraph "External Systems"
-        Remote[Remote Homelab Servers<br/>SSH + Docker]
+        Remote[Remote Tomo Servers<br/>SSH + Docker]
     end
     
     UI --> Nginx
@@ -379,7 +379,7 @@ interface MCPResponse<T> {
   };
 }
 
-class HomelabMCPClient implements MCPClient {
+class TomoMCPClient implements MCPClient {
   private transport: MCPTransport;
   private tools: Map<string, MCPTool>;
   
@@ -813,7 +813,7 @@ environment=PYTHONPATH="/app/backend"
 version: '3.8'
 
 services:
-  homelab-assistant:
+  tomo:
     build:
       context: .
       dockerfile: Dockerfile.dev
@@ -854,7 +854,7 @@ class CredentialManager:
     
     def _derive_key(self, password: str) -> bytes:
         password_bytes = password.encode()
-        salt = os.environ.get('HOMELAB_SALT', 'default-salt').encode()
+        salt = os.environ.get('TOMO_SALT', 'default-salt').encode()
         kdf = PBKDF2HMAC(
             algorithm=hashes.SHA256(),
             length=32,
@@ -1013,31 +1013,31 @@ class ApplicationInstallInput(BaseModel):
 set -e
 
 # Build production image
-docker build -t homelab-assistant:latest .
+docker build -t tomo:latest .
 
 # Run with security configurations
 docker run -d \
-  --name homelab-assistant \
+  --name tomo \
   --restart unless-stopped \
   -p 80:80 \
-  -v homelab_data:/app/data \
+  -v tomo_data:/app/data \
   -v /var/run/docker.sock:/var/run/docker.sock:ro \
   --security-opt no-new-privileges \
   --read-only \
   --tmpfs /tmp:rw,noexec,nosuid,size=100m \
   --tmpfs /var/run:rw,noexec,nosuid,size=50m \
   --tmpfs /var/cache/nginx:rw,noexec,nosuid,size=10m \
-  -e HOMELAB_MASTER_PASSWORD="${HOMELAB_MASTER_PASSWORD}" \
-  -e HOMELAB_SALT="${HOMELAB_SALT}" \
-  homelab-assistant:latest
+  -e TOMO_MASTER_PASSWORD="${TOMO_MASTER_PASSWORD}" \
+  -e TOMO_SALT="${TOMO_SALT}" \
+  tomo:latest
 ```
 
 ### Environment Configuration
 
 ```bash
 # .env.production
-HOMELAB_MASTER_PASSWORD=secure_master_password_here
-HOMELAB_SALT=unique_salt_for_encryption
+TOMO_MASTER_PASSWORD=secure_master_password_here
+TOMO_SALT=unique_salt_for_encryption
 MCP_LOG_LEVEL=INFO
 SSH_CONNECTION_TIMEOUT=30
 MAX_CONCURRENT_CONNECTIONS=10

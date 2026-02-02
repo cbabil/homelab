@@ -1,28 +1,33 @@
 /**
  * Dashboard Loading State Component
- * 
+ *
  * Loading skeleton shown while dashboard data is being fetched.
  */
 
+import { Card, Stack, Grid } from '@mui/material'
+import { Skeleton } from '@/components/ui/Skeleton'
+
 export function DashboardLoadingState() {
   return (
-    <div className="space-y-6">
-      <div className="space-y-2">
-        <div className="h-8 bg-muted rounded w-48" />
-        <div className="h-4 bg-muted rounded w-96" />
-      </div>
-      
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <Stack spacing={3}>
+      <Stack spacing={1}>
+        <Skeleton sx={{ height: 32, width: 192 }} />
+        <Skeleton sx={{ height: 16, width: 384 }} />
+      </Stack>
+
+      <Grid container spacing={3}>
         {Array.from({ length: 4 }).map((_, i) => (
-          <div key={i} className="bg-card p-6 rounded-xl border card-hover">
-            <div className="space-y-3">
-              <div className="w-12 h-12 bg-muted rounded-lg" />
-              <div className="h-6 bg-muted rounded w-20" />
-              <div className="h-4 bg-muted rounded w-32" />
-            </div>
-          </div>
+          <Grid size={{ xs: 12, sm: 6, lg: 3 }} key={i}>
+            <Card sx={{ p: 3 }}>
+              <Stack spacing={1.5}>
+                <Skeleton sx={{ width: 48, height: 48, borderRadius: 1.5 }} />
+                <Skeleton sx={{ height: 24, width: 80 }} />
+                <Skeleton sx={{ height: 16, width: 128 }} />
+              </Stack>
+            </Card>
+          </Grid>
         ))}
-      </div>
-    </div>
+      </Grid>
+    </Stack>
   )
 }

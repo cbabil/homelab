@@ -1,4 +1,4 @@
-"""MCP tool package for the Homelab Assistant backend."""
+"""MCP tool package for the Tomo backend."""
 
 from lib.tool_loader import register_all_tools  # re-export for convenience
 

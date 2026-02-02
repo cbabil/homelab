@@ -1,0 +1,36 @@
+#!/bin/bash
+set -e
+
+case "$1" in
+    install|upgrade)
+        # Create system group if not exists
+        if ! getent group tomo >/dev/null 2>&1; then
+            groupadd --system tomo
+        fi
+
+        # Create system user if not exists
+        if ! getent passwd tomo >/dev/null 2>&1; then
+            useradd --system \
+                --gid tomo \
+                --home-dir /var/lib/tomo \
+                --shell /sbin/nologin \
+                --comment "Tomo Service" \
+                tomo
+        fi
+
+        # Stop service if upgrading
+        if [ "$1" = "upgrade" ]; then
+            if systemctl is-active --quiet tomo 2>/dev/null; then
+                systemctl stop tomo || true
+            fi
+        fi
+        ;;
+    abort-upgrade)
+        ;;
+    *)
+        echo "preinst called with unknown argument: $1" >&2
+        exit 1
+        ;;
+esac
+
+exit 0

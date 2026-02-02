@@ -1,6 +1,6 @@
 /**
  * Registration Validation Utilities
- * 
+ *
  * Comprehensive validation functions for user registration,
  * following security best practices and addressing OWASP requirements.
  */
@@ -81,7 +81,7 @@ export const calculatePasswordStrength = (password: string): PasswordStrength =>
     hasUppercase: /[A-Z]/.test(password),
     hasLowercase: /[a-z]/.test(password),
     hasNumber: /\d/.test(password),
-    hasSpecialChar: /[!@#$%^&*(),.?\":{}|<>]/.test(password)
+    hasSpecialChar: /[!@#$%^&*(),.?"':{}|<>]/.test(password)
   }
   
   const score = Object.values(requirements).filter(Boolean).length
@@ -101,44 +101,44 @@ export const calculatePasswordStrength = (password: string): PasswordStrength =>
 }
 
 /**
- * Validate password with strength requirements
+ * Validate password with strength requirements (legacy mode)
  */
 export const validatePassword = (value: string): ValidationResult & { strength: PasswordStrength } => {
   const rules = DEFAULT_REGISTRATION_VALIDATION.password
   const strength = calculatePasswordStrength(value)
-  
+
   if (rules.required && !value.trim()) {
-    return { 
-      isValid: false, 
+    return {
+      isValid: false,
       error: 'Password is required',
-      strength 
+      strength
     }
   }
-  
+
   if (value.length < rules.minLength) {
-    return { 
-      isValid: false, 
+    return {
+      isValid: false,
       error: `Password must be at least ${rules.minLength} characters`,
-      strength 
+      strength
     }
   }
-  
+
   if (value.length > rules.maxLength) {
-    return { 
-      isValid: false, 
+    return {
+      isValid: false,
       error: `Password must be less than ${rules.maxLength} characters`,
-      strength 
+      strength
     }
   }
-  
+
   // All complexity requirements must be met
   if (strength.score < 5) {
-    return { 
-      isValid: false, 
+    return {
+      isValid: false,
       error: 'Password must meet all requirements',
-      strength 
+      strength
     }
   }
-  
+
   return { isValid: true, strength }
 }

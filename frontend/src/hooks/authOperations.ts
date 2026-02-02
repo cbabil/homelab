@@ -5,7 +5,8 @@
  * with JWT token management and state updates.
  */
 
-import { LoginCredentials, AUTH_STORAGE_KEYS } from '@/types/auth'
+import type { LoginCredentials, AuthState } from '@/types/auth'
+import { AUTH_STORAGE_KEYS } from '@/types/auth'
 import { authService } from '@/services/auth/authService'
 import { storeAuthData, clearStoredAuth } from './authStorageHelpers'
 import {
@@ -16,7 +17,7 @@ import {
 
 export interface AuthOperationResult {
   success: boolean
-  authState?: any
+  authState?: Partial<AuthState>
   error?: string
 }
 

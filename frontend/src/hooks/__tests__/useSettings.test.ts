@@ -5,11 +5,22 @@
  * initialization, updates, and subscription management.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi, Mock } from 'vitest'
 import { renderHook, act, waitFor } from '@testing-library/react'
 import { useSettings, useSessionTimeout } from '../useSettings'
 import { settingsService } from '@/services/settingsService'
-import { DEFAULT_SETTINGS } from '@/types/settings'
+import { DEFAULT_SETTINGS, SettingsUpdateResult } from '@/types/settings'
+
+// Mock settings service type
+interface MockSettingsService {
+  initialize: Mock
+  updateSettings: Mock
+  resetSettings: Mock
+  getSessionTimeoutMs: Mock
+  subscribe: Mock
+  isUsingDatabase: Mock
+  syncFromDatabase: Mock
+}
 
 // Mock settings service
 vi.mock('@/services/settingsService', () => ({
@@ -18,11 +29,28 @@ vi.mock('@/services/settingsService', () => ({
     updateSettings: vi.fn(),
     resetSettings: vi.fn(),
     getSessionTimeoutMs: vi.fn(),
-    subscribe: vi.fn()
+    subscribe: vi.fn(),
+    isUsingDatabase: vi.fn().mockReturnValue(false),
+    syncFromDatabase: vi.fn()
   }
 }))
 
-const mockSettingsService = settingsService as any
+// Mock MCP client hook
+vi.mock('@/services/settingsMcpClient', () => ({
+  useSettingsMcpClient: vi.fn().mockReturnValue(null)
+}))
+
+// Mock system logger
+vi.mock('@/services/systemLogger', () => ({
+  mcpLogger: {
+    info: vi.fn(),
+    error: vi.fn(),
+    debug: vi.fn(),
+    warn: vi.fn()
+  }
+}))
+
+const mockSettingsService = settingsService as unknown as MockSettingsService
 
 describe('useSettings', () => {
   beforeEach(() => {
@@ -98,16 +126,16 @@ describe('useSettings', () => {
         expect(result.current.settings).toBeDefined()
       })
       
-      let updateResult: any
+      let updateResult: SettingsUpdateResult
       await act(async () => {
         updateResult = await result.current.updateSettings('ui', { theme: 'light' })
       })
-      
+
       expect(mockSettingsService.updateSettings).toHaveBeenCalledWith(
         'ui',
         { theme: 'light' }
       )
-      expect(updateResult.success).toBe(true)
+      expect(updateResult!.success).toBe(true)
     })
 
     it('should handle update errors', async () => {
@@ -117,19 +145,19 @@ describe('useSettings', () => {
         success: false,
         error: 'Update failed'
       })
-      
+
       const { result } = renderHook(() => useSettings())
-      
+
       await waitFor(() => {
         expect(result.current.settings).toBeDefined()
       })
-      
-      let updateResult: any
+
+      let updateResult: SettingsUpdateResult
       await act(async () => {
         updateResult = await result.current.updateSettings('ui', { theme: 'light' })
       })
-      
-      expect(updateResult.success).toBe(false)
+
+      expect(updateResult!.success).toBe(false)
       expect(result.current.error).toBe('Update failed')
     })
   })
@@ -142,20 +170,20 @@ describe('useSettings', () => {
         success: true,
         settings: DEFAULT_SETTINGS
       })
-      
+
       const { result } = renderHook(() => useSettings())
-      
+
       await waitFor(() => {
         expect(result.current.settings).toBeDefined()
       })
-      
-      let resetResult: any
+
+      let resetResult: SettingsUpdateResult
       await act(async () => {
         resetResult = await result.current.resetSettings()
       })
       
       expect(mockSettingsService.resetSettings).toHaveBeenCalled()
-      expect(resetResult.success).toBe(true)
+      expect(resetResult!.success).toBe(true)
     })
   })
 

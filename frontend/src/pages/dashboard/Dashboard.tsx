@@ -4,13 +4,19 @@
  * Modern dashboard with real-time data from the backend.
  */
 
-import { Activity, RefreshCw } from 'lucide-react'
+import { useEffect, useRef } from 'react'
+import { useTranslation } from 'react-i18next'
+import { RefreshCw } from 'lucide-react'
+import { Box, Stack, Card, Grid, CircularProgress } from '@mui/material'
 import { Button } from '@/components/ui/Button'
+import { PageHeader } from '@/components/layout/PageHeader'
+import { Skeleton, SkeletonStat } from '@/components/ui/Skeleton'
+import { useSettingsContext } from '@/providers/SettingsProvider'
+import { useAgentStatus } from '@/hooks/useAgentStatus'
 import { useDashboardData } from './useDashboardData'
 import { DashboardStats } from './DashboardStats'
 import { DashboardResourceUsage } from './DashboardResourceUsage'
 import { DashboardRecentActivity } from './DashboardRecentActivity'
-import { DashboardQuickActions } from './DashboardQuickActions'
 
 export function Dashboard() {
   const {
@@ -18,10 +24,55 @@ export function Dashboard() {
     healthStatus,
     loading,
     refreshing,
-    lastUpdated,
     isConnected,
-    refresh
+    refresh,
+    servers
   } = useDashboardData()
+
+  // Agent status management
+  const {
+    agentStatuses,
+    refreshAllAgentStatuses
+  } = useAgentStatus()
+
+  // Settings for auto-refresh
+  const { settings } = useSettingsContext()
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null)
+
+  // Fetch agent statuses when servers change
+  useEffect(() => {
+    if (servers.length > 0) {
+      const serverIds = servers.map((s) => s.id)
+      refreshAllAgentStatuses(serverIds)
+    }
+  }, [servers.length, refreshAllAgentStatuses])
+
+  // Auto-refresh dashboard based on settings.ui.refreshRate
+  useEffect(() => {
+    if (refreshIntervalRef.current) {
+      clearInterval(refreshIntervalRef.current)
+      refreshIntervalRef.current = null
+    }
+
+    const refreshRate = settings?.ui?.refreshRate
+    if (!refreshRate || refreshRate <= 0 || !isConnected) return
+
+    const refreshAll = () => {
+      refresh()
+      if (servers.length > 0) {
+        refreshAllAgentStatuses(servers.map((s) => s.id))
+      }
+    }
+
+    refreshIntervalRef.current = setInterval(refreshAll, refreshRate * 1000)
+
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current)
+        refreshIntervalRef.current = null
+      }
+    }
+  }, [settings?.ui?.refreshRate, isConnected, refresh, servers, refreshAllAgentStatuses])
 
   if (!isConnected) {
     return <DashboardConnecting />
@@ -32,130 +83,169 @@ export function Dashboard() {
   }
 
   return (
-    <div className="space-y-6">
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', gap: 3 }}>
       <DashboardHeader
         healthStatus={healthStatus}
-        lastUpdated={lastUpdated}
         refreshing={refreshing}
         onRefresh={refresh}
       />
 
-      <DashboardStats data={dashboardData} />
+      <DashboardStats data={dashboardData} agentStatuses={agentStatuses} />
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2">
+      <Grid container spacing={2} sx={{ flex: 1, minHeight: 0 }}>
+        <Grid size={{ xs: 12, lg: 6 }} sx={{ display: 'flex' }}>
           <DashboardResourceUsage data={dashboardData} />
-        </div>
-        <div>
-          <DashboardQuickActions />
-        </div>
-      </div>
-
-      <DashboardRecentActivity activities={dashboardData?.recent_activities || []} />
-    </div>
+        </Grid>
+        <Grid size={{ xs: 12, lg: 6 }} sx={{ display: 'flex', minHeight: 0 }}>
+          <DashboardRecentActivity
+            activities={dashboardData?.recent_activities || []}
+            servers={servers.map(s => ({ id: s.id, name: s.name }))}
+          />
+        </Grid>
+      </Grid>
+    </Box>
   )
 }
 
 function DashboardConnecting() {
+  const { t } = useTranslation()
   return (
-    <div className="flex items-center justify-center min-h-[400px]">
-      <div className="bg-card border border-border rounded-lg p-8 text-center max-w-md">
-        <div className="w-16 h-16 mx-auto rounded-full bg-muted flex items-center justify-center mb-4">
-          <Activity className="w-8 h-8 text-muted-foreground" />
-        </div>
-        <h2 className="text-2xl font-semibold mb-2">Connecting to Server...</h2>
-        <p className="text-muted-foreground">
-          Check notifications for connection status updates.
-        </p>
-      </div>
-    </div>
+    <Box sx={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      minHeight: '100vh',
+      bgcolor: 'background.default'
+    }}>
+      <Card sx={{ p: 4, textAlign: 'center', maxWidth: 480 }}>
+        <Box sx={{ mx: 'auto', mb: 2 }}>
+          <CircularProgress size={48} />
+        </Box>
+        <Box component="h2" sx={{ fontSize: 20, fontWeight: 600, mb: 1 }}>
+          {t('dashboard.connecting', 'Connecting to Server')}
+        </Box>
+        <Box component="p" sx={{ fontSize: 14, color: 'text.secondary' }}>
+          {t('dashboard.checkNotifications', 'Check notifications for connection status updates.')}
+        </Box>
+      </Card>
+    </Box>
   )
 }
 
 interface DashboardHeaderProps {
   healthStatus: { status: string } | null
-  lastUpdated: Date | null
   refreshing: boolean
   onRefresh: () => void
 }
 
-function DashboardHeader({ healthStatus, lastUpdated, refreshing, onRefresh }: DashboardHeaderProps) {
+function DashboardHeader({
+  healthStatus,
+  refreshing,
+  onRefresh
+}: DashboardHeaderProps) {
+  const { t } = useTranslation()
+
   return (
-    <div className="flex items-center justify-between">
-      <div>
-        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
-        <p className="text-muted-foreground">
-          Monitor your homelab infrastructure and manage applications.
-        </p>
-      </div>
-      <div className="flex items-center gap-3">
-        {lastUpdated && (
-          <span className="text-sm text-muted-foreground">
-            Updated {lastUpdated.toLocaleTimeString()}
-          </span>
-        )}
-        <Button
-          onClick={onRefresh}
-          variant="ghost"
-          size="sm"
-          disabled={refreshing}
-          leftIcon={<RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />}
-        >
-          Refresh
-        </Button>
-        {healthStatus && (
-          <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-            healthStatus.status === 'healthy'
-              ? 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400'
-              : 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-          }`}>
-            {healthStatus.status}
-          </span>
-        )}
-      </div>
-    </div>
+    <PageHeader
+      title={t('dashboard.title')}
+      actions={
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Button
+            onClick={onRefresh}
+            disabled={refreshing}
+            variant="outline"
+            size="sm"
+            leftIcon={<RefreshCw style={{ width: 12, height: 12 }} className={refreshing ? 'animate-spin' : ''} />}
+            sx={{ fontSize: '0.7rem', py: 0.25, px: 1.5, minHeight: 26 }}
+          >
+            {t('common.refresh')}
+          </Button>
+
+          {healthStatus && (
+            <Box
+              sx={{
+                px: 1.5,
+                py: 0.25,
+                minHeight: 26,
+                display: 'flex',
+                alignItems: 'center',
+                borderRadius: 1,
+                border: 1,
+                borderColor: healthStatus.status === 'healthy' ? 'success.main' : 'error.main',
+                color: healthStatus.status === 'healthy' ? 'success.main' : 'error.main',
+                fontSize: '0.7rem',
+                fontWeight: 500
+              }}
+            >
+              {healthStatus.status === 'healthy' ? t('dashboard.healthy', 'Healthy') : t('dashboard.unhealthy', 'Unhealthy')}
+            </Box>
+          )}
+        </Stack>
+      }
+    />
   )
 }
 
 function DashboardLoadingSkeleton() {
   return (
-    <div className="space-y-6">
-      <div>
-        <div className="h-8 w-48 bg-muted rounded animate-pulse mb-2" />
-        <div className="h-5 w-96 bg-muted rounded animate-pulse" />
-      </div>
+    <Stack spacing={3}>
+      {/* Header skeleton */}
+      <Box>
+        <Skeleton sx={{ height: 28, width: 144, mb: 1 }} />
+        <Skeleton sx={{ height: 16, width: 256 }} />
+      </Box>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      {/* Stats skeleton */}
+      <Grid container spacing={2}>
         {[1, 2, 3, 4].map((i) => (
-          <div key={i} className="bg-card border border-border rounded-lg p-4">
-            <div className="h-4 w-20 bg-muted rounded animate-pulse mb-3" />
-            <div className="h-8 w-16 bg-muted rounded animate-pulse mb-2" />
-            <div className="h-3 w-24 bg-muted rounded animate-pulse" />
-          </div>
+          <Grid size={{ xs: 6, lg: 3 }} key={i}>
+            <SkeletonStat />
+          </Grid>
         ))}
-      </div>
+      </Grid>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 bg-card border border-border rounded-lg p-4">
-          <div className="h-6 w-36 bg-muted rounded animate-pulse mb-4" />
-          <div className="space-y-4">
-            {[1, 2, 3].map((i) => (
-              <div key={i}>
-                <div className="h-5 w-full bg-muted rounded animate-pulse mb-2" />
-                <div className="h-2 w-full bg-muted rounded animate-pulse" />
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="bg-card border border-border rounded-lg p-4">
-          <div className="h-6 w-28 bg-muted rounded animate-pulse mb-4" />
-          <div className="space-y-3">
-            {[1, 2].map((i) => (
-              <div key={i} className="h-10 w-full bg-muted rounded animate-pulse" />
-            ))}
-          </div>
-        </div>
-      </div>
-    </div>
+      {/* Main content skeleton */}
+      <Grid container spacing={2}>
+        <Grid size={{ xs: 12, lg: 8 }}>
+          <Card sx={{ p: 2.5 }}>
+            <Skeleton sx={{ height: 20, width: 128, mb: 3 }} />
+            <Stack direction="row" spacing={4} justifyContent="space-around">
+              {[1, 2, 3].map((i) => (
+                <Stack key={i} alignItems="center">
+                  <Skeleton sx={{ width: 96, height: 96, borderRadius: '50%', mb: 1.5 }} />
+                  <Skeleton sx={{ height: 16, width: 48 }} />
+                </Stack>
+              ))}
+            </Stack>
+          </Card>
+        </Grid>
+        <Grid size={{ xs: 12, lg: 4 }}>
+          <Card sx={{ p: 2.5 }}>
+            <Skeleton sx={{ height: 20, width: 80, mb: 2 }} />
+            <Stack spacing={1.5}>
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} sx={{ height: 56, borderRadius: 1 }} />
+              ))}
+            </Stack>
+          </Card>
+        </Grid>
+      </Grid>
+
+      {/* Activity skeleton */}
+      <Card sx={{ p: 2.5 }}>
+        <Skeleton sx={{ height: 20, width: 128, mb: 2.5 }} />
+        <Stack spacing={1.5}>
+          {[1, 2, 3, 4].map((i) => (
+            <Stack key={i} direction="row" spacing={1.5} alignItems="center">
+              <Skeleton sx={{ width: 32, height: 32, borderRadius: 1 }} />
+              <Box sx={{ flex: 1 }}>
+                <Skeleton sx={{ height: 16, width: 192, mb: 0.5 }} />
+                <Skeleton sx={{ height: 12, width: 96 }} />
+              </Box>
+            </Stack>
+          ))}
+        </Stack>
+      </Card>
+    </Stack>
   )
 }

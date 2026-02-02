@@ -152,7 +152,7 @@ class TestServerDatabaseOperations:
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_server_database.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_server_database.py -v --no-cov
 ```
 
 Expected: FAIL - methods don't exist
@@ -351,7 +351,7 @@ async def delete_server(self, server_id: str) -> bool:
 **Step 5: Run test to verify it passes**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_server_database.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_server_database.py -v --no-cov
 ```
 
 Expected: PASS
@@ -359,7 +359,7 @@ Expected: PASS
 **Step 6: Commit**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab
+cd /Users/christophebabilotte/source/tomo
 git add backend/src/init_db/schema_servers.py backend/src/services/database_service.py backend/tests/unit/test_server_database.py
 git commit -m "feat(server): add database schema and CRUD operations for servers"
 ```
@@ -547,7 +547,7 @@ class TestTestConnection:
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_server_tools.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_server_tools.py -v --no-cov
 ```
 
 Expected: FAIL - ServerTools class doesn't exist with this structure
@@ -802,7 +802,7 @@ def register_server_tools(app: FastMCP, ssh_service: SSHService, server_service:
 **Step 4: Run test to verify it passes**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_server_tools.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_server_tools.py -v --no-cov
 ```
 
 Expected: PASS
@@ -810,7 +810,7 @@ Expected: PASS
 **Step 5: Commit**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab
+cd /Users/christophebabilotte/source/tomo
 git add backend/src/tools/server_tools.py backend/tests/unit/test_server_tools.py
 git commit -m "feat(server): rewrite server tools with full CRUD and test connection"
 ```
@@ -897,7 +897,7 @@ class TestServerService:
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_server_service.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_server_service.py -v --no-cov
 ```
 
 Expected: FAIL
@@ -1019,7 +1019,7 @@ class ServerService:
 **Step 4: Run test to verify it passes**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_server_service.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_server_service.py -v --no-cov
 ```
 
 Expected: PASS
@@ -1027,7 +1027,7 @@ Expected: PASS
 **Step 5: Commit**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab
+cd /Users/christophebabilotte/source/tomo
 git add backend/src/services/server_service.py backend/tests/unit/test_server_service.py
 git commit -m "feat(server): add database persistence and credential encryption to server service"
 ```
@@ -1039,7 +1039,7 @@ git commit -m "feat(server): add database persistence and credential encryption 
 **Step 1: Run all Phase 2 related tests**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_server_*.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_server_*.py -v --no-cov
 ```
 
 **Step 2: Fix any failing tests**
@@ -1047,7 +1047,7 @@ cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophe
 **Step 3: Commit if fixes needed**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab
+cd /Users/christophebabilotte/source/tomo
 git add .
 git commit -m "fix(server): fix test failures in Phase 2 implementation"
 ```

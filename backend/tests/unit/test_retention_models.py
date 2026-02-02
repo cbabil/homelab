@@ -9,17 +9,17 @@ import pytest
 from datetime import datetime, timedelta
 from pydantic import ValidationError
 from models.retention import (
-    DataRetentionSettings, CleanupRequest, CleanupResult, CleanupPreview,
+    RetentionSettings, CleanupRequest, CleanupResult, CleanupPreview,
     RetentionAuditEntry, SecurityValidationResult, RetentionType, RetentionOperation
 )
 
 
-class TestDataRetentionSettings:
+class TestRetentionSettings:
     """Test data retention settings model validation and constraints."""
 
     def test_default_settings_are_valid(self):
         """Test that default settings create valid configuration."""
-        settings = DataRetentionSettings()
+        settings = RetentionSettings()
 
         assert settings.log_retention_days == 30
         assert settings.user_data_retention_days == 365
@@ -33,7 +33,7 @@ class TestDataRetentionSettings:
     def test_valid_retention_periods(self):
         """Test valid retention period ranges."""
         # Test minimum valid values
-        settings = DataRetentionSettings(
+        settings = RetentionSettings(
             log_retention_days=7,
             user_data_retention_days=30,
             metrics_retention_days=7,
@@ -45,7 +45,7 @@ class TestDataRetentionSettings:
         assert settings.audit_log_retention_days == 365
 
         # Test maximum valid values
-        settings = DataRetentionSettings(
+        settings = RetentionSettings(
             log_retention_days=365,
             user_data_retention_days=3650,
             metrics_retention_days=730,
@@ -60,44 +60,44 @@ class TestDataRetentionSettings:
         """Test log retention validation at boundaries."""
         # Test below minimum
         with pytest.raises(ValidationError) as exc_info:
-            DataRetentionSettings(log_retention_days=6)
+            RetentionSettings(log_retention_days=6)
         assert "Log retention must be at least 7 days" in str(exc_info.value)
 
         # Test above maximum
         with pytest.raises(ValidationError) as exc_info:
-            DataRetentionSettings(log_retention_days=366)
+            RetentionSettings(log_retention_days=366)
         assert "Log retention cannot exceed 365 days" in str(exc_info.value)
 
         # Test edge cases for boundaries
-        settings_min = DataRetentionSettings(log_retention_days=7)
+        settings_min = RetentionSettings(log_retention_days=7)
         assert settings_min.log_retention_days == 7
 
-        settings_max = DataRetentionSettings(log_retention_days=365)
+        settings_max = RetentionSettings(log_retention_days=365)
         assert settings_max.log_retention_days == 365
 
     def test_audit_log_retention_compliance_validation(self):
         """Test audit log retention meets compliance requirements."""
         # Test below compliance minimum
         with pytest.raises(ValidationError) as exc_info:
-            DataRetentionSettings(audit_log_retention_days=364)
+            RetentionSettings(audit_log_retention_days=364)
         assert "Audit logs must be retained for at least 1 year" in str(exc_info.value)
 
         # Test compliance minimum is accepted
-        settings = DataRetentionSettings(audit_log_retention_days=365)
+        settings = RetentionSettings(audit_log_retention_days=365)
         assert settings.audit_log_retention_days == 365
 
     def test_batch_size_validation(self):
         """Test batch size validation for cleanup operations."""
         # Test below minimum
         with pytest.raises(ValidationError):
-            DataRetentionSettings(cleanup_batch_size=99)
+            RetentionSettings(cleanup_batch_size=99)
 
         # Test above maximum
         with pytest.raises(ValidationError):
-            DataRetentionSettings(cleanup_batch_size=10001)
+            RetentionSettings(cleanup_batch_size=10001)
 
         # Test valid ranges
-        settings = DataRetentionSettings(cleanup_batch_size=500)
+        settings = RetentionSettings(cleanup_batch_size=500)
         assert settings.cleanup_batch_size == 500
 
     def test_settings_with_user_tracking(self):
@@ -105,7 +105,7 @@ class TestDataRetentionSettings:
         timestamp = "2023-09-14T10:30:00.000Z"
         user_id = "admin-user-123"
 
-        settings = DataRetentionSettings(
+        settings = RetentionSettings(
             log_retention_days=60,
             last_updated=timestamp,
             updated_by_user_id=user_id

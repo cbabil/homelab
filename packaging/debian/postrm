@@ -1,0 +1,50 @@
+#!/bin/bash
+set -e
+
+case "$1" in
+    purge)
+        # Remove data directories
+        rm -rf /var/lib/tomo
+        rm -rf /var/log/tomo
+        rm -rf /etc/tomo
+
+        # Remove Python virtual environment
+        rm -rf /opt/tomo/venv
+
+        # Remove user and group
+        if getent passwd tomo >/dev/null 2>&1; then
+            userdel tomo 2>/dev/null || true
+        fi
+        if getent group tomo >/dev/null 2>&1; then
+            groupdel tomo 2>/dev/null || true
+        fi
+
+        # Reload nginx
+        if nginx -t 2>/dev/null; then
+            systemctl reload nginx 2>/dev/null || true
+        fi
+
+        echo "Tomo has been completely removed."
+        ;;
+    remove)
+        echo ""
+        echo "Tomo removed."
+        echo "Data preserved in /var/lib/tomo"
+        echo "Config preserved in /etc/tomo"
+        echo ""
+        echo "To completely remove all data, run:"
+        echo "  sudo apt purge tomo"
+        echo ""
+        ;;
+    upgrade|failed-upgrade|abort-install|abort-upgrade|disappear)
+        ;;
+    *)
+        echo "postrm called with unknown argument: $1" >&2
+        exit 1
+        ;;
+esac
+
+# Reload systemd
+systemctl daemon-reload 2>/dev/null || true
+
+exit 0

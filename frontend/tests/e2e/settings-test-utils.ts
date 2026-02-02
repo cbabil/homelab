@@ -11,7 +11,7 @@ export const TEST_CONFIG = {
   BACKEND_URL: 'http://localhost:8000',
   FRONTEND_URL: 'http://localhost:3001',
   ADMIN_USERNAME: 'admin',
-  ADMIN_PASSWORD: 'HomeLabAdmin123!'
+  ADMIN_PASSWORD: 'TomoAdmin123!'
 }
 
 /**

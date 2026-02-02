@@ -26,8 +26,7 @@ import {
   parseJWT,
   generateJTI,
   validateTokenTiming,
-  isValidJWTPayload,
-  extractTokenMetadata
+  isValidJWTPayload
 } from '@/utils/jwtUtils'
 
 /**
@@ -74,13 +73,6 @@ class JWTServiceImpl implements JWTService {
     setInterval(() => {
       this.blacklist.cleanup().catch(console.error)
     }, 300000) // 5 minutes
-
-    console.log('[JWTService] Initialized with config:', {
-      issuer: this.config.issuer,
-      audience: this.config.audience,
-      accessTokenTTL: this.config.accessTokenTTL,
-      refreshTokenTTL: this.config.refreshTokenTTL
-    })
   }
 
   /**
@@ -435,14 +427,12 @@ class JWTServiceImpl implements JWTService {
   /**
    * Log security events
    */
-  private logSecurityEvent(type: string, metadata: Record<string, unknown>): void {
-    console.log('[JWTService]', type, {
-      ...metadata,
-      timestamp: new Date().toISOString()
-    })
-    
+  private logSecurityEvent(_type: string, _metadata: Record<string, unknown>): void {
+    // Security events logged - could be sent to monitoring system
+    // console.log('[JWTService]', _type, { ..._metadata, timestamp: new Date().toISOString() })
+
     // In production, send to security monitoring system
-    // securityMonitor.logJWTEvent({ type, metadata })
+    // securityMonitor.logJWTEvent({ type: _type, metadata: _metadata })
   }
 }
 

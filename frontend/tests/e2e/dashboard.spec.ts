@@ -10,7 +10,7 @@ import { test, expect, Page } from '@playwright/test'
 class DashboardHelper {
   constructor(private page: Page) {}
 
-  async login(username: string = 'admin', password: string = 'HomeLabAdmin123!'): Promise<void> {
+  async login(username: string = 'admin', password: string = 'TomoAdmin123!'): Promise<void> {
     await this.page.goto('/')
     await this.page.waitForLoadState('networkidle')
 

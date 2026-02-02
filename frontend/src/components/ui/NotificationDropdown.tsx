@@ -5,10 +5,16 @@
  */
 
 import { useState, useRef, useEffect } from 'react'
-import { Bell, Check, X, AlertCircle, CheckCircle, Info, AlertTriangle } from 'lucide-react'
-import { Button } from '@/components/ui/Button'
+import { Bell } from 'lucide-react'
+import Box from '@mui/material/Box'
+import Typography from '@mui/material/Typography'
+import IconButton from '@mui/material/IconButton'
+import Badge from '@mui/material/Badge'
+import Paper from '@mui/material/Paper'
+import Divider from '@mui/material/Divider'
+import MuiButton from '@mui/material/Button'
+import { NotificationItem } from '@/components/ui/NotificationItem'
 import { useNotifications } from '@/providers/NotificationProvider'
-import { cn } from '@/utils/cn'
 
 export function NotificationDropdown() {
   const [isOpen, setIsOpen] = useState(false)
@@ -26,165 +32,136 @@ export function NotificationDropdown() {
     return () => document.removeEventListener('mousedown', handleClickOutside)
   }, [])
 
-  const getIcon = (type: string) => {
-    switch (type) {
-      case 'error':
-        return AlertCircle
-      case 'success':
-        return CheckCircle
-      case 'warning':
-        return AlertTriangle
-      default:
-        return Info
-    }
-  }
-
-  const getIconColor = (type: string) => {
-    switch (type) {
-      case 'error':
-        return 'text-red-500'
-      case 'success':
-        return 'text-green-500'
-      case 'warning':
-        return 'text-yellow-500'
-      default:
-        return 'text-blue-500'
-    }
-  }
-
-  const formatTime = (timestamp: Date) => {
-    const now = new Date()
-    const diff = now.getTime() - timestamp.getTime()
-    const minutes = Math.floor(diff / (1000 * 60))
-    
-    if (minutes < 1) return 'Just now'
-    if (minutes < 60) return `${minutes}m ago`
-    
-    const hours = Math.floor(minutes / 60)
-    if (hours < 24) return `${hours}h ago`
-    
-    const days = Math.floor(hours / 24)
-    return `${days}d ago`
-  }
-
   return (
-    <div className="relative" ref={dropdownRef}>
-      <Button
+    <Box sx={{ position: 'relative' }} ref={dropdownRef}>
+      <IconButton
         onClick={() => setIsOpen(!isOpen)}
-        variant="ghost"
-        size="icon"
-        className="relative text-muted-foreground hover:text-foreground"
         title="Notifications"
+        sx={{
+          color: 'text.secondary',
+          '&:hover': {
+            color: 'text.primary',
+          },
+        }}
       >
-        <Bell className="h-5 w-5" />
-        {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 h-3 w-3 bg-red-500 rounded-full text-xs flex items-center justify-center">
-            <span className="sr-only">{unreadCount} notifications</span>
-          </span>
-        )}
-      </Button>
+        <Badge
+          badgeContent={unreadCount}
+          color="error"
+          sx={{
+            '& .MuiBadge-badge': {
+              fontSize: '0.625rem',
+              height: 12,
+              minWidth: 12,
+              padding: '0 2px',
+            },
+          }}
+        >
+          <Bell style={{ width: 20, height: 20 }} />
+        </Badge>
+      </IconButton>
 
       {isOpen && (
-        <div className="absolute right-0 mt-2 w-80 bg-background border border-border rounded-lg shadow-lg z-50">
-          <div className="p-4 border-b border-border">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold">Notifications</h3>
+        <Paper
+          elevation={3}
+          sx={{
+            position: 'absolute',
+            right: 0,
+            mt: 1,
+            width: 320,
+            borderRadius: 2,
+            zIndex: 1300,
+            maxHeight: '80vh',
+            display: 'flex',
+            flexDirection: 'column',
+          }}
+        >
+          <Box sx={{ p: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Typography variant="h6" sx={{ fontSize: '1.125rem', fontWeight: 600 }}>
+                Notifications
+              </Typography>
               {notifications.length > 0 && (
-                <div className="flex space-x-2">
+                <Box sx={{ display: 'flex', gap: 1 }}>
                   {unreadCount > 0 && (
-                    <Button
+                    <MuiButton
                       onClick={markAllAsRead}
-                      variant="ghost"
-                      size="sm"
-                      className="h-auto p-0 text-xs text-primary hover:underline hover:bg-transparent"
+                      size="small"
+                      sx={{
+                        minWidth: 'auto',
+                        p: 0,
+                        fontSize: '0.75rem',
+                        textTransform: 'none',
+                        color: 'primary.main',
+                        '&:hover': {
+                          textDecoration: 'underline',
+                          bgcolor: 'transparent',
+                        },
+                      }}
                     >
                       Mark all read
-                    </Button>
+                    </MuiButton>
                   )}
-                  <Button
+                  <MuiButton
                     onClick={clearAll}
-                    variant="ghost"
-                    size="sm"
-                    className="h-auto p-0 text-xs text-muted-foreground hover:underline hover:bg-transparent"
+                    size="small"
+                    sx={{
+                      minWidth: 'auto',
+                      p: 0,
+                      fontSize: '0.75rem',
+                      textTransform: 'none',
+                      color: 'text.secondary',
+                      '&:hover': {
+                        textDecoration: 'underline',
+                        bgcolor: 'transparent',
+                      },
+                    }}
                   >
                     Clear all
-                  </Button>
-                </div>
+                  </MuiButton>
+                </Box>
               )}
-            </div>
+            </Box>
             {unreadCount > 0 && (
-              <p className="text-sm text-muted-foreground mt-1">
+              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
                 {unreadCount} unread notification{unreadCount !== 1 ? 's' : ''}
-              </p>
+              </Typography>
             )}
-          </div>
+          </Box>
 
-          <div className="max-h-96 overflow-y-auto">
+          <Divider />
+
+          <Box sx={{ maxHeight: 384, overflowY: 'auto' }}>
             {notifications.length === 0 ? (
-              <div className="p-8 text-center">
-                <Bell className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-sm text-muted-foreground">No notifications</p>
-              </div>
+              <Box sx={{ p: 4, textAlign: 'center' }}>
+                <Bell
+                  style={{
+                    width: 48,
+                    height: 48,
+                    margin: '0 auto 12px',
+                    color: 'rgba(0, 0, 0, 0.38)',
+                  }}
+                />
+                <Typography variant="body2" color="text.secondary">
+                  No notifications
+                </Typography>
+              </Box>
             ) : (
-              <div className="divide-y divide-border">
-                {notifications.map((notification) => {
-                  const Icon = getIcon(notification.type)
-                  return (
-                    <div
-                      key={notification.id}
-                      className={cn(
-                        "p-4 hover:bg-accent/50 transition-colors",
-                        !notification.read && "bg-accent/20"
-                      )}
-                    >
-                      <div className="flex items-start space-x-3">
-                        <div className={cn("mt-0.5", getIconColor(notification.type))}>
-                          <Icon className="h-4 w-4" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium text-foreground truncate">
-                              {notification.title}
-                            </p>
-                            <div className="flex items-center space-x-1 ml-2">
-                              {!notification.read && (
-                                <Button
-                                  onClick={() => markAsRead(notification.id)}
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-6 w-6"
-                                  title="Mark as read"
-                                >
-                                  <Check className="h-3 w-3" />
-                                </Button>
-                              )}
-                              <Button
-                                onClick={() => removeNotification(notification.id)}
-                                variant="ghost"
-                                size="icon"
-                                className="h-6 w-6 text-muted-foreground"
-                                title="Remove"
-                              >
-                                <X className="h-3 w-3" />
-                              </Button>
-                            </div>
-                          </div>
-                          <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                            {notification.message}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-2">
-                            {formatTime(notification.timestamp)}
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
-              </div>
+              <Box>
+                {notifications.map((notification, index) => (
+                  <Box key={notification.id}>
+                    <NotificationItem
+                      notification={notification}
+                      onMarkAsRead={markAsRead}
+                      onRemove={removeNotification}
+                    />
+                    {index < notifications.length - 1 && <Divider />}
+                  </Box>
+                ))}
+              </Box>
             )}
-          </div>
-        </div>
+          </Box>
+        </Paper>
       )}
-    </div>
+    </Box>
   )
 }

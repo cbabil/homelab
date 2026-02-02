@@ -13,8 +13,7 @@ import {
   SettingsValidation,
   SettingsUpdateResult,
   SessionTimeout,
-  SESSION_TIMEOUT_VALUES,
-  RETENTION_LIMITS
+  SESSION_TIMEOUT_VALUES
 } from '@/types/settings'
 import { SettingsMcpClient } from '@/services/settingsMcpClient'
 import { mcpLogger } from '@/services/systemLogger'
@@ -313,17 +312,8 @@ class SettingsService {
       warnings.push('Refresh interval too low, may impact performance')
     }
 
-    // Validate retention settings
-    const retention = settings.system.dataRetention
-    if (retention.logRetentionDays < RETENTION_LIMITS.LOG_MIN_DAYS ||
-        retention.logRetentionDays > RETENTION_LIMITS.LOG_MAX_DAYS) {
-      errors.push(`Log retention days must be between ${RETENTION_LIMITS.LOG_MIN_DAYS}-${RETENTION_LIMITS.LOG_MAX_DAYS}`)
-    }
-
-    if (retention.otherDataRetentionDays < RETENTION_LIMITS.OTHER_DATA_MIN_DAYS ||
-        retention.otherDataRetentionDays > RETENTION_LIMITS.OTHER_DATA_MAX_DAYS) {
-      errors.push(`Other data retention days must be between ${RETENTION_LIMITS.OTHER_DATA_MIN_DAYS}-${RETENTION_LIMITS.OTHER_DATA_MAX_DAYS}`)
-    }
+    // Note: Retention settings are now managed separately via backend MCP
+    // Validation is done in useRetentionSettings hook
 
     return {
       isValid: errors.length === 0,
@@ -335,7 +325,7 @@ class SettingsService {
   /**
    * Migrate settings from older versions
    */
-  private migrateSettings(settings: any): UserSettings {
+  private migrateSettings(settings: Partial<UserSettings> & { version?: number }): UserSettings {
     // Handle version 1 (current) - no migration needed
     if (settings.version === 1) {
       return settings as UserSettings
@@ -385,12 +375,13 @@ class SettingsService {
 
   /**
    * Get settings audit trail (admin only)
+   * Note: This method is deprecated. Use AuditMcpClient directly instead.
    */
-  async getSettingsAudit(limit: number = 50, offset: number = 0) {
-    if (!this.mcpClient) {
-      return []
-    }
-    return await this.mcpClient.getSettingsAudit(this.userId, limit, offset)
+  async getSettingsAudit(_limit: number = 50, _offset: number = 0) {
+    // Settings audit is now handled by AuditMcpClient
+    // This method kept for backward compatibility but returns empty array
+    mcpLogger.warn('getSettingsAudit is deprecated. Use AuditMcpClient.getSettingsAudit() instead')
+    return []
   }
 
   /**

@@ -6,7 +6,7 @@
  */
 
 import { Sun, Moon } from 'lucide-react'
-import { Button } from '@/components/ui/Button'
+import IconButton from '@mui/material/IconButton'
 import { useTheme } from '@/providers/ThemeProvider'
 
 export function ThemeSwitcher() {
@@ -17,17 +17,24 @@ export function ThemeSwitcher() {
   }
 
   return (
-    <Button
+    <IconButton
       onClick={toggleTheme}
-      variant="ghost"
-      size="icon"
       title={`Switch to ${theme === 'light' ? 'dark' : 'light'} mode`}
+      sx={{
+        color: 'text.secondary',
+        borderRadius: 2.5,
+        width: 36,
+        height: 36,
+        '&:hover': {
+          bgcolor: 'action.hover',
+        },
+      }}
     >
       {theme === 'light' ? (
-        <Moon className="h-4 w-4 text-muted-foreground" />
+        <Moon style={{ width: 16, height: 16 }} />
       ) : (
-        <Sun className="h-4 w-4 text-muted-foreground" />
+        <Sun style={{ width: 16, height: 16 }} />
       )}
-    </Button>
+    </IconButton>
   )
 }

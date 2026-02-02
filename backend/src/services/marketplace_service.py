@@ -31,9 +31,14 @@ from models.marketplace import (
 
 logger = structlog.get_logger("marketplace_service")
 
-# Official marketplace configuration
-OFFICIAL_MARKETPLACE_URL = "https://github.com/cbabil/homelab-marketplace"
-OFFICIAL_MARKETPLACE_NAME = "Homelab Marketplace"
+# CasaOS App Store configuration (primary source)
+CASAOS_APPSTORE_URL = "https://github.com/IceWhaleTech/CasaOS-AppStore"
+CASAOS_APPSTORE_NAME = "CasaOS App Store"
+CASAOS_APPSTORE_BRANCH = "main"
+
+# Legacy official marketplace (kept for backwards compatibility)
+OFFICIAL_MARKETPLACE_URL = "https://github.com/cbabil/tomo-marketplace"
+OFFICIAL_MARKETPLACE_NAME = "Tomo Marketplace"
 OFFICIAL_MARKETPLACE_BRANCH = "master"
 
 
@@ -52,28 +57,62 @@ class MarketplaceService:
             self._initialized = True
 
     async def _ensure_official_marketplace(self) -> None:
-        """Add the official marketplace if not already present."""
+        """Add the CasaOS app store and official marketplace if not already present."""
         from sqlalchemy.exc import IntegrityError
 
         async with db_manager.get_session() as session:
-            # Check if official marketplace exists
+            # Check if CasaOS app store exists
+            result = await session.execute(
+                select(MarketplaceRepoTable).where(MarketplaceRepoTable.id == "casaos")
+            )
+            casaos_exists = result.scalar_one_or_none()
+
+            if not casaos_exists:
+                # Add CasaOS app store as primary source
+                now = datetime.utcnow()
+                casaos_repo = MarketplaceRepoTable(
+                    id="casaos",
+                    name=CASAOS_APPSTORE_NAME,
+                    url=CASAOS_APPSTORE_URL,
+                    branch=CASAOS_APPSTORE_BRANCH,
+                    repo_type=RepoType.OFFICIAL.value,
+                    enabled=True,
+                    status=RepoStatus.ACTIVE.value,
+                    last_synced=None,
+                    app_count=0,
+                    error_message=None,
+                    created_at=now,
+                    updated_at=now,
+                )
+                session.add(casaos_repo)
+                try:
+                    await session.commit()
+                    logger.info(
+                        "CasaOS app store added",
+                        repo_id="casaos",
+                        url=CASAOS_APPSTORE_URL,
+                    )
+                except IntegrityError:
+                    await session.rollback()
+                    logger.debug("CasaOS app store already exists")
+
+            # Check if legacy official marketplace exists
             result = await session.execute(
                 select(MarketplaceRepoTable).where(
-                    MarketplaceRepoTable.repo_type == RepoType.OFFICIAL.value
+                    MarketplaceRepoTable.id == "official"
                 )
             )
-            existing = result.scalar_one_or_none()
+            official_exists = result.scalar_one_or_none()
 
-            if not existing:
-                # Add official marketplace
-                repo_id = "official"
+            if not official_exists:
+                # Add legacy official marketplace (disabled by default)
                 now = datetime.utcnow()
                 repo_table = MarketplaceRepoTable(
-                    id=repo_id,
+                    id="official",
                     name=OFFICIAL_MARKETPLACE_NAME,
                     url=OFFICIAL_MARKETPLACE_URL,
                     branch=OFFICIAL_MARKETPLACE_BRANCH,
-                    repo_type=RepoType.OFFICIAL.value,
+                    repo_type=RepoType.COMMUNITY.value,
                     enabled=True,
                     status=RepoStatus.ACTIVE.value,
                     last_synced=None,
@@ -86,21 +125,16 @@ class MarketplaceService:
                 try:
                     await session.commit()
                     logger.info(
-                        "Official marketplace added",
-                        repo_id=repo_id,
-                        url=OFFICIAL_MARKETPLACE_URL
+                        "Official marketplace added (disabled)",
+                        repo_id="official",
+                        url=OFFICIAL_MARKETPLACE_URL,
                     )
                 except IntegrityError:
-                    # Race condition - another process already added it
                     await session.rollback()
-                    logger.debug("Official marketplace already exists (race condition)")
+                    logger.debug("Official marketplace already exists")
 
     async def add_repo(
-        self,
-        name: str,
-        url: str,
-        repo_type: RepoType,
-        branch: str = "main"
+        self, name: str, url: str, repo_type: RepoType, branch: str = "main"
     ) -> MarketplaceRepo:
         """Create a new marketplace repository.
 
@@ -138,7 +172,9 @@ class MarketplaceService:
 
             repo = self._repo_from_table(repo_table)
 
-        logger.info("Repository added", repo_id=repo_id, name=name, repo_type=repo_type.value)
+        logger.info(
+            "Repository added", repo_id=repo_id, name=name, repo_type=repo_type.value
+        )
         return repo
 
     async def get_repos(self, enabled_only: bool = False) -> List[MarketplaceRepo]:
@@ -161,7 +197,9 @@ class MarketplaceService:
             rows = result.scalars().all()
 
         repos = [self._repo_from_table(row) for row in rows]
-        logger.debug("Fetched repositories", count=len(repos), enabled_only=enabled_only)
+        logger.debug(
+            "Fetched repositories", count=len(repos), enabled_only=enabled_only
+        )
         return repos
 
     async def get_repo(self, repo_id: str) -> Optional[MarketplaceRepo]:
@@ -203,7 +241,9 @@ class MarketplaceService:
         async with db_manager.get_session() as session:
             # First, delete all apps associated with this repo
             await session.execute(
-                delete(MarketplaceAppTable).where(MarketplaceAppTable.repo_id == repo_id)
+                delete(MarketplaceAppTable).where(
+                    MarketplaceAppTable.repo_id == repo_id
+                )
             )
 
             # Then delete the repository
@@ -248,9 +288,7 @@ class MarketplaceService:
         return updated
 
     async def sync_repo(
-        self,
-        repo_id: str,
-        local_path: Optional[Path] = None
+        self, repo_id: str, local_path: Optional[Path] = None
     ) -> List[MarketplaceApp]:
         """Sync apps from a repository.
 
@@ -289,14 +327,31 @@ class MarketplaceService:
             else:
                 repo_path = git_sync.clone_or_pull(repo.url, repo.branch)
 
-            # Find and parse app files
-            app_files = git_sync.find_app_files(repo_path)
+            # Detect repository format and parse accordingly
+            is_casaos_format = self._is_casaos_repo(repo_path)
 
-            for app_file in app_files:
-                app = git_sync.load_app_from_file(app_file, repo_id)
-                if app:
-                    apps.append(app)
-                    await self._upsert_app(app)
+            if is_casaos_format:
+                # CasaOS format: Apps/<AppName>/docker-compose.yml
+                app_files = git_sync.find_casaos_app_files(repo_path)
+                for app_file in app_files:
+                    app = git_sync.load_casaos_app(app_file, repo_id)
+                    if app:
+                        apps.append(app)
+                        await self._upsert_app(app)
+                logger.info(
+                    "Synced CasaOS format repo", repo_id=repo_id, app_count=len(apps)
+                )
+            else:
+                # Legacy format: apps/<app>/app.yaml
+                app_files = git_sync.find_app_files(repo_path)
+                for app_file in app_files:
+                    app = git_sync.load_app_from_file(app_file, repo_id)
+                    if app:
+                        apps.append(app)
+                        await self._upsert_app(app)
+                logger.info(
+                    "Synced legacy format repo", repo_id=repo_id, app_count=len(apps)
+                )
 
             # Update repo with success
             async with db_manager.get_session() as session:
@@ -307,7 +362,7 @@ class MarketplaceService:
                         status=RepoStatus.ACTIVE.value,
                         last_synced=datetime.utcnow(),
                         app_count=len(apps),
-                        error_message=None
+                        error_message=None,
                     )
                 )
 
@@ -319,10 +374,7 @@ class MarketplaceService:
                 await session.execute(
                     update(MarketplaceRepoTable)
                     .where(MarketplaceRepoTable.id == repo_id)
-                    .values(
-                        status=RepoStatus.ERROR.value,
-                        error_message=str(e)
-                    )
+                    .values(status=RepoStatus.ERROR.value, error_message=str(e))
                 )
             logger.error("Repository sync failed", repo_id=repo_id, error=str(e))
             raise
@@ -370,7 +422,7 @@ class MarketplaceService:
                         documentation=app.documentation,
                         docker_config=docker_json,
                         requirements=req_json,
-                        updated_at=datetime.utcnow()
+                        updated_at=datetime.utcnow(),
                     )
                 )
             else:
@@ -391,7 +443,7 @@ class MarketplaceService:
                     documentation=app.documentation,
                     repo_id=app.repo_id,
                     docker_config=docker_json,
-                    requirements=req_json
+                    requirements=req_json,
                 )
                 session.add(table_row)
 
@@ -409,7 +461,7 @@ class MarketplaceService:
         sort_by: str = "name",
         sort_order: str = "asc",
         limit: int = 50,
-        offset: int = 0
+        offset: int = 0,
     ) -> List[MarketplaceApp]:
         """Search marketplace apps with filters.
 
@@ -430,10 +482,14 @@ class MarketplaceService:
         await self._ensure_initialized()
 
         async with db_manager.get_session() as session:
-            query = select(MarketplaceAppTable, MarketplaceRepoTable).join(
-                MarketplaceRepoTable,
-                MarketplaceAppTable.repo_id == MarketplaceRepoTable.id
-            ).where(MarketplaceRepoTable.enabled == True)  # noqa: E712
+            query = (
+                select(MarketplaceAppTable, MarketplaceRepoTable)
+                .join(
+                    MarketplaceRepoTable,
+                    MarketplaceAppTable.repo_id == MarketplaceRepoTable.id,
+                )
+                .where(MarketplaceRepoTable.enabled == True)
+            )  # noqa: E712
 
             # Apply filters
             if category:
@@ -453,14 +509,17 @@ class MarketplaceService:
         if search:
             search_lower = search.lower()
             apps = [
-                a for a in apps
-                if search_lower in a.name.lower() or search_lower in a.description.lower()
+                a
+                for a in apps
+                if search_lower in a.name.lower()
+                or search_lower in a.description.lower()
             ]
 
         if tags:
             required_tags = set(t.lower() for t in tags)
             apps = [
-                a for a in apps
+                a
+                for a in apps
                 if required_tags.issubset(set(t.lower() for t in a.tags))
             ]
 
@@ -476,7 +535,7 @@ class MarketplaceService:
             apps.sort(key=lambda a: a.updated_at, reverse=reverse)
 
         # Pagination
-        return apps[offset:offset + limit]
+        return apps[offset : offset + limit]
 
     async def get_app(self, app_id: str) -> Optional[MarketplaceApp]:
         """Get app by ID.
@@ -518,9 +577,7 @@ class MarketplaceService:
             List of trending MarketplaceApp instances sorted by popularity
         """
         return await self.search_apps(
-            sort_by="popularity",
-            sort_order="desc",
-            limit=limit
+            sort_by="popularity", sort_order="desc", limit=limit
         )
 
     async def get_categories(self) -> List[dict]:
@@ -576,8 +633,7 @@ class MarketplaceService:
             # Check for existing rating
             result = await session.execute(
                 select(AppRatingTable).where(
-                    AppRatingTable.app_id == app_id,
-                    AppRatingTable.user_id == user_id
+                    AppRatingTable.app_id == app_id, AppRatingTable.user_id == user_id
                 )
             )
             existing = result.scalar_one_or_none()
@@ -593,10 +649,7 @@ class MarketplaceService:
             else:
                 # Insert new
                 new_rating = AppRatingTable(
-                    id=rating_id,
-                    app_id=app_id,
-                    user_id=user_id,
-                    rating=rating
+                    id=rating_id, app_id=app_id, user_id=user_id, rating=rating
                 )
                 session.add(new_rating)
 
@@ -624,7 +677,7 @@ class MarketplaceService:
             user_id=user_id,
             rating=rating,
             created_at=now.isoformat(),
-            updated_at=now.isoformat()
+            updated_at=now.isoformat(),
         )
 
     async def get_user_rating(self, app_id: str, user_id: str) -> Optional[int]:
@@ -642,8 +695,7 @@ class MarketplaceService:
         async with db_manager.get_session() as session:
             result = await session.execute(
                 select(AppRatingTable.rating).where(
-                    AppRatingTable.app_id == app_id,
-                    AppRatingTable.user_id == user_id
+                    AppRatingTable.app_id == app_id, AppRatingTable.user_id == user_id
                 )
             )
             row = result.scalar_one_or_none()
@@ -653,6 +705,20 @@ class MarketplaceService:
     # ─────────────────────────────────────────────────────────────
     # Helper Methods
     # ─────────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _is_casaos_repo(repo_path: Path) -> bool:
+        """Detect if repository uses CasaOS format.
+
+        CasaOS format has an 'Apps' directory with docker-compose.yml files.
+        """
+        apps_dir = repo_path / "Apps"
+        if apps_dir.exists():
+            # Check if any subdirectory contains docker-compose.yml
+            for subdir in apps_dir.iterdir():
+                if subdir.is_dir() and (subdir / "docker-compose.yml").exists():
+                    return True
+        return False
 
     @staticmethod
     def _repo_from_table(row: MarketplaceRepoTable) -> MarketplaceRepo:
@@ -690,7 +756,11 @@ class MarketplaceService:
             MarketplaceApp Pydantic model
         """
         docker_config = DockerConfig.model_validate_json(row.docker_config)
-        requirements = AppRequirements.model_validate_json(row.requirements) if row.requirements else AppRequirements(architectures=["amd64", "arm64"])
+        requirements = (
+            AppRequirements.model_validate_json(row.requirements)
+            if row.requirements
+            else AppRequirements(architectures=["amd64", "arm64"])
+        )
         tags = json.loads(row.tags) if row.tags else []
 
         return MarketplaceApp(

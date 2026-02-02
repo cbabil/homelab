@@ -162,8 +162,8 @@ export interface JWTService {
 
 // Default JWT configuration
 export const DEFAULT_JWT_CONFIG: JWTConfig = {
-  issuer: 'homelab-auth-service',
-  audience: 'homelab-frontend',
+  issuer: 'tomo-auth-service',
+  audience: 'tomo-frontend',
   accessTokenTTL: 3600,      // 1 hour
   refreshTokenTTL: 604800,   // 7 days
   clockTolerance: 30,        // 30 seconds
@@ -173,11 +173,11 @@ export const DEFAULT_JWT_CONFIG: JWTConfig = {
 
 // JWT storage keys
 export const JWT_STORAGE_KEYS = {
-  ACCESS_TOKEN: 'homelab-jwt-access',
-  REFRESH_TOKEN: 'homelab-jwt-refresh',
-  KEY_STORAGE: 'homelab-jwt-keys',
-  BLACKLIST: 'homelab-jwt-blacklist',
-  CONFIG: 'homelab-jwt-config'
+  ACCESS_TOKEN: 'tomo-jwt-access',
+  REFRESH_TOKEN: 'tomo-jwt-refresh',
+  KEY_STORAGE: 'tomo-jwt-keys',
+  BLACKLIST: 'tomo-jwt-blacklist',
+  CONFIG: 'tomo-jwt-config'
 } as const
 
 // JWT security events

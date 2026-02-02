@@ -4,99 +4,129 @@
  * Individual session row with status, actions, and hover tooltip.
  */
 
-import { Trash2, RotateCcw, Shield, User } from 'lucide-react'
-import { cn } from '@/utils/cn'
+import { useTranslation } from 'react-i18next'
+import { Trash2, RotateCcw, User } from 'lucide-react'
+import { Box, Stack, Typography, Chip, TableRow, TableCell, Tooltip } from '@mui/material'
 import type { Session } from '../types'
-import { formatDateTime, formatTimeAgo, getStatusColor } from '../utils'
+import { formatDateTime, formatTimeAgo } from '../utils'
 import { useAuth } from '@/providers/AuthProvider'
 import { Button } from '@/components/ui/Button'
 
 interface SessionRowProps {
   session: Session
-  hoveredStatus: string | null
   onTerminateSession: (sessionId: string) => void
   onRestoreSession: (sessionId: string) => void
-  onHoveredStatusChange: (sessionId: string | null) => void
 }
 
 export function SessionRow({
   session,
-  hoveredStatus,
   onTerminateSession,
-  onRestoreSession,
-  onHoveredStatusChange
+  onRestoreSession
 }: SessionRowProps) {
+  const { t } = useTranslation()
   // Get current user from auth context
   const { user } = useAuth()
-  
+
   // Determine if this is the current session by checking if location contains "Current"
   // In a real implementation, this would be a proper flag from the session data
   const isCurrentSession = session.location.includes('Current') || session.location.includes('current')
-  
+
   // Check if user is admin
   const isAdmin = user?.role === 'admin'
-  
+
   // Can terminate session if user is admin and it's not the current session
   const canTerminate = isAdmin && !isCurrentSession && session.status === 'active'
 
+  const statusColorMap: Record<string, string> = {
+    active: 'success.main',
+    expired: 'warning.main',
+    terminated: 'error.main'
+  }
+
   return (
-    <tr className="hover:bg-muted/50 transition-colors">
-      <td className="px-4 py-3 whitespace-nowrap">
-        <div className="flex items-center justify-center">
-          <div 
-            className="relative p-2 cursor-help"
-            onMouseEnter={() => onHoveredStatusChange(session.id)}
-            onMouseLeave={() => onHoveredStatusChange(null)}
-          >
-            <div className={cn("w-2 h-2 rounded-full", getStatusColor(session.status))}></div>
-            {hoveredStatus === session.id && (
-              <div className="absolute left-full top-1/2 transform -translate-y-1/2 ml-1 px-2 py-1 bg-gray-900 text-white text-xs rounded whitespace-nowrap z-10">
-                {session.status.charAt(0).toUpperCase() + session.status.slice(1)}
-                <div className="absolute right-full top-1/2 transform -translate-y-1/2 border-2 border-transparent border-r-gray-900"></div>
-              </div>
-            )}
-          </div>
-        </div>
-      </td>
-      <td className="px-4 py-3 whitespace-nowrap">
-        <span className="text-sm font-mono text-foreground">{session.id}</span>
-      </td>
-      <td className="px-4 py-3 whitespace-nowrap">
-        <span className="text-sm text-muted-foreground">
+    <TableRow sx={{ '&:hover': { bgcolor: 'action.hover' } }}>
+      <TableCell sx={{ px: 2, py: 1.5 }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Tooltip title={session.status.charAt(0).toUpperCase() + session.status.slice(1)}>
+            <Box
+              sx={{
+                width: 8,
+                height: 8,
+                borderRadius: '50%',
+                bgcolor: statusColorMap[session.status] || 'grey.500',
+                cursor: 'help'
+              }}
+            />
+          </Tooltip>
+        </Box>
+      </TableCell>
+      <TableCell sx={{ px: 2, py: 1.5 }}>
+        <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+          {session.id}
+        </Typography>
+      </TableCell>
+      <TableCell sx={{ px: 2, py: 1.5 }}>
+        <Typography variant="body2" color="text.secondary">
           {formatDateTime(session.started)}
-        </span>
-      </td>
-      <td className="px-4 py-3 whitespace-nowrap">
-        <span className="text-sm text-muted-foreground">
+        </Typography>
+      </TableCell>
+      <TableCell sx={{ px: 2, py: 1.5 }}>
+        <Typography variant="body2" color="text.secondary">
           {formatTimeAgo(session.lastActivity)}
-        </span>
-      </td>
-      <td className="px-4 py-3 whitespace-nowrap">
-        <span className="text-sm font-mono text-foreground">{session.ip}</span>
-      </td>
-      <td className="px-4 py-3 whitespace-nowrap">
-        <div className="flex items-center justify-center space-x-2">
+        </Typography>
+      </TableCell>
+      <TableCell sx={{ px: 2, py: 1.5 }}>
+        <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+          {session.ip}
+        </Typography>
+      </TableCell>
+      <TableCell sx={{ px: 2, py: 1.5 }}>
+        <Stack direction="row" spacing={1} alignItems="center" justifyContent="center">
           {/* Check if this is the current session */}
           {isCurrentSession ? (
-            <div className="flex items-center gap-2 px-3 py-1.5 bg-blue-50 dark:bg-blue-950 text-blue-700 dark:text-blue-300 rounded-md border border-blue-200 dark:border-blue-800">
-              <User className="h-3 w-3" />
-              <span className="text-xs font-medium">You</span>
-            </div>
+            <Chip
+              icon={<User style={{ width: 12, height: 12 }} />}
+              label={t('settings.sessionTable.you')}
+              size="small"
+              sx={{
+                height: 24,
+                fontSize: 11,
+                fontWeight: 500,
+                bgcolor: 'info.light',
+                color: 'info.dark',
+                '& .MuiChip-icon': {
+                  marginLeft: 0.5,
+                  color: 'inherit'
+                }
+              }}
+            />
           ) : (
             <>
-              {session.status === 'expired' ? (
+              {session.status === 'terminated' ? (
+                <Typography variant="caption" color="text.secondary" sx={{ px: 1, py: 0.5 }}>
+                  {t('settings.sessionTable.terminated')}
+                </Typography>
+              ) : session.status === 'expired' ? (
                 isAdmin ? (
                   <Button
                     onClick={() => onRestoreSession(session.id)}
                     variant="ghost"
                     size="icon"
-                    className="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950"
-                    title="Restore session"
+                    sx={{
+                      color: 'info.main',
+                      '&:hover': {
+                        color: 'info.dark',
+                        bgcolor: 'info.light'
+                      }
+                    }}
+                    title={t('settings.sessionTable.restoreSession')}
                   >
                     <RotateCcw className="h-4 w-4" />
                   </Button>
                 ) : (
-                  <span className="text-xs text-muted-foreground px-2 py-1">Expired</span>
+                  <Typography variant="caption" color="text.secondary" sx={{ px: 1, py: 0.5 }}>
+                    {t('settings.sessionTable.expired')}
+                  </Typography>
                 )
               ) : (
                 canTerminate ? (
@@ -104,21 +134,27 @@ export function SessionRow({
                     onClick={() => onTerminateSession(session.id)}
                     variant="ghost"
                     size="icon"
-                    className="text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300 hover:bg-red-50 dark:hover:bg-red-950"
-                    title="Terminate session"
+                    sx={{
+                      color: 'error.main',
+                      '&:hover': {
+                        color: 'error.dark',
+                        bgcolor: 'error.light'
+                      }
+                    }}
+                    title={t('settings.sessionTable.terminateSession')}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 ) : (
-                  <span className="text-xs text-muted-foreground px-2 py-1">
-                    {!isAdmin ? 'Admin Only' : 'Active'}
-                  </span>
+                  <Typography variant="caption" color="text.secondary" sx={{ px: 1, py: 0.5 }}>
+                    {!isAdmin ? t('settings.sessionTable.adminOnly') : t('settings.sessionTable.active')}
+                  </Typography>
                 )
               )}
             </>
           )}
-        </div>
-      </td>
-    </tr>
+        </Stack>
+      </TableCell>
+    </TableRow>
   )
 }

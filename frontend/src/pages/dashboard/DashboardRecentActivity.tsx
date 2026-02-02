@@ -1,9 +1,12 @@
 /**
  * Dashboard Recent Activity Component
  *
- * Displays a list of recent system activities.
+ * Displays a clean timeline of recent system activities.
  */
 
+import React from 'react'
+import { Link } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
 import {
   Clock,
   Server,
@@ -17,125 +20,182 @@ import {
   UserCheck,
   Activity
 } from 'lucide-react'
-import { Card, Badge } from 'ui-toolkit'
+import { Box, Card, Typography, Stack, Chip } from '@mui/material'
 import { ActivityLog } from '@/types/mcp'
+
+interface ServerInfo {
+  id: string
+  name: string
+}
 
 interface DashboardRecentActivityProps {
   activities: ActivityLog[]
+  servers?: ServerInfo[]
 }
 
-const activityTypeConfig: Record<string, { icon: React.ComponentType<{ className?: string }>, color: string, bgColor: string }> = {
-  server_connect: { icon: Server, color: 'text-green-600', bgColor: 'bg-green-100 dark:bg-green-900/30' },
-  server_disconnect: { icon: Power, color: 'text-red-600', bgColor: 'bg-red-100 dark:bg-red-900/30' },
-  app_start: { icon: CheckCircle, color: 'text-green-600', bgColor: 'bg-green-100 dark:bg-green-900/30' },
-  app_stop: { icon: Power, color: 'text-yellow-600', bgColor: 'bg-yellow-100 dark:bg-yellow-900/30' },
-  app_install: { icon: Download, color: 'text-blue-600', bgColor: 'bg-blue-100 dark:bg-blue-900/30' },
-  app_uninstall: { icon: Trash2, color: 'text-red-600', bgColor: 'bg-red-100 dark:bg-red-900/30' },
-  app_update: { icon: RefreshCw, color: 'text-purple-600', bgColor: 'bg-purple-100 dark:bg-purple-900/30' },
-  settings_change: { icon: Settings, color: 'text-gray-600', bgColor: 'bg-gray-100 dark:bg-gray-900/30' },
-  login: { icon: UserCheck, color: 'text-blue-600', bgColor: 'bg-blue-100 dark:bg-blue-900/30' },
-  error: { icon: AlertCircle, color: 'text-red-600', bgColor: 'bg-red-100 dark:bg-red-900/30' },
-  default: { icon: Activity, color: 'text-gray-600', bgColor: 'bg-gray-100 dark:bg-gray-900/30' }
+const activityTypeConfig: Record<string, { icon: React.ComponentType<{ className?: string }>, color: string }> = {
+  server_connect: { icon: Server, color: '#10b981' },
+  server_disconnect: { icon: Power, color: '#ef4444' },
+  app_start: { icon: CheckCircle, color: '#10b981' },
+  app_stop: { icon: Power, color: '#f59e0b' },
+  app_install: { icon: Download, color: '#3b82f6' },
+  app_uninstall: { icon: Trash2, color: '#ef4444' },
+  app_update: { icon: RefreshCw, color: '#8b5cf6' },
+  settings_change: { icon: Settings, color: '#6b7280' },
+  login: { icon: UserCheck, color: '#3b82f6' },
+  error: { icon: AlertCircle, color: '#ef4444' },
+  default: { icon: Activity, color: '#6b7280' }
 }
 
 function getActivityConfig(type: string) {
   return activityTypeConfig[type] || activityTypeConfig.default
 }
 
-function formatTimeAgo(dateString: string): string {
-  const date = new Date(dateString)
-  const now = new Date()
-  const diffMs = now.getTime() - date.getTime()
-  const diffMins = Math.floor(diffMs / (1000 * 60))
-  const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-  const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+function useTimeAgo() {
+  const { t } = useTranslation()
 
-  if (diffMins < 1) return 'Just now'
-  if (diffMins < 60) return `${diffMins}m ago`
-  if (diffHours < 24) return `${diffHours}h ago`
-  if (diffDays < 7) return `${diffDays}d ago`
-  return date.toLocaleDateString()
+  return (dateString: string): string => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffMs = now.getTime() - date.getTime()
+    const diffMins = Math.floor(diffMs / (1000 * 60))
+    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24))
+
+    if (diffMins < 1) return t('logs.timeAgo.justNow')
+    if (diffMins < 60) return t('logs.timeAgo.minutesAgo', { count: diffMins })
+    if (diffHours < 24) return t('logs.timeAgo.hoursAgo', { count: diffHours })
+    if (diffDays < 7) return t('logs.timeAgo.daysAgo', { count: diffDays })
+    return date.toLocaleDateString()
+  }
 }
 
-function getActivityBadgeVariant(type: string): 'success' | 'warning' | 'danger' | 'neutral' | 'accent' {
-  if (type.includes('connect') || type.includes('start') || type === 'login') return 'success'
-  if (type.includes('disconnect') || type.includes('stop')) return 'warning'
-  if (type.includes('error') || type.includes('uninstall')) return 'danger'
-  if (type.includes('update') || type.includes('install')) return 'accent'
-  return 'neutral'
+function formatActivityType(type: string): string {
+  return type.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')
 }
 
-export function DashboardRecentActivity({ activities }: DashboardRecentActivityProps) {
+export function DashboardRecentActivity({ activities, servers = [] }: DashboardRecentActivityProps) {
+  const { t } = useTranslation()
+  const formatTimeAgo = useTimeAgo()
+
+  const serverMap = React.useMemo(() => {
+    const map = new Map<string, string>()
+    servers.forEach(s => map.set(s.id, s.name))
+    return map
+  }, [servers])
+
+  const getServerName = (serverId: string): string => {
+    return serverMap.get(serverId) || serverId
+  }
+
   return (
-    <Card padding="md">
-      <div className="flex items-center justify-between mb-6">
-        <div className="flex items-center gap-2">
-          <div className="p-2 rounded-lg bg-blue-100 dark:bg-blue-900/30">
-            <Clock className="w-5 h-5 text-blue-600" />
-          </div>
-          <h2 className="text-lg font-semibold">Recent Activity</h2>
-        </div>
-        {activities.length > 0 && (
-          <Badge variant="neutral" size="sm">
-            {activities.length} events
-          </Badge>
-        )}
-      </div>
+    <Card sx={{ p: 2.5, flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 2.5 }}>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Clock className="w-4 h-4" style={{ color: '#3b82f6' }} />
+          <Typography variant="body2" fontWeight={600}>
+            {t('dashboard.recentActivity')}
+          </Typography>
+        </Stack>
+        <Link
+          to="/logs"
+          style={{
+            fontSize: 12,
+            color: 'var(--mui-palette-text-secondary)',
+            textDecoration: 'none',
+            transition: 'color 0.2s'
+          }}
+        >
+          {t('common.viewAll')}
+        </Link>
+      </Stack>
 
       {activities.length === 0 ? (
-        <div className="text-center py-8">
-          <div className="w-12 h-12 mx-auto rounded-full bg-muted flex items-center justify-center mb-3">
-            <Activity className="w-6 h-6 text-muted-foreground" />
-          </div>
-          <h3 className="text-sm font-medium mb-1">No recent activity</h3>
-          <p className="text-xs text-muted-foreground">
-            System events will appear here as they occur.
-          </p>
-        </div>
+        <Stack alignItems="center" justifyContent="center" sx={{ flex: 1, textAlign: 'center' }}>
+          <Activity className="w-8 h-8" style={{ color: 'var(--mui-palette-text-secondary)', marginBottom: 12 }} />
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+            {t('dashboard.noRecentActivity')}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {t('dashboard.eventsWillAppear')}
+          </Typography>
+        </Stack>
       ) : (
-        <div className="space-y-3">
-          {activities.slice(0, 10).map((activity) => {
+        <Stack spacing={0.5} sx={{ flex: 1, overflow: 'auto', minHeight: 0 }}>
+          {activities.map((activity, index) => {
             const config = getActivityConfig(activity.activity_type)
             const Icon = config.icon
 
             return (
-              <div
+              <Stack
                 key={activity.id}
-                className="flex items-start gap-3 p-3 rounded-lg hover:bg-muted/50 transition-colors"
+                direction="row"
+                spacing={1.5}
+                alignItems="center"
+                sx={{
+                  py: 1.25,
+                  px: 1,
+                  mx: -1,
+                  borderRadius: 1,
+                  transition: 'background-color 0.2s',
+                  '&:hover': {
+                    bgcolor: 'action.hover'
+                  }
+                }}
               >
-                <div className={`p-2 rounded-lg ${config.bgColor} flex-shrink-0`}>
-                  <Icon className={`w-4 h-4 ${config.color}`} />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between gap-2">
-                    <p className="text-sm font-medium truncate">
-                      {activity.description}
-                    </p>
-                    <Badge
-                      variant={getActivityBadgeVariant(activity.activity_type)}
-                      size="sm"
-                    >
-                      {activity.activity_type.replace(/_/g, ' ')}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-xs text-muted-foreground">
+                <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center', justifyContent: 'center', width: 24, minWidth: 24 }}>
+                  <Box component="span" sx={{ display: 'flex', color: config.color }}>
+                    <Icon className="w-4 h-4" />
+                  </Box>
+                  {/* Timeline connector */}
+                  {index < activities.length - 1 && (
+                    <Box sx={{
+                      position: 'absolute',
+                      top: '100%',
+                      left: '50%',
+                      transform: 'translateX(-50%)',
+                      width: 1,
+                      height: 12,
+                      bgcolor: 'divider'
+                    }} />
+                  )}
+                </Box>
+
+                <Box sx={{ flex: 1, minWidth: 0 }}>
+                  <Typography variant="body2" noWrap>
+                    {activity.description}
+                  </Typography>
+                  <Stack direction="row" spacing={1} alignItems="center" sx={{ mt: 0.25 }}>
+                    <Typography variant="caption" color="text.secondary">
                       {formatTimeAgo(activity.created_at)}
-                    </span>
+                    </Typography>
                     {activity.server_id && (
                       <>
-                        <span className="text-xs text-muted-foreground">•</span>
-                        <span className="text-xs text-muted-foreground">
-                          {activity.server_id}
-                        </span>
+                        <Typography variant="caption" color="text.secondary">·</Typography>
+                        <Typography variant="caption" color="text.secondary" noWrap>
+                          {getServerName(activity.server_id)}
+                        </Typography>
                       </>
                     )}
-                  </div>
-                </div>
-              </div>
+                  </Stack>
+                </Box>
+
+                <Chip
+                  label={formatActivityType(activity.activity_type)}
+                  size="small"
+                  sx={{
+                    fontSize: 10,
+                    fontWeight: 500,
+                    height: 20,
+                    bgcolor: 'action.hover',
+                    color: config.color
+                  }}
+                />
+              </Stack>
             )
           })}
-        </div>
+
+        </Stack>
       )}
     </Card>
   )

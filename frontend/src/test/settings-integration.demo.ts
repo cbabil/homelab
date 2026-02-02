@@ -7,8 +7,8 @@
 
 import { settingsService } from '@/services/settingsService'
 import { SettingsMcpClient } from '@/services/settingsMcpClient'
-import { HomelabMCPClient } from '@/services/mcpClient'
-import { DEFAULT_SETTINGS } from '@/types/settings'
+import { DEFAULT_SETTINGS, SessionTimeout } from '@/types/settings'
+import type { MCPClient } from '@/types/mcp'
 
 // Mock MCP client for testing
 class MockMCPClient {
@@ -18,7 +18,7 @@ class MockMCPClient {
     return this.connected
   }
 
-  async callTool<T>(name: string, params: Record<string, unknown>) {
+  async callTool(name: string, params: Record<string, unknown>) {
     console.log(`Demo: MCP tool called - ${name}`, params)
 
     // Simulate backend responses
@@ -41,9 +41,9 @@ class MockMCPClient {
         return {
           success: true,
           data: {
-            ...params.settings,
+            ...(params.settings as Record<string, unknown>),
             lastUpdated: new Date().toISOString(),
-            version: (params.settings as any).version + 1
+            version: ((params.settings as Record<string, unknown>).version as number) + 1
           }
         }
 
@@ -79,7 +79,7 @@ export async function demonstrateSettingsIntegration() {
   // Create mock MCP client
   const mockMcpClient = new MockMCPClient()
   const settingsMcpClient = new SettingsMcpClient(
-    mockMcpClient as any,
+    mockMcpClient as unknown as MCPClient,
     () => mockMcpClient.isBackendConnected()
   )
 
@@ -146,7 +146,7 @@ export async function demonstrateErrorHandling() {
         ...DEFAULT_SETTINGS.security,
         session: {
           ...DEFAULT_SETTINGS.security.session,
-          timeout: 'invalid' as any
+          timeout: 'invalid' as unknown as SessionTimeout
         }
       }
     }
@@ -171,9 +171,20 @@ export async function demonstrateErrorHandling() {
   }
 }
 
+// Extend window type for demo
+declare global {
+  interface Window {
+    settingsDemo?: {
+      demonstrateSettingsIntegration: typeof demonstrateSettingsIntegration
+      demonstrateErrorHandling: typeof demonstrateErrorHandling
+      settingsService: typeof settingsService
+    }
+  }
+}
+
 // Export for console testing
 if (typeof window !== 'undefined') {
-  (window as any).settingsDemo = {
+  window.settingsDemo = {
     demonstrateSettingsIntegration,
     demonstrateErrorHandling,
     settingsService

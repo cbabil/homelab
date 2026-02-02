@@ -1,11 +1,20 @@
 /**
  * Session Table Header Component
- * 
+ *
  * Table header with sortable columns for session management.
  */
 
+import { useTranslation } from 'react-i18next'
+import { TableHead, TableRow } from '@mui/material'
+import type { SxProps, Theme } from '@mui/material'
 import type { SortKey } from '../types'
 import { SortableHeader } from './SortableHeader'
+
+const styles: Record<string, SxProps<Theme>> = {
+  thead: {
+    bgcolor: 'action.hover'
+  }
+}
 
 interface SessionTableHeaderProps {
   sortBy: SortKey
@@ -18,52 +27,54 @@ export function SessionTableHeader({
   sortOrder,
   onSort
 }: SessionTableHeaderProps) {
+  const { t } = useTranslation()
+
   return (
-    <thead className="bg-muted/50">
-      <tr>
-        <SortableHeader 
-          label="Status" 
-          sortKey="status" 
-          currentSort={sortBy} 
-          sortOrder={sortOrder} 
+    <TableHead sx={styles.thead}>
+      <TableRow>
+        <SortableHeader
+          label={t('settings.sessionTable.status')}
+          sortKey="status"
+          currentSort={sortBy}
+          sortOrder={sortOrder}
           onSort={onSort}
         />
-        <SortableHeader 
-          label="Session ID" 
-          sortKey="sessionId" 
-          currentSort={sortBy} 
-          sortOrder={sortOrder} 
+        <SortableHeader
+          label={t('settings.sessionTable.sessionId')}
+          sortKey="sessionId"
+          currentSort={sortBy}
+          sortOrder={sortOrder}
           onSort={onSort}
         />
-        <SortableHeader 
-          label="Started" 
-          sortKey="started" 
-          currentSort={sortBy} 
-          sortOrder={sortOrder} 
+        <SortableHeader
+          label={t('settings.sessionTable.started')}
+          sortKey="started"
+          currentSort={sortBy}
+          sortOrder={sortOrder}
           onSort={onSort}
         />
-        <SortableHeader 
-          label="Last Activity" 
-          sortKey="lastActivity" 
-          currentSort={sortBy} 
-          sortOrder={sortOrder} 
+        <SortableHeader
+          label={t('settings.sessionTable.lastActivity')}
+          sortKey="lastActivity"
+          currentSort={sortBy}
+          sortOrder={sortOrder}
           onSort={onSort}
         />
-        <SortableHeader 
-          label="Location" 
-          sortKey="location" 
-          currentSort={sortBy} 
-          sortOrder={sortOrder} 
+        <SortableHeader
+          label={t('settings.sessionTable.location')}
+          sortKey="location"
+          currentSort={sortBy}
+          sortOrder={sortOrder}
           onSort={onSort}
         />
-        <SortableHeader 
-          label="Actions" 
-          sortKey="actions" 
-          currentSort={sortBy} 
-          sortOrder={sortOrder} 
+        <SortableHeader
+          label={t('settings.sessionTable.actions')}
+          sortKey="actions"
+          currentSort={sortBy}
+          sortOrder={sortOrder}
           onSort={onSort}
         />
-      </tr>
-    </thead>
+      </TableRow>
+    </TableHead>
   )
 }

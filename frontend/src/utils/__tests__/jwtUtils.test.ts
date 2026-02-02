@@ -160,8 +160,8 @@ describe('JWT Utilities', () => {
     })
 
     it('should validate header structure', () => {
-      const invalidHeader = { alg: 'RS256', typ: 'JWT' }
-      const token = createToken(invalidHeader)
+      const invalidHeader = { alg: 'RS256' as const, typ: 'JWT' as const }
+      const token = createToken(invalidHeader as unknown as JWTHeader)
       expect(parseJWT(token)).toBeNull()
     })
   })
@@ -277,7 +277,7 @@ describe('JWT Utilities', () => {
       
       for (const claim of requiredClaims) {
         const invalidPayload = { ...validPayload }
-        delete (invalidPayload as any)[claim]
+        delete (invalidPayload as Record<string, unknown>)[claim]
         
         expect(isValidJWTPayload(invalidPayload)).toBe(false)
       }

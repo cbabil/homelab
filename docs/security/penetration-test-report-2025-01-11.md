@@ -1,7 +1,7 @@
 # Penetration Testing Security Assessment Report
 
 **Assessment Date**: January 11, 2025  
-**Application**: Homelab Management Frontend  
+**Application**: Tomo Management Frontend  
 **Assessment Type**: Authorized Security Testing  
 **Conducted By**: Pentest-Specialist Agent  
 
@@ -20,14 +20,14 @@ This security assessment reveals a well-architected React/TypeScript frontend ap
 ### 1. Authentication & Session Management Security
 
 #### Strengths
-- **Comprehensive JWT Implementation**: Full JWT service with proper signature verification using Web Crypto API (`/Users/christophebabilotte/source/homelab/frontend/src/services/auth/jwtService.ts`)
+- **Comprehensive JWT Implementation**: Full JWT service with proper signature verification using Web Crypto API (`/Users/christophebabilotte/source/tomo/frontend/src/services/auth/jwtService.ts`)
 - **Token Blacklisting**: In-memory blacklist system preventing token reuse after revocation
 - **Session Timeout Management**: Configurable session timeouts with automatic cleanup
 - **Multi-session Support**: Proper session isolation and management across devices
 
 #### **HIGH RISK** - Client-Side Token Storage
 **Finding**: JWT tokens stored in localStorage without encryption
-**Location**: `/Users/christophebabilotte/source/homelab/frontend/src/services/auth/jwtSessionService.ts:78-80`
+**Location**: `/Users/christophebabilotte/source/tomo/frontend/src/services/auth/jwtSessionService.ts:78-80`
 ```typescript
 localStorage.setItem(JWT_STORAGE_KEYS.ACCESS_TOKEN, metadata.accessToken)
 localStorage.setItem(JWT_STORAGE_KEYS.REFRESH_TOKEN, metadata.refreshToken)
@@ -41,7 +41,7 @@ localStorage.setItem(JWT_STORAGE_KEYS.REFRESH_TOKEN, metadata.refreshToken)
 
 #### **MEDIUM RISK** - Session Metadata in localStorage
 **Finding**: Session metadata stored with basic Base64 encoding (not encryption)
-**Location**: `/Users/christophebabilotte/source/homelab/frontend/src/services/auth/sessionService.ts:305-306`
+**Location**: `/Users/christophebabilotte/source/tomo/frontend/src/services/auth/sessionService.ts:305-306`
 ```typescript
 const encrypted = btoa(JSON.stringify(metadata))
 localStorage.setItem(`session_${metadata.sessionId}`, encrypted)
@@ -60,7 +60,7 @@ localStorage.setItem(`session_${metadata.sessionId}`, encrypted)
 
 #### **LOW RISK** - Generic Error Messages
 **Finding**: Security-conscious but potentially user-unfriendly error messaging
-**Location**: `/Users/christophebabilotte/source/homelab/frontend/src/services/auth/authService.ts:248-265`
+**Location**: `/Users/christophebabilotte/source/tomo/frontend/src/services/auth/authService.ts:248-265`
 ```typescript
 if (await this.usernameExists(credentials.username)) {
   throw new Error('Invalid username or password')  // Generic message for security
@@ -79,7 +79,7 @@ if (await this.usernameExists(credentials.username)) {
 
 #### **MEDIUM RISK** - Client-Side Role Determination
 **Finding**: Session identification relies on string matching rather than cryptographic verification
-**Location**: `/Users/christophebabilotte/source/homelab/frontend/src/pages/settings/components/SessionRow.tsx:33`
+**Location**: `/Users/christophebabilotte/source/tomo/frontend/src/pages/settings/components/SessionRow.tsx:33`
 ```typescript
 const isCurrentSession = session.location.includes('Current') || session.location.includes('current')
 ```
@@ -89,9 +89,9 @@ const isCurrentSession = session.location.includes('Current') || session.locatio
 
 #### **HIGH RISK** - Hardcoded Admin Credentials
 **Finding**: Static admin credentials in authentication service
-**Location**: `/Users/christophebabilotte/source/homelab/frontend/src/services/auth/authService.ts:200-201`
+**Location**: `/Users/christophebabilotte/source/tomo/frontend/src/services/auth/authService.ts:200-201`
 ```typescript
-if (credentials.username === 'admin' && credentials.password === 'HomeLabAdmin123!') {
+if (credentials.username === 'admin' && credentials.password === 'TomoAdmin123!') {
 ```
 
 **Impact**: Critical security vulnerability for production deployment
@@ -109,9 +109,9 @@ if (credentials.username === 'admin' && credentials.password === 'HomeLabAdmin12
 #### **HIGH RISK** - Extensive localStorage Usage
 **Finding**: Sensitive data stored in localStorage without encryption
 **Locations**: 
-- Session data: `/Users/christophebabilotte/source/homelab/frontend/src/services/sessionManager.ts:535`
-- Server configurations: `/Users/christophebabilotte/source/homelab/frontend/src/services/storage/storageHelpers.ts`
-- User settings: `/Users/christophebabilotte/source/homelab/frontend/src/services/settingsService.ts`
+- Session data: `/Users/christophebabilotte/source/tomo/frontend/src/services/sessionManager.ts:535`
+- Server configurations: `/Users/christophebabilotte/source/tomo/frontend/src/services/storage/storageHelpers.ts`
+- User settings: `/Users/christophebabilotte/source/tomo/frontend/src/services/settingsService.ts`
 
 **Impact**: Data persistence after logout, accessible to malicious scripts
 **Recommendation**:
@@ -138,7 +138,7 @@ if (credentials.username === 'admin' && credentials.password === 'HomeLabAdmin12
 
 #### **MEDIUM RISK** - Missing CSRF Protection
 **Finding**: No explicit CSRF token implementation in API calls
-**Location**: `/Users/christophebabilotte/source/homelab/frontend/src/services/mcpClient.ts:56-62`
+**Location**: `/Users/christophebabilotte/source/tomo/frontend/src/services/mcpClient.ts:56-62`
 
 **Impact**: Potential for cross-site request forgery attacks
 **Recommendation**: Implement CSRF tokens for state-changing operations
@@ -159,7 +159,7 @@ if (credentials.username === 'admin' && credentials.password === 'HomeLabAdmin12
 
 #### **MEDIUM RISK** - Missing Security Headers
 **Finding**: No explicit Content Security Policy or security headers configuration
-**Location**: `/Users/christophebabilotte/source/homelab/frontend/vite.config.ts`
+**Location**: `/Users/christophebabilotte/source/tomo/frontend/vite.config.ts`
 
 **Impact**: No protection against XSS, clickjacking, and other client-side attacks
 **Recommendation**: Implement comprehensive security headers:
@@ -263,11 +263,11 @@ This assessment followed the **OWASP Testing Guide** methodology with focus on:
 
 ## Conclusion
 
-The homelab management application demonstrates a solid foundation in security architecture with comprehensive authentication systems, proper input validation, and well-structured access controls. The application successfully prevents common vulnerabilities like XSS injection and implements modern security practices.
+The tomo management application demonstrates a solid foundation in security architecture with comprehensive authentication systems, proper input validation, and well-structured access controls. The application successfully prevents common vulnerabilities like XSS injection and implements modern security practices.
 
 However, **immediate attention is required** for critical vulnerabilities, particularly the hardcoded credentials and unencrypted token storage, which pose significant security risks in any deployment scenario. The extensive use of localStorage for sensitive data also requires architectural changes to meet production security standards.
 
-With the recommended fixes implemented, this application would achieve an **A-level security rating** and be suitable for production deployment in a homelab environment with appropriate network security controls.
+With the recommended fixes implemented, this application would achieve an **A-level security rating** and be suitable for production deployment in a tomo environment with appropriate network security controls.
 
 ---
 
@@ -289,4 +289,4 @@ With the recommended fixes implemented, this application would achieve an **A-le
 - Assessment based on static code analysis without runtime testing
 
 ### Authorization
-This security assessment was conducted with explicit authorization on the owner's personal homelab infrastructure for defensive security purposes only.
+This security assessment was conducted with explicit authorization on the owner's personal tomo infrastructure for defensive security purposes only.

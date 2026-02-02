@@ -26,10 +26,9 @@ export function useAuthActions({
 }: UseAuthActionsProps) {
   
   const login = useCallback(async (credentials: LoginCredentials) => {
-    updateAuthState({
-      isLoading: true,
-      error: null
-    })
+    // DO NOT update auth context during login attempt
+    // The form has its own isSubmitting/submitError state
+    // Any updateAuthState call causes all auth subscribers to re-render
 
     try {
       // Initialize settings service if needed
@@ -38,10 +37,10 @@ export function useAuthActions({
         username: credentials.username,
         rememberMe: Boolean(credentials.rememberMe)
       })
-      
+
       // Authenticate with backend
       const loginResponse = await authService.login(credentials)
-      
+
       // Create secure session
       const sessionMetadata = await sessionService.createSession({
         userId: loginResponse.user.id,
@@ -50,6 +49,7 @@ export function useAuthActions({
         ipAddress: 'localhost' // Would be determined by backend
       })
 
+      // Only update auth context on SUCCESS (this navigates away anyway)
       updateAuthState({
         user: loginResponse.user,
         isAuthenticated: true,
@@ -64,15 +64,13 @@ export function useAuthActions({
         sessionExpiry: sessionMetadata.expiryTime
       })
     } catch (error) {
-      const errorMessage = 'Invalid username or password'
-      updateAuthState({
-        isLoading: false,
-        error: errorMessage
-      })
+      // DO NOT update auth context on failure - form handles error display locally
+      const errorMessage = error instanceof Error ? error.message : 'Invalid username or password'
       securityLogger.warn('Login failed', {
         username: credentials.username,
-        reason: error instanceof Error ? error.message : 'unknown-error'
+        reason: errorMessage
       })
+      // Preserve the original error message (e.g., "Account is temporarily locked...")
       throw new Error(errorMessage)
     }
   }, [updateAuthState])
@@ -86,8 +84,6 @@ export function useAuthActions({
       const sessionMetadata = sessionService.getCurrentSession()
       let currentToken = sessionMetadata?.accessToken
 
-      console.log('🔍 Session metadata for logout:', sessionMetadata)
-
       // Try to get token from different sources
       if (!currentToken) {
         // Try to get from localStorage or sessionStorage using correct keys
@@ -96,7 +92,6 @@ export function useAuthActions({
                              sessionStorage.getItem(AUTH_STORAGE_KEYS.TOKEN)
           if (storedToken) {
             currentToken = storedToken
-            console.log('🎟️ Found token in storage')
           }
         } catch (e) {
           console.warn('Could not access token storage:', e)
@@ -107,21 +102,15 @@ export function useAuthActions({
       let fallbackUsername: string | undefined
       if (!currentToken && authState.user) {
         fallbackUsername = authState.user.username
-        console.log('🔄 Using fallback username from authState:', fallbackUsername)
       }
-
-      console.log('🎟️ Current token for logout:', currentToken ? 'Token found' : 'No token')
 
       // Call auth service logout with token for backend logging
       if (currentToken) {
-        console.log('✅ Calling authService.logout with token')
         await authService.logout(currentToken)
       } else if (fallbackUsername) {
-        console.log('🔄 Calling authService.logout with fallback username')
         // Modify authService.logout to accept username directly
         await authService.logout(undefined, fallbackUsername)
       } else {
-        console.log('⚠️ Calling authService.logout without token or username')
       await authService.logout()
       }
 
@@ -191,7 +180,7 @@ export function useAuthActions({
         error: null,
         sessionExpiry: sessionMetadata.expiryTime
       })
-    } catch (error) {
+    } catch (_error) {
       const errorMessage = 'Registration failed. Please try again.'
       updateAuthState({
         isLoading: false,

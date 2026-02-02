@@ -1,5 +1,5 @@
 /**
- * Main entry point for the Homelab Assistant frontend application.
+ * Main entry point for the Tomo frontend application.
  * Sets up React app with routing and global providers.
  */
 
@@ -13,9 +13,12 @@ import { NotificationProvider } from '@/providers/NotificationProvider'
 import { AuthProvider } from '@/providers/AuthProvider'
 import { SettingsProvider } from '@/providers/SettingsProvider'
 import { ToastProvider } from '@/components/ui/Toast'
+import { ErrorBoundary } from '@/components/ui/ErrorBoundary'
 import { App } from '@/App'
-import 'ui-toolkit/dist/style.css'
 import '@/styles/globals.css'
+
+// Initialize i18n before app renders
+import '@/i18n'
 
 // Create React Query client
 const queryClient = new QueryClient({
@@ -40,13 +43,15 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
         <ThemeProvider>
           <AuthProvider>
             <SettingsProvider>
-              <NotificationProvider>
-                <ToastProvider>
-                  <MCPProvider serverUrl={mcpServerUrl} transportType="http">
-                    <App />
-                  </MCPProvider>
-                </ToastProvider>
-              </NotificationProvider>
+              <ToastProvider>
+                <MCPProvider serverUrl={mcpServerUrl} transportType="http">
+                  <NotificationProvider>
+                    <ErrorBoundary>
+                      <App />
+                    </ErrorBoundary>
+                  </NotificationProvider>
+                </MCPProvider>
+              </ToastProvider>
             </SettingsProvider>
           </AuthProvider>
         </ThemeProvider>

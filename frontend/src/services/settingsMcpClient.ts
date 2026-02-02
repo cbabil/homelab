@@ -15,19 +15,8 @@ import { mcpLogger } from '@/services/systemLogger'
 
 // Backend settings operation types
 export interface SettingsSchema {
-  schema: Record<string, any>
-  constraints: Record<string, any>
-}
-
-export interface SettingsAuditEntry {
-  id: number
-  user_id: string
-  action: string
-  settings_path: string
-  old_value: any
-  new_value: any
-  timestamp: string
-  ip_address?: string
+  schema: Record<string, unknown>
+  constraints: Record<string, unknown>
 }
 
 export interface SettingsOperationOptions {
@@ -186,14 +175,15 @@ export class SettingsMcpClient {
   }
 
   /**
-   * Reset user settings to defaults (admin only)
+   * Reset user settings to defaults by deleting user overrides
    */
-  async resetUserSettings(userId: string = 'default'): Promise<SettingsUpdateResult> {
+  async resetUserSettings(userId: string = 'default', category?: string): Promise<SettingsUpdateResult> {
     try {
-      mcpLogger.info('Resetting user settings via backend', { userId })
+      mcpLogger.info('Resetting user settings via backend', { userId, category })
 
-      const response = await this.mcpClient.callTool<UserSettings>('reset_user_settings', {
-        user_id: userId
+      const response = await this.mcpClient.callTool<{ deleted_count: number; user_id: string }>('reset_user_settings', {
+        user_id: userId,
+        category: category
       })
 
       if (!response.success) {
@@ -204,10 +194,17 @@ export class SettingsMcpClient {
         }
       }
 
-      mcpLogger.info('User settings reset successfully', { userId })
+      mcpLogger.info('User settings reset successfully', {
+        userId,
+        deletedCount: response.data?.deleted_count
+      })
+
+      // After reset, fetch the current settings (which will be system defaults)
+      const settingsResponse = await this.getSettings(userId)
+
       return {
         success: true,
-        settings: response.data
+        settings: settingsResponse.settings
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
@@ -220,33 +217,78 @@ export class SettingsMcpClient {
   }
 
   /**
-   * Get settings audit log (admin only)
+   * Reset system settings to factory defaults (admin only)
    */
-  async getSettingsAudit(
-    userId?: string,
-    limit: number = 50,
-    offset: number = 0
-  ): Promise<SettingsAuditEntry[]> {
+  async resetSystemSettings(userId: string = 'default', category?: string): Promise<SettingsUpdateResult> {
     try {
-      mcpLogger.info('Getting settings audit log', { userId, limit, offset })
+      mcpLogger.info('Resetting system settings to defaults via backend', { userId, category })
 
-      const response = await this.mcpClient.callTool<SettingsAuditEntry[]>('get_settings_audit', {
+      const response = await this.mcpClient.callTool<{ reset_count: number }>('reset_system_settings', {
         user_id: userId,
-        limit,
-        offset
+        category: category
       })
 
       if (!response.success) {
-        mcpLogger.error('Failed to get settings audit', { error: response.error })
-        return []
+        mcpLogger.error('Failed to reset system settings', { error: response.error })
+        return {
+          success: false,
+          error: response.error || 'Failed to reset system settings'
+        }
       }
 
-      mcpLogger.info('Settings audit retrieved successfully', { count: response.data?.length })
-      return response.data || []
+      mcpLogger.info('System settings reset successfully', {
+        userId,
+        resetCount: response.data?.reset_count
+      })
+
+      // After reset, fetch the current settings
+      const settingsResponse = await this.getSettings(userId)
+
+      return {
+        success: true,
+        settings: settingsResponse.settings
+      }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Unknown error'
-      mcpLogger.error('Settings audit retrieval failed', { error: errorMessage })
-      return []
+      mcpLogger.error('System settings reset failed', { error: errorMessage })
+      return {
+        success: false,
+        error: errorMessage
+      }
+    }
+  }
+
+  /**
+   * Get factory default settings values
+   */
+  async getDefaultSettings(category?: string): Promise<{ success: boolean; defaults?: Record<string, unknown>; error?: string }> {
+    try {
+      mcpLogger.info('Getting default settings', { category })
+
+      const response = await this.mcpClient.callTool<{ defaults: Record<string, unknown> }>('get_default_settings', {
+        category: category
+      })
+
+      if (!response.success) {
+        mcpLogger.error('Failed to get default settings', { error: response.error })
+        return {
+          success: false,
+          error: response.error || 'Failed to get default settings'
+        }
+      }
+
+      mcpLogger.info('Default settings retrieved successfully')
+      return {
+        success: true,
+        defaults: response.data?.defaults
+      }
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error'
+      mcpLogger.error('Get default settings failed', { error: errorMessage })
+      return {
+        success: false,
+        error: errorMessage
+      }
     }
   }
 
@@ -288,7 +330,7 @@ export function useSettingsMcpClient(): SettingsMcpClient | null {
   try {
     const { client, isConnected } = useMCP()
     return new SettingsMcpClient(client, () => isConnected)
-  } catch (error) {
+  } catch (_error) {
     // useMCP will throw if not within MCPProvider
     mcpLogger.warn('Settings MCP Client not available - no MCP provider')
     return null

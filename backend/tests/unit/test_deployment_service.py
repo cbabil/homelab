@@ -2,7 +2,7 @@
 import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
-from services.deployment_service import DeploymentService
+from services.deployment import DeploymentService
 from models.app_catalog import InstallationStatus
 from models.marketplace import (
     MarketplaceApp, DockerConfig, AppPort, AppVolume, AppEnvVar, AppRequirements

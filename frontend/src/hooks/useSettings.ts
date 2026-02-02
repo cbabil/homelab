@@ -9,20 +9,40 @@ import { useState, useEffect, useCallback } from 'react'
 import {
   UserSettings,
   SettingsUpdateResult,
-  SessionTimeout
+  SessionTimeout,
+  SecuritySettings,
+  UISettings,
+  SystemSettings,
+  ApplicationSettings,
+  NotificationSettings,
+  ServerConnectionSettings,
+  AgentConnectionSettings,
 } from '@/types/settings'
+
+// Type for section updates - maps section key to its partial type
+type SettingsSectionUpdates = {
+  security: Partial<SecuritySettings>
+  ui: Partial<UISettings>
+  system: Partial<SystemSettings>
+  applications: Partial<ApplicationSettings>
+  notifications: Partial<NotificationSettings>
+  servers: Partial<ServerConnectionSettings>
+  agent: Partial<AgentConnectionSettings>
+}
 import { settingsService } from '@/services/settingsService'
 import { useSettingsMcpClient } from '@/services/settingsMcpClient'
 import { mcpLogger } from '@/services/systemLogger'
+
+type SettingsSectionKey = keyof Omit<UserSettings, 'lastUpdated' | 'version'>
 
 interface UseSettingsReturn {
   settings: UserSettings | null
   isLoading: boolean
   error: string | null
   isUsingDatabase: boolean
-  updateSettings: (
-    section: keyof Omit<UserSettings, 'lastUpdated' | 'version'>,
-    updates: any
+  updateSettings: <K extends SettingsSectionKey>(
+    section: K,
+    updates: SettingsSectionUpdates[K]
   ) => Promise<SettingsUpdateResult>
   resetSettings: () => Promise<SettingsUpdateResult>
   syncFromDatabase: () => Promise<SettingsUpdateResult>
@@ -98,9 +118,9 @@ export function useSettings(userId: string = 'default'): UseSettingsReturn {
   }, [])
 
   // Update settings function
-  const updateSettings = useCallback(async (
-    section: keyof Omit<UserSettings, 'lastUpdated' | 'version'>,
-    updates: any
+  const updateSettings = useCallback(async <K extends SettingsSectionKey>(
+    section: K,
+    updates: SettingsSectionUpdates[K]
   ): Promise<SettingsUpdateResult> => {
     try {
       setError(null)
@@ -165,9 +185,13 @@ export function useSessionTimeout() {
   const { settings, updateSettings, getSessionTimeoutMs } = useSettings()
   
   const updateSessionTimeout = useCallback(async (timeout: SessionTimeout) => {
+    if (!settings?.security.session) {
+      return { success: false, error: 'Settings not loaded' }
+    }
+
     return await updateSettings('security', {
       session: {
-        ...settings?.security.session,
+        ...settings.security.session,
         timeout
       }
     })

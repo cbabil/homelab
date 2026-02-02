@@ -69,6 +69,51 @@ interface RawSearchResult {
   filters: Record<string, unknown>
 }
 
+// MCP Tool Response Types
+interface SearchAppsToolResponse {
+  success: boolean
+  data?: RawSearchResult
+  error?: string
+  message?: string
+}
+
+interface GetAppDetailsToolResponse {
+  success: boolean
+  data?: RawApp
+  error?: string
+  message?: string
+}
+
+interface SimpleToolResponse {
+  success: boolean
+  error?: string
+  message?: string
+}
+
+interface BulkRemoveToolResponse {
+  success: boolean
+  data?: {
+    removed: string[]
+    removed_count: number
+    skipped: Array<{ id: string; reason: string }>
+    skipped_count: number
+  }
+  error?: string
+  message?: string
+}
+
+interface BulkUninstallToolResponse {
+  success: boolean
+  data?: {
+    uninstalled: string[]
+    uninstalled_count: number
+    skipped: Array<{ id: string; reason: string }>
+    skipped_count: number
+  }
+  error?: string
+  message?: string
+}
+
 const ICON_MAP: Record<string, LucideIconType> = {
   film: Film,
   media: Film,
@@ -179,7 +224,7 @@ export class ApplicationsDataService extends BaseDataService {
     }
 
     const filtersPayload = deriveFilterPayload(filter)
-    const response = await this.callTool<any>('search_apps', { filters: filtersPayload })
+    const response = await this.callTool<SearchAppsToolResponse>('search_apps', { filters: filtersPayload })
 
     if (!response.success) {
       return {
@@ -189,7 +234,7 @@ export class ApplicationsDataService extends BaseDataService {
       }
     }
 
-    const payload = response.data as { success: boolean; data?: RawSearchResult; error?: string; message?: string }
+    const payload = response.data
 
     if (!payload?.success) {
       return {
@@ -228,7 +273,7 @@ export class ApplicationsDataService extends BaseDataService {
    * Retrieve a single application by identifier.
    */
   async getById(id: string): Promise<ServiceResponse<App>> {
-    const result = await this.callTool<any>('get_app_details', { app_id: id })
+    const result = await this.callTool<GetAppDetailsToolResponse>('get_app_details', { app_id: id })
 
     if (!result.success) {
       return {
@@ -238,7 +283,7 @@ export class ApplicationsDataService extends BaseDataService {
       }
     }
 
-    const payload = result.data as { success: boolean; data?: RawApp; error?: string; message?: string }
+    const payload = result.data
     if (!payload?.success || !payload.data) {
       return {
         success: false,
@@ -259,7 +304,7 @@ export class ApplicationsDataService extends BaseDataService {
    * Only works for non-installed apps.
    */
   async remove(appId: string): Promise<ServiceResponse<void>> {
-    const result = await this.callTool<any>('remove_app', { app_id: appId })
+    const result = await this.callTool<SimpleToolResponse>('remove_app', { app_id: appId })
 
     if (!result.success) {
       return {
@@ -269,7 +314,7 @@ export class ApplicationsDataService extends BaseDataService {
       }
     }
 
-    const payload = result.data as { success: boolean; error?: string; message?: string }
+    const payload = result.data
     if (!payload?.success) {
       return {
         success: false,
@@ -291,7 +336,7 @@ export class ApplicationsDataService extends BaseDataService {
    * Mark an application as uninstalled (without server interaction).
    */
   async markUninstalled(appId: string): Promise<ServiceResponse<void>> {
-    const result = await this.callTool<any>('mark_app_uninstalled', { app_id: appId })
+    const result = await this.callTool<SimpleToolResponse>('mark_app_uninstalled', { app_id: appId })
 
     if (!result.success) {
       return {
@@ -301,7 +346,7 @@ export class ApplicationsDataService extends BaseDataService {
       }
     }
 
-    const payload = result.data as { success: boolean; error?: string; message?: string }
+    const payload = result.data
     if (!payload?.success) {
       return {
         success: false,
@@ -328,7 +373,7 @@ export class ApplicationsDataService extends BaseDataService {
     skipped: Array<{ id: string; reason: string }>
     skippedCount: number
   }>> {
-    const result = await this.callTool<any>('mark_apps_uninstalled_bulk', { app_ids: appIds })
+    const result = await this.callTool<BulkUninstallToolResponse>('mark_apps_uninstalled_bulk', { app_ids: appIds })
 
     if (!result.success) {
       return {
@@ -338,17 +383,7 @@ export class ApplicationsDataService extends BaseDataService {
       }
     }
 
-    const payload = result.data as {
-      success: boolean
-      data?: {
-        uninstalled: string[]
-        uninstalled_count: number
-        skipped: Array<{ id: string; reason: string }>
-        skipped_count: number
-      }
-      error?: string
-      message?: string
-    }
+    const payload = result.data
 
     if (!payload?.success) {
       return {
@@ -377,7 +412,7 @@ export class ApplicationsDataService extends BaseDataService {
    * Uninstall an application from a server.
    */
   async uninstall(appId: string, serverId: string, removeData: boolean = false): Promise<ServiceResponse<void>> {
-    const result = await this.callTool<any>('uninstall_app', {
+    const result = await this.callTool<SimpleToolResponse>('delete_app', {
       app_id: appId,
       server_id: serverId,
       remove_data: removeData
@@ -391,7 +426,7 @@ export class ApplicationsDataService extends BaseDataService {
       }
     }
 
-    const payload = result.data as { success: boolean; error?: string; message?: string }
+    const payload = result.data
     if (!payload?.success) {
       return {
         success: false,
@@ -419,7 +454,7 @@ export class ApplicationsDataService extends BaseDataService {
     skipped: Array<{ id: string; reason: string }>
     skippedCount: number
   }>> {
-    const result = await this.callTool<any>('remove_apps_bulk', { app_ids: appIds })
+    const result = await this.callTool<BulkRemoveToolResponse>('remove_apps_bulk', { app_ids: appIds })
 
     if (!result.success) {
       return {
@@ -429,17 +464,7 @@ export class ApplicationsDataService extends BaseDataService {
       }
     }
 
-    const payload = result.data as {
-      success: boolean
-      data?: {
-        removed: string[]
-        removed_count: number
-        skipped: Array<{ id: string; reason: string }>
-        skipped_count: number
-      }
-      error?: string
-      message?: string
-    }
+    const payload = result.data
 
     if (!payload?.success) {
       return {

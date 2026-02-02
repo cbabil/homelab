@@ -25,7 +25,7 @@ from models.app import (
 )
 from services.service_log import log_service
 from exceptions import ApplicationLogWriteError
-from app_logging import build_empty_search_log
+from logs import build_empty_search_log
 
 logger = structlog.get_logger("app_service")
 
@@ -351,6 +351,44 @@ class AppService:
             app.status = 'available'
             app.connected_server_id = None
             logger.info("Application marked as uninstalled", app_id=app_id)
+
+        return True
+
+    async def mark_app_installed(self, app_id: str, server_id: str) -> bool:
+        """Mark an application as installed on a server.
+
+        Args:
+            app_id: Application ID to update (may be prefixed with 'casaos-')
+            server_id: Server ID where the app is installed
+
+        Returns:
+            True if updated, False if not found
+        """
+        await self._ensure_initialized()
+
+        async with db_manager.get_session() as session:
+            # Try finding by exact ID first
+            result = await session.execute(
+                select(ApplicationTable).where(ApplicationTable.id == app_id)
+            )
+            app_row = result.first()
+
+            # If not found and ID has prefix, try without prefix
+            if not app_row and app_id.startswith('casaos-'):
+                base_id = app_id[7:]  # Remove 'casaos-' prefix
+                result = await session.execute(
+                    select(ApplicationTable).where(ApplicationTable.id == base_id)
+                )
+                app_row = result.first()
+
+            if not app_row:
+                logger.warning("Application not found for marking installed", app_id=app_id)
+                return False
+
+            app = app_row[0]
+            app.status = 'installed'
+            app.connected_server_id = server_id
+            logger.info("Application marked as installed", app_id=app.id, server_id=server_id)
 
         return True
 

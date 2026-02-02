@@ -1,7 +1,7 @@
 """Tests for backup MCP tools."""
 import pytest
 from unittest.mock import AsyncMock, MagicMock
-from tools.backup_tools import BackupTools
+from tools.backup.tools import BackupTools
 
 
 @pytest.fixture

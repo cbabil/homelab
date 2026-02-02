@@ -5,11 +5,44 @@
  */
 
 import { useState } from 'react'
+import { useTranslation } from 'react-i18next'
 import { Check, RotateCcw } from 'lucide-react'
+import { Box, Stack, Typography } from '@mui/material'
+import type { SxProps, Theme } from '@mui/material'
 import { useSettingsContext } from '@/providers/SettingsProvider'
 import { Button } from '@/components/ui/Button'
 
+const styles: Record<string, SxProps<Theme>> = {
+  container: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexShrink: 0
+  },
+  successMessage: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1,
+    fontSize: '0.875rem',
+    color: 'success.main',
+    bgcolor: 'success.light',
+    border: 1,
+    borderColor: 'success.main',
+    borderRadius: 2,
+    px: 1.5,
+    py: 1
+  },
+  autoSaveMessage: {
+    fontSize: '0.875rem',
+    color: 'text.secondary',
+    display: 'flex',
+    alignItems: 'center',
+    gap: 1
+  }
+}
+
 export function SettingsActionFooter() {
+  const { t } = useTranslation()
   const { resetSettings } = useSettingsContext()
   const [isResetting, setIsResetting] = useState(false)
   const [resetSuccess, setResetSuccess] = useState(false)
@@ -31,30 +64,31 @@ export function SettingsActionFooter() {
   }
 
   return (
-    <div className="flex items-center justify-between p-3 bg-muted/50 rounded-lg border flex-shrink-0">
-      <div className="flex space-x-2">
+    <Stack sx={styles.container}>
+      <Stack direction="row" spacing={1}>
         <Button
           onClick={handleResetToDefaults}
           disabled={isResetting}
           variant="outline"
-          size="md"
-          leftIcon={<RotateCcw className={`w-4 h-4 ${isResetting ? 'animate-spin' : ''}`} />}
+          size="sm"
+          leftIcon={<RotateCcw style={{ width: 12, height: 12 }} className={isResetting ? 'animate-spin' : ''} />}
+          sx={{ fontSize: '0.7rem', py: 0.25, px: 1.5, minHeight: 26 }}
         >
-          {isResetting ? 'Resetting...' : 'Reset to Defaults'}
+          {isResetting ? t('settings.resetting') : t('settings.resetToDefaults')}
         </Button>
 
         {resetSuccess && (
-          <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 border border-green-200 rounded-lg px-3 py-2">
+          <Box sx={styles.successMessage}>
             <Check className="w-4 h-4" />
-            Settings reset successfully
-          </div>
+            <Typography variant="body2">{t('settings.settingsResetSuccess')}</Typography>
+          </Box>
         )}
-      </div>
+      </Stack>
 
-      <div className="text-sm text-muted-foreground flex items-center gap-2">
+      <Typography sx={styles.autoSaveMessage}>
         <Check className="w-4 h-4 text-green-500" />
-        Changes are saved automatically
-      </div>
-    </div>
+        {t('settings.changesAutoSaved')}
+      </Typography>
+    </Stack>
   )
 }

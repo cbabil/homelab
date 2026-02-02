@@ -11,6 +11,7 @@
 
 import { useState } from 'react'
 import { Star } from 'lucide-react'
+import { Box } from '@mui/material'
 
 type StarSize = 'sm' | 'md' | 'lg'
 
@@ -24,16 +25,16 @@ interface StarRatingProps {
   ratingCount?: number
 }
 
-const sizeClasses: Record<StarSize, string> = {
-  sm: 'h-3 w-3',
-  md: 'h-4 w-4',
-  lg: 'h-5 w-5',
+const sizeMap: Record<StarSize, number> = {
+  sm: 12,
+  md: 16,
+  lg: 20,
 }
 
-const textSizeClasses: Record<StarSize, string> = {
-  sm: 'text-xs',
-  md: 'text-sm',
-  lg: 'text-base',
+const textSizeMap: Record<StarSize, string> = {
+  sm: '0.75rem',
+  md: '0.875rem',
+  lg: '1rem',
 }
 
 export function StarRating({
@@ -81,7 +82,7 @@ export function StarRating({
 
   const renderStar = (starIndex: number) => {
     const fillPercentage = getStarFillPercentage(starIndex)
-    const starClass = sizeClasses[size]
+    const starSize = sizeMap[size]
     const isHovering = hoverRating !== null && starIndex < hoverRating
 
     // For interactive mode, use full stars only (no half stars on hover)
@@ -89,11 +90,13 @@ export function StarRating({
       return (
         <Star
           key={starIndex}
-          className={`${starClass} transition-all ${
-            isHovering
-              ? 'text-yellow-500 fill-yellow-500'
-              : 'text-gray-300 dark:text-gray-600'
-          }`}
+          style={{
+            width: starSize,
+            height: starSize,
+            transition: 'all 0.2s',
+            color: isHovering ? '#eab308' : '#d1d5db',
+            fill: isHovering ? '#eab308' : 'none'
+          }}
         />
       )
     }
@@ -103,68 +106,99 @@ export function StarRating({
       return (
         <Star
           key={starIndex}
-          className={`${starClass} text-yellow-500 fill-yellow-500`}
+          style={{
+            width: starSize,
+            height: starSize,
+            color: '#eab308',
+            fill: '#eab308'
+          }}
         />
       )
     } else if (fillPercentage === 0) {
       return (
         <Star
           key={starIndex}
-          className={`${starClass} text-gray-300 dark:text-gray-600`}
+          style={{
+            width: starSize,
+            height: starSize,
+            color: '#d1d5db'
+          }}
         />
       )
     } else {
       // Half-star using gradient
       return (
-        <div key={starIndex} className="relative inline-block">
+        <Box key={starIndex} sx={{ position: 'relative', display: 'inline-block' }}>
           <Star
-            className={`${starClass} text-gray-300 dark:text-gray-600`}
+            style={{
+              width: starSize,
+              height: starSize,
+              color: '#d1d5db'
+            }}
           />
-          <div
-            className="absolute top-0 left-0 overflow-hidden"
-            style={{ width: `${fillPercentage}%` }}
+          <Box
+            sx={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              overflow: 'hidden',
+              width: `${fillPercentage}%`
+            }}
           >
             <Star
-              className={`${starClass} text-yellow-500 fill-yellow-500`}
+              style={{
+                width: starSize,
+                height: starSize,
+                color: '#eab308',
+                fill: '#eab308'
+              }}
             />
-          </div>
-        </div>
+          </Box>
+        </Box>
       )
     }
   }
 
   return (
-    <div className="flex items-center space-x-1">
-      <div
-        className={`flex items-center space-x-0.5 ${
-          interactive ? 'cursor-pointer' : ''
-        }`}
+    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+      <Box
+        sx={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 0.25,
+          cursor: interactive ? 'pointer' : 'default'
+        }}
         onMouseLeave={handleMouseLeave}
       >
         {Array.from({ length: maxStars }, (_, i) => (
-          <button
+          <Box
             key={i}
+            component="button"
             type="button"
             disabled={!interactive}
             onClick={() => handleClick(i)}
             onMouseEnter={() => handleMouseEnter(i)}
-            className={`${
-              interactive
-                ? 'hover:scale-110 transition-transform'
-                : 'cursor-default'
-            } focus:outline-none`}
+            sx={{
+              background: 'none',
+              border: 'none',
+              padding: 0,
+              cursor: interactive ? 'pointer' : 'default',
+              transition: 'transform 0.2s',
+              '&:hover': interactive ? { transform: 'scale(1.1)' } : {},
+              '&:focus': { outline: 'none' }
+            }}
             aria-label={`Rate ${i + 1} stars`}
           >
             {renderStar(i)}
-          </button>
+          </Box>
         ))}
-      </div>
+      </Box>
 
       {showCount && ratingCount > 0 && (
-        <span className={`text-muted-foreground ${textSizeClasses[size]}`}>
+        <Box component="span" sx={{ color: 'text.secondary', fontSize: textSizeMap[size] }}>
           ({ratingCount})
-        </span>
+        </Box>
       )}
-    </div>
+    </Box>
   )
 }

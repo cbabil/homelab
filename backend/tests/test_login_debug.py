@@ -31,7 +31,7 @@ async def test_login_flow():
     # Test credentials (using default admin from init_database.py)
     credentials = {
         "username": "admin",
-        "password": "HomeLabAdmin123!"
+        "password": "TomoAdmin123!"
     }
 
     print(f"Testing login with credentials: {list(credentials.keys())}")

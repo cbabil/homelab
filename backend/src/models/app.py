@@ -1,9 +1,9 @@
-"""Application data models and database mappings for the Homelab marketplace."""
+"""Application data models and database mappings for the Tomo marketplace."""
 
 from __future__ import annotations
 
 import json
-from datetime import datetime
+from datetime import datetime, UTC
 from enum import Enum
 from typing import Any, Dict, List, Optional
 
@@ -237,7 +237,7 @@ class App(BaseModel):
         """Serialize datetime to ISO 8601 string."""
 
         if value is None:
-            return datetime.now().isoformat()
+            return datetime.now(UTC).isoformat()
         return value.replace(microsecond=0).isoformat()
 
     @staticmethod

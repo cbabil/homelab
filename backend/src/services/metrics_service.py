@@ -9,7 +9,7 @@ import uuid
 from datetime import datetime, UTC, timedelta
 from typing import Dict, Any, Optional, List
 import structlog
-from models.metrics import ServerMetrics, ContainerMetrics, MetricType
+from models.metrics import ServerMetrics, ContainerMetrics
 
 logger = structlog.get_logger("metrics_service")
 

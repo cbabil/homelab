@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-echo "Setting up Homelab Assistant development environment..."
+echo "Setting up Tomo development environment..."
 
 # Check if Docker is installed
 if ! command -v docker &> /dev/null; then

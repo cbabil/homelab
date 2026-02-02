@@ -1,5 +1,5 @@
 -- Migration Script for Existing Installations with Security Controls
--- Safely migrates existing homelab installations to the new settings database schema
+-- Safely migrates existing Tomo installations to the new settings database schema
 -- Includes backup creation, rollback capability, and data integrity verification
 
 -- Enable foreign key constraints for data integrity

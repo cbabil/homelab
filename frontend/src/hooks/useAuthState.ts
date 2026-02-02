@@ -10,6 +10,45 @@ import type { AuthState, User } from '@/types/auth'
 import { sessionService } from '@/services/auth/sessionService'
 import { settingsService } from '@/services/settingsService'
 
+const USER_STORAGE_KEY = 'tomo_user_data'
+
+/**
+ * Store user data in localStorage for session persistence
+ */
+function storeUserData(user: User): void {
+  try {
+    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user))
+  } catch (error) {
+    console.warn('Failed to store user data:', error)
+  }
+}
+
+/**
+ * Retrieve user data from localStorage
+ */
+function getStoredUserData(): User | null {
+  try {
+    const stored = localStorage.getItem(USER_STORAGE_KEY)
+    if (stored) {
+      return JSON.parse(stored) as User
+    }
+  } catch (error) {
+    console.warn('Failed to retrieve user data:', error)
+  }
+  return null
+}
+
+/**
+ * Clear user data from localStorage
+ */
+function clearStoredUserData(): void {
+  try {
+    localStorage.removeItem(USER_STORAGE_KEY)
+  } catch (error) {
+    console.warn('Failed to clear user data:', error)
+  }
+}
+
 export function useAuthState() {
   const [authState, setAuthState] = useState<AuthState>({
     user: null,
@@ -31,30 +70,31 @@ export function useAuthState() {
         const validation = await sessionService.validateSession()
         
         if (validation.isValid && validation.metadata) {
-          // In production, get user data from backend using session
-          // For now, reconstruct from session metadata
-          const mockUser: User = {
-            id: validation.metadata.userId,
-            username: 'admin', // Would be fetched from backend
-            email: 'admin@homelab.local',
-            role: 'admin',
-            lastLogin: validation.metadata.startTime,
-            isActive: true,
-            preferences: {
-              theme: 'dark',
-              notifications: true
-            }
-          }
+          // Retrieve stored user data from localStorage
+          const storedUser = getStoredUserData()
 
-          setAuthState({
-            user: mockUser,
-            isAuthenticated: true,
-            isLoading: false,
-            error: null,
-            sessionExpiry: validation.metadata.expiryTime,
-            activity: null,
-            warning: null
-          })
+          if (storedUser && storedUser.id === validation.metadata.userId) {
+            // Use stored user data if it matches the session
+            setAuthState({
+              user: storedUser,
+              isAuthenticated: true,
+              isLoading: false,
+              error: null,
+              sessionExpiry: validation.metadata.expiryTime,
+              activity: null,
+              warning: null
+            })
+          } else {
+            // No matching user data found - session is invalid
+            // This can happen if localStorage was cleared but session cookie remains
+            console.warn('Session valid but user data not found, clearing session')
+            clearStoredUserData()
+            setAuthState(prev => ({
+              ...prev,
+              isLoading: false,
+              error: null
+            }))
+          }
         } else {
           setAuthState(prev => ({
             ...prev,
@@ -99,10 +139,16 @@ export function useAuthState() {
   }, [authState.isAuthenticated])
 
   const updateAuthState = useCallback((update: Partial<AuthState>) => {
+    // Store user data in localStorage when user is updated
+    if (update.user) {
+      storeUserData(update.user)
+    }
     setAuthState(prev => ({ ...prev, ...update }))
   }, [])
 
   const clearAuthState = useCallback(() => {
+    // Clear stored user data on logout
+    clearStoredUserData()
     setAuthState({
       user: null,
       isAuthenticated: false,
