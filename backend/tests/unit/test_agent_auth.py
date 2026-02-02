@@ -13,6 +13,7 @@ def mock_agent_db():
     """Create mock agent database."""
     db = MagicMock()
     db.get_agent_by_token_hash = AsyncMock()
+    db.get_agent_by_pending_token_hash = AsyncMock(return_value=None)
     db.update_agent = AsyncMock()
     return db
 
