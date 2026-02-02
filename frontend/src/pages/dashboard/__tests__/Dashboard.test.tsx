@@ -14,6 +14,27 @@ import { useMCP } from '@/providers/MCPProvider'
 // Mock the MCP provider
 vi.mock('@/providers/MCPProvider')
 
+// Mock the SettingsProvider
+vi.mock('@/providers/SettingsProvider', () => ({
+  useSettingsContext: () => ({
+    settings: {
+      ui: { refreshRate: 60 },
+      applications: { autoRefreshStatus: true }
+    },
+    updateSettings: vi.fn(),
+    isLoading: false,
+    error: null
+  })
+}))
+
+// Mock useAgentStatus hook
+vi.mock('@/hooks/useAgentStatus', () => ({
+  useAgentStatus: () => ({
+    agentStatuses: new Map(),
+    refreshAllAgentStatuses: vi.fn()
+  })
+}))
+
 const mockUseMCP = vi.mocked(useMCP)
 
 const mockDashboardSummary = {
@@ -34,13 +55,20 @@ const mockHealthStatus = {
   status: 'healthy'
 }
 
+interface MockClient {
+  callTool: ReturnType<typeof vi.fn>
+  isConnected: () => boolean
+}
+
 describe('Dashboard', () => {
-  let mockClient: any
+  let mockClient: MockClient
 
   beforeEach(() => {
-    vi.useFakeTimers()
+    // Use fake timers with shouldAdvanceTime to allow waitFor to work
+    vi.useFakeTimers({ shouldAdvanceTime: true })
     mockClient = {
-      callTool: vi.fn()
+      callTool: vi.fn() as ReturnType<typeof vi.fn>,
+      isConnected: () => true
     }
   })
 
@@ -66,7 +94,7 @@ describe('Dashboard', () => {
 
     renderDashboard()
 
-    expect(screen.getByText('Connecting to Server...')).toBeInTheDocument()
+    expect(screen.getByText('Connecting to Server')).toBeInTheDocument()
     expect(screen.getByText('Check notifications for connection status updates.')).toBeInTheDocument()
   })
 
@@ -104,7 +132,7 @@ describe('Dashboard', () => {
       expect(screen.getByText('Dashboard')).toBeInTheDocument()
     })
 
-    expect(screen.getByText('Monitor your homelab infrastructure and manage applications.')).toBeInTheDocument()
+    expect(screen.getByText('Monitor your tomo infrastructure')).toBeInTheDocument()
   })
 
   it('should display health status badge', async () => {
@@ -121,7 +149,7 @@ describe('Dashboard', () => {
     renderDashboard()
 
     await waitFor(() => {
-      expect(screen.getByText('healthy')).toBeInTheDocument()
+      expect(screen.getByText('Healthy')).toBeInTheDocument()
     })
   })
 
@@ -138,12 +166,13 @@ describe('Dashboard', () => {
 
     renderDashboard()
 
+    // Stats section titles - Servers appears twice (stats and overview), so use getAllByText
     await waitFor(() => {
-      expect(screen.getByText('Total Servers')).toBeInTheDocument()
+      expect(screen.getAllByText('Servers').length).toBeGreaterThanOrEqual(1)
     })
 
-    expect(screen.getByText('Total Applications')).toBeInTheDocument()
-    expect(screen.getByText('Running Apps')).toBeInTheDocument()
+    expect(screen.getByText('Applications')).toBeInTheDocument()
+    expect(screen.getByText('Running')).toBeInTheDocument()
     expect(screen.getByText('Issues')).toBeInTheDocument()
   })
 
@@ -165,7 +194,7 @@ describe('Dashboard', () => {
     })
   })
 
-  it('should display quick actions section', async () => {
+  it('should display servers overview section', async () => {
     mockUseMCP.mockReturnValue({
       client: mockClient as any,
       isConnected: true,
@@ -178,8 +207,11 @@ describe('Dashboard', () => {
 
     renderDashboard()
 
+    // The Servers title appears in both stats and overview, View all appears in both overview and activity
     await waitFor(() => {
-      expect(screen.getByText('Quick Actions')).toBeInTheDocument()
+      // Servers appears in both stats and overview sections
+      const serverElements = screen.getAllByText('Servers')
+      expect(serverElements.length).toBe(2) // One in stats, one in servers overview
     })
   })
 
@@ -201,7 +233,7 @@ describe('Dashboard', () => {
     })
   })
 
-  it('should show refresh button', async () => {
+  it('should show refresh interval controls', async () => {
     mockUseMCP.mockReturnValue({
       client: mockClient as any,
       isConnected: true,
@@ -214,8 +246,11 @@ describe('Dashboard', () => {
 
     renderDashboard()
 
+    // Check for refresh interval options in the dropdown
     await waitFor(() => {
-      expect(screen.getByRole('button', { name: /refresh/i })).toBeInTheDocument()
+      // These interval options are always visible in the dropdown
+      expect(screen.getByText('15 seconds')).toBeInTheDocument()
+      expect(screen.getByText('Manual only')).toBeInTheDocument()
     })
   })
 

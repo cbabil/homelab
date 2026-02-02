@@ -110,7 +110,7 @@ class TestAppModels:
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_app_models.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_app_models.py -v --no-cov
 ```
 
 Expected: FAIL - `ModuleNotFoundError: No module named 'models.app_catalog'`
@@ -241,7 +241,7 @@ def get_apps_schema() -> str:
 **Step 5: Run test to verify it passes**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_app_models.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_app_models.py -v --no-cov
 ```
 
 Expected: PASS
@@ -398,7 +398,7 @@ image: m1:latest
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_catalog_service.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_catalog_service.py -v --no-cov
 ```
 
 Expected: FAIL
@@ -571,7 +571,7 @@ restart_policy: unless-stopped
 **Step 5: Run test to verify it passes**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_catalog_service.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_catalog_service.py -v --no-cov
 ```
 
 Expected: PASS
@@ -748,7 +748,7 @@ class TestDeploymentService:
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_deployment_service.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_deployment_service.py -v --no-cov
 ```
 
 Expected: FAIL
@@ -1047,7 +1047,7 @@ class DeploymentService:
 **Step 4: Run test to verify it passes**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_deployment_service.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_deployment_service.py -v --no-cov
 ```
 
 Expected: PASS
@@ -1188,7 +1188,7 @@ class TestAppDatabaseOperations:
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_app_database.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_app_database.py -v --no-cov
 ```
 
 Expected: FAIL
@@ -1339,7 +1339,7 @@ async def delete_installation(self, server_id: str, app_id: str) -> bool:
 **Step 4: Run test to verify it passes**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_app_database.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_app_database.py -v --no-cov
 ```
 
 Expected: PASS
@@ -1507,7 +1507,7 @@ class TestUninstallApp:
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_app_tools.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_app_tools.py -v --no-cov
 ```
 
 Expected: FAIL
@@ -1759,7 +1759,7 @@ def register_app_tools(app: FastMCP, catalog_service: CatalogService, deployment
 **Step 4: Run test to verify it passes**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_app_tools.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_app_tools.py -v --no-cov
 ```
 
 Expected: PASS
@@ -1915,13 +1915,13 @@ git commit -m "feat(apps): add curated app definitions for v1.0"
 **Step 1: Run all Phase 4 tests**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_app*.py tests/unit/test_catalog*.py tests/unit/test_deployment*.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_app*.py tests/unit/test_catalog*.py tests/unit/test_deployment*.py -v --no-cov
 ```
 
 **Step 2: Run all project tests to ensure no regressions**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_auth*.py tests/unit/test_server*.py tests/unit/test_preparation*.py tests/unit/test_app*.py tests/unit/test_catalog*.py tests/unit/test_deployment*.py tests/unit/test_health*.py tests/unit/test_cli.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_auth*.py tests/unit/test_server*.py tests/unit/test_preparation*.py tests/unit/test_app*.py tests/unit/test_catalog*.py tests/unit/test_deployment*.py tests/unit/test_health*.py tests/unit/test_cli.py -v --no-cov
 ```
 
 **Step 3: Commit if any fixes needed**

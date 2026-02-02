@@ -1,7 +1,7 @@
 import { defineConfig, devices } from '@playwright/test'
 
 /**
- * Playwright Configuration for Homelab Assistant E2E Testing
+ * Playwright Configuration for Tomo E2E Testing
  * 
  * Comprehensive end-to-end testing with cross-browser support,
  * visual regression testing, and accessibility validation.

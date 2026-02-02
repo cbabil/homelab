@@ -6,17 +6,17 @@
  */
 
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { HomelabMCPClient } from './mcpClient'
+import { TomoMCPClient } from './mcpClient'
 
-describe('HomelabMCPClient', () => {
-  let client: HomelabMCPClient
+describe('TomoMCPClient', () => {
+  let client: TomoMCPClient
   let fetchMock: ReturnType<typeof vi.fn>
   const baseUrl = 'http://localhost:8000'
 
   beforeEach(() => {
     fetchMock = vi.fn()
-    global.fetch = fetchMock
-    client = new HomelabMCPClient(baseUrl)
+    global.fetch = fetchMock as unknown as typeof fetch
+    client = new TomoMCPClient(baseUrl)
   })
 
   describe('constructor', () => {
@@ -25,7 +25,7 @@ describe('HomelabMCPClient', () => {
     })
 
     it('should remove trailing slash from base URL', () => {
-      const clientWithSlash = new HomelabMCPClient('http://localhost:8000/')
+      const clientWithSlash = new TomoMCPClient('http://localhost:8000/')
       expect(clientWithSlash.isConnected()).toBe(false)
     })
   })
@@ -38,18 +38,18 @@ describe('HomelabMCPClient', () => {
         headers: {
           get: vi.fn().mockReturnValue('test-session-id')
         }
-      } as any)
+      } as unknown)
 
       // Mock initialization response with SSE format
       fetchMock.mockResolvedValueOnce({
         ok: true,
         text: vi.fn().mockResolvedValue('data: {"jsonrpc":"2.0","result":{"capabilities":{}},"id":"init"}\n\n')
-      } as any)
+      } as unknown)
 
       // Mock initialized notification response
       fetchMock.mockResolvedValueOnce({
         ok: true
-      } as any)
+      } as unknown)
 
       await expect(client.connect()).resolves.not.toThrow()
       expect(client.isConnected()).toBe(true)
@@ -62,7 +62,7 @@ describe('HomelabMCPClient', () => {
         headers: {
           get: vi.fn().mockReturnValue(null)
         }
-      } as any)
+      } as unknown)
 
       await expect(client.connect()).rejects.toThrow('Failed to get session ID from MCP server')
       expect(client.isConnected()).toBe(false)
@@ -82,12 +82,12 @@ describe('HomelabMCPClient', () => {
       fetchMock.mockResolvedValueOnce({
         ok: true,
         headers: { get: vi.fn().mockReturnValue('test-session-id') }
-      } as any)
+      } as unknown)
       fetchMock.mockResolvedValueOnce({
         ok: true,
         text: vi.fn().mockResolvedValue('data: {"jsonrpc":"2.0","result":{"capabilities":{}},"id":"init"}\n\n')
-      } as any)
-      fetchMock.mockResolvedValueOnce({ ok: true } as any)
+      } as unknown)
+      fetchMock.mockResolvedValueOnce({ ok: true } as unknown)
 
       await client.connect()
       expect(client.isConnected()).toBe(true)
@@ -103,12 +103,12 @@ describe('HomelabMCPClient', () => {
       fetchMock.mockResolvedValueOnce({
         ok: true,
         headers: { get: vi.fn().mockReturnValue('test-session-id') }
-      } as any)
+      } as unknown)
       fetchMock.mockResolvedValueOnce({
         ok: true,
         text: vi.fn().mockResolvedValue('data: {"jsonrpc":"2.0","result":{"capabilities":{}},"id":"init"}\n\n')
-      } as any)
-      fetchMock.mockResolvedValueOnce({ ok: true } as any)
+      } as unknown)
+      fetchMock.mockResolvedValueOnce({ ok: true } as unknown)
 
       await client.connect()
       
@@ -116,7 +116,7 @@ describe('HomelabMCPClient', () => {
       fetchMock.mockResolvedValueOnce({
         ok: true,
         text: vi.fn().mockResolvedValue('data: {"jsonrpc":"2.0","result":{"status":"success","data":"test"}}\n\n')
-      } as any)
+      } as unknown)
 
       const result = await client.callTool('get_health_status', {})
 
@@ -130,12 +130,12 @@ describe('HomelabMCPClient', () => {
       fetchMock.mockResolvedValueOnce({
         ok: true,
         headers: { get: vi.fn().mockReturnValue('test-session-id') }
-      } as any)
+      } as unknown)
       fetchMock.mockResolvedValueOnce({
         ok: true,
         text: vi.fn().mockResolvedValue('data: {"jsonrpc":"2.0","result":{"capabilities":{}},"id":"init"}\n\n')
-      } as any)
-      fetchMock.mockResolvedValueOnce({ ok: true } as any)
+      } as unknown)
+      fetchMock.mockResolvedValueOnce({ ok: true } as unknown)
 
       await client.connect()
       
@@ -143,7 +143,7 @@ describe('HomelabMCPClient', () => {
       fetchMock.mockResolvedValueOnce({
         ok: true,
         text: vi.fn().mockResolvedValue('data: {"jsonrpc":"2.0","error":{"message":"Tool not found"}}\n\n')
-      } as any)
+      } as unknown)
 
       const result = await client.callTool('invalid_tool', {})
 
@@ -159,18 +159,18 @@ describe('HomelabMCPClient', () => {
       fetchMock.mockResolvedValueOnce({
         ok: true,
         headers: { get: vi.fn().mockReturnValue('test-session-id-2') }
-      } as any)
+      } as unknown)
       fetchMock.mockResolvedValueOnce({
         ok: true,
         text: vi.fn().mockResolvedValue('data: {"jsonrpc":"2.0","result":{"capabilities":{}},"id":"init"}\n\n')
-      } as any)
-      fetchMock.mockResolvedValueOnce({ ok: true } as any)
+      } as unknown)
+      fetchMock.mockResolvedValueOnce({ ok: true } as unknown)
       
       // Mock tool call
       fetchMock.mockResolvedValueOnce({
         ok: true,
         text: vi.fn().mockResolvedValue('data: {"jsonrpc":"2.0","result":{"message":"pong"}}\n\n')
-      } as any)
+      } as unknown)
 
       const result = await client.callTool('ping', {})
 
@@ -185,7 +185,7 @@ describe('HomelabMCPClient', () => {
       global.EventSource = vi.fn().mockImplementation((url) => ({
         url,
         close: vi.fn()
-      }))
+      })) as unknown as typeof EventSource
     })
 
     it('should create EventSource with correct URL', () => {
@@ -203,7 +203,7 @@ describe('HomelabMCPClient', () => {
       const mockClose = vi.fn()
       global.EventSource = vi.fn().mockImplementation(() => ({
         close: mockClose
-      }))
+      })) as unknown as typeof EventSource
 
       client.subscribeTo(['event1'])
       client.subscribeTo(['event2'])

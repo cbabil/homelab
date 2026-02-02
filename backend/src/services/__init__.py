@@ -1,1 +1,1 @@
-"""Service modules for the Homelab Assistant backend."""
+"""Service modules for the Tomo backend."""

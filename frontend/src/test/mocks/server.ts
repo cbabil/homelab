@@ -16,7 +16,7 @@ const handlers = [
       ctx.status(200),
       ctx.json({
         status: 'healthy',
-        service: 'homelab-assistant-backend',
+        service: 'tomo-backend',
         version: '0.1.0'
       })
     )

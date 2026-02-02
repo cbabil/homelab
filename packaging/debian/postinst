@@ -1,0 +1,102 @@
+#!/bin/bash
+set -e
+
+case "$1" in
+    configure)
+        # Create directories
+        mkdir -p /var/lib/tomo
+        mkdir -p /var/lib/tomo/catalog
+        mkdir -p /var/lib/tomo/backups
+        mkdir -p /var/log/tomo
+        mkdir -p /etc/tomo
+
+        # Set ownership and permissions
+        chown -R tomo:tomo /var/lib/tomo
+        chown -R tomo:tomo /var/log/tomo
+        chown root:tomo /etc/tomo
+        chmod 750 /var/lib/tomo
+        chmod 750 /var/log/tomo
+        chmod 750 /etc/tomo
+
+        # Create Python virtual environment if not exists
+        if [ ! -d /opt/tomo/venv ]; then
+            echo "Creating Python virtual environment..."
+            python3 -m venv /opt/tomo/venv
+            /opt/tomo/venv/bin/pip install --upgrade pip wheel -q
+            /opt/tomo/venv/bin/pip install \
+                -r /opt/tomo/backend/requirements.txt -q
+        fi
+
+        # Generate secrets on first install
+        if [ ! -f /etc/tomo/environment ]; then
+            echo "Generating secrets..."
+            MASTER_PASSWORD=$(python3 -c "import secrets; print(secrets.token_urlsafe(32))")
+            SALT=$(python3 -c "import secrets; print(secrets.token_urlsafe(16))")
+            JWT_SECRET=$(python3 -c "import secrets; print(secrets.token_urlsafe(48))")
+
+            cat > /etc/tomo/environment <<EOF
+# Tomo Configuration
+# Generated on $(date)
+
+# SECURITY: These are auto-generated secrets. Keep them safe!
+TOMO_MASTER_PASSWORD=${MASTER_PASSWORD}
+TOMO_SALT=${SALT}
+JWT_SECRET_KEY=${JWT_SECRET}
+
+# Data directory
+DATA_DIRECTORY=/var/lib/tomo
+
+# Environment mode
+PYTHON_ENV=production
+
+# Optional: Comma-separated list of allowed CORS origins
+# Update this for your domain
+ALLOWED_ORIGINS=http://localhost
+EOF
+
+            chown root:tomo /etc/tomo/environment
+            chmod 640 /etc/tomo/environment
+        fi
+
+        # Enable nginx config (remove default if exists)
+        rm -f /etc/nginx/sites-enabled/default 2>/dev/null || true
+        rm -f /etc/nginx/conf.d/default.conf 2>/dev/null || true
+
+        # Test and reload nginx
+        if nginx -t 2>/dev/null; then
+            systemctl reload nginx 2>/dev/null || true
+        fi
+
+        # Reload systemd and enable service
+        systemctl daemon-reload
+        systemctl enable tomo
+
+        echo ""
+        echo "==================================================="
+        echo "  Tomo installed successfully!"
+        echo "==================================================="
+        echo ""
+        echo "Next steps:"
+        echo ""
+        echo "  1. Edit /etc/tomo/environment"
+        echo "     (update ALLOWED_ORIGINS for your domain)"
+        echo ""
+        echo "  2. Start the service:"
+        echo "     sudo systemctl start tomo"
+        echo ""
+        echo "  3. Create an admin account:"
+        echo "     tomo admin create"
+        echo ""
+        echo "  4. Access the web interface:"
+        echo "     http://localhost (or your domain)"
+        echo ""
+        ;;
+    abort-upgrade|abort-remove|abort-deconfigure)
+        ;;
+    *)
+        echo "postinst called with unknown argument: $1" >&2
+        exit 1
+        ;;
+esac
+
+exit 0

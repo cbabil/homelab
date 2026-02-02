@@ -2,7 +2,7 @@
 Authentication Helper Utilities
 
 Provides utility functions for password hashing, JWT operations, and user management.
-Supports secure authentication operations for the homelab system.
+Supports secure authentication operations for the tomo system.
 """
 
 import jwt
@@ -16,10 +16,13 @@ from models.auth import User, UserRole
 
 logger = structlog.get_logger("auth_helpers")
 
+# bcrypt cost factor - must match CLI (cli/src/lib/admin.ts)
+BCRYPT_ROUNDS = 12
+
 
 def hash_password(password: str) -> str:
     """Hash password using bcrypt, return as string for database storage."""
-    hashed_bytes = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt())
+    hashed_bytes = bcrypt.hashpw(password.encode("utf-8"), bcrypt.gensalt(rounds=BCRYPT_ROUNDS))
     return hashed_bytes.decode("utf-8")
 
 
@@ -41,7 +44,7 @@ def generate_jwt_token(user: User, secret: str, algorithm: str = "HS256",
         "role": user.role.value,
         "exp": datetime.now(UTC) + timedelta(hours=expiry_hours),
         "iat": datetime.now(UTC),
-        "iss": "homelab-assistant"
+        "iss": "tomo"
     }
     
     return jwt.encode(payload, secret, algorithm=algorithm)
@@ -80,7 +83,7 @@ def create_default_admin() -> User:
     return User(
         id=str(uuid.uuid4()),
         username="admin",
-        email="admin@homelab.dev",
+        email="admin@tomo.dev",
         role=UserRole.ADMIN,
         last_login=datetime.now(UTC).isoformat(),
         is_active=True,

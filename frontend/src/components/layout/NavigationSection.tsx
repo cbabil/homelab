@@ -6,7 +6,7 @@
  */
 
 import { memo, ReactNode } from 'react'
-import { cn } from '@/utils/cn'
+import { Box } from '@mui/material'
 import { Button } from '@/components/ui/Button'
 
 interface NavigationSectionProps {
@@ -29,59 +29,86 @@ export const NavigationSection = memo(({
   showDivider = false
 }: NavigationSectionProps) => {
   return (
-    <div className={cn('nav-section', className)}>
+    <Box className={className}>
       {showDivider && (
-        <div className="mx-3 my-4 border-t border-border/50" />
+        <Box sx={{ mx: 1.5, my: 2, borderTop: 1, borderColor: 'rgba(var(--border-rgb), 0.5)' }} />
       )}
-      
+
       {title && (
-        <div className="px-3 mb-2">
+        <Box sx={{ px: 1.5, mb: 1 }}>
           {collapsible ? (
             <Button
               variant="ghost"
               size="sm"
               onClick={onToggle}
-              className={cn(
-                'flex items-center justify-between w-full px-2 py-1 h-auto',
-                'text-xs font-semibold text-muted-foreground uppercase tracking-wider',
-                'hover:text-foreground'
-              )}
+              className="text-muted-foreground hover:text-foreground"
+              sx={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                width: '100%',
+                px: 1,
+                py: 0.5,
+                height: 'auto',
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em'
+              }}
               aria-expanded={!isCollapsed}
               aria-controls={`nav-section-${title.toLowerCase().replace(/\s+/g, '-')}`}
             >
               <span>{title}</span>
-              <svg
-                className={cn(
-                  'h-3 w-3 transition-transform duration-200',
-                  isCollapsed && 'rotate-180'
-                )}
+              <Box
+                component="svg"
+                sx={{
+                  width: 12,
+                  height: 12,
+                  transition: 'transform 0.2s',
+                  transform: isCollapsed ? 'rotate(180deg)' : 'rotate(0deg)'
+                }}
                 viewBox="0 0 12 12"
                 fill="currentColor"
               >
                 <path d="M6 8L2 4h8l-4 4z" />
-              </svg>
+              </Box>
             </Button>
           ) : (
-            <h3 className="px-2 py-1 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+            <Box
+              component="h3"
+              sx={{
+                px: 1,
+                py: 0.5,
+                fontSize: '0.75rem',
+                fontWeight: 600,
+                color: 'hsl(var(--muted-foreground))',
+                textTransform: 'uppercase',
+                letterSpacing: '0.05em'
+              }}
+            >
               {title}
-            </h3>
+            </Box>
           )}
-        </div>
+        </Box>
       )}
-      
-      <div
+
+      <Box
         id={title ? `nav-section-${title.toLowerCase().replace(/\s+/g, '-')}` : undefined}
-        className={cn(
-          'space-y-1',
-          collapsible && (isCollapsed 
-            ? 'max-h-0 overflow-hidden opacity-0 transition-all duration-300 ease-in-out'
-            : 'max-h-none opacity-100 transition-all duration-300 ease-in-out'
-          )
-        )}
+        sx={{
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 0.5,
+          ...(collapsible && {
+            maxHeight: isCollapsed ? 0 : 'none',
+            overflow: isCollapsed ? 'hidden' : 'visible',
+            opacity: isCollapsed ? 0 : 1,
+            transition: 'all 0.3s ease-in-out'
+          })
+        }}
       >
         {children}
-      </div>
-    </div>
+      </Box>
+    </Box>
   )
 })
 

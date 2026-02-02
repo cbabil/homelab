@@ -128,7 +128,7 @@ class TestGetCurrentUser:
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && pytest tests/unit/test_auth_tools.py -v
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && pytest tests/unit/test_auth_tools.py -v
 ```
 
 Expected: FAIL - `AttributeError: 'AuthTools' object has no attribute 'get_current_user'`
@@ -184,7 +184,7 @@ app.tool(auth_tools.get_current_user)
 **Step 4: Run test to verify it passes**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && pytest tests/unit/test_auth_tools.py -v
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && pytest tests/unit/test_auth_tools.py -v
 ```
 
 Expected: PASS
@@ -192,7 +192,7 @@ Expected: PASS
 **Step 5: Commit**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab
+cd /Users/christophebabilotte/source/tomo
 git add backend/src/tools/auth_tools.py backend/tests/unit/test_auth_tools.py
 git commit -m "feat(auth): add get_current_user MCP tool"
 ```
@@ -280,7 +280,7 @@ class TestCreateUser:
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && pytest tests/unit/test_auth_tools.py::TestCreateUser -v
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && pytest tests/unit/test_auth_tools.py::TestCreateUser -v
 ```
 
 Expected: FAIL - `AttributeError: 'AuthTools' object has no attribute 'create_user'`
@@ -386,7 +386,7 @@ app.tool(auth_tools.create_user)
 **Step 4: Run test to verify it passes**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && pytest tests/unit/test_auth_tools.py::TestCreateUser -v
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && pytest tests/unit/test_auth_tools.py::TestCreateUser -v
 ```
 
 Expected: PASS
@@ -394,7 +394,7 @@ Expected: PASS
 **Step 5: Commit**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab
+cd /Users/christophebabilotte/source/tomo
 git add backend/src/tools/auth_tools.py backend/src/services/auth_service.py backend/tests/unit/test_auth_tools.py
 git commit -m "feat(auth): add create_user MCP tool with admin-only access"
 ```
@@ -469,7 +469,7 @@ class TestListUsers:
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && pytest tests/unit/test_auth_tools.py::TestListUsers -v
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && pytest tests/unit/test_auth_tools.py::TestListUsers -v
 ```
 
 Expected: FAIL
@@ -523,7 +523,7 @@ app.tool(auth_tools.list_users)
 **Step 4: Run test to verify it passes**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && pytest tests/unit/test_auth_tools.py::TestListUsers -v
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && pytest tests/unit/test_auth_tools.py::TestListUsers -v
 ```
 
 Expected: PASS
@@ -531,7 +531,7 @@ Expected: PASS
 **Step 5: Commit**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab
+cd /Users/christophebabilotte/source/tomo
 git add backend/src/tools/auth_tools.py backend/tests/unit/test_auth_tools.py
 git commit -m "feat(auth): add list_users MCP tool with admin-only access"
 ```
@@ -599,7 +599,7 @@ class TestCreateAdminCLI:
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && pytest tests/unit/test_cli.py -v
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && pytest tests/unit/test_cli.py -v
 ```
 
 Expected: FAIL - `ModuleNotFoundError: No module named 'cli'`
@@ -611,7 +611,7 @@ Create `backend/src/cli.py`:
 ```python
 #!/usr/bin/env python3
 """
-Homelab Assistant CLI
+Tomo CLI
 
 Provides command-line utilities for administration tasks.
 """
@@ -674,8 +674,8 @@ async def create_admin_user(
 def main():
     """Main CLI entry point."""
     parser = argparse.ArgumentParser(
-        description="Homelab Assistant CLI",
-        prog="homelab-assistant"
+        description="Tomo CLI",
+        prog="tomo"
     )
 
     subparsers = parser.add_subparsers(dest="command", help="Available commands")
@@ -734,7 +734,7 @@ if __name__ == "__main__":
 **Step 4: Run test to verify it passes**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && pytest tests/unit/test_cli.py -v
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && pytest tests/unit/test_cli.py -v
 ```
 
 Expected: PASS
@@ -742,7 +742,7 @@ Expected: PASS
 **Step 5: Commit**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab
+cd /Users/christophebabilotte/source/tomo
 git add backend/src/cli.py backend/tests/unit/test_cli.py
 git commit -m "feat(cli): add create-admin CLI command for first-run setup"
 ```
@@ -758,7 +758,7 @@ git commit -m "feat(cli): add create-admin CLI command for first-run setup"
 **Step 1: Verify health tool exists and test it**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && pytest tests/unit/test_health_tools.py -v
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && pytest tests/unit/test_health_tools.py -v
 ```
 
 If tests pass, skip to commit. If not, fix any issues.
@@ -766,7 +766,7 @@ If tests pass, skip to commit. If not, fix any issues.
 **Step 2: Commit (if changes needed)**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab
+cd /Users/christophebabilotte/source/tomo
 git add backend/src/tools/health_tools.py backend/tests/unit/test_health_tools.py
 git commit -m "fix(health): ensure health endpoint works correctly"
 ```
@@ -778,7 +778,7 @@ git commit -m "fix(health): ensure health endpoint works correctly"
 **Step 1: Run backend tests with coverage**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && pytest --cov=src --cov-report=term-missing -v
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && pytest --cov=src --cov-report=term-missing -v
 ```
 
 Target: 90% coverage. Fix any failing tests.
@@ -786,7 +786,7 @@ Target: 90% coverage. Fix any failing tests.
 **Step 2: Run frontend tests**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/frontend && source /Users/christophebabilotte/source/homelab/venv/bin/activate && yarn test
+cd /Users/christophebabilotte/source/tomo/frontend && source /Users/christophebabilotte/source/tomo/venv/bin/activate && yarn test
 ```
 
 Fix any failing tests.
@@ -794,7 +794,7 @@ Fix any failing tests.
 **Step 3: Run frontend lint and type-check**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/frontend && source /Users/christophebabilotte/source/homelab/venv/bin/activate && yarn lint && yarn type-check
+cd /Users/christophebabilotte/source/tomo/frontend && source /Users/christophebabilotte/source/tomo/venv/bin/activate && yarn lint && yarn type-check
 ```
 
 Fix any errors.
@@ -802,7 +802,7 @@ Fix any errors.
 **Step 4: Run E2E tests**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/frontend && source /Users/christophebabilotte/source/homelab/venv/bin/activate && yarn test:e2e
+cd /Users/christophebabilotte/source/tomo/frontend && source /Users/christophebabilotte/source/tomo/venv/bin/activate && yarn test:e2e
 ```
 
 Fix any failing E2E tests.
@@ -810,7 +810,7 @@ Fix any failing E2E tests.
 **Step 5: Final commit for Phase 1**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab
+cd /Users/christophebabilotte/source/tomo
 git add .
 git commit -m "chore: Phase 1 complete - foundation and auth verified"
 ```

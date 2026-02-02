@@ -1,0 +1,37 @@
+#!/bin/sh
+
+# Prevent committing sensitive files
+FORBIDDEN_EXTENSIONS="\.pem$|\.key$|\.p12$|\.pfx$|\.jks$|\.keystore$|\.env\.local$|\.env\.production$|id_rsa$|id_ed25519$|id_ecdsa$"
+FORBIDDEN_FILES=$(git diff --cached --name-only | grep -E "$FORBIDDEN_EXTENSIONS" || true)
+
+if [ -n "$FORBIDDEN_FILES" ]; then
+  echo "ERROR: Attempting to commit sensitive files:"
+  echo "$FORBIDDEN_FILES"
+  echo ""
+  echo "If you really need to commit these files, use: git commit --no-verify"
+  exit 1
+fi
+
+# Check for secrets in staged files
+SECRET_PATTERNS='(-----BEGIN (RSA |EC |DSA |OPENSSH )?PRIVATE KEY-----|AKIA[0-9A-Z]{16}|ghp_[a-zA-Z0-9]{36}|gho_[a-zA-Z0-9]{36}|github_pat_[a-zA-Z0-9]{22}_[a-zA-Z0-9]{59}|sk-[a-zA-Z0-9]{48}|xox[baprs]-[0-9]{10,13}-[0-9]{10,13}-[a-zA-Z0-9]{24}|eyJ[a-zA-Z0-9_-]*\.eyJ[a-zA-Z0-9_-]*\.[a-zA-Z0-9_-]*)'
+
+# Get staged file contents and check for secrets
+STAGED_FILES=$(git diff --cached --name-only --diff-filter=ACM | grep -E '\.(ts|tsx|js|jsx|json|yml|yaml|env|sh|md)$' || true)
+
+if [ -n "$STAGED_FILES" ]; then
+  for file in $STAGED_FILES; do
+    if [ -f "$file" ]; then
+      SECRETS_FOUND=$(git show ":$file" 2>/dev/null | grep -E "$SECRET_PATTERNS" || true)
+      if [ -n "$SECRETS_FOUND" ]; then
+        echo "ERROR: Potential secret detected in $file"
+        echo "Matched pattern found. Please remove sensitive data before committing."
+        echo ""
+        echo "If this is a false positive, use: git commit --no-verify"
+        exit 1
+      fi
+    fi
+  done
+fi
+
+# Run lint-staged for code quality
+cd frontend && npx lint-staged

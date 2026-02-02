@@ -6,16 +6,16 @@ services:
       context: .
       dockerfile: docker/Dockerfile.backend
     volumes:
-      - homelab-data:/app/data
+      - tomo-data:/app/data
     environment:
       - PYTHON_ENV=production
       - DATA_DIRECTORY=/app/data
-      - HOMELAB_MASTER_PASSWORD=${HOMELAB_MASTER_PASSWORD:?HOMELAB_MASTER_PASSWORD must be set}
-      - HOMELAB_SALT=${HOMELAB_SALT:?HOMELAB_SALT must be set}
+      - TOMO_MASTER_PASSWORD=${TOMO_MASTER_PASSWORD:?TOMO_MASTER_PASSWORD must be set}
+      - TOMO_SALT=${TOMO_SALT:?TOMO_SALT must be set}
       - JWT_SECRET_KEY=${JWT_SECRET_KEY:?JWT_SECRET_KEY must be set}
       - ALLOWED_ORIGINS=${ALLOWED_ORIGINS:-}
     networks:
-      - homelab
+      - tomo
     restart: unless-stopped
 
   frontend:
@@ -27,12 +27,12 @@ services:
     depends_on:
       - backend
     networks:
-      - homelab
+      - tomo
     restart: unless-stopped
 
 networks:
-  homelab:
+  tomo:
     driver: bridge
 
 volumes:
-  homelab-data:
+  tomo-data:

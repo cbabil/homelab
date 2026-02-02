@@ -11,6 +11,7 @@ import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { BrowserRouter } from 'react-router-dom'
 import { MCPProvider, useMCP } from '@/providers/MCPProvider'
+import { ToastProvider } from '@/components/ui/Toast'
 import { server } from '@/test/mocks/server'
 import { rest } from 'msw'
 
@@ -23,7 +24,7 @@ function TestMCPIntegration() {
     try {
       const response = await client.callTool('get_health_status', {})
       setResult(response.success ? 'Health check passed' : 'Health check failed')
-    } catch (err) {
+    } catch (_err) {
       setResult('Error calling tool')
     }
   }
@@ -54,9 +55,11 @@ describe('MCP Integration Tests', () => {
   const renderWithProviders = (component: React.ReactNode) => {
     return render(
       <BrowserRouter>
-        <MCPProvider serverUrl="http://localhost:8000">
-          {component}
-        </MCPProvider>
+        <ToastProvider>
+          <MCPProvider serverUrl="http://localhost:8000">
+            {component}
+          </MCPProvider>
+        </ToastProvider>
       </BrowserRouter>
     )
   }

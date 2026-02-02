@@ -2,18 +2,17 @@
  * Cache Utilities
  *
  * Helper function for clearing client-side caches and local storage entries
- * used by the Homelab frontend.
+ * used by the Tomo frontend.
  */
 
 import { clearStoredAuth } from '@/hooks/authStorageHelpers'
 import { systemLogger } from '@/services/systemLogger'
 import { SETTINGS_STORAGE_KEYS } from '@/types/settings'
-import { STORAGE_KEY as SERVERS_STORAGE_KEY } from '@/services/storage/storageTypes'
 
-const LOG_STORAGE_KEY = 'homelab-system-logs'
+const LOG_STORAGE_KEY = 'tomo-system-logs'
 const SESSION_MANAGER_STORAGE_KEY = 'sessionManager_sessions'
 
-export function clearHomelabCaches() {
+export function clearTomoCaches() {
   try {
     systemLogger.clearLogs()
   } catch (error) {
@@ -32,12 +31,6 @@ export function clearHomelabCaches() {
     })
   } catch (error) {
     console.warn('Failed to clear settings cache', error)
-  }
-
-  try {
-    localStorage.removeItem(SERVERS_STORAGE_KEY)
-  } catch (error) {
-    console.warn('Failed to clear server cache', error)
   }
 
   try {

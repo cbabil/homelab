@@ -1,15 +1,15 @@
 /**
  * Login Form Fields Component
  *
- * Individual form fields for the login form.
- * Extracted to maintain 100-line limit per CLAUDE.md rules.
+ * Individual form fields for the login form using MUI components.
  */
 
-import React from 'react'
-import { Eye, EyeOff, Lock, User } from 'lucide-react'
-import { Button } from '@/components/ui/Button'
+import { useTranslation } from 'react-i18next'
+import TextField from '@mui/material/TextField'
+import InputAdornment from '@mui/material/InputAdornment'
+import IconButton from '@mui/material/IconButton'
+import { VisibilityOutlined, VisibilityOffOutlined, Person, Lock } from '@mui/icons-material'
 import { LoginFormState } from '@/types/auth'
-import { cn } from '@/utils/cn'
 
 interface LoginFormFieldsProps {
   formState: LoginFormState
@@ -24,80 +24,77 @@ export function LoginFormFields({
   onInputChange,
   onTogglePassword
 }: LoginFormFieldsProps) {
+  const { t } = useTranslation()
+
   return (
     <>
       {/* Username Field */}
-      <div className="form-group">
-        <label htmlFor="username" className="form-label">Username</label>
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <User className="h-4 w-4 text-muted-foreground" />
-          </div>
-          <input
-            id="username"
-            type="text"
-            autoComplete="username"
-            required
-            className={cn(
-              'input-base pl-10',
-              formState.username.error && 'input-error',
-              formState.username.isValid && formState.username.value && 'form-field-valid'
-            )}
-            placeholder="Enter your username"
-            value={formState.username.value}
-            onChange={(e) => onInputChange('username', e.target.value)}
-            disabled={formState.isSubmitting}
-          />
-        </div>
-        {formState.username.error && (
-          <div className="form-error-message">{formState.username.error}</div>
-        )}
-      </div>
+      <TextField
+        id="username"
+        label={t('auth.username')}
+        type="text"
+        autoComplete="username"
+        required
+        fullWidth
+        placeholder={t('auth.username')}
+        value={formState.username.value}
+        onChange={(e) => onInputChange('username', e.target.value)}
+        error={!!formState.username.error}
+        helperText={formState.username.error}
+        slotProps={{
+          input: {
+            startAdornment: (
+              <InputAdornment position="start">
+                <Person color="action" />
+              </InputAdornment>
+            ),
+          },
+        }}
+        sx={{ mb: 2 }}
+      />
 
       {/* Password Field */}
-      <div className="form-group">
-        <label htmlFor="password" className="form-label">Password</label>
-        <div className="input-password-wrapper">
-          <div className="relative">
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <Lock className="h-4 w-4 text-muted-foreground" />
-            </div>
-            <input
-              id="password"
-              type={showPassword ? 'text' : 'password'}
-              autoComplete="current-password"
-              required
-              className={cn(
-                'input-base input-password pl-10',
-                formState.password.error && 'input-error',
-                formState.password.isValid && formState.password.value && 'form-field-valid'
-              )}
-              placeholder="Enter your password"
-              value={formState.password.value}
-              onChange={(e) => onInputChange('password', e.target.value)}
-              disabled={formState.isSubmitting}
-            />
-            <Button
-              type="button"
-              variant="ghost"
-              size="icon"
-              className="input-password-toggle h-9 w-9"
-              onClick={onTogglePassword}
-              disabled={formState.isSubmitting}
-            >
-              {showPassword ? (
-                <EyeOff className="h-4 w-4 text-muted-foreground" />
-              ) : (
-                <Eye className="h-4 w-4 text-muted-foreground" />
-              )}
-            </Button>
-          </div>
-        </div>
-        {formState.password.error && (
-          <div className="form-error-message">{formState.password.error}</div>
-        )}
-      </div>
-
+      <TextField
+        id="password"
+        label={t('auth.password')}
+        type={showPassword ? 'text' : 'password'}
+        autoComplete="current-password"
+        required
+        fullWidth
+        placeholder={t('auth.password')}
+        value={formState.password.value}
+        onChange={(e) => onInputChange('password', e.target.value)}
+        error={!!formState.password.error}
+        helperText={formState.password.error}
+        slotProps={{
+          input: {
+            startAdornment: (
+              <InputAdornment position="start">
+                <Lock color="action" />
+              </InputAdornment>
+            ),
+            endAdornment: (
+              <InputAdornment position="end">
+                <IconButton
+                  aria-label={showPassword ? t('auth.hidePassword', 'Hide password') : t('auth.showPassword', 'Show password')}
+                  onClick={onTogglePassword}
+                  edge="end"
+                  disableRipple
+                  sx={{
+                    color: 'hsl(250 76% 72%)',
+                    '&:hover': {
+                      backgroundColor: 'transparent',
+                      color: 'hsl(250 85% 80%)'
+                    }
+                  }}
+                >
+                  {showPassword ? <VisibilityOutlined /> : <VisibilityOffOutlined />}
+                </IconButton>
+              </InputAdornment>
+            ),
+          },
+        }}
+      />
     </>
   )
 }

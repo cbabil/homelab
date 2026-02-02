@@ -1,0 +1,72 @@
+{
+  "name": "Tomo Development",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/git:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "ms-python.python",
+        "ms-python.vscode-pylance",
+        "ms-python.black-formatter",
+        "charliermarsh.ruff",
+        "dbaeumer.vscode-eslint",
+        "esbenp.prettier-vscode",
+        "bradlc.vscode-tailwindcss",
+        "ms-azuretools.vscode-docker",
+        "eamodio.gitlens",
+        "usernamehw.errorlens"
+      ],
+      "settings": {
+        "python.defaultInterpreterPath": "/usr/local/bin/python",
+        "python.formatting.provider": "black",
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "esbenp.prettier-vscode",
+        "[python]": {
+          "editor.defaultFormatter": "ms-python.black-formatter"
+        },
+        "[typescript]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        },
+        "[typescriptreact]": {
+          "editor.defaultFormatter": "esbenp.prettier-vscode"
+        }
+      }
+    }
+  },
+  "forwardPorts": [3000, 3001, 8000],
+  "portsAttributes": {
+    "3000": {
+      "label": "Frontend (via nginx)",
+      "onAutoForward": "notify"
+    },
+    "3001": {
+      "label": "Frontend (Vite dev)",
+      "onAutoForward": "notify"
+    },
+    "8000": {
+      "label": "Backend (MCP)",
+      "onAutoForward": "notify"
+    }
+  },
+  "postCreateCommand": ".devcontainer/post-create.sh",
+  "postStartCommand": "echo 'Development container ready! Run: cd backend && python src/main.py (backend) or cd frontend && yarn dev (frontend)'",
+  "remoteUser": "vscode",
+  "containerEnv": {
+    "PYTHON_ENV": "development",
+    "MCP_LOG_LEVEL": "DEBUG",
+    "DATA_DIRECTORY": "/workspaces/tomo/backend/data"
+  },
+  "mounts": [
+    "source=${localWorkspaceFolder}/.env,target=/workspaces/tomo/.env,type=bind,consistency=cached"
+  ],
+  "runArgs": [
+    "--env-file", "${localWorkspaceFolder}/.env"
+  ]
+}

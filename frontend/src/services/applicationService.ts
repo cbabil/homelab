@@ -7,12 +7,10 @@
 import { App, AppFilter, AppInstallation } from '@/types/app'
 
 class ApplicationService {
-  private readonly baseUrl = '/api/applications'
-
   /**
    * Get available applications
    */
-  async getApplications(filter?: AppFilter): Promise<App[]> {
+  async getApplications(_filter?: AppFilter): Promise<App[]> {
     // Mock implementation - in production, this would call the real API
     return new Promise((resolve) => {
       setTimeout(() => {
@@ -25,7 +23,7 @@ class ApplicationService {
   /**
    * Install application
    */
-  async installApplication(appId: string, config?: Record<string, any>): Promise<AppInstallation> {
+  async installApplication(appId: string, config?: Record<string, unknown>): Promise<AppInstallation> {
     // Mock implementation
     return new Promise((resolve) => {
       setTimeout(() => {
@@ -43,7 +41,7 @@ class ApplicationService {
   /**
    * Uninstall application
    */
-  async uninstallApplication(appId: string): Promise<void> {
+  async uninstallApplication(_appId: string): Promise<void> {
     // Mock implementation
     return new Promise((resolve) => {
       setTimeout(() => {
@@ -55,7 +53,7 @@ class ApplicationService {
   /**
    * Get installation status
    */
-  async getInstallationStatus(appId: string): Promise<AppInstallation | null> {
+  async getInstallationStatus(_appId: string): Promise<AppInstallation | null> {
     // Mock implementation
     return new Promise((resolve) => {
       setTimeout(() => {

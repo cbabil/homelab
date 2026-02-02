@@ -8,7 +8,7 @@ Covers authentication methods and system information gathering.
 import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 import paramiko
-from services.ssh_helpers import connect_password, connect_key, get_system_info
+from services.helpers.ssh_helpers import connect_password, connect_key, get_system_info
 
 
 class TestSSHHelpers:

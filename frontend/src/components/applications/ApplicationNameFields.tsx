@@ -1,9 +1,10 @@
 /**
  * Application Name Fields Component
- * 
+ *
  * Form fields for application name, description, and version.
  */
 
+import { Stack, Typography, TextField } from '@mui/material'
 import { App } from '@/types/app'
 
 interface ApplicationNameFieldsProps {
@@ -11,47 +12,51 @@ interface ApplicationNameFieldsProps {
   onChange: (field: string, value: string | string[]) => void
 }
 
-export function ApplicationNameFields({ 
-  formData, 
-  onChange 
+export function ApplicationNameFields({
+  formData,
+  onChange
 }: ApplicationNameFieldsProps) {
   return (
-    <div className="space-y-3">
+    <Stack spacing={1.5}>
       <div>
-        <label className="block text-sm font-medium text-foreground mb-1">Application Name</label>
-        <input
+        <Typography variant="body2" fontWeight={500} sx={{ mb: 0.5 }}>Application Name</Typography>
+        <TextField
           type="text"
+          size="small"
+          fullWidth
           value={formData.name || ''}
           onChange={(e) => onChange('name', e.target.value)}
-          className="w-full px-3 py-1.5 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20"
           placeholder="Enter application name"
           required
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-foreground mb-1">Description</label>
-        <textarea
+        <Typography variant="body2" fontWeight={500} sx={{ mb: 0.5 }}>Description</Typography>
+        <TextField
+          multiline
+          rows={2}
+          size="small"
+          fullWidth
           value={formData.description || ''}
           onChange={(e) => onChange('description', e.target.value)}
-          className="w-full px-3 py-1.5 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20"
-          rows={2}
           placeholder="Brief description of the application"
           required
         />
       </div>
 
       <div>
-        <label className="block text-sm font-medium text-foreground mb-1">Version</label>
-        <input
+        <Typography variant="body2" fontWeight={500} sx={{ mb: 0.5 }}>Version</Typography>
+        <TextField
           type="text"
+          size="small"
+          fullWidth
           value={formData.version || ''}
           onChange={(e) => onChange('version', e.target.value)}
-          className="w-full px-3 py-1.5 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20"
           placeholder="1.0.0"
           required
         />
       </div>
-    </div>
+    </Stack>
   )
 }

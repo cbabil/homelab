@@ -6,7 +6,7 @@ Following TDD: Write tests first, verify they fail, then implement.
 
 import pytest
 from unittest.mock import AsyncMock, MagicMock
-from tools.marketplace_tools import MarketplaceTools
+from tools.marketplace.tools import MarketplaceTools
 from models.marketplace import (
     MarketplaceRepo,
     MarketplaceApp,
@@ -45,7 +45,7 @@ async def test_list_repos_success(marketplace_tools, mock_marketplace_service):
         MarketplaceRepo(
             id="repo-1",
             name="Official Apps",
-            url="https://github.com/homelab/apps",
+            url="https://github.com/tomo/apps",
             branch="main",
             repo_type=RepoType.OFFICIAL,
             enabled=True,

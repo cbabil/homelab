@@ -1,30 +1,55 @@
 /**
  * Privacy Policy Page
- * 
+ *
  * Standalone page for Privacy Policy, designed to open in popup windows.
  */
 
+import { useTranslation } from 'react-i18next'
+import Box from '@mui/material/Box'
+import Container from '@mui/material/Container'
+import Paper from '@mui/material/Paper'
+import Typography from '@mui/material/Typography'
+import Button from '@mui/material/Button'
+import Divider from '@mui/material/Divider'
 import { PrivacyPolicyContent } from '@/components/legal/PrivacyPolicyContent'
 
 export function PrivacyPolicyPage() {
+  const { t } = useTranslation()
   return (
-    <div className="min-h-screen bg-background p-8">
-      <div className="max-w-4xl mx-auto">
-        <div className="bg-card rounded-lg border shadow-sm p-8">
-          <h1 className="text-3xl font-bold text-foreground mb-6">Privacy Policy</h1>
-          
+    <Box
+      sx={{
+        minHeight: '100vh',
+        bgcolor: 'background.default',
+        p: 4,
+      }}
+    >
+      <Container maxWidth="md">
+        <Paper
+          elevation={1}
+          sx={{
+            p: 4,
+            borderRadius: 2,
+          }}
+        >
+          <Typography variant="h3" fontWeight={700} gutterBottom>
+            {t('legal.privacyPolicy')}
+          </Typography>
+
           <PrivacyPolicyContent />
-          
-          <div className="mt-8 pt-6 border-t text-center">
-            <button
+
+          <Divider sx={{ my: 3 }} />
+
+          <Box sx={{ textAlign: 'center' }}>
+            <Button
+              variant="contained"
               onClick={() => window.close()}
-              className="bg-primary text-primary-foreground hover:bg-primary/90 px-6 py-2 rounded-md transition-colors"
+              sx={{ px: 4, py: 1 }}
             >
-              Close Window
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
+              {t('legal.closeWindow')}
+            </Button>
+          </Box>
+        </Paper>
+      </Container>
+    </Box>
   )
 }

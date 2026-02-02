@@ -5,10 +5,10 @@
  * Provides type-safe tool calling and real-time event subscription.
  */
 
-import { MCPClient, MCPRequest, MCPResponse } from '@/types/mcp'
+import { MCPClient, MCPResponse } from '@/types/mcp'
 import { mcpLogger } from '@/services/systemLogger'
 
-export class HomelabMCPClient implements MCPClient {
+export class TomoMCPClient implements MCPClient {
   private baseUrl: string
   private eventSource: EventSource | null = null
   private connected: boolean = false
@@ -21,33 +21,14 @@ export class HomelabMCPClient implements MCPClient {
 
   async connect(): Promise<void> {
     mcpLogger.info('Attempting to connect to MCP server', { url: this.baseUrl })
-    
+
     try {
-      // First, establish a session to get the session ID
-      const sessionResponse = await fetch(this.baseUrl, {
-        method: 'GET',
-        headers: {
-          'Accept': 'text/event-stream'
-        }
-      })
-      
-      // Extract session ID from header
-      const sessionId = sessionResponse.headers.get('mcp-session-id')
-      if (!sessionId) {
-        mcpLogger.error('Failed to get session ID from MCP server')
-        throw new Error('Failed to get session ID from MCP server')
-      }
-      
-      this.sessionId = sessionId
-      mcpLogger.info('MCP session established', { sessionId })
-      
-      // Initialize MCP protocol
+      // Initialize MCP protocol (stateless HTTP - no session required)
       const initResponse = await fetch(this.baseUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Accept': 'application/json, text/event-stream',
-          'mcp-session-id': this.sessionId
+          'Accept': 'application/json, text/event-stream'
         },
         body: JSON.stringify({
           jsonrpc: '2.0',
@@ -55,47 +36,43 @@ export class HomelabMCPClient implements MCPClient {
           params: {
             protocolVersion: '2024-11-05',
             capabilities: {
-              roots: {
-                listChanged: true
-              },
+              roots: { listChanged: true },
               sampling: {}
             },
             clientInfo: {
-              name: 'homelab-frontend',
+              name: 'tomo-frontend',
               version: '1.0.0'
             }
           },
           id: 'init'
         })
       })
-      
+
       if (!initResponse.ok) {
         throw new Error(`MCP initialization failed: ${initResponse.status} ${initResponse.statusText}`)
       }
-      
-      // Parse initialization response
-      const initResponseText = await initResponse.text()
-      const lines = initResponseText.split('\n')
-      const dataLine = lines.find(line => line.startsWith('data: '))
-      
-      if (!dataLine) {
-        throw new Error('Invalid MCP initialization response format')
+
+      // Check for session ID in response (optional in stateless mode)
+      const sessionId = initResponse.headers.get('mcp-session-id')
+      if (sessionId) {
+        this.sessionId = sessionId
+        mcpLogger.info('MCP session ID received', { sessionId })
       }
-      
-      const jsonData = dataLine.substring(6)
-      const initResult = JSON.parse(jsonData)
-      
+
+      // Parse initialization response (JSON format in stateless mode)
+      const initResult = await initResponse.json()
+
       if (initResult.error) {
         throw new Error(`MCP initialization error: ${initResult.error.message}`)
       }
-      
-      // Now send initialized notification
+
+      // Send initialized notification
       await fetch(this.baseUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json, text/event-stream',
-          'mcp-session-id': this.sessionId
+          ...(this.sessionId && { 'mcp-session-id': this.sessionId })
         },
         body: JSON.stringify({
           jsonrpc: '2.0',
@@ -103,11 +80,11 @@ export class HomelabMCPClient implements MCPClient {
           params: {}
         })
       })
-      
+
       this.connected = true
-      mcpLogger.info('MCP connection established successfully', { 
+      mcpLogger.info('MCP connection established successfully', {
         sessionId: this.sessionId,
-        url: this.baseUrl 
+        url: this.baseUrl
       })
     } catch (error) {
       this.connected = false
@@ -140,7 +117,7 @@ export class HomelabMCPClient implements MCPClient {
   }
 
   async callTool<T>(name: string, params: Record<string, unknown>, attempt = 0): Promise<MCPResponse<T>> {
-    if (!this.connected || !this.sessionId) {
+    if (!this.connected) {
       mcpLogger.info('Auto-connecting for tool call', { tool: name })
       await this.connect()
     }
@@ -163,14 +140,14 @@ export class HomelabMCPClient implements MCPClient {
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json, text/event-stream',
-          'mcp-session-id': this.sessionId!
+          ...(this.sessionId && { 'mcp-session-id': this.sessionId })
         },
         body: JSON.stringify(request)
       })
 
       if (!response.ok) {
         if (response.status === 400 && attempt === 0) {
-          mcpLogger.warn('MCP session invalid, attempting reconnect', {
+          mcpLogger.warn('MCP request failed, attempting reconnect', {
             tool: name,
             status: response.status
           })
@@ -193,19 +170,8 @@ export class HomelabMCPClient implements MCPClient {
         throw new Error(`MCP call failed: ${response.status} ${response.statusText}`)
       }
 
-      // Handle Server-Sent Events response
-      const responseText = await response.text()
-      
-      // Parse SSE format - look for the data line
-      const lines = responseText.split('\n')
-      const dataLine = lines.find(line => line.startsWith('data: '))
-      
-      if (!dataLine) {
-        throw new Error('Invalid MCP response format')
-      }
-      
-      const jsonData = dataLine.substring(6) // Remove 'data: ' prefix
-      const result = JSON.parse(jsonData)
+      // Parse JSON response (stateless HTTP mode returns JSON directly)
+      const result = await response.json()
       
       // Convert MCP JSON-RPC response to our internal format
       if (result.error) {

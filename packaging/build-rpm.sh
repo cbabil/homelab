@@ -1,5 +1,5 @@
 #!/bin/bash
-# Build RPM package for Homelab Assistant
+# Build RPM package for Tomo
 # Run this script on a RHEL/Rocky/Fedora system with rpmbuild installed
 
 set -e
@@ -8,7 +8,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PROJECT_DIR="$(dirname "$SCRIPT_DIR")"
 VERSION=$(grep '"version"' "$PROJECT_DIR/frontend/package.json" | head -1 | sed 's/.*: "\(.*\)".*/\1/')
 
-echo "Building Homelab Assistant RPM v${VERSION}"
+echo "Building Tomo RPM v${VERSION}"
 echo "=========================================="
 
 # Check for required tools
@@ -25,7 +25,7 @@ mkdir -p "$RPMBUILD_DIR"/{BUILD,RPMS,SOURCES,SPECS,SRPMS}
 
 # Create tarball
 echo "Creating source tarball..."
-TARBALL_NAME="homelab-assistant-${VERSION}"
+TARBALL_NAME="tomo-${VERSION}"
 TARBALL_DIR=$(mktemp -d)
 
 mkdir -p "$TARBALL_DIR/$TARBALL_NAME"
@@ -51,8 +51,8 @@ echo "Tarball created: $RPMBUILD_DIR/SOURCES/${TARBALL_NAME}.tar.gz"
 
 # Copy and update spec file
 echo "Preparing spec file..."
-SPEC_FILE="$RPMBUILD_DIR/SPECS/homelab-assistant.spec"
-cp "$SCRIPT_DIR/homelab-assistant.spec" "$SPEC_FILE"
+SPEC_FILE="$RPMBUILD_DIR/SPECS/tomo.spec"
+cp "$SCRIPT_DIR/tomo.spec" "$SPEC_FILE"
 
 # Update version in spec file
 sed -i "s/^Version:.*/Version:        ${VERSION}/" "$SPEC_FILE"
@@ -66,10 +66,10 @@ echo ""
 echo "Build complete!"
 echo ""
 echo "RPM packages created:"
-find "$RPMBUILD_DIR/RPMS" -name "homelab-assistant*.rpm" -type f
+find "$RPMBUILD_DIR/RPMS" -name "tomo*.rpm" -type f
 echo ""
 echo "Source RPM created:"
-find "$RPMBUILD_DIR/SRPMS" -name "homelab-assistant*.rpm" -type f
+find "$RPMBUILD_DIR/SRPMS" -name "tomo*.rpm" -type f
 echo ""
 echo "To install:"
-echo "  sudo dnf install $RPMBUILD_DIR/RPMS/noarch/homelab-assistant-${VERSION}-*.rpm"
+echo "  sudo dnf install $RPMBUILD_DIR/RPMS/noarch/tomo-${VERSION}-*.rpm"

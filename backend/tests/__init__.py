@@ -1,5 +1,5 @@
 """
-Test package for Homelab Assistant backend.
+Test package for Tomo backend.
 
 This package contains all test modules organized by test type:
 - unit/: Unit tests for individual modules and functions

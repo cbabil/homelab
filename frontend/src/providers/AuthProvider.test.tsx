@@ -1,6 +1,6 @@
 /**
  * AuthProvider Test Suite
- * 
+ *
  * Comprehensive tests for authentication provider including login/logout,
  * session persistence, token validation, and error handling.
  */
@@ -9,10 +9,46 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { render, screen, waitFor } from '@testing-library/react'
 import { userEvent } from '@testing-library/user-event'
 import { AuthProvider, useAuth } from './AuthProvider'
-import { AUTH_STORAGE_KEYS } from '@/types/auth'
+import { authService } from '@/services/auth/authService'
+import { sessionService } from '@/services/auth/sessionService'
 
-// Global service mocks are provided by test setup
-// Individual tests can override these mocks as needed
+// Mock the auth services for this test file
+vi.mock('@/services/auth/authService', () => ({
+  authService: {
+    login: vi.fn(),
+    logout: vi.fn().mockResolvedValue(undefined),
+    validateToken: vi.fn().mockResolvedValue(false),
+    register: vi.fn()
+  }
+}))
+
+vi.mock('@/services/auth/sessionService', () => ({
+  sessionService: {
+    validateSession: vi.fn().mockResolvedValue({ isValid: false, metadata: null }),
+    createSession: vi.fn(),
+    clearSession: vi.fn().mockResolvedValue(undefined),
+    destroySession: vi.fn().mockResolvedValue(undefined),
+    refreshSession: vi.fn().mockResolvedValue({ success: false }),
+    renewSession: vi.fn().mockResolvedValue({ success: false }),
+    getCurrentSession: vi.fn().mockReturnValue(null)
+  }
+}))
+
+vi.mock('@/services/settingsService', () => ({
+  settingsService: {
+    initialize: vi.fn().mockResolvedValue(undefined),
+    getSettings: vi.fn().mockReturnValue({}),
+    updateSettings: vi.fn().mockResolvedValue(undefined)
+  }
+}))
+
+vi.mock('@/services/systemLogger', () => ({
+  securityLogger: {
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn()
+  }
+}))
 
 // Mock localStorage and sessionStorage
 const mockLocalStorage = {
@@ -64,7 +100,7 @@ function TestComponent() {
         data-testid="login-btn" 
         onClick={() => login({ 
           username: 'admin', 
-          password: 'HomeLabAdmin123!', 
+          password: 'TomoAdmin123!', 
           rememberMe: false 
         })}
       >
@@ -94,12 +130,46 @@ function renderWithAuth() {
   )
 }
 
+const mockUser = {
+  id: '1',
+  username: 'admin',
+  email: 'admin@tomo.local',
+  role: 'admin' as const,
+  lastLogin: new Date().toISOString(),
+  isActive: true
+}
+
+const mockSessionMetadata = {
+  sessionId: 'test-session-123',
+  userId: '1',
+  userAgent: 'Mozilla/5.0',
+  ipAddress: '127.0.0.1',
+  startTime: new Date().toISOString(),
+  lastActivity: new Date().toISOString(),
+  expiryTime: new Date(Date.now() + 3600000).toISOString(),
+  accessToken: 'mock-jwt-token-123',
+  refreshToken: 'mock-refresh-token-123'
+}
+
 describe('AuthProvider', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     // Reset localStorage/sessionStorage mocks
     mockLocalStorage.getItem.mockReturnValue(null)
     mockSessionStorage.getItem.mockReturnValue(null)
+
+    // Setup default successful login mock
+    vi.mocked(authService.login).mockResolvedValue({
+      user: mockUser,
+      token: 'mock-jwt-token-123',
+      expiresIn: 3600
+    })
+
+    // Setup default session creation mock
+    vi.mocked(sessionService.createSession).mockResolvedValue(mockSessionMetadata)
+
+    // Setup renew session mock
+    vi.mocked(sessionService.renewSession).mockResolvedValue(mockSessionMetadata)
   })
 
   afterEach(() => {
@@ -123,75 +193,57 @@ describe('AuthProvider', () => {
       expect(screen.getByTestId('auth-state')).toHaveTextContent('loading')
     })
 
-    it('should restore session from localStorage', async () => {
-      const mockUser = {
-        id: '1',
-        username: 'admin',
-        email: 'admin@homelab.local',
-        role: 'admin' as const,
-        lastLogin: '2023-01-01T00:00:00Z',
-        isActive: true
-      }
-      
+    it('should restore session from valid session metadata', async () => {
       const futureDate = new Date()
       futureDate.setHours(futureDate.getHours() + 1)
-      
-      mockLocalStorage.getItem.mockImplementation((key) => {
-        switch (key) {
-          case AUTH_STORAGE_KEYS.TOKEN:
-            return 'mock-jwt-token'
-          case AUTH_STORAGE_KEYS.USER:
-            return JSON.stringify(mockUser)
-          case AUTH_STORAGE_KEYS.SESSION_EXPIRY:
-            return futureDate.toISOString()
-          default:
-            return null
+
+      // Mock localStorage to return stored user data
+      mockLocalStorage.getItem.mockImplementation((key: string) => {
+        if (key === 'tomo_user_data') {
+          return JSON.stringify(mockUser)
+        }
+        return null
+      })
+
+      // Mock sessionService.validateSession to return a valid session
+      vi.mocked(sessionService.validateSession).mockResolvedValueOnce({
+        isValid: true,
+        metadata: {
+          sessionId: 'existing-session-123',
+          userId: '1',
+          userAgent: 'Mozilla/5.0',
+          ipAddress: '127.0.0.1',
+          startTime: new Date().toISOString(),
+          lastActivity: new Date().toISOString(),
+          expiryTime: futureDate.toISOString(),
+          accessToken: 'mock-jwt-token',
+          refreshToken: 'mock-refresh-token'
         }
       })
 
       renderWithAuth()
-      
+
       await waitFor(() => {
         expect(screen.getByTestId('auth-state')).toHaveTextContent('authenticated')
       })
-      
+
       expect(screen.getByTestId('user-info')).toHaveTextContent('admin (admin)')
     })
 
-    it('should clear expired session', async () => {
-      const mockUser = {
-        id: '1',
-        username: 'admin',
-        email: 'admin@homelab.local',
-        role: 'admin' as const,
-        lastLogin: '2023-01-01T00:00:00Z',
-        isActive: true
-      }
-      
-      const pastDate = new Date()
-      pastDate.setHours(pastDate.getHours() - 1)
-      
-      mockLocalStorage.getItem.mockImplementation((key) => {
-        switch (key) {
-          case AUTH_STORAGE_KEYS.TOKEN:
-            return 'mock-jwt-token'
-          case AUTH_STORAGE_KEYS.USER:
-            return JSON.stringify(mockUser)
-          case AUTH_STORAGE_KEYS.SESSION_EXPIRY:
-            return pastDate.toISOString()
-          default:
-            return null
-        }
+    it('should remain unauthenticated when session is invalid', async () => {
+      // Session validation returns invalid
+      vi.mocked(sessionService.validateSession).mockResolvedValueOnce({
+        isValid: false,
+        metadata: undefined
       })
 
       renderWithAuth()
-      
+
       await waitFor(() => {
         expect(screen.getByTestId('auth-state')).toHaveTextContent('unauthenticated')
       })
-      
-      expect(mockLocalStorage.removeItem).toHaveBeenCalledWith(AUTH_STORAGE_KEYS.TOKEN)
-      expect(mockLocalStorage.removeItem).toHaveBeenCalledWith(AUTH_STORAGE_KEYS.USER)
+
+      expect(screen.getByTestId('user-info')).toHaveTextContent('No user')
     })
   })
 
@@ -205,30 +257,26 @@ describe('AuthProvider', () => {
       })
 
       await user.click(screen.getByTestId('login-btn'))
-      
-      // Should show loading state during login
-      expect(screen.getByTestId('auth-state')).toHaveTextContent('loading')
-      
+
       // Wait for login to complete
       await waitFor(() => {
         expect(screen.getByTestId('auth-state')).toHaveTextContent('authenticated')
       })
-      
+
       expect(screen.getByTestId('user-info')).toHaveTextContent('admin (admin)')
+      expect(authService.login).toHaveBeenCalled()
+      expect(sessionService.createSession).toHaveBeenCalled()
     })
 
     it('should handle login failure gracefully', async () => {
+      // Mock login to reject for this test
+      vi.mocked(authService.login).mockRejectedValueOnce(new Error('Invalid credentials'))
+
       const user = userEvent.setup()
-      renderWithAuth()
 
-      await waitFor(() => {
-        expect(screen.getByTestId('auth-state')).toHaveTextContent('unauthenticated')
-      })
-
-      // Mock invalid credentials by patching the login function
       const TestComponentWithInvalidLogin = () => {
         const { login, ...authProps } = useAuth()
-        
+
         return (
           <div>
             <div data-testid="auth-state">
@@ -237,13 +285,13 @@ describe('AuthProvider', () => {
             <div data-testid="error-info">
               {authProps.error || 'No error'}
             </div>
-            <button 
-              data-testid="invalid-login-btn" 
-              onClick={() => login({ 
-                username: 'invalid', 
-                password: 'invalid', 
-                rememberMe: false 
-              })}
+            <button
+              data-testid="invalid-login-btn"
+              onClick={() => login({
+                username: 'invalid',
+                password: 'invalid',
+                rememberMe: false
+              }).catch(() => { /* expected error */ })}
             >
               Invalid Login
             </button>
@@ -272,18 +320,18 @@ describe('AuthProvider', () => {
       const user = userEvent.setup()
       const TestComponentWithRememberMe = () => {
         const { login, ...authProps } = useAuth()
-        
+
         return (
           <div>
             <div data-testid="auth-state">
               {authProps.isLoading ? 'loading' : authProps.isAuthenticated ? 'authenticated' : 'unauthenticated'}
             </div>
-            <button 
-              data-testid="remember-login-btn" 
-              onClick={() => login({ 
-                username: 'admin', 
-                password: 'HomeLabAdmin123!', 
-                rememberMe: true 
+            <button
+              data-testid="remember-login-btn"
+              onClick={() => login({
+                username: 'admin',
+                password: 'TomoAdmin123!',
+                rememberMe: true
               })}
             >
               Login with Remember Me
@@ -308,14 +356,11 @@ describe('AuthProvider', () => {
         expect(screen.getByTestId('auth-state')).toHaveTextContent('authenticated')
       })
 
-      // Verify localStorage calls
-      expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
-        AUTH_STORAGE_KEYS.TOKEN,
-        expect.stringMatching(/^mock-jwt-token/)
-      )
-      expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
-        AUTH_STORAGE_KEYS.REMEMBER_ME,
-        'true'
+      // Verify session was created with rememberMe flag
+      expect(sessionService.createSession).toHaveBeenCalledWith(
+        expect.objectContaining({
+          rememberMe: true
+        })
       )
     })
   })
@@ -329,9 +374,9 @@ describe('AuthProvider', () => {
       await waitFor(() => {
         expect(screen.getByTestId('auth-state')).toHaveTextContent('unauthenticated')
       })
-      
+
       await user.click(screen.getByTestId('login-btn'))
-      
+
       await waitFor(() => {
         expect(screen.getByTestId('auth-state')).toHaveTextContent('authenticated')
       })
@@ -339,23 +384,30 @@ describe('AuthProvider', () => {
       // Then logout
       await user.click(screen.getByTestId('logout-btn'))
 
-      expect(screen.getByTestId('auth-state')).toHaveTextContent('unauthenticated')
+      await waitFor(() => {
+        expect(screen.getByTestId('auth-state')).toHaveTextContent('unauthenticated')
+      })
+
       expect(screen.getByTestId('user-info')).toHaveTextContent('No user')
-      expect(mockLocalStorage.removeItem).toHaveBeenCalledWith(AUTH_STORAGE_KEYS.TOKEN)
-      expect(mockLocalStorage.removeItem).toHaveBeenCalledWith(AUTH_STORAGE_KEYS.USER)
+      expect(sessionService.destroySession).toHaveBeenCalled()
     })
   })
 
   describe('Session Management', () => {
-    it('should handle refresh token flow', async () => {
+    it('should refresh session for authenticated user', async () => {
       const user = userEvent.setup()
-      
-      // Mock refresh token in localStorage
-      mockLocalStorage.getItem.mockImplementation((key) => {
-        if (key === AUTH_STORAGE_KEYS.REFRESH_TOKEN) {
-          return 'mock-refresh-token-123'
-        }
-        return null
+
+      // Setup renewSession mock
+      vi.mocked(sessionService.renewSession).mockResolvedValue({
+        sessionId: 'renewed-session-123',
+        userId: '1',
+        userAgent: 'Mozilla/5.0',
+        ipAddress: '127.0.0.1',
+        startTime: new Date().toISOString(),
+        lastActivity: new Date().toISOString(),
+        expiryTime: new Date(Date.now() + 7200000).toISOString(),
+        accessToken: 'new-access-token',
+        refreshToken: 'new-refresh-token'
       })
 
       renderWithAuth()
@@ -364,23 +416,29 @@ describe('AuthProvider', () => {
         expect(screen.getByTestId('auth-state')).toHaveTextContent('unauthenticated')
       })
 
-      await user.click(screen.getByTestId('refresh-btn'))
+      // First login
+      await user.click(screen.getByTestId('login-btn'))
 
       await waitFor(() => {
         expect(screen.getByTestId('auth-state')).toHaveTextContent('authenticated')
       })
+
+      // Then refresh
+      await user.click(screen.getByTestId('refresh-btn'))
+
+      // Should still be authenticated after refresh
+      await waitFor(() => {
+        expect(screen.getByTestId('auth-state')).toHaveTextContent('authenticated')
+      })
+
+      expect(sessionService.renewSession).toHaveBeenCalled()
     })
 
     it('should logout on failed refresh', async () => {
       const user = userEvent.setup()
-      
-      // Mock invalid refresh token
-      mockLocalStorage.getItem.mockImplementation((key) => {
-        if (key === AUTH_STORAGE_KEYS.REFRESH_TOKEN) {
-          return 'invalid-refresh-token'
-        }
-        return null
-      })
+
+      // Mock renewSession to reject
+      vi.mocked(sessionService.renewSession).mockRejectedValueOnce(new Error('Session expired'))
 
       renderWithAuth()
 
@@ -388,6 +446,14 @@ describe('AuthProvider', () => {
         expect(screen.getByTestId('auth-state')).toHaveTextContent('unauthenticated')
       })
 
+      // First login
+      await user.click(screen.getByTestId('login-btn'))
+
+      await waitFor(() => {
+        expect(screen.getByTestId('auth-state')).toHaveTextContent('authenticated')
+      })
+
+      // Try to refresh but it will fail
       await user.click(screen.getByTestId('refresh-btn'))
 
       await waitFor(() => {

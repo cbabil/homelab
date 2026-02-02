@@ -6,9 +6,13 @@
  */
 
 import React, { createContext, useContext, useState, useCallback } from 'react'
-import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react'
-import { Button } from '@/components/ui/Button'
-import { cn } from '@/utils/cn'
+import { CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react'
+import Snackbar from '@mui/material/Snackbar'
+import Alert from '@mui/material/Alert'
+import AlertTitle from '@mui/material/AlertTitle'
+import Box from '@mui/material/Box'
+import IconButton from '@mui/material/IconButton'
+import CloseIcon from '@mui/icons-material/Close'
 
 interface Toast {
   id: string
@@ -32,20 +36,6 @@ const toastIcons = {
   info: Info
 }
 
-const toastStyles = {
-  success: 'border-green-200 bg-green-50 text-green-800 dark:border-green-800 dark:bg-green-950 dark:text-green-200',
-  error: 'border-red-200 bg-red-50 text-red-800 dark:border-red-800 dark:bg-red-950 dark:text-red-200',
-  warning: 'border-yellow-200 bg-yellow-50 text-yellow-800 dark:border-yellow-800 dark:bg-yellow-950 dark:text-yellow-200',
-  info: 'border-blue-200 bg-blue-50 text-blue-800 dark:border-blue-800 dark:bg-blue-950 dark:text-blue-200'
-}
-
-const toastIconColors = {
-  success: 'text-green-500',
-  error: 'text-red-500',
-  warning: 'text-yellow-500',
-  info: 'text-blue-500'
-}
-
 interface ToastItemProps {
   toast: Toast
   onRemove: (id: string) => void
@@ -53,43 +43,57 @@ interface ToastItemProps {
 
 function ToastItem({ toast, onRemove }: ToastItemProps) {
   const Icon = toastIcons[toast.type]
+  const [isOpen, setIsOpen] = React.useState(true)
 
-  React.useEffect(() => {
-    const timer = setTimeout(() => {
-      onRemove(toast.id)
-    }, toast.duration || 5000)
+  const handleClose = React.useCallback((_event?: React.SyntheticEvent | Event, reason?: string) => {
+    if (reason === 'clickaway') {
+      return
+    }
+    setIsOpen(false)
+    setTimeout(() => onRemove(toast.id), 300)
+  }, [toast.id, onRemove])
 
-    return () => clearTimeout(timer)
-  }, [toast.id, toast.duration, onRemove])
+  // Use role="alert" for errors/warnings (more urgent) and role="status" for success/info
+  const role = toast.type === 'error' || toast.type === 'warning' ? 'alert' : 'status'
 
   return (
-    <div
-      className={cn(
-        'pointer-events-auto w-full max-w-sm rounded-lg border p-4 shadow-lg',
-        'transition-all duration-200',
-        toastStyles[toast.type]
-      )}
+    <Snackbar
+      open={isOpen}
+      autoHideDuration={toast.duration || 5000}
+      onClose={handleClose}
+      anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+      sx={{ position: 'relative', mt: 1 }}
     >
-      <div className="flex items-start space-x-3">
-        <Icon className={cn('h-5 w-5 flex-shrink-0 mt-0.5', toastIconColors[toast.type])} />
-        
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium">{toast.title}</p>
-          {toast.message && (
-            <p className="text-sm opacity-90 mt-1">{toast.message}</p>
-          )}
-        </div>
-
-        <Button
-          onClick={() => onRemove(toast.id)}
-          variant="ghost"
-          size="icon"
-          className="flex-shrink-0 h-7 w-7 hover:bg-black/10 dark:hover:bg-white/10"
-        >
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-    </div>
+      <Alert
+        severity={toast.type}
+        role={role}
+        icon={<Icon style={{ width: 20, height: 20 }} />}
+        action={
+          <IconButton
+            size="small"
+            aria-label={`Dismiss ${toast.type} notification: ${toast.title}`}
+            onClick={handleClose}
+            sx={{ color: 'inherit' }}
+          >
+            <CloseIcon fontSize="small" />
+          </IconButton>
+        }
+        sx={{
+          width: '100%',
+          maxWidth: 400,
+          boxShadow: 3,
+        }}
+      >
+        <AlertTitle sx={{ fontWeight: 600, fontSize: '0.875rem' }}>
+          {toast.title}
+        </AlertTitle>
+        {toast.message && (
+          <Box sx={{ fontSize: '0.875rem', opacity: 0.9 }}>
+            {toast.message}
+          </Box>
+        )}
+      </Alert>
+    </Snackbar>
   )
 }
 
@@ -112,22 +116,36 @@ export function ToastProvider({ children }: ToastProviderProps) {
   return (
     <ToastContext.Provider value={{ addToast, removeToast }}>
       {children}
-      
-      <div className="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50 flex flex-col space-y-2 pointer-events-none">
+
+      <Box
+        sx={{
+          position: 'fixed',
+          bottom: 16,
+          right: 16,
+          zIndex: 1400,
+          display: 'flex',
+          flexDirection: 'column',
+          gap: 1,
+          pointerEvents: 'none',
+          '& > *': {
+            pointerEvents: 'auto',
+          },
+        }}
+      >
         {toasts.map(toast => (
           <ToastItem key={toast.id} toast={toast} onRemove={removeToast} />
         ))}
-      </div>
+      </Box>
     </ToastContext.Provider>
   )
 }
 
 export function useToast() {
   const context = useContext(ToastContext)
-  
+
   if (context === undefined) {
     throw new Error('useToast must be used within a ToastProvider')
   }
-  
+
   return context
 }

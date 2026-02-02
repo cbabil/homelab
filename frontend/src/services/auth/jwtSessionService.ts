@@ -10,15 +10,12 @@ import type {
   SessionValidationResult, 
   CreateSessionOptions 
 } from './sessionService'
-import type { 
-  TokenPair, 
-  JWTGenerationOptions
-} from '@/types/jwt'
+import type { JWTGenerationOptions } from '@/types/jwt'
 import { JWT_STORAGE_KEYS } from '@/types/jwt'
 
 import { jwtService } from './jwtService'
 import { settingsService } from '../settingsService'
-import { getUserIdFromToken, parseJWT, getTimeToExpiration } from '@/utils/jwtUtils'
+// Note: getUserIdFromToken, parseJWT, getTimeToExpiration available from '@/utils/jwtUtils' when needed
 
 /**
  * Enhanced session metadata with JWT integration
@@ -560,12 +557,9 @@ class JWTSessionService {
   /**
    * Log session events
    */
-  private logSessionEvent(event: string, metadata: Record<string, unknown>): void {
-    console.log('[JWTSession]', event, {
-      ...metadata,
-      timestamp: new Date().toISOString(),
-      userAgent: navigator.userAgent
-    })
+  private logSessionEvent(_event: string, _metadata: Record<string, unknown>): void {
+    // Session events logged - could be sent to monitoring service
+    // console.log('[JWTSession]', _event, { ..._metadata, timestamp: new Date().toISOString(), userAgent: navigator.userAgent })
   }
 }
 

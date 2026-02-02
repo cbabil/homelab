@@ -1,1 +1,1 @@
-"""Shared library modules for the Homelab Assistant backend."""
+"""Shared library modules for the Tomo backend."""

@@ -6,14 +6,18 @@
 
 export interface Session {
   id: string
-  status: 'active' | 'idle' | 'expired'
+  userId: string
+  username: string
+  status: 'active' | 'idle' | 'expired' | 'terminated'
   started: Date
   lastActivity: Date
+  expiresAt: Date
   location: string
   ip: string
+  isCurrent: boolean
 }
 
-export type SortKey = 'status' | 'sessionId' | 'started' | 'lastActivity' | 'location' | 'actions'
+export type SortKey = 'status' | 'userId' | 'sessionId' | 'started' | 'lastActivity' | 'expiresAt' | 'location' | 'actions'
 
 import type { LucideIcon } from 'lucide-react'
 

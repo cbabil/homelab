@@ -1,8 +1,8 @@
-# Homelab Assistant Configuration
-# Location: /etc/homelab-assistant/config.yaml
+# Tomo Configuration
+# Location: /etc/tomo/config.yaml
 #
 # This file is read on service startup. After making changes,
-# restart the service: systemctl restart homelab-assistant
+# restart the service: systemctl restart tomo
 
 # Server settings
 server:
@@ -13,7 +13,7 @@ server:
 # Database configuration
 database:
   # SQLite database path
-  path: /var/lib/homelab-assistant/homelab.db
+  path: /var/lib/tomo/tomo.db
 
 # Logging configuration
 logging:
@@ -22,7 +22,7 @@ logging:
   # Log format: json or text
   format: json
   # Log file path
-  file: /var/log/homelab-assistant/app.log
+  file: /var/log/tomo/app.log
   # Maximum log file size (MB) before rotation
   max_size_mb: 100
   # Number of backup log files to keep
@@ -51,14 +51,14 @@ metrics:
 # Application catalog
 catalog:
   # Built-in catalog location
-  builtin_path: /opt/homelab-assistant/data/catalog
+  builtin_path: /opt/tomo/data/catalog
   # Custom catalog location (user-defined apps)
-  custom_path: /var/lib/homelab-assistant/catalog
+  custom_path: /var/lib/tomo/catalog
 
 # Backup settings
 backup:
   # Default backup location
-  default_path: /var/lib/homelab-assistant/backups
+  default_path: /var/lib/tomo/backups
   # Include in backup: servers, apps, settings, logs
   include:
     - servers

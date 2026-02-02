@@ -13,7 +13,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from tools.health_tools import register_health_tools
+from tools.health.tools import HealthTools
 
 
 class TestHealthTools:

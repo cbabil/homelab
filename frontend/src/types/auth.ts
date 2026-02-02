@@ -11,10 +11,11 @@ import type { JWTPayload, JWTValidationResult } from './jwt'
 export interface User {
   id: string
   username: string
-  email: string
+  email?: string  // Optional - not required for registration
   role: 'admin' | 'user'
   lastLogin: string
   isActive: boolean
+  createdAt?: string
   preferences?: {
     theme?: 'light' | 'dark'
     language?: string
@@ -164,9 +165,9 @@ export interface PasswordValidation {
   isValid: boolean
 }
 
-// Password strength for registration (not login)
+// Password strength for registration (not login) - Legacy mode
 export interface PasswordStrength {
-  score: number // 0-4
+  score: number // 0-5
   feedback: string[]
   requirements: {
     minLength: boolean
@@ -179,16 +180,16 @@ export interface PasswordStrength {
 
 // Session storage keys for persistence
 export const AUTH_STORAGE_KEYS = {
-  TOKEN: 'homelab-auth-token',
-  REFRESH_TOKEN: 'homelab-refresh-token',
-  USER: 'homelab-user-data',
-  REMEMBER_ME: 'homelab-remember-me',
-  SESSION_EXPIRY: 'homelab-session-expiry',
-  LAST_ACTIVITY: 'homelab-last-activity',
-  ACTIVITY_COUNT: 'homelab-activity-count',
-  TOKEN_TYPE: 'homelab-token-type',
-  TOKEN_EXPIRY: 'homelab-token-expiry',
-  TOKEN_METADATA: 'homelab-token-metadata'
+  TOKEN: 'tomo-auth-token',
+  REFRESH_TOKEN: 'tomo-refresh-token',
+  USER: 'tomo-user-data',
+  REMEMBER_ME: 'tomo-remember-me',
+  SESSION_EXPIRY: 'tomo-session-expiry',
+  LAST_ACTIVITY: 'tomo-last-activity',
+  ACTIVITY_COUNT: 'tomo-activity-count',
+  TOKEN_TYPE: 'tomo-token-type',
+  TOKEN_EXPIRY: 'tomo-token-expiry',
+  TOKEN_METADATA: 'tomo-token-metadata'
 } as const
 
 // Authentication context interface with JWT support

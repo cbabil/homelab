@@ -50,7 +50,7 @@ export function base64URLDecode(input: string): ArrayBuffer {
 export function base64URLEncodeJSON(obj: unknown): string {
   const json = JSON.stringify(obj)
   const buffer = new TextEncoder().encode(json)
-  return base64URLEncode(buffer)
+  return base64URLEncode(buffer.buffer)
 }
 
 /**

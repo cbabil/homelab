@@ -62,7 +62,6 @@ export interface ServerConnectionTest {
     os: string
     kernel: string
     architecture: string
-    uptime: string
     docker_version?: string
   }
 }

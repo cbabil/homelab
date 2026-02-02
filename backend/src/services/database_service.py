@@ -1,388 +1,169 @@
-"""
-Database Service for User Management
+"""Database Service Facade - Backward Compatibility Layer.
 
-Provides async database operations for user authentication and management.
-Handles user queries, password verification, and session management with the SQLite database.
+Provides the original DatabaseService interface by delegating to specialized
+database services. All consuming code can continue using DatabaseService
+without changes.
 """
 
-import json
-import os
-from contextlib import asynccontextmanager
-from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-import aiosqlite
-import sqlite3
-import structlog
-
 from models.auth import User, UserRole
-from models.preparation import ServerPreparation, PreparationLog, PreparationStatus, PreparationStep
-from models.app_catalog import InstalledApp, InstallationStatus
-from models.metrics import ServerMetrics, ContainerMetrics, ActivityLog, ActivityType
+from models.server import ServerConnection
+from models.app_catalog import InstalledApp
+from models.metrics import ServerMetrics, ContainerMetrics, ActivityLog
 
-logger = structlog.get_logger("database_service")
+from services.database import (
+    DatabaseConnection,
+    UserDatabaseService,
+    ServerDatabaseService,
+    SessionDatabaseService,
+    AppDatabaseService,
+    MetricsDatabaseService,
+    SystemDatabaseService,
+    ExportDatabaseService,
+    SchemaInitializer,
+    ALLOWED_SERVER_COLUMNS,
+    ALLOWED_INSTALLATION_COLUMNS,
+    ALLOWED_SYSTEM_INFO_COLUMNS,
+)
 
-# Whitelisted columns for dynamic updates (SQL injection prevention)
-ALLOWED_SERVER_COLUMNS = frozenset({
-    'name', 'host', 'port', 'username', 'auth_type', 'status', 'last_connected'
-})
-ALLOWED_PREPARATION_COLUMNS = frozenset({
-    'status', 'current_step', 'detected_os', 'completed_at', 'error_message'
-})
-ALLOWED_INSTALLATION_COLUMNS = frozenset({
-    'status', 'container_id', 'container_name', 'config', 'started_at', 'error_message'
-})
+# Re-export column whitelists for backward compatibility
+__all__ = [
+    "DatabaseService",
+    "ALLOWED_SERVER_COLUMNS",
+    "ALLOWED_INSTALLATION_COLUMNS",
+    "ALLOWED_SYSTEM_INFO_COLUMNS",
+]
 
 
 class DatabaseService:
-    """Async database service for user management operations."""
+    """Facade maintaining backward compatibility with existing code.
+
+    All consuming services can continue using DatabaseService without changes.
+    Methods delegate to the appropriate specialized service.
+    """
 
     def __init__(
         self,
         db_path: str | Path | None = None,
         data_directory: str | Path | None = None,
     ):
-        """Initialize database service with path to homelab.db."""
+        """Initialize database service with path to tomo.db."""
+        self._connection = DatabaseConnection(db_path, data_directory)
+        self._user = UserDatabaseService(self._connection)
+        self._server = ServerDatabaseService(self._connection)
+        self._session = SessionDatabaseService(self._connection)
+        self._app = AppDatabaseService(self._connection)
+        self._metrics = MetricsDatabaseService(self._connection)
+        self._system = SystemDatabaseService(self._connection)
+        self._export = ExportDatabaseService(self._connection)
+        self._schema = SchemaInitializer(self._connection)
 
-        backend_root = Path(__file__).resolve().parents[2]
+    @property
+    def db_path(self) -> str:
+        """Get the database file path."""
+        return self._connection.path
 
-        if db_path is not None and data_directory is not None:
-            raise ValueError("Provide either db_path or data_directory, not both")
-
-        if db_path is not None:
-            resolved_path = Path(db_path)
-            if not resolved_path.is_absolute():
-                resolved_path = (backend_root / resolved_path).resolve()
-        else:
-            directory = Path(data_directory if data_directory is not None else os.getenv("DATA_DIRECTORY", "data"))
-            if not directory.is_absolute():
-                directory = (backend_root / directory).resolve()
-            resolved_path = directory / "homelab.db"
-
-        self.db_path = str(resolved_path)
-        logger.info("Database service initialized", db_path=self.db_path)
-
-    @asynccontextmanager
-    async def get_connection(self):
+    # Connection - delegate directly
+    def get_connection(self):
         """Get async database connection with automatic cleanup."""
-        async with aiosqlite.connect(self.db_path) as connection:
-            # Enable row factory for dict-like access
-            connection.row_factory = aiosqlite.Row
-            try:
-                yield connection
-            except Exception:
-                await connection.rollback()
-                raise
+        return self._connection.get_connection()
+
+    # ========== User Methods ==========
+
+    async def get_user(
+        self, user_id: Optional[str] = None, username: Optional[str] = None
+    ) -> Optional[User]:
+        return await self._user.get_user(user_id, username)
 
     async def get_user_by_username(self, username: str) -> Optional[User]:
-        """Get user by username from database."""
-        try:
-            async with self.get_connection() as conn:
-                cursor = await conn.execute(
-                    """
-                    SELECT id, username, email, role, created_at, last_login, is_active, preferences_json
-                    FROM users
-                    WHERE username = ? AND is_active = 1
-                    """,
-                    (username,)
-                )
-                row = await cursor.fetchone()
-
-                if not row:
-                    logger.debug("User not found", username=username)
-                    return None
-
-                # Parse preferences JSON
-                preferences = {}
-                if row['preferences_json']:
-                    try:
-                        preferences = json.loads(row['preferences_json'])
-                    except json.JSONDecodeError:
-                        logger.warning("Invalid preferences JSON for user", username=username)
-                        preferences = {}
-
-                # Create User model
-                user = User(
-                    id=row['id'],
-                    username=row['username'],
-                    email=row['email'],
-                    role=UserRole(row['role']),
-                    last_login=row['last_login'] or datetime.now(UTC).isoformat(),
-                    is_active=bool(row['is_active']),
-                    preferences=preferences
-                )
-
-                logger.debug("User retrieved successfully", username=username, user_id=user.id)
-                return user
-
-        except Exception as e:
-            logger.error("Failed to get user by username", username=username, error=str(e))
-            return None
+        return await self._user.get_user_by_username(username)
 
     async def get_user_by_id(self, user_id: str) -> Optional[User]:
-        """Get user by ID from database."""
-        try:
-            async with self.get_connection() as conn:
-                cursor = await conn.execute(
-                    """
-                    SELECT id, username, email, role, created_at, last_login, is_active, preferences_json
-                    FROM users
-                    WHERE id = ? AND is_active = 1
-                    """,
-                    (user_id,)
-                )
-                row = await cursor.fetchone()
-
-                if not row:
-                    logger.debug("User not found", user_id=user_id)
-                    return None
-
-                # Parse preferences JSON
-                preferences = {}
-                if row['preferences_json']:
-                    try:
-                        preferences = json.loads(row['preferences_json'])
-                    except json.JSONDecodeError:
-                        logger.warning("Invalid preferences JSON for user", user_id=user_id)
-                        preferences = {}
-
-                # Create User model
-                user = User(
-                    id=row['id'],
-                    username=row['username'],
-                    email=row['email'],
-                    role=UserRole(row['role']),
-                    last_login=row['last_login'] or datetime.now(UTC).isoformat(),
-                    is_active=bool(row['is_active']),
-                    preferences=preferences
-                )
-
-                logger.debug("User retrieved successfully", user_id=user_id, username=user.username)
-                return user
-
-        except Exception as e:
-            logger.error("Failed to get user by ID", user_id=user_id, error=str(e))
-            return None
+        return await self._user.get_user_by_id(user_id)
 
     async def get_user_password_hash(self, username: str) -> Optional[str]:
-        """Get user's password hash from database."""
-        try:
-            async with self.get_connection() as conn:
-                cursor = await conn.execute(
-                    "SELECT password_hash FROM users WHERE username = ? AND is_active = 1",
-                    (username,)
-                )
-                row = await cursor.fetchone()
+        return await self._user.get_user_password_hash(username)
 
-                if row:
-                    logger.debug("Password hash retrieved for user", username=username)
-                    return row['password_hash']
-                else:
-                    logger.debug("No password hash found for user", username=username)
-                    return None
-
-        except Exception as e:
-            logger.error("Failed to get password hash", username=username, error=str(e))
-            return None
-
-    async def update_user_last_login(self, username: str, timestamp: Optional[str] = None) -> bool:
-        """Update user's last login timestamp."""
-        if timestamp is None:
-            timestamp = datetime.now(UTC).isoformat()
-
-        try:
-            async with self.get_connection() as conn:
-                await conn.execute(
-                    "UPDATE users SET last_login = ? WHERE username = ?",
-                    (timestamp, username)
-                )
-                await conn.commit()
-
-                logger.debug("Updated last login for user", username=username, timestamp=timestamp)
-                return True
-
-        except Exception as e:
-            logger.error("Failed to update last login", username=username, error=str(e))
-            return False
+    async def update_user_last_login(
+        self, username: str, timestamp: Optional[str] = None
+    ) -> bool:
+        return await self._user.update_user_last_login(username, timestamp)
 
     async def get_all_users(self) -> List[User]:
-        """Get all active users from database."""
-        try:
-            async with self.get_connection() as conn:
-                cursor = await conn.execute(
-                    """
-                    SELECT id, username, email, role, created_at, last_login, is_active, preferences_json
-                    FROM users
-                    WHERE is_active = 1
-                    ORDER BY username
-                    """
-                )
-                rows = await cursor.fetchall()
+        return await self._user.get_all_users()
 
-                users = []
-                for row in rows:
-                    # Parse preferences JSON
-                    preferences = {}
-                    if row['preferences_json']:
-                        try:
-                            preferences = json.loads(row['preferences_json'])
-                        except json.JSONDecodeError:
-                            preferences = {}
+    async def create_user(
+        self,
+        username: str,
+        password_hash: str,
+        email: str = "",
+        role: UserRole = UserRole.USER,
+        preferences: Optional[Dict[str, Any]] = None,
+    ) -> Optional[User]:
+        return await self._user.create_user(
+            username, password_hash, email, role, preferences
+        )
 
-                    user = User(
-                        id=row['id'],
-                        username=row['username'],
-                        email=row['email'],
-                        role=UserRole(row['role']),
-                        last_login=row['last_login'] or datetime.now(UTC).isoformat(),
-                        is_active=bool(row['is_active']),
-                        preferences=preferences
-                    )
-                    users.append(user)
+    async def update_user_password(self, username: str, password_hash: str) -> bool:
+        return await self._user.update_user_password(username, password_hash)
 
-                logger.debug("Retrieved all users", count=len(users))
-                return users
+    async def has_admin_user(self) -> bool:
+        return await self._user.has_admin_user()
 
-        except Exception as e:
-            logger.error("Failed to get all users", error=str(e))
-            return []
+    async def update_user_preferences(
+        self, user_id: str, preferences: Dict[str, Any]
+    ) -> bool:
+        return await self._user.update_user_preferences(user_id, preferences)
 
-    async def create_user(self, username: str, email: str, password_hash: str,
-                         role: UserRole = UserRole.USER,
-                         preferences: Optional[Dict[str, Any]] = None) -> Optional[User]:
-        """Create a new user in the database."""
-        try:
-            import uuid
-            user_id = str(uuid.uuid4())
-            now = datetime.now(UTC).isoformat()
-            preferences_json = json.dumps(preferences or {})
+    async def update_user_avatar(self, user_id: str, avatar: Optional[str]) -> bool:
+        return await self._user.update_user_avatar(user_id, avatar)
 
-            async with self.get_connection() as conn:
-                await conn.execute(
-                    """
-                    INSERT INTO users (id, username, email, password_hash, role, created_at, is_active, preferences_json)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-                    """,
-                    (user_id, username, email, password_hash, role.value, now, True, preferences_json)
-                )
-                await conn.commit()
+    # ========== System Info Methods ==========
 
-                user = User(
-                    id=user_id,
-                    username=username,
-                    email=email,
-                    role=role,
-                    last_login=now,
-                    is_active=True,
-                    preferences=preferences or {}
-                )
+    async def get_system_info(self) -> Optional[Dict[str, Any]]:
+        return await self._system.get_system_info()
 
-                logger.info("Created new user", username=username, user_id=user_id, role=role.value)
-                return user
+    async def is_system_setup(self) -> bool:
+        return await self._system.is_system_setup()
 
-        except Exception as e:
-            logger.error("Failed to create user", username=username, error=str(e))
-            return None
+    async def mark_system_setup_complete(self, user_id: str) -> bool:
+        return await self._system.mark_system_setup_complete(user_id)
+
+    async def update_system_info(self, **kwargs) -> bool:
+        return await self._system.update_system_info(**kwargs)
 
     async def verify_database_connection(self) -> bool:
-        """Verify database connection and table existence."""
-        try:
-            async with self.get_connection() as conn:
-                # Check if users table exists and has expected columns
-                cursor = await conn.execute("PRAGMA table_info(users)")
-                columns = await cursor.fetchall()
+        return await self._system.verify_database_connection()
 
-                required_columns = {'id', 'username', 'email', 'password_hash', 'role', 'is_active'}
-                existing_columns = {col['name'] for col in columns}
+    # ========== Component Versions Methods ==========
 
-                if not required_columns.issubset(existing_columns):
-                    missing = required_columns - existing_columns
-                    logger.error("Missing required columns in users table", missing=list(missing))
-                    return False
+    async def initialize_component_versions_table(self) -> bool:
+        return await self._schema.initialize_component_versions_table()
 
-                # Test a simple query
-                cursor = await conn.execute("SELECT COUNT(*) as count FROM users")
-                result = await cursor.fetchone()
-                user_count = result['count']
+    async def get_component_versions(self) -> List[Dict[str, Any]]:
+        return await self._system.get_component_versions()
 
-                logger.info("Database connection verified", user_count=user_count)
-                return True
+    async def get_component_version(self, component: str) -> Optional[Dict[str, Any]]:
+        return await self._system.get_component_version(component)
 
-        except Exception as e:
-            logger.error("Database connection verification failed", error=str(e))
-            return False
+    async def update_component_version(self, component: str, version: str) -> bool:
+        return await self._system.update_component_version(component, version)
 
-    async def update_user_preferences(self, user_id: str, preferences: Dict[str, Any]) -> bool:
-        """Update user preferences in database."""
-        try:
-            preferences_json = json.dumps(preferences)
-
-            async with self.get_connection() as conn:
-                await conn.execute(
-                    "UPDATE users SET preferences_json = ? WHERE id = ?",
-                    (preferences_json, user_id)
-                )
-                await conn.commit()
-
-                logger.debug("Updated user preferences", user_id=user_id)
-                return True
-
-        except Exception as e:
-            logger.error("Failed to update user preferences", user_id=user_id, error=str(e))
-            return False
+    # ========== Log Retention Methods ==========
 
     async def get_log_entries_count_before_date(self, cutoff_date: str) -> int:
-        """Get count of log entries before specified date for retention operations."""
-        try:
-            async with self.get_connection() as conn:
-                cursor = await conn.execute(
-                    "SELECT COUNT(*) as count FROM log_entries WHERE timestamp < ?",
-                    (cutoff_date,)
-                )
-                result = await cursor.fetchone()
-                return result['count'] if result else 0
+        return await self._metrics.get_log_entries_count_before_date(cutoff_date)
 
-        except Exception as e:
-            logger.error("Failed to count log entries", cutoff_date=cutoff_date, error=str(e))
-            return 0
+    async def delete_log_entries_before_date(
+        self, cutoff_date: str, batch_size: int = 1000
+    ) -> int:
+        return await self._metrics.delete_log_entries_before_date(
+            cutoff_date, batch_size
+        )
 
-    async def delete_log_entries_before_date(self, cutoff_date: str, batch_size: int = 1000) -> int:
-        """Delete log entries before specified date in batches."""
-        total_deleted = 0
-
-        try:
-            async with self.get_connection() as conn:
-                await conn.execute("BEGIN IMMEDIATE")
-
-                try:
-                    while True:
-                        cursor = await conn.execute(
-                            "DELETE FROM log_entries WHERE timestamp < ? LIMIT ?",
-                            (cutoff_date, batch_size)
-                        )
-
-                        deleted_count = cursor.rowcount
-                        total_deleted += deleted_count
-
-                        logger.debug("Deleted batch of log entries",
-                                   batch_size=deleted_count, total=total_deleted)
-
-                        if deleted_count < batch_size:
-                            break
-
-                    await conn.commit()
-                    logger.info("Successfully deleted log entries", total=total_deleted)
-                    return total_deleted
-
-                except Exception as e:
-                    await conn.rollback()
-                    logger.error("Log deletion failed, rolled back", error=str(e))
-                    raise
-
-        except Exception as e:
-            logger.error("Failed to delete log entries", error=str(e))
-            raise
+    # ========== Server Methods ==========
 
     async def create_server(
         self,
@@ -392,292 +173,40 @@ class DatabaseService:
         port: int,
         username: str,
         auth_type: str,
-        encrypted_credentials: str
-    ) -> Optional["ServerConnection"]:
-        """Create a new server in the database."""
-        from datetime import datetime, UTC
-        from models.server import ServerConnection, AuthType, ServerStatus
+        encrypted_credentials: str,
+    ) -> Optional[ServerConnection]:
+        return await self._server.create_server(
+            id, name, host, port, username, auth_type, encrypted_credentials
+        )
 
-        try:
-            now = datetime.now(UTC).isoformat()
+    async def get_server_by_id(self, server_id: str) -> Optional[ServerConnection]:
+        return await self._server.get_server_by_id(server_id)
 
-            async with self.get_connection() as conn:
-                await conn.execute(
-                    """INSERT INTO servers (id, name, host, port, username, auth_type, status, created_at)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                    (id, name, host, port, username, auth_type, "disconnected", now)
-                )
+    async def get_server_by_connection(
+        self, host: str, port: int, username: str
+    ) -> Optional[ServerConnection]:
+        return await self._server.get_server_by_connection(host, port, username)
 
-                await conn.execute(
-                    """INSERT INTO server_credentials (server_id, encrypted_data, created_at, updated_at)
-                       VALUES (?, ?, ?, ?)""",
-                    (id, encrypted_credentials, now, now)
-                )
-
-                await conn.commit()
-
-            return ServerConnection(
-                id=id,
-                name=name,
-                host=host,
-                port=port,
-                username=username,
-                auth_type=AuthType(auth_type),
-                status=ServerStatus.DISCONNECTED,
-                created_at=now
-            )
-        except Exception as e:
-            logger.error("Failed to create server", error=str(e))
-            return None
-
-    async def get_server_by_id(self, server_id: str) -> Optional["ServerConnection"]:
-        """Get server by ID."""
-        from models.server import ServerConnection, AuthType, ServerStatus
-
-        try:
-            async with self.get_connection() as conn:
-                cursor = await conn.execute(
-                    "SELECT * FROM servers WHERE id = ?", (server_id,)
-                )
-                row = await cursor.fetchone()
-
-            if not row:
-                return None
-
-            return ServerConnection(
-                id=row["id"],
-                name=row["name"],
-                host=row["host"],
-                port=row["port"],
-                username=row["username"],
-                auth_type=AuthType(row["auth_type"]),
-                status=ServerStatus(row["status"]),
-                created_at=row["created_at"],
-                last_connected=row["last_connected"]
-            )
-        except Exception as e:
-            logger.error("Failed to get server", error=str(e))
-            return None
-
-    async def get_all_servers_from_db(self) -> list:
-        """Get all servers from database."""
-        from models.server import ServerConnection, AuthType, ServerStatus
-
-        try:
-            async with self.get_connection() as conn:
-                cursor = await conn.execute("SELECT * FROM servers")
-                rows = await cursor.fetchall()
-
-            return [
-                ServerConnection(
-                    id=row["id"],
-                    name=row["name"],
-                    host=row["host"],
-                    port=row["port"],
-                    username=row["username"],
-                    auth_type=AuthType(row["auth_type"]),
-                    status=ServerStatus(row["status"]),
-                    created_at=row["created_at"],
-                    last_connected=row["last_connected"]
-                )
-                for row in rows
-            ]
-        except Exception as e:
-            logger.error("Failed to get servers", error=str(e))
-            return []
+    async def get_all_servers_from_db(self) -> List[ServerConnection]:
+        return await self._server.get_all_servers_from_db()
 
     async def get_server_credentials(self, server_id: str) -> Optional[str]:
-        """Get encrypted credentials for a server."""
-        try:
-            async with self.get_connection() as conn:
-                cursor = await conn.execute(
-                    "SELECT encrypted_data FROM server_credentials WHERE server_id = ?",
-                    (server_id,)
-                )
-                row = await cursor.fetchone()
-            return row["encrypted_data"] if row else None
-        except Exception as e:
-            logger.error("Failed to get credentials", error=str(e))
-            return None
+        return await self._server.get_server_credentials(server_id)
+
+    async def update_server_credentials(
+        self, server_id: str, encrypted_credentials: str
+    ) -> bool:
+        return await self._server.update_server_credentials(
+            server_id, encrypted_credentials
+        )
 
     async def update_server(self, server_id: str, **kwargs) -> bool:
-        """Update server in database."""
-        try:
-            updates = []
-            values = []
-            for key, value in kwargs.items():
-                if value is not None:
-                    # Validate column name against whitelist (SQL injection prevention)
-                    if key not in ALLOWED_SERVER_COLUMNS:
-                        logger.warning("Rejected invalid column in update_server", column=key)
-                        raise ValueError(f"Invalid column name: {key}")
-                    updates.append(f"{key} = ?")
-                    values.append(value)
-
-            if not updates:
-                return True
-
-            values.append(server_id)
-            query = f"UPDATE servers SET {', '.join(updates)} WHERE id = ?"
-
-            async with self.get_connection() as conn:
-                await conn.execute(query, values)
-                await conn.commit()
-            return True
-        except Exception as e:
-            logger.error("Failed to update server", error=str(e))
-            return False
+        return await self._server.update_server(server_id, **kwargs)
 
     async def delete_server(self, server_id: str) -> bool:
-        """Delete server from database."""
-        try:
-            async with self.get_connection() as conn:
-                await conn.execute(
-                    "DELETE FROM servers WHERE id = ?", (server_id,)
-                )
-                await conn.commit()
-            return True
-        except Exception as e:
-            logger.error("Failed to delete server", error=str(e))
-            return False
+        return await self._server.delete_server(server_id)
 
-    async def create_preparation(
-        self,
-        id: str,
-        server_id: str,
-        status: str,
-        started_at: str
-    ) -> Optional[ServerPreparation]:
-        """Create a new preparation record."""
-        try:
-            async with self.get_connection() as conn:
-                await conn.execute(
-                    """INSERT INTO server_preparations (id, server_id, status, started_at)
-                       VALUES (?, ?, ?, ?)""",
-                    (id, server_id, status, started_at)
-                )
-                await conn.commit()
-
-            return ServerPreparation(
-                id=id,
-                server_id=server_id,
-                status=PreparationStatus(status),
-                started_at=started_at
-            )
-        except Exception as e:
-            logger.error("Failed to create preparation", error=str(e))
-            return None
-
-    async def update_preparation(self, prep_id: str, **kwargs) -> bool:
-        """Update preparation record."""
-        try:
-            updates = []
-            values = []
-            for key, value in kwargs.items():
-                if value is not None:
-                    # Validate column name against whitelist (SQL injection prevention)
-                    if key not in ALLOWED_PREPARATION_COLUMNS:
-                        logger.warning("Rejected invalid column in update_preparation", column=key)
-                        raise ValueError(f"Invalid column name: {key}")
-                    updates.append(f"{key} = ?")
-                    values.append(value)
-
-            if not updates:
-                return True
-
-            values.append(prep_id)
-            query = f"UPDATE server_preparations SET {', '.join(updates)} WHERE id = ?"
-
-            async with self.get_connection() as conn:
-                await conn.execute(query, values)
-                await conn.commit()
-            return True
-        except Exception as e:
-            logger.error("Failed to update preparation", error=str(e))
-            return False
-
-    async def add_preparation_log(
-        self,
-        id: str,
-        server_id: str,
-        preparation_id: str,
-        step: str,
-        status: str,
-        message: str,
-        timestamp: str,
-        output: str = None,
-        error: str = None
-    ) -> bool:
-        """Add preparation log entry."""
-        try:
-            async with self.get_connection() as conn:
-                await conn.execute(
-                    """INSERT INTO preparation_logs
-                       (id, server_id, preparation_id, step, status, message, output, error, timestamp)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                    (id, server_id, preparation_id, step, status, message, output, error, timestamp)
-                )
-                await conn.commit()
-            return True
-        except Exception as e:
-            logger.error("Failed to add preparation log", error=str(e))
-            return False
-
-    async def get_preparation(self, server_id: str) -> Optional[ServerPreparation]:
-        """Get latest preparation for a server."""
-        try:
-            async with self.get_connection() as conn:
-                cursor = await conn.execute(
-                    """SELECT * FROM server_preparations
-                       WHERE server_id = ? ORDER BY started_at DESC LIMIT 1""",
-                    (server_id,)
-                )
-                row = await cursor.fetchone()
-
-            if not row:
-                return None
-
-            return ServerPreparation(
-                id=row["id"],
-                server_id=row["server_id"],
-                status=PreparationStatus(row["status"]),
-                current_step=PreparationStep(row["current_step"]) if row["current_step"] else None,
-                detected_os=row["detected_os"],
-                started_at=row["started_at"],
-                completed_at=row["completed_at"],
-                error_message=row["error_message"]
-            )
-        except Exception as e:
-            logger.error("Failed to get preparation", error=str(e))
-            return None
-
-    async def get_preparation_logs(self, server_id: str) -> list:
-        """Get all preparation logs for a server."""
-        try:
-            async with self.get_connection() as conn:
-                cursor = await conn.execute(
-                    """SELECT * FROM preparation_logs
-                       WHERE server_id = ? ORDER BY timestamp ASC""",
-                    (server_id,)
-                )
-                rows = await cursor.fetchall()
-
-            return [
-                PreparationLog(
-                    id=row["id"],
-                    server_id=row["server_id"],
-                    step=PreparationStep(row["step"]),
-                    status=PreparationStatus(row["status"]),
-                    message=row["message"],
-                    output=row["output"],
-                    error=row["error"],
-                    timestamp=row["timestamp"]
-                )
-                for row in rows
-            ]
-        except Exception as e:
-            logger.error("Failed to get preparation logs", error=str(e))
-            return []
+    # ========== Installation Methods ==========
 
     async def create_installation(
         self,
@@ -687,292 +216,58 @@ class DatabaseService:
         container_name: str,
         status: str,
         config: dict,
-        installed_at: str
+        installed_at: str,
     ) -> Optional[InstalledApp]:
-        """Create a new installation record."""
-        try:
-            config_json = json.dumps(config) if config else "{}"
-            async with self.get_connection() as conn:
-                await conn.execute(
-                    """INSERT INTO installed_apps
-                       (id, server_id, app_id, container_name, status, config, installed_at)
-                       VALUES (?, ?, ?, ?, ?, ?, ?)""",
-                    (id, server_id, app_id, container_name, status, config_json, installed_at)
-                )
-                await conn.commit()
-
-            return InstalledApp(
-                id=id,
-                server_id=server_id,
-                app_id=app_id,
-                container_name=container_name,
-                status=InstallationStatus(status),
-                config=config,
-                installed_at=installed_at
-            )
-        except Exception as e:
-            logger.error("Failed to create installation", error=str(e))
-            return None
+        return await self._app.create_installation(
+            id, server_id, app_id, container_name, status, config, installed_at
+        )
 
     async def update_installation(self, install_id: str, **kwargs) -> bool:
-        """Update installation record."""
-        try:
-            updates = []
-            values = []
-            for key, value in kwargs.items():
-                if value is not None:
-                    # Validate column name against whitelist (SQL injection prevention)
-                    if key not in ALLOWED_INSTALLATION_COLUMNS:
-                        logger.warning("Rejected invalid column in update_installation", column=key)
-                        raise ValueError(f"Invalid column name: {key}")
-                    updates.append(f"{key} = ?")
-                    values.append(value)
+        return await self._app.update_installation(install_id, **kwargs)
 
-            if not updates:
-                return True
+    async def get_installation(
+        self, server_id: str, app_id: str
+    ) -> Optional[InstalledApp]:
+        return await self._app.get_installation(server_id, app_id)
 
-            values.append(install_id)
-            query = f"UPDATE installed_apps SET {', '.join(updates)} WHERE id = ?"
+    async def get_installation_by_id(self, install_id: str) -> Optional[InstalledApp]:
+        return await self._app.get_installation_by_id(install_id)
 
-            async with self.get_connection() as conn:
-                await conn.execute(query, values)
-                await conn.commit()
-            return True
-        except Exception as e:
-            logger.error("Failed to update installation", error=str(e))
-            return False
+    async def get_installations(self, server_id: str) -> List[InstalledApp]:
+        return await self._app.get_installations(server_id)
 
-    async def get_installation(self, server_id: str, app_id: str) -> Optional[InstalledApp]:
-        """Get installation by server and app ID."""
-        try:
-            async with self.get_connection() as conn:
-                cursor = await conn.execute(
-                    """SELECT * FROM installed_apps
-                       WHERE server_id = ? AND app_id = ?""",
-                    (server_id, app_id)
-                )
-                row = await cursor.fetchone()
-
-            if not row:
-                return None
-
-            config = json.loads(row["config"]) if row["config"] else {}
-            return InstalledApp(
-                id=row["id"],
-                server_id=row["server_id"],
-                app_id=row["app_id"],
-                container_id=row["container_id"],
-                container_name=row["container_name"],
-                status=InstallationStatus(row["status"]),
-                config=config,
-                installed_at=row["installed_at"],
-                started_at=row["started_at"],
-                error_message=row["error_message"]
-            )
-        except Exception as e:
-            logger.error("Failed to get installation", error=str(e))
-            return None
-
-    async def get_installations(self, server_id: str) -> list:
-        """Get all installations for a server."""
-        try:
-            async with self.get_connection() as conn:
-                cursor = await conn.execute(
-                    """SELECT * FROM installed_apps WHERE server_id = ?""",
-                    (server_id,)
-                )
-                rows = await cursor.fetchall()
-
-            return [
-                InstalledApp(
-                    id=row["id"],
-                    server_id=row["server_id"],
-                    app_id=row["app_id"],
-                    container_id=row["container_id"],
-                    container_name=row["container_name"],
-                    status=InstallationStatus(row["status"]),
-                    config=json.loads(row["config"]) if row["config"] else {},
-                    installed_at=row["installed_at"],
-                    started_at=row["started_at"],
-                    error_message=row["error_message"]
-                )
-                for row in rows
-            ]
-        except Exception as e:
-            logger.error("Failed to get installations", error=str(e))
-            return []
+    async def get_all_installations(self) -> List[InstalledApp]:
+        return await self._app.get_all_installations()
 
     async def delete_installation(self, server_id: str, app_id: str) -> bool:
-        """Delete installation record."""
-        try:
-            async with self.get_connection() as conn:
-                await conn.execute(
-                    """DELETE FROM installed_apps WHERE server_id = ? AND app_id = ?""",
-                    (server_id, app_id)
-                )
-                await conn.commit()
-            return True
-        except Exception as e:
-            logger.error("Failed to delete installation", error=str(e))
-            return False
+        return await self._app.delete_installation(server_id, app_id)
+
+    # ========== Metrics Methods ==========
 
     async def save_server_metrics(self, metrics: ServerMetrics) -> bool:
-        """Save server metrics to database."""
-        try:
-            async with self.get_connection() as conn:
-                await conn.execute(
-                    """INSERT INTO server_metrics
-                       (id, server_id, cpu_percent, memory_percent, memory_used_mb,
-                        memory_total_mb, disk_percent, disk_used_gb, disk_total_gb,
-                        network_rx_bytes, network_tx_bytes, load_average_1m,
-                        load_average_5m, load_average_15m, uptime_seconds, timestamp)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                    (metrics.id, metrics.server_id, metrics.cpu_percent,
-                     metrics.memory_percent, metrics.memory_used_mb, metrics.memory_total_mb,
-                     metrics.disk_percent, metrics.disk_used_gb, metrics.disk_total_gb,
-                     metrics.network_rx_bytes, metrics.network_tx_bytes,
-                     metrics.load_average_1m, metrics.load_average_5m,
-                     metrics.load_average_15m, metrics.uptime_seconds, metrics.timestamp)
-                )
-                await conn.commit()
-            return True
-        except Exception as e:
-            logger.error("Failed to save server metrics", error=str(e))
-            return False
+        return await self._metrics.save_server_metrics(metrics)
 
     async def save_container_metrics(self, metrics: ContainerMetrics) -> bool:
-        """Save container metrics to database."""
-        try:
-            async with self.get_connection() as conn:
-                await conn.execute(
-                    """INSERT INTO container_metrics
-                       (id, server_id, container_id, container_name, cpu_percent,
-                        memory_usage_mb, memory_limit_mb, network_rx_bytes,
-                        network_tx_bytes, status, timestamp)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
-                    (metrics.id, metrics.server_id, metrics.container_id,
-                     metrics.container_name, metrics.cpu_percent,
-                     metrics.memory_usage_mb, metrics.memory_limit_mb,
-                     metrics.network_rx_bytes, metrics.network_tx_bytes,
-                     metrics.status, metrics.timestamp)
-                )
-                await conn.commit()
-            return True
-        except Exception as e:
-            logger.error("Failed to save container metrics", error=str(e))
-            return False
+        return await self._metrics.save_container_metrics(metrics)
 
     async def save_activity_log(self, log: ActivityLog) -> bool:
-        """Save activity log to database."""
-        try:
-            details_json = json.dumps(log.details) if log.details else "{}"
-            async with self.get_connection() as conn:
-                await conn.execute(
-                    """INSERT INTO activity_logs
-                       (id, activity_type, user_id, server_id, app_id, message, details, timestamp)
-                       VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                    (log.id, log.activity_type.value, log.user_id, log.server_id,
-                     log.app_id, log.message, details_json, log.timestamp)
-                )
-                await conn.commit()
-            return True
-        except Exception as e:
-            logger.error("Failed to save activity log", error=str(e))
-            return False
+        return await self._metrics.save_activity_log(log)
 
     async def get_server_metrics(
-        self,
-        server_id: str,
-        since: str = None,
-        limit: int = 100
-    ) -> list:
-        """Get server metrics from database."""
-        try:
-            query = "SELECT * FROM server_metrics WHERE server_id = ?"
-            params = [server_id]
-
-            if since:
-                query += " AND timestamp >= ?"
-                params.append(since)
-
-            query += " ORDER BY timestamp DESC LIMIT ?"
-            params.append(limit)
-
-            async with self.get_connection() as conn:
-                cursor = await conn.execute(query, params)
-                rows = await cursor.fetchall()
-
-            return [
-                ServerMetrics(
-                    id=row["id"],
-                    server_id=row["server_id"],
-                    cpu_percent=row["cpu_percent"],
-                    memory_percent=row["memory_percent"],
-                    memory_used_mb=row["memory_used_mb"],
-                    memory_total_mb=row["memory_total_mb"],
-                    disk_percent=row["disk_percent"],
-                    disk_used_gb=row["disk_used_gb"],
-                    disk_total_gb=row["disk_total_gb"],
-                    network_rx_bytes=row["network_rx_bytes"],
-                    network_tx_bytes=row["network_tx_bytes"],
-                    load_average_1m=row["load_average_1m"],
-                    load_average_5m=row["load_average_5m"],
-                    load_average_15m=row["load_average_15m"],
-                    uptime_seconds=row["uptime_seconds"],
-                    timestamp=row["timestamp"]
-                )
-                for row in rows
-            ]
-        except Exception as e:
-            logger.error("Failed to get server metrics", error=str(e))
-            return []
+        self, server_id: str, since: str = None, limit: int = 100
+    ) -> List[ServerMetrics]:
+        return await self._metrics.get_server_metrics(server_id, since, limit)
 
     async def get_container_metrics(
         self,
         server_id: str,
         container_name: str = None,
         since: str = None,
-        limit: int = 100
-    ) -> list:
-        """Get container metrics from database."""
-        try:
-            query = "SELECT * FROM container_metrics WHERE server_id = ?"
-            params = [server_id]
-
-            if container_name:
-                query += " AND container_name = ?"
-                params.append(container_name)
-
-            if since:
-                query += " AND timestamp >= ?"
-                params.append(since)
-
-            query += " ORDER BY timestamp DESC LIMIT ?"
-            params.append(limit)
-
-            async with self.get_connection() as conn:
-                cursor = await conn.execute(query, params)
-                rows = await cursor.fetchall()
-
-            return [
-                ContainerMetrics(
-                    id=row["id"],
-                    server_id=row["server_id"],
-                    container_id=row["container_id"],
-                    container_name=row["container_name"],
-                    cpu_percent=row["cpu_percent"],
-                    memory_usage_mb=row["memory_usage_mb"],
-                    memory_limit_mb=row["memory_limit_mb"],
-                    network_rx_bytes=row["network_rx_bytes"],
-                    network_tx_bytes=row["network_tx_bytes"],
-                    status=row["status"],
-                    timestamp=row["timestamp"]
-                )
-                for row in rows
-            ]
-        except Exception as e:
-            logger.error("Failed to get container metrics", error=str(e))
-            return []
+        limit: int = 100,
+    ) -> List[ContainerMetrics]:
+        return await self._metrics.get_container_metrics(
+            server_id, container_name, since, limit
+        )
 
     async def get_activity_logs(
         self,
@@ -982,190 +277,129 @@ class DatabaseService:
         since: str = None,
         until: str = None,
         limit: int = 100,
-        offset: int = 0
-    ) -> list:
-        """Get activity logs from database."""
-        try:
-            query = "SELECT * FROM activity_logs WHERE 1=1"
-            params = []
-
-            if activity_types:
-                placeholders = ",".join("?" * len(activity_types))
-                query += f" AND activity_type IN ({placeholders})"
-                params.extend(activity_types)
-
-            if user_id:
-                query += " AND user_id = ?"
-                params.append(user_id)
-
-            if server_id:
-                query += " AND server_id = ?"
-                params.append(server_id)
-
-            if since:
-                query += " AND timestamp >= ?"
-                params.append(since)
-
-            if until:
-                query += " AND timestamp <= ?"
-                params.append(until)
-
-            query += " ORDER BY timestamp DESC LIMIT ? OFFSET ?"
-            params.extend([limit, offset])
-
-            async with self.get_connection() as conn:
-                cursor = await conn.execute(query, params)
-                rows = await cursor.fetchall()
-
-            return [
-                ActivityLog(
-                    id=row["id"],
-                    activity_type=ActivityType(row["activity_type"]),
-                    user_id=row["user_id"],
-                    server_id=row["server_id"],
-                    app_id=row["app_id"],
-                    message=row["message"],
-                    details=json.loads(row["details"]) if row["details"] else {},
-                    timestamp=row["timestamp"]
-                )
-                for row in rows
-            ]
-        except Exception as e:
-            logger.error("Failed to get activity logs", error=str(e))
-            return []
+        offset: int = 0,
+    ) -> List[ActivityLog]:
+        return await self._metrics.get_activity_logs(
+            activity_types, user_id, server_id, since, until, limit, offset
+        )
 
     async def count_activity_logs(
-        self,
-        activity_types: list = None,
-        since: str = None
+        self, activity_types: list = None, since: str = None
     ) -> int:
-        """Count activity logs matching filters."""
-        try:
-            query = "SELECT COUNT(*) as count FROM activity_logs WHERE 1=1"
-            params = []
+        return await self._metrics.count_activity_logs(activity_types, since)
 
-            if activity_types:
-                placeholders = ",".join("?" * len(activity_types))
-                query += f" AND activity_type IN ({placeholders})"
-                params.extend(activity_types)
+    # ========== Export/Import Methods ==========
 
-            if since:
-                query += " AND timestamp >= ?"
-                params.append(since)
+    async def export_users(self) -> List[Dict[str, Any]]:
+        return await self._export.export_users()
 
-            async with self.get_connection() as conn:
-                cursor = await conn.execute(query, params)
-                row = await cursor.fetchone()
+    async def export_servers(self) -> List[Dict[str, Any]]:
+        return await self._export.export_servers()
 
-            return row["count"] if row else 0
-        except Exception as e:
-            logger.error("Failed to count activity logs", error=str(e))
-            return 0
-
-    async def export_users(self) -> list:
-        """Export all users for backup."""
-        try:
-            async with self.get_connection() as conn:
-                cursor = await conn.execute(
-                    "SELECT id, username, email, role, is_active, created_at FROM users"
-                )
-                rows = await cursor.fetchall()
-
-            return [dict(row) for row in rows]
-        except Exception as e:
-            logger.error("Failed to export users", error=str(e))
-            return []
-
-    async def export_servers(self) -> list:
-        """Export all servers for backup (including encrypted credentials)."""
-        try:
-            async with self.get_connection() as conn:
-                cursor = await conn.execute(
-                    "SELECT * FROM servers"
-                )
-                rows = await cursor.fetchall()
-
-            return [dict(row) for row in rows]
-        except Exception as e:
-            logger.error("Failed to export servers", error=str(e))
-            return []
-
-    async def export_settings(self) -> dict:
-        """Export settings for backup."""
-        try:
-            async with self.get_connection() as conn:
-                cursor = await conn.execute("SELECT key, value FROM settings")
-                rows = await cursor.fetchall()
-
-            return {row["key"]: row["value"] for row in rows}
-        except Exception as e:
-            logger.error("Failed to export settings", error=str(e))
-            return {}
+    async def export_settings(self) -> Dict[str, Any]:
+        return await self._export.export_settings()
 
     async def import_users(self, users: list, overwrite: bool = False) -> None:
-        """Import users from backup."""
-        try:
-            async with self.get_connection() as conn:
-                for user in users:
-                    if overwrite:
-                        await conn.execute(
-                            "DELETE FROM users WHERE id = ?", (user["id"],)
-                        )
-                    await conn.execute(
-                        """INSERT OR IGNORE INTO users
-                           (id, username, email, role, is_active, created_at)
-                           VALUES (?, ?, ?, ?, ?, ?)""",
-                        (user["id"], user["username"], user.get("email"),
-                         user.get("role", "user"), user.get("is_active", 1),
-                         user.get("created_at"))
-                    )
-                await conn.commit()
-            logger.info("Imported users", count=len(users))
-        except Exception as e:
-            logger.error("Failed to import users", error=str(e))
-            raise
+        return await self._export.import_users(users, overwrite)
 
     async def import_servers(self, servers: list, overwrite: bool = False) -> None:
-        """Import servers from backup."""
-        try:
-            async with self.get_connection() as conn:
-                for server in servers:
-                    if overwrite:
-                        await conn.execute(
-                            "DELETE FROM servers WHERE id = ?", (server["id"],)
-                        )
-                    await conn.execute(
-                        """INSERT OR IGNORE INTO servers
-                           (id, name, host, port, username, auth_type, credentials, status)
-                           VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
-                        (server["id"], server["name"], server["host"],
-                         server.get("port", 22), server.get("username"),
-                         server.get("auth_type"), server.get("credentials"),
-                         server.get("status", "unknown"))
-                    )
-                await conn.commit()
-            logger.info("Imported servers", count=len(servers))
-        except Exception as e:
-            logger.error("Failed to import servers", error=str(e))
-            raise
+        return await self._export.import_servers(servers, overwrite)
 
     async def import_settings(self, settings: dict, overwrite: bool = False) -> None:
-        """Import settings from backup."""
-        try:
-            async with self.get_connection() as conn:
-                for key, value in settings.items():
-                    if overwrite:
-                        await conn.execute(
-                            "INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)",
-                            (key, value)
-                        )
-                    else:
-                        await conn.execute(
-                            "INSERT OR IGNORE INTO settings (key, value) VALUES (?, ?)",
-                            (key, value)
-                        )
-                await conn.commit()
-            logger.info("Imported settings", count=len(settings))
-        except Exception as e:
-            logger.error("Failed to import settings", error=str(e))
-            raise
+        return await self._export.import_settings(settings, overwrite)
+
+    # ========== Migration Methods ==========
+
+    async def run_installed_apps_migrations(self) -> None:
+        return await self._schema.run_installed_apps_migrations()
+
+    async def run_users_migrations(self) -> None:
+        return await self._schema.run_users_migrations()
+
+    # ========== Schema Initialization Methods ==========
+
+    async def initialize_system_info_table(self) -> bool:
+        return await self._schema.initialize_system_info_table()
+
+    async def initialize_users_table(self) -> bool:
+        return await self._schema.initialize_users_table()
+
+    async def initialize_sessions_table(self) -> bool:
+        return await self._schema.initialize_sessions_table()
+
+    async def initialize_account_locks_table(self) -> bool:
+        return await self._schema.initialize_account_locks_table()
+
+    async def initialize_notifications_table(self) -> bool:
+        return await self._schema.initialize_notifications_table()
+
+    async def initialize_retention_settings_table(self) -> bool:
+        return await self._schema.initialize_retention_settings_table()
+
+    async def initialize_servers_table(self) -> bool:
+        return await self._schema.initialize_servers_table()
+
+    async def initialize_agents_table(self) -> bool:
+        return await self._schema.initialize_agents_table()
+
+    async def initialize_installed_apps_table(self) -> bool:
+        return await self._schema.initialize_installed_apps_table()
+
+    async def initialize_metrics_tables(self) -> bool:
+        return await self._schema.initialize_metrics_tables()
+
+    # ========== Account Lock Methods ==========
+
+    async def is_account_locked(
+        self, identifier: str, identifier_type: str = "username"
+    ) -> tuple[bool, Optional[Dict[str, Any]]]:
+        return await self._session.is_account_locked(identifier, identifier_type)
+
+    async def record_failed_login_attempt(
+        self,
+        identifier: str,
+        identifier_type: str = "username",
+        ip_address: Optional[str] = None,
+        user_agent: Optional[str] = None,
+        max_attempts: int = 5,
+        lock_duration_minutes: int = 15,
+    ) -> tuple[bool, int, Optional[str]]:
+        return await self._session.record_failed_login_attempt(
+            identifier,
+            identifier_type,
+            ip_address,
+            user_agent,
+            max_attempts,
+            lock_duration_minutes,
+        )
+
+    async def clear_failed_attempts(
+        self, identifier: str, identifier_type: str = "username"
+    ) -> bool:
+        return await self._session.clear_failed_attempts(identifier, identifier_type)
+
+    async def get_locked_accounts(
+        self, include_expired: bool = False, include_unlocked: bool = False
+    ) -> List[Dict[str, Any]]:
+        return await self._session.get_locked_accounts(
+            include_expired, include_unlocked
+        )
+
+    async def unlock_account(
+        self, lock_id: str, unlocked_by: str, notes: Optional[str] = None
+    ) -> bool:
+        return await self._session.unlock_account(lock_id, unlocked_by, notes)
+
+    async def lock_account(
+        self,
+        lock_id: str,
+        locked_by: str,
+        notes: Optional[str] = None,
+        lock_duration_minutes: int = 15,
+    ) -> bool:
+        return await self._session.lock_account(
+            lock_id, locked_by, notes, lock_duration_minutes
+        )
+
+    async def get_lock_by_id(self, lock_id: str) -> Optional[Dict[str, Any]]:
+        return await self._session.get_lock_by_id(lock_id)

@@ -16,7 +16,21 @@ const mockUseMCP = vi.mocked(useMCP)
 
 describe('useDashboardData', () => {
   const mockClient = {
-    callTool: vi.fn()
+    callTool: vi.fn() as ReturnType<typeof vi.fn>,
+    isConnected: () => true
+  }
+
+  const mockServersResponse = {
+    success: true,
+    data: {
+      servers: [
+        { id: '1', name: 'Server 1', host: 'host1', port: 22, username: 'user', auth_type: 'password', status: 'connected' },
+        { id: '2', name: 'Server 2', host: 'host2', port: 22, username: 'user', auth_type: 'password', status: 'connected' },
+        { id: '3', name: 'Server 3', host: 'host3', port: 22, username: 'user', auth_type: 'password', status: 'connected' },
+        { id: '4', name: 'Server 4', host: 'host4', port: 22, username: 'user', auth_type: 'password', status: 'connected' },
+        { id: '5', name: 'Server 5', host: 'host5', port: 22, username: 'user', auth_type: 'password', status: 'disconnected' }
+      ]
+    }
   }
 
   const mockDashboardSummary = {
@@ -68,6 +82,7 @@ describe('useDashboardData', () => {
 
   it('should fetch dashboard data on mount', async () => {
     mockClient.callTool
+      .mockResolvedValueOnce({ data: mockServersResponse })
       .mockResolvedValueOnce({ success: true, data: mockDashboardSummary })
       .mockResolvedValueOnce({ success: true, data: mockHealthStatus })
 
@@ -77,9 +92,12 @@ describe('useDashboardData', () => {
       expect(result.current.loading).toBe(false)
     })
 
+    expect(mockClient.callTool).toHaveBeenCalledWith('list_servers', {})
     expect(mockClient.callTool).toHaveBeenCalledWith('get_dashboard_summary', {})
     expect(mockClient.callTool).toHaveBeenCalledWith('get_health_status', {})
-    expect(result.current.dashboardData).toEqual(mockDashboardSummary)
+    // Server counts should be overridden from backend data
+    expect(result.current.dashboardData?.total_servers).toBe(5)
+    expect(result.current.dashboardData?.online_servers).toBe(4)
     expect(result.current.healthStatus).toEqual(mockHealthStatus)
   })
 
@@ -98,6 +116,7 @@ describe('useDashboardData', () => {
 
   it('should set lastUpdated after successful fetch', async () => {
     mockClient.callTool
+      .mockResolvedValueOnce({ data: mockServersResponse })
       .mockResolvedValueOnce({ success: true, data: mockDashboardSummary })
       .mockResolvedValueOnce({ success: true, data: mockHealthStatus })
 
@@ -143,6 +162,7 @@ describe('useDashboardData', () => {
 
   it('should provide refresh function', async () => {
     mockClient.callTool
+      .mockResolvedValueOnce({ data: mockServersResponse })
       .mockResolvedValueOnce({ success: true, data: mockDashboardSummary })
       .mockResolvedValueOnce({ success: true, data: mockHealthStatus })
 
@@ -157,8 +177,10 @@ describe('useDashboardData', () => {
 
   it('should call refresh when refresh function is invoked', async () => {
     mockClient.callTool
+      .mockResolvedValueOnce({ data: mockServersResponse })
       .mockResolvedValueOnce({ success: true, data: mockDashboardSummary })
       .mockResolvedValueOnce({ success: true, data: mockHealthStatus })
+      .mockResolvedValueOnce({ data: mockServersResponse })
       .mockResolvedValueOnce({ success: true, data: mockDashboardSummary })
       .mockResolvedValueOnce({ success: true, data: mockHealthStatus })
 

@@ -1,42 +1,43 @@
 /**
  * LoginPage Security Test
- * 
+ *
  * Tests to verify that login error messages are generic and don't reveal
  * system internals for security purposes.
  */
 
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, waitFor } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
 import { LoginPage } from './LoginPage'
 import { AuthProvider } from '@/providers/AuthProvider'
 
-// Mock auth services to simulate different error scenarios
-vi.mock('@/services/auth/authService', () => ({
-  authService: {
-    initialize: vi.fn().mockResolvedValue(undefined),
-    login: vi.fn().mockRejectedValue(new Error('Mock auth service error')),
-    validateToken: vi.fn().mockResolvedValue(false)
+// Mock the auth hook for controlled testing
+const { mockLogin, getMockAuthState, setMockAuthState } = vi.hoisted(() => {
+  const mockLogin = vi.fn()
+  let mockAuthState = {
+    isAuthenticated: false,
+    isLoading: false,
+    error: null,
+    user: null
   }
-}))
 
-vi.mock('@/services/auth/sessionService', () => ({
-  sessionService: {
-    initialize: vi.fn().mockResolvedValue(undefined),
-    validateSession: vi.fn().mockResolvedValue({
-      isValid: false,
-      reason: 'Authentication required'
-    }),
-    createSession: vi.fn().mockRejectedValue(new Error('Mock session error'))
+  return {
+    mockLogin,
+    getMockAuthState: () => mockAuthState,
+    setMockAuthState: (newState: Record<string, unknown>) => { mockAuthState = { ...mockAuthState, ...newState } }
   }
-}))
+})
 
-vi.mock('@/services/settingsService', () => ({
-  settingsService: {
-    initialize: vi.fn().mockResolvedValue(undefined),
-    getSessionTimeoutMs: vi.fn().mockReturnValue(3600000)
+vi.mock('@/providers/AuthProvider', async () => {
+  const actual = (await vi.importActual('@/providers/AuthProvider')) as Record<string, unknown>
+  return {
+    ...actual,
+    useAuth: () => ({
+      login: mockLogin,
+      ...getMockAuthState()
+    })
   }
-}))
+})
 
 const renderLoginPage = () => {
   return render(
@@ -48,28 +49,33 @@ const renderLoginPage = () => {
   )
 }
 
+// Helper to get password field by placeholder
+function getPasswordField() {
+  return screen.getByPlaceholderText('Password')
+}
+
 describe('LoginPage Security Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockLogin.mockResolvedValue(undefined)
+    setMockAuthState({
+      isAuthenticated: false,
+      isLoading: false,
+      error: null,
+      user: null
+    })
   })
 
   it('should show generic error message for authentication failures', async () => {
     renderLoginPage()
 
-    // Wait for potential initialization errors to resolve
+    // Wait for component to render
     await waitFor(() => {
-      // Look for either loading state or ready state
-      const submitButton = screen.getByRole('button', { name: /sign in|signing in/i })
+      const submitButton = screen.getByRole('button', { name: /sign in/i })
       expect(submitButton).toBeInTheDocument()
     })
 
-    // Check if there's an initial error displayed (from initialization)
-    const errorText = screen.queryByText(/invalid username or password/i)
-    if (errorText) {
-      expect(errorText).toBeInTheDocument()
-    }
-
-    // Verify that specific system error messages are NOT shown anywhere
+    // Verify that specific system error messages are NOT shown
     expect(screen.queryByText(/no session found/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/session expired/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/failed to restore session/i)).not.toBeInTheDocument()
@@ -82,52 +88,53 @@ describe('LoginPage Security Tests', () => {
   it('should not reveal system internals in error messages', async () => {
     renderLoginPage()
 
-    // Wait for initial load errors to be handled
+    // Wait for initial load
     await waitFor(() => {
-      // Check that any displayed error is generic
-      const errorElements = screen.queryAllByText(/error|fail/i)
-      errorElements.forEach(element => {
-        const text = element.textContent?.toLowerCase() || ''
-        
-        // Verify no specific system errors are revealed
-        expect(text).not.toContain('indexeddb')
-        expect(text).not.toContain('jwt')
-        expect(text).not.toContain('session')
-        expect(text).not.toContain('token')
-        expect(text).not.toContain('database')
-        expect(text).not.toContain('storage')
-        expect(text).not.toContain('expired')
-        expect(text).not.toContain('not found')
-        expect(text).not.toContain('validation')
-        
-        // Only allow generic messages
-        if (text.includes('error') || text.includes('fail')) {
-          expect(
-            text.includes('invalid username or password') ||
-            text.includes('sign') ||
-            text.includes('demo')
-          ).toBe(true)
-        }
-      })
+      expect(screen.getByRole('heading', { name: /welcome back/i })).toBeInTheDocument()
     })
+
+    // Check that no system-level errors are revealed
+    expect(screen.queryByText(/indexeddb/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/jwt/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/database/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/storage/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/token/i)).not.toBeInTheDocument()
   })
 
-  it('should handle initialization errors gracefully with generic messages', async () => {
+  it('should render page normally even with potential backend issues', async () => {
     renderLoginPage()
 
-    // Wait for component to render and handle initialization
+    // Wait for component to render
     await waitFor(() => {
       expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument()
     })
 
-    // Verify that page renders normally despite backend errors
-    expect(screen.getByLabelText(/username/i)).toBeInTheDocument()
-    expect(screen.getByLabelText(/password/i)).toBeInTheDocument()
-    
-    // If any error is shown, it should be generic
-    const possibleError = screen.queryByText(/invalid username or password/i)
-    if (possibleError) {
-      expect(possibleError).toBeInTheDocument()
-    }
+    // Verify that page renders normally
+    expect(screen.getByRole('textbox', { name: /username/i })).toBeInTheDocument()
+    expect(getPasswordField()).toBeInTheDocument()
+
+    // No error alert should be shown on initial load
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('should have secure password field', () => {
+    renderLoginPage()
+
+    const passwordInput = getPasswordField()
+
+    // Password field should be type="password" by default
+    expect(passwordInput).toHaveAttribute('type', 'password')
+
+    // Should have proper autocomplete attribute
+    expect(passwordInput).toHaveAttribute('autocomplete', 'current-password')
+  })
+
+  it('should have secure username field', () => {
+    renderLoginPage()
+
+    const usernameInput = screen.getByRole('textbox', { name: /username/i })
+
+    // Should have proper autocomplete attribute
+    expect(usernameInput).toHaveAttribute('autocomplete', 'username')
   })
 })

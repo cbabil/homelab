@@ -1,6 +1,6 @@
 /**
  * MCP Provider
- * 
+ *
  * React context provider using the official use-mcp package.
  * Provides modern MCP client access throughout the application.
  */
@@ -29,7 +29,7 @@ interface MCPProviderProps {
 export function MCPProvider({ children, serverUrl, transportType = 'http' }: MCPProviderProps) {
   const mcpClient = useMcpClient({ 
     serverUrl,
-    clientName: 'Homelab Assistant',
+    clientName: 'Tomo',
     autoReconnect: true,
     transportType
   })

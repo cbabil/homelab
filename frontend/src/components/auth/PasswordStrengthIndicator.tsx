@@ -1,30 +1,42 @@
 /**
  * Password Strength Indicator Component
- * 
- * Visual indicator for password strength during registration,
- * helping users create secure passwords.
+ *
+ * Visual indicator for password strength during registration.
  */
 
-import { Check, X } from 'lucide-react'
+import { useMemo } from 'react'
+import Box from '@mui/material/Box'
+import Typography from '@mui/material/Typography'
+import LinearProgress from '@mui/material/LinearProgress'
+import { CheckCircle, Cancel } from '@mui/icons-material'
 import { PasswordStrength } from '@/types/auth'
-import { cn } from '@/utils/cn'
 
 interface PasswordStrengthIndicatorProps {
   strength: PasswordStrength
   password: string
+  minLength?: number
 }
 
-export function PasswordStrengthIndicator({ strength, password }: PasswordStrengthIndicatorProps) {
-  // Don't show anything if no password entered
+interface RequirementItem {
+  key: string
+  label: string
+  isMet: boolean
+}
+
+export function PasswordStrengthIndicator({
+  strength,
+  password,
+  minLength = 8
+}: PasswordStrengthIndicatorProps) {
   if (!password) {
     return null
   }
 
-  const getStrengthColor = (score: number): string => {
-    if (score <= 2) return 'text-red-500'
-    if (score <= 3) return 'text-yellow-500'
-    if (score <= 4) return 'text-blue-500'
-    return 'text-green-500'
+  const getBarColor = (score: number): 'error' | 'warning' | 'info' | 'success' => {
+    if (score <= 2) return 'error'
+    if (score <= 3) return 'warning'
+    if (score <= 4) return 'info'
+    return 'success'
   }
 
   const getStrengthText = (score: number): string => {
@@ -34,58 +46,46 @@ export function PasswordStrengthIndicator({ strength, password }: PasswordStreng
     return 'Strong'
   }
 
-  const getStrengthBarWidth = (score: number): string => {
-    return `${(score / 5) * 100}%`
-  }
+  const requirements = useMemo((): RequirementItem[] => [
+    { key: 'minLength', label: `${minLength}+ characters`, isMet: strength.requirements.minLength },
+    { key: 'hasUppercase', label: 'Uppercase letter', isMet: strength.requirements.hasUppercase },
+    { key: 'hasLowercase', label: 'Lowercase letter', isMet: strength.requirements.hasLowercase },
+    { key: 'hasNumber', label: 'Number', isMet: strength.requirements.hasNumber },
+    { key: 'hasSpecialChar', label: 'Special character', isMet: strength.requirements.hasSpecialChar }
+  ], [strength, minLength])
 
   return (
-    <div className="mt-2 space-y-2">
+    <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 0.5 }}>
       {/* Strength Bar */}
-      <div className="flex items-center gap-2">
-        <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
-          <div 
-            className={cn(
-              'h-full transition-all duration-300',
-              strength.score <= 2 && 'bg-red-500',
-              strength.score === 3 && 'bg-yellow-500',
-              strength.score === 4 && 'bg-blue-500',
-              strength.score === 5 && 'bg-green-500'
-            )}
-            style={{ width: getStrengthBarWidth(strength.score) }}
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+        <Box sx={{ flex: 1 }}>
+          <LinearProgress
+            variant="determinate"
+            value={(strength.score / 5) * 100}
+            color={getBarColor(strength.score)}
+            sx={{ height: 6, borderRadius: 1, bgcolor: 'action.hover' }}
           />
-        </div>
-        <span className={cn('text-sm font-medium', getStrengthColor(strength.score))}>
+        </Box>
+        <Typography variant="caption" fontWeight={500} sx={{ color: `${getBarColor(strength.score)}.main`, minWidth: 45 }}>
           {getStrengthText(strength.score)}
-        </span>
-      </div>
+        </Typography>
+      </Box>
 
       {/* Requirements Checklist */}
-      <div className="grid grid-cols-1 gap-1 text-xs">
-        {[
-          { key: 'minLength', label: '12+ characters' },
-          { key: 'hasUppercase', label: 'Uppercase letter' },
-          { key: 'hasLowercase', label: 'Lowercase letter' },
-          { key: 'hasNumber', label: 'Number' },
-          { key: 'hasSpecialChar', label: 'Special character' }
-        ].map(({ key, label }) => {
-          const isMet = strength.requirements[key as keyof typeof strength.requirements]
-          return (
-            <div key={key} className="flex items-center gap-1">
-              {isMet ? (
-                <Check className="w-3 h-3 text-green-500" />
-              ) : (
-                <X className="w-3 h-3 text-muted-foreground" />
-              )}
-              <span className={cn(
-                'text-xs',
-                isMet ? 'text-green-600' : 'text-muted-foreground'
-              )}>
-                {label}
-              </span>
-            </div>
-          )
-        })}
-      </div>
-    </div>
+      <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+        {requirements.map(({ key, label, isMet }) => (
+          <Box key={key} sx={{ display: 'flex', alignItems: 'center', gap: 0.25, minWidth: '45%' }}>
+            {isMet ? (
+              <CheckCircle sx={{ fontSize: 12, color: 'success.main' }} />
+            ) : (
+              <Cancel sx={{ fontSize: 12, color: 'text.disabled' }} />
+            )}
+            <Typography variant="caption" sx={{ color: isMet ? 'success.dark' : 'text.disabled', fontSize: '0.7rem' }}>
+              {label}
+            </Typography>
+          </Box>
+        ))}
+      </Box>
+    </Box>
   )
 }

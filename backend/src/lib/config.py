@@ -122,3 +122,73 @@ def resolve_data_directory(config: Dict[str, Any]) -> Path:
 
     directory = config.get("data_directory") or DEFAULT_ENV_VALUES["DATA_DIRECTORY"]
     return _resolve_data_directory(directory)
+
+
+# =============================================================================
+# Feature Flag Utilities
+# =============================================================================
+
+def is_feature_enabled(feature_name: str, default: bool = True) -> bool:
+    """Check if a feature flag is enabled.
+
+    Feature flags are read from environment variables with the FEATURE_ prefix.
+    For example, is_feature_enabled("MARKETPLACE") checks FEATURE_MARKETPLACE.
+
+    Args:
+        feature_name: The feature name (without FEATURE_ prefix).
+        default: Default value if the environment variable is not set.
+
+    Returns:
+        True if the feature is enabled, False otherwise.
+
+    Example:
+        >>> is_feature_enabled("MARKETPLACE")  # Checks FEATURE_MARKETPLACE
+        True
+        >>> is_feature_enabled("CUSTOM_FEATURE", default=False)
+        False
+    """
+    env_key = f"FEATURE_{feature_name.upper()}"
+    value = os.getenv(env_key, str(default)).lower()
+    return value in ('true', '1', 'yes', 'on')
+
+
+def get_feature_flags() -> Dict[str, bool]:
+    """Get all feature flags from environment variables.
+
+    Scans environment variables for FEATURE_* prefixed keys and returns
+    a dictionary of feature names to their boolean values.
+
+    Returns:
+        Dictionary mapping feature names (without FEATURE_ prefix) to booleans.
+
+    Example:
+        >>> get_feature_flags()
+        {'MARKETPLACE': True, 'BACKUP': True, 'STRICT_SSH': False}
+    """
+    flags: Dict[str, bool] = {}
+    for key, value in os.environ.items():
+        if key.startswith("FEATURE_"):
+            feature_name = key[8:]  # Remove "FEATURE_" prefix
+            flags[feature_name] = value.lower() in ('true', '1', 'yes', 'on')
+    return flags
+
+
+def require_feature(feature_name: str, operation: str = "operation") -> None:
+    """Raise an error if a feature is not enabled.
+
+    Use this to guard operations that require a specific feature to be enabled.
+
+    Args:
+        feature_name: The feature name (without FEATURE_ prefix).
+        operation: Description of the operation being attempted (for error message).
+
+    Raises:
+        PermissionError: If the feature is not enabled.
+
+    Example:
+        >>> require_feature("BACKUP", "create backup")  # Raises if FEATURE_BACKUP is false
+    """
+    if not is_feature_enabled(feature_name):
+        raise PermissionError(
+            f"Feature '{feature_name}' is not enabled. Cannot perform: {operation}"
+        )

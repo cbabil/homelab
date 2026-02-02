@@ -16,7 +16,7 @@ vi.mock('@/components/ui/Toast', () => ({
 }))
 
 vi.mock('@/services/mcpClient', () => ({
-  HomelabMCPClient: vi.fn().mockImplementation(() => ({
+  TomoMCPClient: vi.fn().mockImplementation(() => ({
     connect: connectMock,
     callTool: vi.fn(),
     isConnected: vi.fn().mockReturnValue(false)

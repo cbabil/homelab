@@ -83,7 +83,7 @@ class TestPreparationModels:
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_preparation_models.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_preparation_models.py -v --no-cov
 ```
 
 Expected: FAIL - `ModuleNotFoundError: No module named 'models.preparation'`
@@ -209,7 +209,7 @@ def get_preparation_schema() -> str:
 **Step 5: Run test to verify it passes**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_preparation_models.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_preparation_models.py -v --no-cov
 ```
 
 Expected: PASS
@@ -330,7 +330,7 @@ class TestPreparationService:
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_preparation_service.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_preparation_service.py -v --no-cov
 ```
 
 Expected: FAIL - `ModuleNotFoundError: No module named 'services.preparation_service'`
@@ -497,7 +497,7 @@ class PreparationService:
 **Step 4: Run test to verify it passes**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_preparation_service.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_preparation_service.py -v --no-cov
 ```
 
 Expected: PASS
@@ -637,7 +637,7 @@ class TestPreparationDatabaseOperations:
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_preparation_database.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_preparation_database.py -v --no-cov
 ```
 
 Expected: FAIL - methods don't exist
@@ -788,7 +788,7 @@ async def get_preparation_logs(self, server_id: str) -> list:
 **Step 4: Run test to verify it passes**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_preparation_database.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_preparation_database.py -v --no-cov
 ```
 
 Expected: PASS
@@ -892,7 +892,7 @@ class TestGetPreparationStatus:
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_preparation_tools.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_preparation_tools.py -v --no-cov
 ```
 
 Expected: FAIL
@@ -1060,7 +1060,7 @@ def register_preparation_tools(app: FastMCP, preparation_service: PreparationSer
 **Step 4: Run test to verify it passes**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_preparation_tools.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_preparation_tools.py -v --no-cov
 ```
 
 Expected: PASS
@@ -1079,13 +1079,13 @@ git commit -m "feat(prep): add preparation MCP tools"
 **Step 1: Run all Phase 3 tests**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_preparation*.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_preparation*.py -v --no-cov
 ```
 
 **Step 2: Run all project tests to ensure no regressions**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_auth*.py tests/unit/test_server*.py tests/unit/test_preparation*.py tests/unit/test_health*.py tests/unit/test_cli.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_auth*.py tests/unit/test_server*.py tests/unit/test_preparation*.py tests/unit/test_health*.py tests/unit/test_cli.py -v --no-cov
 ```
 
 **Step 3: Commit if any fixes needed**

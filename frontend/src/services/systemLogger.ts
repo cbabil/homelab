@@ -12,13 +12,18 @@ export interface SystemLogEntry {
   level: 'info' | 'warn' | 'error'
   category: string
   message: string
-  data?: any
+  data?: unknown
+}
+
+// Parsed log entry from localStorage
+interface StoredLogEntry extends Omit<SystemLogEntry, 'timestamp'> {
+  timestamp: string
 }
 
 class SystemLogger {
   private logs: SystemLogEntry[] = []
   private maxLogs = 1000
-  private storageKey = 'homelab-system-logs'
+  private storageKey = 'tomo-system-logs'
 
   constructor() {
     this.loadLogsFromStorage()
@@ -28,8 +33,8 @@ class SystemLogger {
     try {
       const stored = localStorage.getItem(this.storageKey)
       if (stored) {
-        const parsedLogs = JSON.parse(stored)
-        this.logs = parsedLogs.map((log: any) => ({
+        const parsedLogs = JSON.parse(stored) as StoredLogEntry[]
+        this.logs = parsedLogs.map((log: StoredLogEntry) => ({
           ...log,
           timestamp: new Date(log.timestamp)
         }))
@@ -47,7 +52,7 @@ class SystemLogger {
     }
   }
 
-  private addLog(level: SystemLogEntry['level'], category: string, message: string, data?: any) {
+  private addLog(level: SystemLogEntry['level'], category: string, message: string, data?: unknown) {
     const entry: SystemLogEntry = {
       id: `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       timestamp: new Date(),
@@ -80,15 +85,15 @@ class SystemLogger {
     }
   }
 
-  info(category: string, message: string, data?: any) {
+  info(category: string, message: string, data?: unknown) {
     this.addLog('info', category, message, data)
   }
 
-  warn(category: string, message: string, data?: any) {
+  warn(category: string, message: string, data?: unknown) {
     this.addLog('warn', category, message, data)
   }
 
-  error(category: string, message: string, data?: any) {
+  error(category: string, message: string, data?: unknown) {
     this.addLog('error', category, message, data)
   }
 
@@ -119,31 +124,37 @@ export const systemLogger = new SystemLogger()
 
 // Convenience functions for common categories
 export const mcpLogger = {
-  info: (message: string, data?: any) => systemLogger.info('MCP', message, data),
-  warn: (message: string, data?: any) => systemLogger.warn('MCP', message, data),
-  error: (message: string, data?: any) => systemLogger.error('MCP', message, data)
+  info: (message: string, data?: unknown) => systemLogger.info('MCP', message, data),
+  warn: (message: string, data?: unknown) => systemLogger.warn('MCP', message, data),
+  error: (message: string, data?: unknown) => systemLogger.error('MCP', message, data)
 }
 
 export const settingsLogger = {
-  info: (message: string, data?: any) => systemLogger.info('Settings', message, data),
-  warn: (message: string, data?: any) => systemLogger.warn('Settings', message, data),
-  error: (message: string, data?: any) => systemLogger.error('Settings', message, data)
+  info: (message: string, data?: unknown) => systemLogger.info('Settings', message, data),
+  warn: (message: string, data?: unknown) => systemLogger.warn('Settings', message, data),
+  error: (message: string, data?: unknown) => systemLogger.error('Settings', message, data)
 }
 
 export const applicationLogger = {
-  info: (message: string, data?: any) => systemLogger.info('application', message, data),
-  warn: (message: string, data?: any) => systemLogger.warn('application', message, data),
-  error: (message: string, data?: any) => systemLogger.error('application', message, data)
+  info: (message: string, data?: unknown) => systemLogger.info('application', message, data),
+  warn: (message: string, data?: unknown) => systemLogger.warn('application', message, data),
+  error: (message: string, data?: unknown) => systemLogger.error('application', message, data)
 }
 
 export const securityLogger = {
-  info: (message: string, data?: any) => systemLogger.info('Security', message, data),
-  warn: (message: string, data?: any) => systemLogger.warn('Security', message, data),
-  error: (message: string, data?: any) => systemLogger.error('Security', message, data)
+  info: (message: string, data?: unknown) => systemLogger.info('Security', message, data),
+  warn: (message: string, data?: unknown) => systemLogger.warn('Security', message, data),
+  error: (message: string, data?: unknown) => systemLogger.error('Security', message, data)
 }
 
 export const marketplaceLogger = {
-  info: (message: string, data?: any) => systemLogger.info('Marketplace', message, data),
-  warn: (message: string, data?: any) => systemLogger.warn('Marketplace', message, data),
-  error: (message: string, data?: any) => systemLogger.error('Marketplace', message, data)
+  info: (message: string, data?: unknown) => systemLogger.info('Marketplace', message, data),
+  warn: (message: string, data?: unknown) => systemLogger.warn('Marketplace', message, data),
+  error: (message: string, data?: unknown) => systemLogger.error('Marketplace', message, data)
+}
+
+export const deploymentLogger = {
+  info: (message: string, data?: unknown) => systemLogger.info('Deployment', message, data),
+  warn: (message: string, data?: unknown) => systemLogger.warn('Deployment', message, data),
+  error: (message: string, data?: unknown) => systemLogger.error('Deployment', message, data)
 }

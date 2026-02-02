@@ -1,110 +1,168 @@
 /**
  * Dashboard Resource Usage Component
  *
- * Displays CPU, memory, and disk usage with progress bars.
+ * Displays system resource metrics with modern circular progress indicators.
  */
 
-import { Cpu, MemoryStick, HardDrive, Activity } from 'lucide-react'
+import React from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import { Cpu, MemoryStick, HardDrive, Server } from 'lucide-react'
+import { Box, Card, Typography, Stack } from '@mui/material'
+import { Button } from '@/components/ui/Button'
 import { DashboardSummary } from '@/types/mcp'
 
 interface DashboardResourceUsageProps {
   data: DashboardSummary | null
 }
 
-interface ResourceBarProps {
+interface ResourceGaugeProps {
   label: string
   value: number
   icon: React.ReactNode
   color: string
-  bgColor: string
+  statusLabels: { critical: string; high: string; normal: string }
 }
 
-const badgeStyles = {
-  success: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-  warning: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
-  danger: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400'
-}
-
-function ResourceBar({ label, value, icon, color, bgColor }: ResourceBarProps) {
+function ResourceGauge({ label, value, icon, color, statusLabels }: ResourceGaugeProps) {
   const percentage = Math.min(Math.max(value, 0), 100)
-  const variant = percentage >= 90 ? 'danger' : percentage >= 70 ? 'warning' : 'success'
+  const circumference = 2 * Math.PI * 24
+  const strokeDashoffset = circumference - (percentage / 100) * circumference
+  const status = percentage >= 90 ? 'critical' : percentage >= 70 ? 'warning' : 'healthy'
 
   return (
-    <div className="space-y-2">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <div className={`p-1.5 rounded ${bgColor}`}>
-            {icon}
-          </div>
-          <span className="text-sm font-medium">{label}</span>
-        </div>
-        <span className={`px-2 py-1 text-xs font-medium rounded-full ${badgeStyles[variant]}`}>
-          {percentage.toFixed(1)}%
-        </span>
-      </div>
-      <div className="h-2 bg-muted rounded-full overflow-hidden">
-        <div
-          className={`h-full rounded-full transition-all duration-500 ${color}`}
-          style={{ width: `${percentage}%` }}
-        />
-      </div>
-    </div>
+    <Stack direction="row" spacing={1.5} alignItems="center">
+      <Box sx={{ position: 'relative', width: 56, height: 56 }}>
+        <svg
+          style={{ width: 56, height: 56, transform: 'rotate(-90deg)' }}
+          viewBox="0 0 56 56"
+        >
+          <circle
+            cx="28"
+            cy="28"
+            r="24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="4"
+            style={{ color: 'var(--mui-palette-action-hover)' }}
+          />
+          <circle
+            cx="28"
+            cy="28"
+            r="24"
+            fill="none"
+            stroke={color}
+            strokeWidth="4"
+            strokeLinecap="round"
+            style={{
+              strokeDasharray: circumference,
+              strokeDashoffset,
+              transition: 'stroke-dashoffset 0.5s ease'
+            }}
+          />
+        </svg>
+        <Box sx={{
+          position: 'absolute',
+          inset: 0,
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}>
+          <Typography variant="body2" fontWeight={700}>
+            {percentage.toFixed(0)}%
+          </Typography>
+        </Box>
+      </Box>
+      <Stack spacing={0}>
+        <Stack direction="row" spacing={0.5} alignItems="center">
+          {icon}
+          <Typography variant="body2" fontWeight={500}>
+            {label}
+          </Typography>
+        </Stack>
+        <Typography
+          variant="caption"
+          sx={{
+            color: status === 'critical' ? 'error.main' :
+                   status === 'warning' ? 'warning.main' :
+                   'success.main'
+          }}
+        >
+          {status === 'critical' ? statusLabels.critical : status === 'warning' ? statusLabels.high : statusLabels.normal}
+        </Typography>
+      </Stack>
+    </Stack>
   )
 }
 
 export function DashboardResourceUsage({ data }: DashboardResourceUsageProps) {
-  const resources: ResourceBarProps[] = [
-    {
-      label: 'CPU Usage',
-      value: data?.avg_cpu_percent ?? 0,
-      icon: <Cpu className="w-4 h-4 text-blue-600" />,
-      color: 'bg-blue-500',
-      bgColor: 'bg-blue-100 dark:bg-blue-900/30'
-    },
-    {
-      label: 'Memory Usage',
-      value: data?.avg_memory_percent ?? 0,
-      icon: <MemoryStick className="w-4 h-4 text-purple-600" />,
-      color: 'bg-purple-500',
-      bgColor: 'bg-purple-100 dark:bg-purple-900/30'
-    },
-    {
-      label: 'Disk Usage',
-      value: data?.avg_disk_percent ?? 0,
-      icon: <HardDrive className="w-4 h-4 text-orange-600" />,
-      color: 'bg-orange-500',
-      bgColor: 'bg-orange-100 dark:bg-orange-900/30'
-    }
-  ]
-
+  const { t } = useTranslation()
+  const navigate = useNavigate()
   const hasData = data && (data.avg_cpu_percent > 0 || data.avg_memory_percent > 0 || data.avg_disk_percent > 0)
 
+  const statusLabels = {
+    critical: t('dashboard.resourceStatus.critical'),
+    high: t('dashboard.resourceStatus.high'),
+    normal: t('dashboard.resourceStatus.normal')
+  }
+
   return (
-    <div className="bg-card border border-border rounded-lg p-4 h-full">
-      <div className="flex items-center gap-2 mb-6">
-        <div className="p-2 rounded-lg bg-green-100 dark:bg-green-900/30">
-          <Activity className="w-5 h-5 text-green-600" />
-        </div>
-        <h2 className="text-lg font-semibold">Resource Usage</h2>
-      </div>
+    <Card sx={{ p: 2, flex: 1, display: 'flex', flexDirection: 'column' }}>
+      <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
+        <Stack direction="row" spacing={1} alignItems="center">
+          <Cpu className="w-4 h-4" style={{ color: '#10b981' }} />
+          <Typography variant="body2" fontWeight={600}>
+            {t('dashboard.resourceUsage')}
+          </Typography>
+        </Stack>
+        <Typography variant="caption" color="text.secondary">
+          {t('dashboard.averageAcrossServers')}
+        </Typography>
+      </Stack>
 
       {hasData ? (
-        <div className="space-y-5">
-          {resources.map((resource) => (
-            <ResourceBar key={resource.label} {...resource} />
-          ))}
-        </div>
+        <Stack direction="row" spacing={6} justifyContent="space-around" alignItems="center" sx={{ flex: 1 }}>
+          <ResourceGauge
+            label={t('dashboard.cpu')}
+            value={data?.avg_cpu_percent ?? 0}
+            icon={<Cpu className="w-4 h-4" style={{ color: '#3b82f6' }} />}
+            color="#3b82f6"
+            statusLabels={statusLabels}
+          />
+          <ResourceGauge
+            label={t('dashboard.memory')}
+            value={data?.avg_memory_percent ?? 0}
+            icon={<MemoryStick className="w-4 h-4" style={{ color: '#8b5cf6' }} />}
+            color="#8b5cf6"
+            statusLabels={statusLabels}
+          />
+          <ResourceGauge
+            label={t('dashboard.disk')}
+            value={data?.avg_disk_percent ?? 0}
+            icon={<HardDrive className="w-4 h-4" style={{ color: '#f59e0b' }} />}
+            color="#f59e0b"
+            statusLabels={statusLabels}
+          />
+        </Stack>
       ) : (
-        <div className="text-center py-8">
-          <Activity className="w-12 h-12 text-muted-foreground mx-auto mb-3" />
-          <p className="text-sm text-muted-foreground">
-            No resource data available.
-          </p>
-          <p className="text-xs text-muted-foreground mt-1">
-            Connect a server to see resource metrics.
-          </p>
-        </div>
+        <Stack alignItems="center" justifyContent="center" sx={{ flex: 1, textAlign: 'center' }}>
+          <Server className="w-8 h-8" style={{ color: 'var(--mui-palette-text-secondary)', marginBottom: 12 }} />
+          <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+            {t('dashboard.noMetricsAvailable')}
+          </Typography>
+          <Typography variant="caption" color="text.secondary" sx={{ mb: 1.5 }}>
+            {t('dashboard.connectServersToView')}
+          </Typography>
+          <Button
+            onClick={() => navigate('/servers')}
+            variant="primary"
+            size="sm"
+            sx={{ fontSize: '0.7rem', py: 0.25, px: 1.5, minHeight: 26 }}
+          >
+            {t('dashboard.manageServers')}
+          </Button>
+        </Stack>
       )}
-    </div>
+    </Card>
   )
 }

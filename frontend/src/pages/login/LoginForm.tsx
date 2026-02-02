@@ -1,25 +1,27 @@
 /**
  * Login Form Component (Simplified)
- * 
- * Simplified login form using custom hook for state management.
- * Maintains 100-line limit per CLAUDE.md rules.
+ *
+ * Simplified login form using MUI components and custom hook for state management.
  */
 
-import React from 'react'
+import { Link as RouterLink } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import Box from '@mui/material/Box'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Checkbox from '@mui/material/Checkbox'
+import CheckBoxOutlineBlankOutlinedIcon from '@mui/icons-material/CheckBoxOutlineBlankOutlined'
+import CheckBoxOutlinedIcon from '@mui/icons-material/CheckBoxOutlined'
+import Link from '@mui/material/Link'
 import { Button } from '@/components/ui/Button'
 import { useLoginForm } from './useLoginForm'
 import { LoginFormFields } from './LoginFormFields'
 import { LoginFormMessages } from './LoginFormMessages'
 
-interface LoginFormProps {
-  onSuccess?: () => void
-}
-
-export function LoginForm({ onSuccess }: LoginFormProps) {
+export function LoginForm() {
+  const { t } = useTranslation()
   const {
     formState,
     showPassword,
-    error,
     isFormValid,
     handleInputChange,
     handleRememberMeChange,
@@ -28,10 +30,9 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
   } = useLoginForm()
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
+    <Box component="form" onSubmit={handleSubmit} sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
       <LoginFormMessages
         submitError={formState.submitError}
-        authError={error}
       />
 
       <LoginFormFields
@@ -41,27 +42,35 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         onTogglePassword={togglePassword}
       />
 
-      {/* Remember Me - handled separately since it needs state update */}
-      <div className="flex items-center justify-between">
-        <label className="checkbox-item">
-          <input
-            type="checkbox"
-            className="checkbox-input"
-            checked={formState.rememberMe}
-            onChange={(e) => handleRememberMeChange(e.target.checked)}
-            disabled={formState.isSubmitting}
-          />
-          <span className="checkbox-label">Remember me</span>
-        </label>
-        
-        <button
-          type="button"
-          className="text-sm text-primary hover:text-primary/80 transition-colors"
-          disabled={formState.isSubmitting}
+      {/* Remember Me & Forgot Password */}
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+        <FormControlLabel
+          control={
+            <Checkbox
+              checked={formState.rememberMe}
+              onChange={(e) => handleRememberMeChange(e.target.checked)}
+              size="small"
+              icon={<CheckBoxOutlineBlankOutlinedIcon />}
+              checkedIcon={<CheckBoxOutlinedIcon />}
+            />
+          }
+          label={t('auth.rememberMe')}
+          sx={{
+            '& .MuiFormControlLabel-label': { fontSize: '0.875rem' },
+            cursor: 'pointer'
+          }}
+        />
+
+        <Link
+          component={RouterLink}
+          to="/forgot-password"
+          variant="body2"
+          underline="none"
+          sx={{ cursor: 'pointer' }}
         >
-          Forgot password?
-        </button>
-      </div>
+          {t('auth.forgotPassword')}
+        </Link>
+      </Box>
 
       {/* Submit Button */}
       <Button
@@ -69,11 +78,12 @@ export function LoginForm({ onSuccess }: LoginFormProps) {
         variant="primary"
         size="lg"
         fullWidth
-        loading={formState.isSubmitting}
         disabled={!isFormValid || formState.isSubmitting}
+        loading={formState.isSubmitting}
+        sx={{ mt: 1 }}
       >
-        {formState.isSubmitting ? 'Signing in...' : 'Sign In'}
+        {t('auth.signIn')}
       </Button>
-    </form>
+    </Box>
   )
 }

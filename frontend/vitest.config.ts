@@ -15,7 +15,9 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/test/setup.ts'],
-    css: true,
+    css: false,
+    testTimeout: 10000,
+    hookTimeout: 10000,
     coverage: {
       provider: 'v8',
       reporter: ['text', 'json', 'html'],
@@ -36,7 +38,7 @@ export default defineConfig({
       }
     },
     include: ['src/**/*.{test,spec}.{js,ts,jsx,tsx}'],
-    exclude: ['node_modules/', 'dist/']
+    exclude: ['node_modules/', 'dist/', 'src/test/e2e/**', 'tests/e2e/**']
   },
   resolve: {
     alias: {

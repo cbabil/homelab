@@ -13,7 +13,7 @@ if str(SRC_PATH) not in sys.path:
     sys.path.insert(0, str(SRC_PATH))
 
 from services.auth_service import AuthService
-from tools.auth_tools import AuthTools
+from tools.auth.tools import AuthTools
 from services.service_log import log_service
 
 

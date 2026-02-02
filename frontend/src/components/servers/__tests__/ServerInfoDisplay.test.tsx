@@ -149,7 +149,7 @@ describe('ServerInfoDisplay', () => {
         />
       )
       
-      expect(screen.getByText('Docker not installed')).toBeInTheDocument()
+      expect(screen.getByText('Not installed')).toBeInTheDocument()
     })
 
     it('should apply custom className', () => {

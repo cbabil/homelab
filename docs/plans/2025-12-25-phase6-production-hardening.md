@@ -142,7 +142,7 @@ class TestLogSanitization:
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_security.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_security.py -v --no-cov
 ```
 
 Expected: FAIL
@@ -380,7 +380,7 @@ class RateLimiter:
 **Step 4: Run test to verify it passes**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_security.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_security.py -v --no-cov
 ```
 
 Expected: PASS
@@ -542,7 +542,7 @@ class TestBackupService:
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_backup_service.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_backup_service.py -v --no-cov
 ```
 
 Expected: FAIL
@@ -740,7 +740,7 @@ class BackupService:
 **Step 4: Run test to verify it passes**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_backup_service.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_backup_service.py -v --no-cov
 ```
 
 Expected: PASS
@@ -833,7 +833,7 @@ class TestBackupCLI:
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_backup_cli.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_backup_cli.py -v --no-cov
 ```
 
 Expected: FAIL
@@ -911,7 +911,7 @@ cli.add_command(import_backup, name='import')
 **Step 4: Run test to verify it passes**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_backup_cli.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_backup_cli.py -v --no-cov
 ```
 
 Expected: PASS
@@ -928,23 +928,23 @@ git commit -m "feat(backup): add export/import CLI commands"
 ## Task 4: Create RPM Packaging Files
 
 **Files:**
-- Create: `packaging/homelab-assistant.spec`
-- Create: `packaging/homelab-assistant.service`
+- Create: `packaging/tomo.spec`
+- Create: `packaging/tomo.service`
 - Create: `packaging/config.yaml.example`
 - Create: `packaging/post-install.sh`
 
 **Step 1: Create RPM spec file**
 
-Create `packaging/homelab-assistant.spec`:
+Create `packaging/tomo.spec`:
 
 ```spec
-Name:           homelab-assistant
+Name:           tomo
 Version:        1.0.0
 Release:        1%{?dist}
-Summary:        Self-hosted homelab infrastructure management
+Summary:        Self-hosted tomo infrastructure management
 
 License:        MIT
-URL:            https://github.com/cbabil/homelab
+URL:            https://github.com/cbabil/tomo
 Source0:        %{name}-%{version}.tar.gz
 
 BuildRequires:  python3-devel
@@ -953,7 +953,7 @@ Requires:       python3 >= 3.11
 Requires:       python3-pip
 
 %description
-A self-hosted web application for managing homelab infrastructure.
+A self-hosted web application for managing tomo infrastructure.
 Connect to remote servers via SSH, deploy Docker applications through
 an extensible catalog, and monitor your infrastructure.
 
@@ -969,83 +969,83 @@ cd ..
 
 %install
 # Create directories
-mkdir -p %{buildroot}/opt/homelab-assistant
-mkdir -p %{buildroot}/etc/homelab-assistant
-mkdir -p %{buildroot}/var/lib/homelab-assistant
-mkdir -p %{buildroot}/var/log/homelab-assistant
+mkdir -p %{buildroot}/opt/tomo
+mkdir -p %{buildroot}/etc/tomo
+mkdir -p %{buildroot}/var/lib/tomo
+mkdir -p %{buildroot}/var/log/tomo
 mkdir -p %{buildroot}%{_unitdir}
 
 # Install backend
-cp -r backend/src/* %{buildroot}/opt/homelab-assistant/
-cp backend/requirements.txt %{buildroot}/opt/homelab-assistant/
+cp -r backend/src/* %{buildroot}/opt/tomo/
+cp backend/requirements.txt %{buildroot}/opt/tomo/
 
 # Install frontend build
-cp -r frontend/dist %{buildroot}/opt/homelab-assistant/static
+cp -r frontend/dist %{buildroot}/opt/tomo/static
 
 # Install config
-cp packaging/config.yaml.example %{buildroot}/etc/homelab-assistant/config.yaml
+cp packaging/config.yaml.example %{buildroot}/etc/tomo/config.yaml
 
 # Install systemd service
-cp packaging/homelab-assistant.service %{buildroot}%{_unitdir}/
+cp packaging/tomo.service %{buildroot}%{_unitdir}/
 
 %post
 # Create user if not exists
-getent group homelab >/dev/null || groupadd -r homelab
-getent passwd homelab >/dev/null || useradd -r -g homelab -d /var/lib/homelab-assistant -s /sbin/nologin homelab
+getent group tomo >/dev/null || groupadd -r tomo
+getent passwd tomo >/dev/null || useradd -r -g tomo -d /var/lib/tomo -s /sbin/nologin tomo
 
 # Set permissions
-chown -R homelab:homelab /var/lib/homelab-assistant
-chown -R homelab:homelab /var/log/homelab-assistant
-chmod 750 /var/lib/homelab-assistant
-chmod 750 /var/log/homelab-assistant
+chown -R tomo:tomo /var/lib/tomo
+chown -R tomo:tomo /var/log/tomo
+chmod 750 /var/lib/tomo
+chmod 750 /var/log/tomo
 
 # Install Python dependencies
-cd /opt/homelab-assistant && pip3 install -r requirements.txt
+cd /opt/tomo && pip3 install -r requirements.txt
 
 # Enable service
 systemctl daemon-reload
-systemctl enable homelab-assistant
+systemctl enable tomo
 
 %preun
 if [ $1 -eq 0 ]; then
-    systemctl stop homelab-assistant
-    systemctl disable homelab-assistant
+    systemctl stop tomo
+    systemctl disable tomo
 fi
 
 %files
 %defattr(-,root,root,-)
-/opt/homelab-assistant
-%config(noreplace) /etc/homelab-assistant/config.yaml
-%{_unitdir}/homelab-assistant.service
-%dir %attr(750,homelab,homelab) /var/lib/homelab-assistant
-%dir %attr(750,homelab,homelab) /var/log/homelab-assistant
+/opt/tomo
+%config(noreplace) /etc/tomo/config.yaml
+%{_unitdir}/tomo.service
+%dir %attr(750,tomo,tomo) /var/lib/tomo
+%dir %attr(750,tomo,tomo) /var/log/tomo
 
 %changelog
-* Thu Dec 26 2025 Homelab Team <team@example.com> - 1.0.0-1
+* Thu Dec 26 2025 Tomo Team <team@example.com> - 1.0.0-1
 - Initial release
 ```
 
 **Step 2: Create systemd service**
 
-Create `packaging/homelab-assistant.service`:
+Create `packaging/tomo.service`:
 
 ```ini
 [Unit]
-Description=Homelab Assistant
-Documentation=https://github.com/cbabil/homelab
+Description=Tomo
+Documentation=https://github.com/cbabil/tomo
 After=network.target
 
 [Service]
 Type=simple
-User=homelab
-Group=homelab
-WorkingDirectory=/opt/homelab-assistant
+User=tomo
+Group=tomo
+WorkingDirectory=/opt/tomo
 
-Environment=DATA_DIRECTORY=/var/lib/homelab-assistant
-Environment=LOG_DIRECTORY=/var/log/homelab-assistant
-Environment=CONFIG_FILE=/etc/homelab-assistant/config.yaml
+Environment=DATA_DIRECTORY=/var/lib/tomo
+Environment=LOG_DIRECTORY=/var/log/tomo
+Environment=CONFIG_FILE=/etc/tomo/config.yaml
 
-ExecStart=/usr/bin/python3 /opt/homelab-assistant/main.py
+ExecStart=/usr/bin/python3 /opt/tomo/main.py
 ExecReload=/bin/kill -HUP $MAINPID
 
 Restart=always
@@ -1056,7 +1056,7 @@ NoNewPrivileges=yes
 ProtectSystem=strict
 ProtectHome=yes
 PrivateTmp=yes
-ReadWritePaths=/var/lib/homelab-assistant /var/log/homelab-assistant
+ReadWritePaths=/var/lib/tomo /var/log/tomo
 
 [Install]
 WantedBy=multi-user.target
@@ -1067,7 +1067,7 @@ WantedBy=multi-user.target
 Create `packaging/config.yaml.example`:
 
 ```yaml
-# Homelab Assistant Configuration
+# Tomo Configuration
 
 # Server settings
 server:
@@ -1076,13 +1076,13 @@ server:
 
 # Database
 database:
-  path: /var/lib/homelab-assistant/homelab.db
+  path: /var/lib/tomo/tomo.db
 
 # Logging
 logging:
   level: INFO
   format: json
-  file: /var/log/homelab-assistant/app.log
+  file: /var/log/tomo/app.log
 
 # Security
 security:
@@ -1098,8 +1098,8 @@ metrics:
 
 # App catalog
 catalog:
-  builtin_path: /opt/homelab-assistant/data/catalog
-  custom_path: /var/lib/homelab-assistant/catalog
+  builtin_path: /opt/tomo/data/catalog
+  custom_path: /var/lib/tomo/catalog
 ```
 
 **Step 4: Create post-install script**
@@ -1108,37 +1108,37 @@ Create `packaging/post-install.sh`:
 
 ```bash
 #!/bin/bash
-# Post-installation script for homelab-assistant
+# Post-installation script for tomo
 
 set -e
 
-# Create homelab user and group
-if ! getent group homelab >/dev/null; then
-    groupadd -r homelab
-    echo "Created homelab group"
+# Create tomo user and group
+if ! getent group tomo >/dev/null; then
+    groupadd -r tomo
+    echo "Created tomo group"
 fi
 
-if ! getent passwd homelab >/dev/null; then
-    useradd -r -g homelab -d /var/lib/homelab-assistant -s /sbin/nologin -c "Homelab Assistant" homelab
-    echo "Created homelab user"
+if ! getent passwd tomo >/dev/null; then
+    useradd -r -g tomo -d /var/lib/tomo -s /sbin/nologin -c "Tomo" tomo
+    echo "Created tomo user"
 fi
 
 # Create directories
-mkdir -p /var/lib/homelab-assistant/catalog
-mkdir -p /var/log/homelab-assistant
+mkdir -p /var/lib/tomo/catalog
+mkdir -p /var/log/tomo
 
 # Set ownership
-chown -R homelab:homelab /var/lib/homelab-assistant
-chown -R homelab:homelab /var/log/homelab-assistant
+chown -R tomo:tomo /var/lib/tomo
+chown -R tomo:tomo /var/log/tomo
 
 # Set permissions
-chmod 750 /var/lib/homelab-assistant
-chmod 750 /var/log/homelab-assistant
+chmod 750 /var/lib/tomo
+chmod 750 /var/log/tomo
 
 # Initialize database if not exists
-if [ ! -f /var/lib/homelab-assistant/homelab.db ]; then
+if [ ! -f /var/lib/tomo/tomo.db ]; then
     echo "Initializing database..."
-    sudo -u homelab python3 /opt/homelab-assistant/cli.py init-db
+    sudo -u tomo python3 /opt/tomo/cli.py init-db
 fi
 
 # Reload systemd
@@ -1147,10 +1147,10 @@ systemctl daemon-reload
 echo "Post-installation complete"
 echo ""
 echo "To start the service:"
-echo "  systemctl start homelab-assistant"
+echo "  systemctl start tomo"
 echo ""
 echo "To create an admin user:"
-echo "  homelab-assistant create-admin"
+echo "  tomo create-admin"
 ```
 
 **Step 5: Commit**
@@ -1263,7 +1263,7 @@ class TestBackupDatabaseOperations:
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_backup_database.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_backup_database.py -v --no-cov
 ```
 
 Expected: FAIL
@@ -1385,7 +1385,7 @@ async def import_settings(self, settings: dict, overwrite: bool = False) -> None
 **Step 4: Run test to verify it passes**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_backup_database.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_backup_database.py -v --no-cov
 ```
 
 Expected: PASS
@@ -1501,7 +1501,7 @@ class TestImportBackup:
 **Step 2: Run test to verify it fails**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_backup_tools.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_backup_tools.py -v --no-cov
 ```
 
 Expected: FAIL
@@ -1620,7 +1620,7 @@ def register_backup_tools(app: FastMCP, backup_service: BackupService):
 **Step 4: Run test to verify it passes**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_backup_tools.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_backup_tools.py -v --no-cov
 ```
 
 Expected: PASS
@@ -1639,13 +1639,13 @@ git commit -m "feat(backup): add backup MCP tools"
 **Step 1: Run all Phase 6 tests**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_security.py tests/unit/test_backup*.py -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/test_security.py tests/unit/test_backup*.py -v --no-cov
 ```
 
 **Step 2: Run all project tests to ensure no regressions**
 
 ```bash
-cd /Users/christophebabilotte/source/homelab/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/ -v --no-cov
+cd /Users/christophebabilotte/source/tomo/backend && source /Users/christophebabilotte/source/pythonvenv/bin/activate && PYTHONPATH=src pytest tests/unit/ -v --no-cov
 ```
 
 **Step 3: Commit if any fixes needed**

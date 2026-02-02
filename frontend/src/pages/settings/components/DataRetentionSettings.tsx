@@ -5,8 +5,10 @@
  * with multi-step confirmation flows and preview capabilities.
  */
 
-import { useState, useEffect } from 'react'
-import { SettingRow, Toggle } from '../components'
+import React, { useState, useEffect } from 'react'
+import { useTranslation } from 'react-i18next'
+import { Box, Stack, Typography, Slider, TextField, Alert, Card } from '@mui/material'
+import { SettingRow } from '../components'
 import { useRetentionSettings } from '@/hooks/useRetentionSettings'
 import { Button } from '@/components/ui/Button'
 
@@ -20,6 +22,8 @@ interface SliderWithInputProps {
 }
 
 function SliderWithInput({ value, min, max, step, onChange, disabled = false }: SliderWithInputProps) {
+  const { t } = useTranslation()
+
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const inputValue = Number(e.target.value)
     // Validate range
@@ -39,31 +43,42 @@ function SliderWithInput({ value, min, max, step, onChange, disabled = false }: 
   }
 
   return (
-    <div className="flex items-center space-x-2 w-full">
-      <input
-        type="range"
+    <Stack direction="row" spacing={1} alignItems="center" sx={{ width: '100%' }}>
+      <Slider
+        value={value}
         min={min}
         max={max}
         step={step}
-        value={value}
-        onChange={(e) => onChange(Number(e.target.value))}
+        onChange={(_, newValue) => onChange(newValue as number)}
         disabled={disabled}
-        className="flex-1 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700 disabled:opacity-50"
+        sx={{ flex: 1 }}
       />
-      <div className="flex items-center space-x-1 flex-shrink-0">
-        <input
+      <Stack direction="row" spacing={0.5} alignItems="center" sx={{ flexShrink: 0 }}>
+        <TextField
           type="number"
-          min={min}
-          max={max}
           value={value}
           onChange={handleInputChange}
           onBlur={handleInputBlur}
           disabled={disabled}
-          className="w-14 px-2 py-1 text-sm border border-gray-300 dark:border-gray-600 rounded bg-background text-foreground disabled:opacity-50"
+          inputProps={{ min, max, style: { textAlign: 'center' } }}
+          size="small"
+          sx={{
+            width: 48,
+            '& .MuiOutlinedInput-root': {
+              height: 28,
+              '& input': {
+                padding: '4px 6px',
+                fontSize: '0.75rem',
+                color: 'text.primary',
+              },
+            },
+          }}
         />
-        <span className="text-xs text-muted-foreground whitespace-nowrap">Day(s)</span>
-      </div>
-    </div>
+        <Typography variant="caption" color="text.secondary" sx={{ whiteSpace: 'nowrap' }}>
+          {t('settings.dataRetentionSettings.days')}
+        </Typography>
+      </Stack>
+    </Stack>
   )
 }
 
@@ -86,44 +101,65 @@ function ConfirmationDialog({
   confirmText,
   isDestructive = false
 }: ConfirmationDialogProps) {
+  const { t } = useTranslation()
+
   if (!isOpen) return null
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-card rounded-lg border max-w-md w-full m-4 p-6">
-        <h3 className="text-lg font-semibold mb-3 text-primary">{title}</h3>
-        <p className="text-sm mb-6 text-muted-foreground">{message}</p>
+    <Box
+      sx={{
+        position: 'fixed',
+        inset: 0,
+        bgcolor: 'rgba(0, 0, 0, 0.5)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        zIndex: 50
+      }}
+    >
+      <Card sx={{ maxWidth: 448, width: '100%', m: 2, p: 3 }}>
+        <Typography variant="h6" fontWeight={600} sx={{ mb: 1.5, color: 'primary.main' }}>
+          {title}
+        </Typography>
+        <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+          {message}
+        </Typography>
 
-        <div className="flex gap-3 justify-end">
+        <Stack direction="row" spacing={1.5} justifyContent="flex-end">
           <Button
             onClick={onClose}
             variant="outline"
-            size="md"
+            size="sm"
+            sx={{ fontSize: '0.7rem', py: 0.25, px: 1.5, minHeight: 26 }}
           >
-            Cancel
+            {t('common.cancel')}
           </Button>
           <Button
             onClick={onConfirm}
             variant={isDestructive ? 'destructive' : 'primary'}
-            size="md"
+            size="sm"
+            sx={{ fontSize: '0.7rem', py: 0.25, px: 1.5, minHeight: 26 }}
           >
             {confirmText}
           </Button>
-        </div>
-      </div>
-    </div>
+        </Stack>
+      </Card>
+    </Box>
   )
 }
 
 export function DataRetentionSettings() {
+  const { t } = useTranslation()
   const {
     settings,
     isLoading,
     error,
     isOperationInProgress,
     previewResult,
+    isBackendConnected,
     updateRetentionSettings,
     previewCleanup,
+    performCleanup,
     limits
   } = useRetentionSettings()
 
@@ -132,6 +168,8 @@ export function DataRetentionSettings() {
   const [confirmationText, setConfirmationText] = useState('')
   const [validationErrors, setValidationErrors] = useState<string[]>([])
   const [isDangerousOperation, setIsDangerousOperation] = useState(false)
+  const [cleanupSuccess, setCleanupSuccess] = useState<string | null>(null)
+  const [cleanupError, setCleanupError] = useState<string | null>(null)
 
   // Enhanced validation with security checks
   useEffect(() => {
@@ -141,18 +179,13 @@ export function DataRetentionSettings() {
     let isDangerous = false
 
     // Check for potentially dangerous configurations
-    if (settings.logRetentionDays < 14) {
-      errors.push('Log retention below 14 days may affect debugging capabilities')
+    if (settings.log_retention < 14) {
+      errors.push(t('settings.dataRetentionSettings.validationErrors.logRetentionLow'))
       isDangerous = true
     }
 
-    if (settings.otherDataRetentionDays < 90) {
-      errors.push('Very short retention periods may cause data loss')
-      isDangerous = true
-    }
-
-    if (settings.autoCleanupEnabled && (settings.logRetentionDays < 30)) {
-      errors.push('Auto-cleanup with short retention periods requires extra caution')
+    if (settings.data_retention < 90) {
+      errors.push(t('settings.dataRetentionSettings.validationErrors.otherDataRetentionLow'))
       isDangerous = true
     }
 
@@ -162,17 +195,21 @@ export function DataRetentionSettings() {
 
   if (isLoading) {
     return (
-      <div className="bg-card rounded-lg border p-6">
-        <p className="text-sm text-muted-foreground">Loading retention settings...</p>
-      </div>
+      <Box>
+        <Typography variant="body2" color="text.secondary">
+          {t('settings.dataRetentionSettings.loadingSettings')}
+        </Typography>
+      </Box>
     )
   }
 
   if (!settings) {
     return (
-      <div className="bg-card rounded-lg border p-6">
-        <p className="text-sm text-red-600">Failed to load retention settings</p>
-      </div>
+      <Box>
+        <Typography variant="body2" color="error.main">
+          {t('settings.dataRetentionSettings.failedToLoad')}
+        </Typography>
+      </Box>
     )
   }
 
@@ -189,7 +226,7 @@ export function DataRetentionSettings() {
     setConfirmationText('')  // Reset confirmation text
   }
 
-  const handleFinalCleanup = () => {
+  const handleFinalCleanup = async () => {
     // Validate confirmation text for dangerous operations
     const requiredText = 'DELETE DATA'
     if (isDangerousOperation && confirmationText !== requiredText) {
@@ -198,152 +235,193 @@ export function DataRetentionSettings() {
 
     setShowCleanupConfirm(false)
     setConfirmationText('')
-    // TODO: Implement actual cleanup execution with CSRF protection
-    console.log('Cleanup confirmed - would execute deletion with security checks')
+    setCleanupSuccess(null)
+    setCleanupError(null)
+
+    // Execute cleanup with CSRF protection
+    const result = await performCleanup('logs')
+
+    if (result.success) {
+      const totalDeleted = result.deletedCounts
+        ? Object.values(result.deletedCounts).reduce((sum, count) => sum + count, 0)
+        : 0
+      const spaceFreed = result.preview?.estimatedSpaceFreed || '0 MB'
+      setCleanupSuccess(
+        `Cleanup completed: ${totalDeleted} records deleted, ${spaceFreed} freed`
+      )
+    } else {
+      setCleanupError(result.error || 'Cleanup operation failed')
+    }
   }
 
   return (
-    <div className="bg-card rounded-lg border p-3">
-      <h4 className="text-sm font-semibold mb-3 text-primary">Data Retention</h4>
+    <Box>
+      <Stack direction="row" alignItems="center" justifyContent="space-between">
+        <Box>
+          <Typography sx={{ fontSize: '0.9rem', fontWeight: 600, color: 'primary.main', lineHeight: 1.2 }}>
+            {t('settings.dataRetentionSettings.title')}
+          </Typography>
+          <Typography variant="caption" color="text.secondary">
+            {t('settings.dataRetentionSettings.description')}
+          </Typography>
+        </Box>
+        <Button
+          onClick={handlePreviewCleanup}
+          disabled={isOperationInProgress || !isBackendConnected}
+          variant="outline"
+          size="sm"
+          sx={{ fontSize: '0.7rem', py: 0.25, px: 1.5, minHeight: 26 }}
+        >
+          {isOperationInProgress ? t('settings.dataRetentionSettings.analyzing') : t('settings.dataRetentionSettings.previewCleanup')}
+        </Button>
+      </Stack>
+
+      {!isBackendConnected && (
+        <Alert severity="warning" sx={{ mb: 1.5 }}>
+          {t('settings.dataRetentionSettings.backendNotConnected')}
+        </Alert>
+      )}
 
       {error && (
-        <div className="bg-red-50 border border-red-200 rounded-lg p-3 mb-3">
-          <p className="text-sm text-red-600">{error}</p>
-        </div>
+        <Alert severity="error" sx={{ mb: 1.5 }}>
+          {error}
+        </Alert>
+      )}
+
+      {cleanupError && (
+        <Alert severity="error" sx={{ mb: 1.5 }}>
+          {cleanupError}
+        </Alert>
+      )}
+
+      {cleanupSuccess && (
+        <Alert severity="success" sx={{ mb: 1.5 }}>
+          {cleanupSuccess}
+        </Alert>
       )}
 
       {validationErrors.length > 0 && (
-        <div className={`border rounded-lg p-3 mb-3 ${
-          isDangerousOperation
-            ? 'bg-orange-50 border-orange-200'
-            : 'bg-yellow-50 border-yellow-200'
-        }`}>
-          <div className="text-sm">
-            {validationErrors.map((error, index) => (
-              <p key={index} className={
-                isDangerousOperation ? 'text-orange-700' : 'text-yellow-700'
-              }>{error}</p>
-            ))}
-          </div>
-        </div>
+        <Box sx={{ mb: 1.5 }}>
+          {validationErrors.map((error, index) => (
+            <Typography key={index} variant="caption" color="text.secondary">
+              {error}
+            </Typography>
+          ))}
+        </Box>
       )}
 
-      <div className="space-y-0">
+      <Stack spacing={0}>
         <SettingRow
-          label="Auto-cleanup"
+          label={t('settings.dataRetentionSettings.logRetention')}
           children={
-            <Toggle
-              checked={settings.autoCleanupEnabled}
-              onChange={(enabled) => updateRetentionSettings({ autoCleanupEnabled: enabled })}
-            />
-          }
-        />
-
-        <SettingRow
-          label="Log retention"
-          children={
-            <div className="flex-1 max-w-xs">
+            <Box sx={{ flex: 1, maxWidth: 320 }}>
               <SliderWithInput
-                value={settings.logRetentionDays}
-                min={limits.LOG_MIN_DAYS}
-                max={limits.LOG_MAX_DAYS}
+                value={settings.log_retention}
+                min={limits.LOG_MIN}
+                max={limits.LOG_MAX}
                 step={1}
-                onChange={(value) => updateRetentionSettings({ logRetentionDays: value })}
+                onChange={(value) => updateRetentionSettings({ log_retention: value })}
               />
-            </div>
+            </Box>
           }
         />
 
         <SettingRow
-          label="Other data retention"
+          label={t('settings.dataRetentionSettings.dataRetention')}
           children={
-            <div className="flex-1 max-w-xs">
+            <Box sx={{ flex: 1, maxWidth: 320 }}>
               <SliderWithInput
-                value={settings.otherDataRetentionDays}
-                min={limits.OTHER_DATA_MIN_DAYS}
-                max={limits.OTHER_DATA_MAX_DAYS}
+                value={settings.data_retention}
+                min={limits.DATA_MIN}
+                max={limits.DATA_MAX}
                 step={1}
-                onChange={(value) => updateRetentionSettings({ otherDataRetentionDays: value })}
+                onChange={(value) => updateRetentionSettings({ data_retention: value })}
               />
-            </div>
+            </Box>
           }
         />
-
-        <div className="pt-3 border-t">
-          <Button
-            onClick={handlePreviewCleanup}
-            disabled={isOperationInProgress}
-            variant="outline"
-            size="sm"
-          >
-            {isOperationInProgress ? 'Analyzing...' : 'Preview Cleanup'}
-          </Button>
-        </div>
-      </div>
+      </Stack>
 
       {/* Preview Dialog */}
       <ConfirmationDialog
         isOpen={showPreviewDialog}
         onClose={() => setShowPreviewDialog(false)}
         onConfirm={handleConfirmCleanup}
-        title="Cleanup Preview"
+        title={t('settings.dataRetentionSettings.cleanupPreviewTitle')}
         message={
           previewResult
-            ? `This will delete ${previewResult.logEntriesAffected} log entries and ${previewResult.otherDataAffected} other records, freeing approximately ${previewResult.estimatedSpaceFreed} of storage space.`
-            : 'Preview data not available'
+            ? t('settings.dataRetentionSettings.cleanupPreviewMessage', {
+                logEntries: previewResult.logEntriesAffected,
+                otherRecords: previewResult.otherDataAffected,
+                space: previewResult.estimatedSpaceFreed
+              })
+            : t('settings.dataRetentionSettings.previewNotAvailable')
         }
-        confirmText="Continue"
+        confirmText={t('settings.dataRetentionSettings.continue')}
       />
 
       {/* Enhanced Final Confirmation Dialog */}
       {showCleanupConfirm && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-card rounded-lg border max-w-md w-full m-4 p-6">
-            <h3 className="text-lg font-semibold mb-3 text-red-600">
-              Confirm Data Deletion
-            </h3>
-            <p className="text-sm mb-4 text-muted-foreground">
-              This action will permanently delete data and cannot be undone.
-            </p>
+        <Box
+          sx={{
+            position: 'fixed',
+            inset: 0,
+            bgcolor: 'rgba(0, 0, 0, 0.5)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 50
+          }}
+        >
+          <Card sx={{ maxWidth: 448, width: '100%', m: 2, p: 3 }}>
+            <Typography variant="h6" fontWeight={600} sx={{ mb: 1.5, color: 'error.main' }}>
+              {t('settings.dataRetentionSettings.confirmDeletion')}
+            </Typography>
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+              {t('settings.dataRetentionSettings.deletionWarning')}
+            </Typography>
 
             {isDangerousOperation && (
-              <div className="mb-4">
-                <label className="block text-sm font-medium mb-2 text-red-700">
-                  Type "DELETE DATA" to confirm:
-                </label>
-                <input
+              <Box sx={{ mb: 2 }}>
+                <Typography variant="body2" fontWeight={500} sx={{ mb: 1, color: 'error.dark' }}>
+                  {t('settings.dataRetentionSettings.typeToConfirm')}
+                </Typography>
+                <TextField
                   type="text"
                   value={confirmationText}
                   onChange={(e) => setConfirmationText(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
                   placeholder="DELETE DATA"
+                  size="small"
+                  fullWidth
                 />
-              </div>
+              </Box>
             )}
 
-            <div className="flex gap-3 justify-end">
+            <Stack direction="row" spacing={1.5} justifyContent="flex-end">
               <Button
                 onClick={() => {
                   setShowCleanupConfirm(false)
                   setConfirmationText('')
                 }}
                 variant="outline"
-                size="md"
+                size="sm"
+                sx={{ fontSize: '0.7rem', py: 0.25, px: 1.5, minHeight: 26 }}
               >
-                Cancel
+                {t('common.cancel')}
               </Button>
               <Button
                 onClick={handleFinalCleanup}
                 disabled={isDangerousOperation && confirmationText !== 'DELETE DATA'}
                 variant="destructive"
-                size="md"
+                size="sm"
+                sx={{ fontSize: '0.7rem', py: 0.25, px: 1.5, minHeight: 26 }}
               >
-                Delete Data
+                {t('settings.dataRetentionSettings.deleteData')}
               </Button>
-            </div>
-          </div>
-        </div>
+            </Stack>
+          </Card>
+        </Box>
       )}
-    </div>
+    </Box>
   )
 }

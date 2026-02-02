@@ -25,10 +25,10 @@ export function useDataServices(): UseDataServicesReturn {
     // Create MCP client adapter for service factory
     const mcpClientAdapter = {
       callTool: client.callTool.bind(client),
-      isConnected: client.isConnected?.bind(client) || (() => isConnected),
-      connect: client.connect?.bind(client) || (() => Promise.resolve()),
-      disconnect: client.disconnect?.bind(client) || (() => Promise.resolve()),
-      subscribeTo: client.subscribeTo?.bind(client) || (() => new EventSource(''))
+      isConnected: () => isConnected,
+      connect: () => Promise.resolve(),
+      disconnect: () => Promise.resolve(),
+      subscribeTo: () => new EventSource('')
     }
 
     return new DataServiceFactory(mcpClientAdapter, {

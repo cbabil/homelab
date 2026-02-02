@@ -7,16 +7,20 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { PrivateKeyFileInput } from '../PrivateKeyFileInput'
-import { 
-  setupFileReaderMock,  
-  createMockFile, 
-  simulateFileLoad 
+import {
+  setupFileReaderMock,
+  createMockFile,
+  simulateFileLoad
 } from '../../../test/utils/server-test-utils'
+
+const { mockOnChange } = vi.hoisted(() => {
+  const mockOnChange = vi.fn()
+  return { mockOnChange }
+})
 
 setupFileReaderMock()
 
 describe('PrivateKeyFileInput - Existing Key Handling', () => {
-  const mockOnChange = vi.fn()
 
   beforeEach(() => {
     vi.clearAllMocks()

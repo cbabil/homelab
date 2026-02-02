@@ -1,4 +1,4 @@
-# Homelab Marketplace Implementation Plan
+# Tomo Marketplace Implementation Plan
 
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
@@ -28,8 +28,8 @@ from models.marketplace import MarketplaceRepo, RepoType
 def test_marketplace_repo_model():
     repo = MarketplaceRepo(
         id="official",
-        name="Official Homelab Apps",
-        url="https://github.com/homelab/app-catalog",
+        name="Official Tomo Apps",
+        url="https://github.com/tomo/app-catalog",
         repo_type=RepoType.OFFICIAL,
         enabled=True
     )
@@ -719,7 +719,7 @@ class GitSync:
     """Handles Git repository synchronization."""
 
     def __init__(self, cache_dir: str = None):
-        self.cache_dir = cache_dir or tempfile.mkdtemp(prefix="homelab-marketplace-")
+        self.cache_dir = cache_dir or tempfile.mkdtemp(prefix="tomo-marketplace-")
         os.makedirs(self.cache_dir, exist_ok=True)
 
     def clone_or_pull(self, repo_url: str, branch: str = "main") -> Path:
@@ -1912,7 +1912,7 @@ Sample apps for testing.
 
 ### Task 6.2: Add Default Official Repo on Init
 
-Seed the official homelab apps repository on first run.
+Seed the official tomo apps repository on first run.
 
 ### Task 6.3: Write Integration Tests
 

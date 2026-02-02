@@ -7,7 +7,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { LogsDataService } from '../logsDataService'
 import { MCPClient, MCPResponse } from '@/types/mcp'
-import { LogEntry } from '@/types/logs'
 
 // Mock MCP Client
 const mockMCPClient: MCPClient = {
@@ -28,7 +27,7 @@ describe('LogsDataService', () => {
 
   describe('getAll', () => {
     it('should fetch logs successfully', async () => {
-      const mockResponse: MCPResponse<any> = {
+      const mockResponse: MCPResponse<unknown> = {
         success: true,
         data: {
           logs: [{
@@ -60,7 +59,7 @@ describe('LogsDataService', () => {
     })
 
     it('should handle service errors', async () => {
-      const mockErrorResponse: MCPResponse<any> = {
+      const mockErrorResponse: MCPResponse<unknown> = {
         success: false,
         error: 'Connection failed'
       }
@@ -76,23 +75,23 @@ describe('LogsDataService', () => {
 
   describe('refresh', () => {
     it('should clear cache and reload data', async () => {
-      const mockResponse: MCPResponse<any> = {
+      const mockResponse: MCPResponse<unknown> = {
         success: true,
         data: { logs: [], total: 0, page: 1, pageSize: 50 }
       }
 
       vi.mocked(mockMCPClient.callTool).mockResolvedValue(mockResponse)
 
-      const result = await service.refresh()
+      await service.refresh()
 
-      expect(result.success).toBe(true)
+      // refresh() now returns void, just check it was called
       expect(mockMCPClient.callTool).toHaveBeenCalled()
     })
   })
 
   describe('loading state management', () => {
     it('should track loading state during operations', async () => {
-      const mockResponse: MCPResponse<any> = {
+      const mockResponse: MCPResponse<unknown> = {
         success: true,
         data: { logs: [], total: 0, page: 1, pageSize: 50 }
       }

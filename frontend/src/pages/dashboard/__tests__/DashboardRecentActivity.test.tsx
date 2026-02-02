@@ -4,11 +4,17 @@
  * Tests activity log display and formatting.
  */
 
+import React from 'react'
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import './setup'
 import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import { DashboardRecentActivity } from '../DashboardRecentActivity'
 import { ActivityLog } from '@/types/mcp'
+
+const renderWithRouter = (ui: React.ReactElement) => {
+  return render(<MemoryRouter>{ui}</MemoryRouter>)
+}
 
 describe('DashboardRecentActivity', () => {
   beforeEach(() => {
@@ -29,30 +35,28 @@ describe('DashboardRecentActivity', () => {
   })
 
   it('should render the title', () => {
-    render(<DashboardRecentActivity activities={[]} />)
+    renderWithRouter(<DashboardRecentActivity activities={[]} />)
 
     expect(screen.getByText('Recent Activity')).toBeInTheDocument()
   })
 
   it('should show empty state when no activities', () => {
-    render(<DashboardRecentActivity activities={[]} />)
+    renderWithRouter(<DashboardRecentActivity activities={[]} />)
 
     expect(screen.getByText('No recent activity')).toBeInTheDocument()
-    expect(screen.getByText('System events will appear here as they occur.')).toBeInTheDocument()
+    expect(screen.getByText('Events will appear here as they occur')).toBeInTheDocument()
   })
 
-  it('should display activity count badge', () => {
-    const activities = [createActivity({ id: '1' }), createActivity({ id: '2' })]
+  it('should display View all link', () => {
+    renderWithRouter(<DashboardRecentActivity activities={[]} />)
 
-    render(<DashboardRecentActivity activities={activities} />)
-
-    expect(screen.getByText('2 events')).toBeInTheDocument()
+    expect(screen.getByText('View all')).toBeInTheDocument()
   })
 
   it('should display activity description', () => {
     const activities = [createActivity({ description: 'Test server connected' })]
 
-    render(<DashboardRecentActivity activities={activities} />)
+    renderWithRouter(<DashboardRecentActivity activities={activities} />)
 
     expect(screen.getByText('Test server connected')).toBeInTheDocument()
   })
@@ -60,15 +64,15 @@ describe('DashboardRecentActivity', () => {
   it('should display activity type as badge', () => {
     const activities = [createActivity({ activity_type: 'server_connect' })]
 
-    render(<DashboardRecentActivity activities={activities} />)
+    renderWithRouter(<DashboardRecentActivity activities={activities} />)
 
-    expect(screen.getByText('server connect')).toBeInTheDocument()
+    expect(screen.getByText('Server Connect')).toBeInTheDocument()
   })
 
   it('should display server_id when present', () => {
     const activities = [createActivity({ server_id: 'server-123' })]
 
-    render(<DashboardRecentActivity activities={activities} />)
+    renderWithRouter(<DashboardRecentActivity activities={activities} />)
 
     expect(screen.getByText('server-123')).toBeInTheDocument()
   })
@@ -76,7 +80,7 @@ describe('DashboardRecentActivity', () => {
   it('should format time as "Just now" for recent activity', () => {
     const activities = [createActivity({ created_at: new Date().toISOString() })]
 
-    render(<DashboardRecentActivity activities={activities} />)
+    renderWithRouter(<DashboardRecentActivity activities={activities} />)
 
     expect(screen.getByText('Just now')).toBeInTheDocument()
   })
@@ -85,7 +89,7 @@ describe('DashboardRecentActivity', () => {
     const tenMinutesAgo = new Date(Date.now() - 10 * 60 * 1000)
     const activities = [createActivity({ created_at: tenMinutesAgo.toISOString() })]
 
-    render(<DashboardRecentActivity activities={activities} />)
+    renderWithRouter(<DashboardRecentActivity activities={activities} />)
 
     expect(screen.getByText('10m ago')).toBeInTheDocument()
   })
@@ -94,7 +98,7 @@ describe('DashboardRecentActivity', () => {
     const twoHoursAgo = new Date(Date.now() - 2 * 60 * 60 * 1000)
     const activities = [createActivity({ created_at: twoHoursAgo.toISOString() })]
 
-    render(<DashboardRecentActivity activities={activities} />)
+    renderWithRouter(<DashboardRecentActivity activities={activities} />)
 
     expect(screen.getByText('2h ago')).toBeInTheDocument()
   })
@@ -103,21 +107,21 @@ describe('DashboardRecentActivity', () => {
     const threeDaysAgo = new Date(Date.now() - 3 * 24 * 60 * 60 * 1000)
     const activities = [createActivity({ created_at: threeDaysAgo.toISOString() })]
 
-    render(<DashboardRecentActivity activities={activities} />)
+    renderWithRouter(<DashboardRecentActivity activities={activities} />)
 
     expect(screen.getByText('3d ago')).toBeInTheDocument()
   })
 
-  it('should limit displayed activities to 10', () => {
+  it('should limit displayed activities to 8', () => {
     const activities = Array.from({ length: 15 }, (_, i) =>
       createActivity({ id: `${i}`, description: `Activity ${i}` })
     )
 
-    render(<DashboardRecentActivity activities={activities} />)
+    renderWithRouter(<DashboardRecentActivity activities={activities} />)
 
     expect(screen.getByText('Activity 0')).toBeInTheDocument()
-    expect(screen.getByText('Activity 9')).toBeInTheDocument()
-    expect(screen.queryByText('Activity 10')).not.toBeInTheDocument()
+    expect(screen.getByText('Activity 7')).toBeInTheDocument()
+    expect(screen.queryByText('Activity 8')).not.toBeInTheDocument()
   })
 
   it('should handle different activity types', () => {
@@ -127,10 +131,10 @@ describe('DashboardRecentActivity', () => {
       createActivity({ id: '3', activity_type: 'error' })
     ]
 
-    render(<DashboardRecentActivity activities={activities} />)
+    renderWithRouter(<DashboardRecentActivity activities={activities} />)
 
-    expect(screen.getByText('server connect')).toBeInTheDocument()
-    expect(screen.getByText('app install')).toBeInTheDocument()
-    expect(screen.getByText('error')).toBeInTheDocument()
+    expect(screen.getByText('Server Connect')).toBeInTheDocument()
+    expect(screen.getByText('App Install')).toBeInTheDocument()
+    expect(screen.getByText('Error')).toBeInTheDocument()
   })
 })

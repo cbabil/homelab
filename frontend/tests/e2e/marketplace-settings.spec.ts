@@ -14,10 +14,10 @@ import { test, expect, type Page } from '@playwright/test'
 const TEST_CONFIG = {
   BACKEND_URL: 'http://localhost:8000',
   FRONTEND_URL: 'http://localhost:3001',
-  OFFICIAL_MARKETPLACE_URL: 'https://github.com/cbabil/homelab-marketplace',
+  OFFICIAL_MARKETPLACE_URL: 'https://github.com/cbabil/tomo-marketplace',
   // Demo credentials from login page
   ADMIN_USERNAME: 'admin',
-  ADMIN_PASSWORD: 'HomeLabAdmin123!'
+  ADMIN_PASSWORD: 'TomoAdmin123!'
 }
 
 // Helper functions
@@ -126,7 +126,7 @@ test.describe('Marketplace Settings', () => {
       console.log('Console messages:', consoleMessages.filter(m => m.includes('Marketplace') || m.includes('repos')))
 
       // Either official marketplace is shown OR the "Add Official Marketplace" button is shown
-      const officialRepoName = page.locator('text=Homelab Marketplace')
+      const officialRepoName = page.locator('text=Tomo Marketplace')
       const addOfficialButton = page.locator('button:has-text("Add Official Marketplace")')
 
       // One of these should be visible
@@ -151,10 +151,10 @@ test.describe('Marketplace Settings', () => {
         await page.waitForTimeout(3000)
 
         // Should now show the official marketplace
-        await expect(page.locator('text=Homelab Marketplace')).toBeVisible({ timeout: 10000 })
+        await expect(page.locator('text=Tomo Marketplace')).toBeVisible({ timeout: 10000 })
       } else {
         // Official marketplace already configured - just verify it's there
-        await expect(page.locator('text=Homelab Marketplace')).toBeVisible()
+        await expect(page.locator('text=Tomo Marketplace')).toBeVisible()
       }
     })
 
@@ -164,7 +164,7 @@ test.describe('Marketplace Settings', () => {
       await waitForMcpConnection(page)
 
       // If official marketplace is configured, should have sync button
-      const officialRepoName = page.locator('text=Homelab Marketplace')
+      const officialRepoName = page.locator('text=Tomo Marketplace')
 
       if (await officialRepoName.isVisible()) {
         // Should show a sync button
@@ -310,7 +310,7 @@ test.describe('Marketplace Settings', () => {
       await clickMarketplaceTab(page)
       await waitForMcpConnection(page)
 
-      const officialRepoName = page.locator('text=Homelab Marketplace')
+      const officialRepoName = page.locator('text=Tomo Marketplace')
 
       if (await officialRepoName.isVisible()) {
         // Should show status badge (Active, Syncing, Error, etc.)
@@ -326,7 +326,7 @@ test.describe('Marketplace Settings', () => {
       await clickMarketplaceTab(page)
       await waitForMcpConnection(page)
 
-      const officialRepoName = page.locator('text=Homelab Marketplace')
+      const officialRepoName = page.locator('text=Tomo Marketplace')
 
       if (await officialRepoName.isVisible()) {
         // Should show app count

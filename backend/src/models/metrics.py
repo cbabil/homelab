@@ -37,7 +37,9 @@ class ActivityType(str, Enum):
     PREPARATION_FAILED = "preparation_failed"
 
     # App activities
+    APP_DEPLOYMENT_STARTED = "app_deployment_started"
     APP_INSTALLED = "app_installed"
+    APP_DEPLOYMENT_FAILED = "app_deployment_failed"
     APP_UNINSTALLED = "app_uninstalled"
     APP_STARTED = "app_started"
     APP_STOPPED = "app_stopped"

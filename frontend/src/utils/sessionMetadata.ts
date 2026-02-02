@@ -123,7 +123,7 @@ async function detectLocalIP(): Promise<string | null> {
       }
       
       pc.createOffer().then(offer => pc.setLocalDescription(offer))
-    } catch (error) {
+    } catch (_error) {
       clearTimeout(timeout)
       resolve(null)
     }

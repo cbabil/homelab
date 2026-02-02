@@ -8,9 +8,8 @@
 import { memo } from 'react'
 import { Link } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
-import { cn } from '@/utils/cn'
+import { Box, SxProps, Theme } from '@mui/material'
 import { NavItem, SubNavItem } from '@/hooks/useNavigation'
-import { Button } from '@/components/ui/Button'
 
 interface NavigationItemProps {
   item: NavItem
@@ -20,6 +19,114 @@ interface NavigationItemProps {
   onSubItemClick?: (subItem: SubNavItem) => void
   isActiveSubItem?: (subItem: SubNavItem) => boolean
 }
+
+interface BadgeProps {
+  badge: number | string
+  isActive: boolean
+  isInGroup?: boolean
+}
+
+const getBadgeStyles = (isActive: boolean, badge: number | string): SxProps<Theme> => {
+  if (isActive) {
+    return { bgcolor: 'rgba(255, 255, 255, 0.2)', color: 'white' }
+  }
+  if (typeof badge === 'number') {
+    return {
+      bgcolor: 'hsl(var(--destructive))',
+      color: 'hsl(var(--destructive-foreground))',
+      '.group:hover &': { bgcolor: 'rgba(255, 255, 255, 0.2)', color: 'white' }
+    }
+  }
+  return {
+    bgcolor: 'warning.light',
+    color: 'warning.dark',
+    '.group:hover &': { bgcolor: 'rgba(255, 255, 255, 0.2)', color: 'white' }
+  }
+}
+
+const NavigationBadge = ({ badge, isActive, isInGroup = true }: BadgeProps) => (
+  <Box
+    component="span"
+    sx={{
+      ...(isInGroup ? {} : { ml: 'auto' }),
+      width: 20,
+      height: 20,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: '0.75rem',
+      fontWeight: 500,
+      borderRadius: '50%',
+      ...getBadgeStyles(isActive, badge)
+    }}
+  >
+    {badge}
+  </Box>
+)
+
+interface SubItemBadgeProps {
+  count: number
+  isActive: boolean
+}
+
+const SubItemBadge = ({ count, isActive }: SubItemBadgeProps) => (
+  <Box
+    component="span"
+    className={isActive ? '' : 'group-hover:bg-white/20 group-hover:text-white'}
+    sx={{
+      ml: 0.5,
+      width: 20,
+      height: 20,
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      fontSize: '0.75rem',
+      borderRadius: '50%',
+      flexShrink: 0,
+      ...(isActive
+        ? { bgcolor: 'rgba(255, 255, 255, 0.2)', color: 'white' }
+        : { bgcolor: 'hsl(var(--muted) / 0.6)', color: 'hsl(var(--muted-foreground))' })
+    }}
+  >
+    {count}
+  </Box>
+)
+
+interface SubNavigationItemProps {
+  subItem: SubNavItem
+  isActive: boolean
+  onClick: () => void
+}
+
+const SubNavigationItemLink = ({ subItem, isActive, onClick }: SubNavigationItemProps) => (
+  <Box
+    component={Link}
+    to={subItem.href}
+    onClick={onClick}
+    className={isActive ? 'bg-primary text-white' : 'text-muted-foreground hover:text-white hover:bg-primary'}
+    sx={{
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      px: 1,
+      py: 0.75,
+      borderRadius: 0.5,
+      fontSize: '0.75rem',
+      textDecoration: 'none',
+      fontWeight: isActive ? 500 : 400,
+      '&:focus': {
+        outline: 'none',
+        boxShadow: '0 0 0 1px hsl(var(--primary) / 0.3)'
+      }
+    }}
+    title={`${subItem.label}${subItem.count !== undefined ? ` (${subItem.count})` : ''}`}
+  >
+    <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+      {subItem.label}
+    </Box>
+    {subItem.count !== undefined && <SubItemBadge count={subItem.count} isActive={isActive} />}
+  </Box>
+)
 
 export const NavigationItem = memo(({
   item,
@@ -45,126 +152,109 @@ export const NavigationItem = memo(({
   }
 
   return (
-    <div className="nav-item-container">
+    <Box>
       {/* Main Navigation Item */}
-      <div className="relative">
+      <Box sx={{ position: 'relative' }}>
         {hasSubItems ? (
-          <Button
-            variant="ghost"
-            size="sm"
+          <Box
+            component="button"
             onClick={handleMainClick}
-            className={cn(
-              'group flex items-center justify-between w-full',
-              'relative overflow-hidden',
-              isActive
-                ? 'bg-primary text-white hover:bg-primary hover:text-white'
-                : 'text-muted-foreground hover:text-white hover:bg-primary'
-            )}
             title={item.description}
             aria-expanded={isExpanded}
             aria-controls={`nav-subitems-${item.id}`}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              width: '100%',
+              px: 1.5,
+              py: 1,
+              border: 'none',
+              bgcolor: 'transparent !important',
+              color: 'hsl(var(--muted-foreground))',
+              fontSize: '0.875rem',
+              cursor: 'pointer',
+              borderRadius: 1,
+              '&:hover': {
+                bgcolor: 'transparent !important',
+                background: 'transparent !important'
+              },
+              '&:focus': { outline: 'none' }
+            }}
           >
-            <div className="flex items-center space-x-3">
-              <item.icon className="h-4 w-4 flex-shrink-0" />
-              <span className="font-medium truncate">{item.label}</span>
-              {showBadge && (
-                <span className={cn(
-                  'w-5 h-5 flex items-center justify-center text-xs font-medium rounded-full',
-                  isActive
-                    ? 'bg-white/20 text-white'
-                    : typeof item.badge === 'number'
-                    ? 'bg-destructive text-destructive-foreground group-hover:bg-white/20 group-hover:text-white'
-                    : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 group-hover:bg-white/20 group-hover:text-white'
-                )}>
-                  {item.badge}
-                </span>
-              )}
-            </div>
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+              <item.icon style={{ width: 16, height: 16, flexShrink: 0 }} />
+              <Box component="span" sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                {item.label}
+              </Box>
+              {showBadge && <NavigationBadge badge={item.badge!} isActive={isActive} />}
+            </Box>
             <ChevronRight
-              className={cn(
-                'h-4 w-4 transition-transform duration-200',
-                isActive ? 'text-white' : 'text-muted-foreground group-hover:text-white',
-                isExpanded && 'rotate-90'
-              )}
+              style={{
+                width: 16,
+                height: 16,
+                transition: 'transform 0.2s',
+                transform: isExpanded ? 'rotate(90deg)' : 'rotate(0deg)',
+                color: 'hsl(var(--muted-foreground))'
+              }}
             />
-          </Button>
+          </Box>
         ) : (
-          <Link
+          <Box
+            component={Link}
             to={item.href}
-            className={cn(
-              'group flex items-center space-x-3 px-3 py-2 rounded-md text-sm',
-              'relative overflow-hidden',
-              'focus:outline-none focus:ring-1 focus:ring-primary/30',
-              isActive
-                ? 'bg-primary text-white'
-                : 'text-muted-foreground hover:text-white hover:bg-primary'
-            )}
+            className={`group ${isActive ? 'bg-primary text-white' : 'text-muted-foreground hover:text-white hover:bg-primary'}`}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.5,
+              px: 1.5,
+              py: 1,
+              borderRadius: 1,
+              fontSize: '0.875rem',
+              position: 'relative',
+              overflow: 'hidden',
+              textDecoration: 'none',
+              '&:focus': {
+                outline: 'none',
+                boxShadow: '0 0 0 1px hsl(var(--primary) / 0.3)'
+              }
+            }}
             title={item.description}
           >
-            <item.icon className="h-4 w-4 flex-shrink-0" />
-            <span className="font-medium truncate">{item.label}</span>
-            {showBadge && (
-              <span className={cn(
-                'ml-auto w-5 h-5 flex items-center justify-center text-xs font-medium rounded-full',
-                isActive
-                  ? 'bg-white/20 text-white'
-                  : typeof item.badge === 'number'
-                  ? 'bg-destructive text-destructive-foreground group-hover:bg-white/20 group-hover:text-white'
-                  : 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900 dark:text-yellow-200 group-hover:bg-white/20 group-hover:text-white'
-              )}>
-                {item.badge}
-              </span>
-            )}
-          </Link>
+            <item.icon style={{ width: 16, height: 16, flexShrink: 0 }} />
+            <Box component="span" sx={{ fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+              {item.label}
+            </Box>
+            {showBadge && <NavigationBadge badge={item.badge!} isActive={isActive} isInGroup={false} />}
+          </Box>
         )}
-
-      </div>
+      </Box>
 
       {/* Sub Navigation Items */}
       {hasSubItems && (
-        <div
+        <Box
           id={`nav-subitems-${item.id}`}
-          className={cn(
-            'overflow-hidden transition-all duration-300 ease-in-out',
-            isExpanded ? 'max-h-80 opacity-100' : 'max-h-0 opacity-0'
-          )}
+          sx={{
+            overflow: 'hidden',
+            transition: 'all 0.3s ease-in-out',
+            maxHeight: isExpanded ? 320 : 0,
+            opacity: isExpanded ? 1 : 0
+          }}
         >
-          <div className="ml-4 mt-1 space-y-0.5 border-l border-border/20 pl-2">
-            {item.subItems!.map((subItem) => {
-              const isSubActive = isActiveSubItem?.(subItem) || false
-              
-              return (
-                <Link
-                  key={subItem.href}
-                  to={subItem.href}
-                  onClick={() => handleSubItemClick(subItem)}
-                  className={cn(
-                    'flex items-center justify-between px-2 py-1.5 rounded text-xs',
-                    'focus:outline-none focus:ring-1 focus:ring-primary/30',
-                    isSubActive
-                      ? 'bg-primary text-white font-medium'
-                      : 'text-muted-foreground hover:text-white hover:bg-primary'
-                  )}
-                  title={`${subItem.label}${subItem.count !== undefined ? ` (${subItem.count})` : ''}`}
-                >
-                  <span className="truncate">{subItem.label}</span>
-                  {subItem.count !== undefined && (
-                    <span className={cn(
-                      'ml-1 w-5 h-5 flex items-center justify-center text-xs rounded-full flex-shrink-0',
-                      isSubActive
-                        ? 'bg-white/20 text-white'
-                        : 'bg-muted/60 text-muted-foreground group-hover:bg-white/20 group-hover:text-white'
-                    )}>
-                      {subItem.count}
-                    </span>
-                  )}
-                </Link>
-              )
-            })}
-          </div>
-        </div>
+          <Box sx={{ ml: 2, mt: 0.5, display: 'flex', flexDirection: 'column', gap: 0.25, borderLeft: 1, borderColor: 'rgba(var(--border-rgb), 0.2)', pl: 1 }}>
+            {item.subItems!.map((subItem) => (
+              <SubNavigationItemLink
+                key={subItem.href}
+                subItem={subItem}
+                isActive={isActiveSubItem?.(subItem) || false}
+                onClick={() => handleSubItemClick(subItem)}
+              />
+            ))}
+          </Box>
+        </Box>
       )}
-    </div>
+    </Box>
   )
 })
 

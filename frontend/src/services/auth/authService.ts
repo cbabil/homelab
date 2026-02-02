@@ -8,7 +8,7 @@
 import type { LoginCredentials, User, LoginResponse, RegistrationCredentials, RegistrationResponse } from '@/types/auth'
 import type { JWTGenerationOptions } from '@/types/jwt'
 import { jwtService } from './jwtService'
-import { HomelabMCPClient } from '@/services/mcpClient'
+import { TomoMCPClient } from '@/services/mcpClient'
 
 const MCP_CONNECTION_ERROR_PATTERNS = [
   'failed to connect to mcp server',
@@ -20,7 +20,7 @@ const MCP_CONNECTION_ERROR_PATTERNS = [
 
 class AuthService {
   private isInitialized = false
-  private mcpClient: HomelabMCPClient
+  private mcpClient!: TomoMCPClient
   private offlineMode = false
 
   /**
@@ -30,7 +30,7 @@ class AuthService {
     if (!this.isInitialized) {
       await jwtService.initialize()
       const serverUrl = import.meta.env.VITE_MCP_SERVER_URL || '/mcp'
-      this.mcpClient = new HomelabMCPClient(serverUrl)
+      this.mcpClient = new TomoMCPClient(serverUrl)
 
       try {
         await this.mcpClient.connect()
@@ -90,7 +90,7 @@ class AuthService {
     const jwtOptions: JWTGenerationOptions = {
       userId: user.id,
       username: user.username,
-      email: user.email,
+      email: user.email || `${user.username}@tomo.local`,
       role: user.role,
       sessionId,
       userAgent,
@@ -134,7 +134,7 @@ class AuthService {
     const jwtOptions: JWTGenerationOptions = {
       userId: user.id,
       username: user.username,
-      email: user.email,
+      email: user.email || `${user.username}@tomo.local`,
       role: user.role,
       sessionId,
       userAgent,
@@ -235,22 +235,22 @@ class AuthService {
             try {
               const decodedToken = jwtService.decodeToken(token)
               username = decodedToken?.payload?.username || 'unknown'
-              console.log('🔐 Extracted username from token for logout:', username)
+              console.log('[AuthService] Extracted username from token for logout:', username)
             } catch (e) {
               console.warn('Could not extract username from token for logout logging:', e)
               if (fallbackUsername) {
                 username = fallbackUsername
-                console.log('🔄 Using fallback username for logout:', username)
+                console.log('[AuthService] Using fallback username for logout:', username)
               }
             }
           } else if (fallbackUsername) {
             username = fallbackUsername
-            console.log('🔄 Using fallback username for logout (no token):', username)
+            console.log('[AuthService] Using fallback username for logout (no token):', username)
           } else {
-            console.warn('⚠️ No token or fallback username provided for logout - cannot extract username')
+            console.warn('[AuthService] No token or fallback username provided for logout - cannot extract username')
           }
 
-          console.log('🚪 Calling backend logout with:', { session_id: sessionId, username: username !== 'unknown' ? username : undefined })
+          console.log('[AuthService] Calling backend logout with:', { session_id: sessionId, username: username !== 'unknown' ? username : undefined })
 
           const logoutResult = await this.mcpClient.callTool('logout', {
             session_id: sessionId,
@@ -263,22 +263,22 @@ class AuthService {
               this.offlineMode = true
               console.warn('MCP logout skipped due to connection issue', logoutResult.error)
             } else {
-              console.error('❌ Backend logout logging failed:', logoutResult.error)
+              console.error('[AuthService] Backend logout logging failed:', logoutResult.error)
             }
           } else {
-            console.log('✅ Backend logout response:', logoutResult)
+            console.log('[AuthService] Backend logout response:', logoutResult)
           }
         } catch (error) {
           if (this.isConnectionError(error)) {
             this.offlineMode = true
             console.warn('MCP logout skipped due to connection issue', error)
           } else {
-            console.error('❌ Backend logout logging failed:', error)
+            console.error('[AuthService] Backend logout logging failed:', error)
           }
           // Continue with logout even if backend logging fails
         }
       } else {
-        console.log('ℹ️ Skipping backend logout logging while offline')
+        console.log('[AuthService] Skipping backend logout logging while offline')
       }
 
       // Simulate logout delay
@@ -377,30 +377,52 @@ class AuthService {
       })
 
       if (!response.success) {
-        const errorMessage = response.error || 'Unknown MCP error'
+        const errorData = response.data as { message?: string } | undefined
+        const errorMessage = response.error || errorData?.message || 'Authentication failed'
         const wrappedError = new Error(errorMessage)
         if (this.isConnectionError(wrappedError)) {
           throw new Error(`MCP_CONNECTION_ERROR: ${errorMessage}`)
         }
-        throw new Error('Invalid username or password')
+        // Pass through the backend error message directly
+        throw new Error(errorMessage)
       }
 
       // MCP client already extracts structuredContent into response.data
       // The login tool returns { success: true, data: { user: {...} } }
-      const userData = response.data?.data?.user || response.data?.user
-
-      if (!userData) {
-        console.error('No user data in response:', response.data)
-        throw new Error('Invalid username or password')
+      interface BackendUser {
+        id?: string
+        username: string
+        email?: string
+        role?: string
+        is_active?: boolean
+        created_at?: string
+        preferences?: Record<string, unknown>
       }
 
-      const user = {
+      interface LoginToolResponse {
+        data?: { user: BackendUser }
+        user?: BackendUser
+      }
+
+      const typedData = response.data as LoginToolResponse
+      const userData = typedData?.data?.user || typedData?.user
+
+      if (!userData) {
+        // Pass through the backend error message directly
+        const errorData = response.data as { message?: string } | undefined
+        const errorMessage = errorData?.message || response.error || 'Authentication failed'
+        console.error('No user data in response:', response.data)
+        throw new Error(errorMessage)
+      }
+
+      const user: User = {
         id: userData.id || userData.username,
         username: userData.username,
-        email: userData.email || `${userData.username}@homelab.local`,
-        role: userData.role || 'user',
+        email: userData.email || `${userData.username}@tomo.local`,
+        role: (userData.role as 'admin' | 'user') || 'user',
         lastLogin: new Date().toISOString(),
         isActive: userData.is_active !== false,
+        createdAt: userData.created_at,
         preferences: userData.preferences || {}
       }
 
@@ -413,7 +435,11 @@ class AuthService {
       }
 
       console.error('Backend authentication error:', error)
-      throw new Error('Invalid username or password')
+      // Re-throw the original error message
+      if (error instanceof Error) {
+        throw error
+      }
+      throw new Error('Authentication failed')
     }
   }
 
@@ -473,7 +499,7 @@ class AuthService {
       lastLogin: new Date().toISOString(),
       isActive: true,
       preferences: {
-        theme: 'light', // Default preferences for new users
+        theme: 'dark', // Default preferences for new users
         notifications: true
       }
     }
@@ -499,7 +525,7 @@ class AuthService {
     await new Promise(resolve => setTimeout(resolve, 200))
     
     // Mock check - in production, query database
-    const existingEmails = ['admin@homelab.local', 'user@homelab.local', 'test@example.com']
+    const existingEmails = ['admin@tomo.local', 'user@tomo.local', 'test@example.com']
     return existingEmails.includes(email.toLowerCase())
   }
 

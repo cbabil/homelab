@@ -6,11 +6,13 @@
  */
 
 export { LoginPage } from './LoginPage'
+export { LoginPageWrapper } from './LoginPageWrapper'
 export { LoginForm } from './LoginForm'
 export { LoginFormFields } from './LoginFormFields'
 export { LoginFormMessages } from './LoginFormMessages'
 export { RegistrationPage } from './RegistrationPage'
 export { PrivacyPolicyPage } from './PrivacyPolicyPage'
 export { TermsOfServicePage } from './TermsOfServicePage'
+export { ForgotPasswordPage } from './ForgotPasswordPage'
 export { useLoginForm } from './useLoginForm'
 export * from './loginValidation'

@@ -1,0 +1,29 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: tomo
+Upstream-Contact: Christophe Babilotte <christophe@babilotte.com>
+Source: https://github.com/cbabil/tomo
+
+Files: *
+Copyright: 2024-2026 Christophe Babilotte
+License: Proprietary
+
+License: Proprietary
+ All rights reserved.
+ .
+ This software and associated documentation files (the "Software") are the
+ proprietary property of Christophe Babilotte.
+ .
+ No part of this Software may be reproduced, distributed, modified, or
+ transmitted in any form or by any means, including photocopying, recording,
+ or other electronic or mechanical methods, without the prior written
+ permission of the copyright holder.
+ .
+ THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ COPYRIGHT HOLDER BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY,
+ WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF
+ OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ SOFTWARE.
+ .
+ For licensing inquiries, contact: christophe@babilotte.com

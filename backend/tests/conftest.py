@@ -58,7 +58,8 @@ def sample_credentials():
 @pytest.fixture(autouse=True)
 def setup_test_env():
     """Set up test environment variables."""
-    os.environ["HOMELAB_MASTER_PASSWORD"] = "test_password"
-    os.environ["HOMELAB_SALT"] = "test_salt"
+    os.environ["TOMO_MASTER_PASSWORD"] = "test_password"
+    os.environ["TOMO_SALT"] = "test_salt"
+    os.environ["JWT_SECRET_KEY"] = "test_jwt_secret_key_for_testing_only_not_for_production_use"
     yield
     # Cleanup not needed as each test gets fresh environment

@@ -1,11 +1,11 @@
 /**
  * Info Item Component
- * 
+ *
  * Displays individual server information items with icon and label/value pairs.
  */
 
 import { type ComponentType } from 'react'
-import { cn } from '@/utils/cn'
+import { Box, Stack, Typography } from '@mui/material'
 
 interface InfoItemProps {
   icon: ComponentType<{ className?: string }>
@@ -23,16 +23,43 @@ export function InfoItem({ icon: Icon, label, value, className }: InfoItemProps)
     if (label.includes('Kernel')) return 'Kernel info unavailable'
     return 'Not available'
   }
-  
+
   return (
-    <div className={cn("flex items-center space-x-2", className)}>
-      <Icon className="h-3 w-3 text-muted-foreground flex-shrink-0" />
-      <div className="min-w-0 flex-1">
-        <p className="text-xs text-muted-foreground truncate">{label}</p>
-        <p className={cn("text-xs truncate", value ? "font-medium" : "font-normal text-muted-foreground italic")}>
+    <Stack
+      direction="row"
+      spacing={1.5}
+      alignItems="center"
+      className={className}
+    >
+      <Icon className="h-2.5 w-2.5 text-muted-foreground flex-shrink-0" />
+      <Box sx={{ minWidth: 0, flex: 1 }}>
+        <Typography
+          sx={{
+            fontSize: 10,
+            color: 'text.secondary',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            lineHeight: 1
+          }}
+        >
+          {label}
+        </Typography>
+        <Typography
+          sx={{
+            fontSize: 10,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            lineHeight: 1.2,
+            fontWeight: value ? 500 : 400,
+            color: value ? 'text.primary' : 'text.secondary',
+            fontStyle: value ? 'normal' : 'italic'
+          }}
+        >
           {value || getNotAvailableMessage(label)}
-        </p>
-      </div>
-    </div>
+        </Typography>
+      </Box>
+    </Stack>
   )
 }

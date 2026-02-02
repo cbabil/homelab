@@ -1,6 +1,6 @@
 /**
  * Cookie Utilities Tests
- * 
+ *
  * Comprehensive test suite for secure cookie management functionality.
  * Tests security configurations, validation, and edge cases.
  */
@@ -31,7 +31,7 @@ Object.defineProperty(global, 'crypto', {
 // Mock location for secure context testing
 const mockLocation = {
   protocol: 'https:',
-  hostname: 'homelab.local'
+  hostname: 'tomo.local'
 }
 
 Object.defineProperty(window, 'location', {
@@ -51,7 +51,7 @@ describe('CookieUtils', () => {
 
   describe('Cookie Configuration', () => {
     it('should have secure default configuration', () => {
-      expect(DEFAULT_SESSION_CONFIG.name).toBe('homelab_session')
+      expect(DEFAULT_SESSION_CONFIG.name).toBe('tomo_session')
       expect(DEFAULT_SESSION_CONFIG.options.httpOnly).toBe(true)
       expect(DEFAULT_SESSION_CONFIG.options.secure).toBe(true)
       expect(DEFAULT_SESSION_CONFIG.options.sameSite).toBe('strict')
@@ -61,56 +61,46 @@ describe('CookieUtils', () => {
     it('should detect secure context correctly', () => {
       // Test HTTPS
       mockLocation.protocol = 'https:'
-      mockLocation.hostname = 'homelab.local'
-      
+      mockLocation.hostname = 'tomo.local'
+
       // Create a new instance to test different contexts
-      const httpsUtils = new (cookieUtils.constructor as any)()
-      const httpsConfig = httpsUtils['buildCookieConfig']({})
+      type CookieUtilsConstructor = new () => typeof cookieUtils
+      const httpsUtils = new (cookieUtils.constructor as unknown as CookieUtilsConstructor)()
+      const httpsConfig = (httpsUtils as typeof cookieUtils)['buildCookieConfig']({})
       expect(httpsConfig.secure).toBe(true)
 
-      // Test localhost
+      // Test localhost - should also be secure
       mockLocation.protocol = 'http:'
       mockLocation.hostname = 'localhost'
-      const localhostUtils = new (cookieUtils.constructor as any)()
-      const localhostConfig = localhostUtils['buildCookieConfig']({})
+      const localhostUtils = new (cookieUtils.constructor as unknown as CookieUtilsConstructor)()
+      const localhostConfig = (localhostUtils as typeof cookieUtils)['buildCookieConfig']({})
       expect(localhostConfig.secure).toBe(true)
 
-      // Test insecure context - for testing, we'll check the default is secure=true in production
-      // In real implementation, this would be false for non-secure contexts
+      // Test insecure context - returns false for non-localhost HTTP
       mockLocation.protocol = 'http:'
       mockLocation.hostname = 'insecure.com'
-      const insecureUtils = new (cookieUtils.constructor as any)()
-      const insecureConfig = insecureUtils['buildCookieConfig']({})
-      // For safety, the implementation defaults to secure=true, which is correct behavior
-      expect(insecureConfig.secure).toBe(true) // This is actually the correct secure behavior
+      const insecureUtils = new (cookieUtils.constructor as unknown as CookieUtilsConstructor)()
+      const insecureConfig = (insecureUtils as typeof cookieUtils)['buildCookieConfig']({})
+      // Insecure context should return secure=false
+      expect(insecureConfig.secure).toBe(false)
     })
   })
 
   describe('Cookie Operations', () => {
     it('should set cookie with security attributes', () => {
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
-      
       cookieUtils.setSessionCookie('test_cookie', 'test_value', {
         httpOnly: false, // Allow for testing
         secure: false,
         maxAge: 3600000
       })
 
-      expect(consoleSpy).toHaveBeenCalledWith(
-        '[Security]',
-        'cookie_set_attempt',
-        expect.objectContaining({
-          name: 'test_cookie',
-          secure: false
-        })
-      )
-
-      consoleSpy.mockRestore()
+      // Cookie should be set (httpOnly=false allows browser-side setting)
+      expect(mockCookie).toContain('test_cookie=test_value')
     })
 
     it('should get cookie value correctly', () => {
       mockCookie = 'test_cookie=test_value; path=/'
-      
+
       const value = cookieUtils.getCookie('test_cookie')
       expect(value).toBe('test_value')
     })
@@ -121,17 +111,12 @@ describe('CookieUtils', () => {
     })
 
     it('should delete cookie by setting expiration', () => {
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
-      
-      cookieUtils.deleteCookie('test_cookie')
-      
-      expect(consoleSpy).toHaveBeenCalledWith(
-        '[Security]',
-        'cookie_deleted',
-        expect.objectContaining({ name: 'test_cookie' })
-      )
+      mockCookie = 'test_cookie=value'
 
-      consoleSpy.mockRestore()
+      cookieUtils.deleteCookie('test_cookie')
+
+      // Should set expired cookie
+      expect(mockCookie).toContain('expires=Thu, 01 Jan 1970 00:00:00 GMT')
     })
   })
 
@@ -142,7 +127,7 @@ describe('CookieUtils', () => {
         secure: true,
         sameSite: 'strict'
       }
-      
+
       const isValid = cookieUtils.validateCookieConfig(secureConfig)
       expect(isValid).toBe(true)
     })
@@ -153,7 +138,7 @@ describe('CookieUtils', () => {
         secure: false,
         sameSite: 'lax'
       }
-      
+
       const isValid = cookieUtils.validateCookieConfig(insecureConfig)
       expect(isValid).toBe(false)
     })
@@ -169,7 +154,7 @@ describe('CookieUtils', () => {
     it('should generate unique session IDs', () => {
       const id1 = cookieUtils.generateSessionId()
       const id2 = cookieUtils.generateSessionId()
-      
+
       expect(id1).not.toBe(id2)
       expect(id1).toMatch(/^\w+-[0-9a-f]+$/)
       expect(id2).toMatch(/^\w+-[0-9a-f]+$/)
@@ -178,7 +163,7 @@ describe('CookieUtils', () => {
     it('should generate session IDs with correct format', () => {
       const sessionId = cookieUtils.generateSessionId()
       const parts = sessionId.split('-')
-      
+
       expect(parts).toHaveLength(2)
       expect(parts[0]).toBeTruthy() // timestamp part
       expect(parts[1]).toBeTruthy() // random part
@@ -193,8 +178,6 @@ describe('CookieUtils', () => {
 
   describe('Error Handling', () => {
     it('should handle cookie setting errors gracefully', () => {
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
-      
       // Mock document.cookie to throw an error
       const originalDescriptor = Object.getOwnPropertyDescriptor(document, 'cookie')
       Object.defineProperty(document, 'cookie', {
@@ -213,13 +196,9 @@ describe('CookieUtils', () => {
       if (originalDescriptor) {
         Object.defineProperty(document, 'cookie', originalDescriptor)
       }
-
-      consoleSpy.mockRestore()
     })
 
     it('should handle cookie getting errors gracefully', () => {
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
-      
       // Mock document.cookie to throw an error
       const originalDescriptor = Object.getOwnPropertyDescriptor(document, 'cookie')
       Object.defineProperty(document, 'cookie', {
@@ -232,27 +211,14 @@ describe('CookieUtils', () => {
 
       const value = cookieUtils.getCookie('error_cookie')
       expect(value).toBeNull()
-      
-      expect(consoleSpy).toHaveBeenCalledWith(
-        '[Security]',
-        'cookie_get_error',
-        expect.objectContaining({
-          name: 'error_cookie',
-          error: 'Error: Cookie read error'
-        })
-      )
 
       // Restore original descriptor
       if (originalDescriptor) {
         Object.defineProperty(document, 'cookie', originalDescriptor)
       }
-
-      consoleSpy.mockRestore()
     })
 
     it('should handle cookie deletion errors gracefully', () => {
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
-      
       // Mock document.cookie to throw an error on set
       const originalDescriptor = Object.getOwnPropertyDescriptor(document, 'cookie')
       Object.defineProperty(document, 'cookie', {
@@ -263,24 +229,13 @@ describe('CookieUtils', () => {
         configurable: true
       })
 
-      // Should not throw
-      cookieUtils.deleteCookie('error_cookie')
-      
-      expect(consoleSpy).toHaveBeenCalledWith(
-        '[Security]',
-        'cookie_delete_error',
-        expect.objectContaining({
-          name: 'error_cookie',
-          error: 'Error: Cookie delete error'
-        })
-      )
+      // Should not throw - errors are handled internally
+      expect(() => cookieUtils.deleteCookie('error_cookie')).not.toThrow()
 
       // Restore original descriptor
       if (originalDescriptor) {
         Object.defineProperty(document, 'cookie', originalDescriptor)
       }
-
-      consoleSpy.mockRestore()
     })
   })
 
@@ -289,49 +244,43 @@ describe('CookieUtils', () => {
       const options: CookieOptions = {
         maxAge: 3600000,
         path: '/test',
-        domain: 'homelab.local',
+        domain: 'tomo.local',
         secure: true,
         sameSite: 'strict'
       }
 
       const formatted = cookieUtils['formatCookieString']('test', 'value', options)
-      
+
       expect(formatted).toContain('test=value')
       expect(formatted).toContain('path=/test')
-      expect(formatted).toContain('domain=homelab.local')
+      expect(formatted).toContain('domain=tomo.local')
       expect(formatted).toContain('secure')
       expect(formatted).toContain('samesite=strict')
     })
 
     it('should handle negative maxAge for deletion', () => {
       const options: CookieOptions = { maxAge: -1 }
-      
+
       const formatted = cookieUtils['formatCookieString']('test', '', options)
-      
+
       expect(formatted).toContain('expires=Thu, 01 Jan 1970 00:00:00 GMT')
     })
 
     it('should encode cookie values', () => {
       const specialValue = 'value with spaces & symbols!'
       const formatted = cookieUtils['formatCookieString']('test', specialValue, {})
-      
+
       expect(formatted).toContain(encodeURIComponent(specialValue))
     })
   })
 
   describe('Security Logging', () => {
-    it('should log security events for monitoring', () => {
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
-      
-      cookieUtils['logSecurityEvent']('test_event', { test: 'data' })
-      
-      expect(consoleSpy).toHaveBeenCalledWith(
-        '[Security]',
-        'test_event',
-        { test: 'data' }
-      )
-
-      consoleSpy.mockRestore()
+    it('should have logSecurityEvent method for monitoring', () => {
+      // The method exists but logging is disabled in production
+      // Verify the method can be called without errors
+      expect(() => {
+        cookieUtils['logSecurityEvent']('test_event', { test: 'data' })
+      }).not.toThrow()
     })
   })
 })

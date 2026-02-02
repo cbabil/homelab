@@ -5,16 +5,15 @@ Provides secure data cleanup operations with comprehensive audit logging,
 transaction safety, and mandatory security controls for data deletion.
 """
 
-import json
 import uuid
 from datetime import UTC, datetime, timedelta
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 import structlog
 from models.retention import (
-    DataRetentionSettings, CleanupRequest, CleanupResult, CleanupPreview,
+    RetentionSettings, CleanupRequest, CleanupResult, CleanupPreview,
     RetentionOperation, RetentionType, RetentionAuditEntry, SecurityValidationResult
 )
-from models.auth import User, UserRole
+from models.auth import UserRole
 from models.log import LogEntry
 from services.database_service import DatabaseService
 from services.auth_service import AuthService
@@ -138,25 +137,42 @@ class RetentionService:
         except Exception as e:
             logger.error("Failed to log retention operation", error=str(e))
 
-    async def get_retention_settings(self, user_id: str) -> Optional[DataRetentionSettings]:
-        """Get current retention settings for user."""
+    async def get_retention_settings(self, user_id: str) -> Optional[RetentionSettings]:
+        """Get current system-wide retention settings from database.
+
+        Returns simplified settings with log_retention and data_retention integers.
+        Uses access_log_retention as the representative log value and
+        metrics_retention as the representative data value.
+        """
         try:
-            user = await self.db_service.get_user_by_id(user_id)
-            if not user or not user.preferences:
-                return DataRetentionSettings()
+            async with self.db_service.get_connection() as conn:
+                cursor = await conn.execute(
+                    "SELECT * FROM retention_settings WHERE id = 'system'"
+                )
+                row = await cursor.fetchone()
 
-            retention_data = user.preferences.get('retention_settings', {})
-            if not retention_data:
-                return DataRetentionSettings()
+            if not row:
+                return RetentionSettings()
 
-            return DataRetentionSettings(**retention_data)
+            # Use access_log_retention as representative for all logs
+            # Use metrics_retention as representative for all data
+            return RetentionSettings(
+                log_retention=row["access_log_retention"],
+                data_retention=row["metrics_retention"],
+                last_updated=row["last_updated"],
+                updated_by_user_id=row["updated_by_user_id"],
+            )
 
         except Exception as e:
-            logger.error("Failed to get retention settings", user_id=user_id, error=str(e))
-            return DataRetentionSettings()
+            logger.error("Failed to get retention settings", error=str(e))
+            return RetentionSettings()
 
-    async def update_retention_settings(self, user_id: str, settings: DataRetentionSettings) -> bool:
-        """Update retention settings for user with validation."""
+    async def update_retention_settings(self, user_id: str, settings: RetentionSettings) -> bool:
+        """Update system-wide retention settings in database.
+
+        Applies log_retention to all log columns (audit, access, application, server).
+        Applies data_retention to all data columns (metrics, notification, session).
+        """
         try:
             # Get user and verify admin role
             user = await self.db_service.get_user_by_id(user_id)
@@ -164,19 +180,33 @@ class RetentionService:
                 logger.error("Unauthorized retention settings update", user_id=user_id)
                 return False
 
-            # Update settings with timestamp and user tracking
-            settings.last_updated = datetime.now(UTC).isoformat()
-            settings.updated_by_user_id = user_id
+            now = datetime.now(UTC).isoformat()
 
-            # Update user preferences
-            preferences = user.preferences or {}
-            preferences['retention_settings'] = settings.model_dump()
-
-            # Save to database
+            # Update database - apply single values to all columns in each category
             async with self.db_service.get_connection() as conn:
                 await conn.execute(
-                    "UPDATE users SET preferences_json = ? WHERE id = ?",
-                    (json.dumps(preferences), user_id)
+                    """UPDATE retention_settings SET
+                        audit_log_retention = ?,
+                        access_log_retention = ?,
+                        application_log_retention = ?,
+                        server_log_retention = ?,
+                        metrics_retention = ?,
+                        notification_retention = ?,
+                        session_retention = ?,
+                        last_updated = ?,
+                        updated_by_user_id = ?
+                    WHERE id = 'system'""",
+                    (
+                        settings.log_retention,  # All log types get same value
+                        settings.log_retention,
+                        settings.log_retention,
+                        settings.log_retention,
+                        settings.data_retention,  # All data types get same value
+                        settings.data_retention,
+                        settings.data_retention,
+                        now,
+                        user_id,
+                    )
                 )
                 await conn.commit()
 
@@ -188,7 +218,9 @@ class RetentionService:
                 metadata={"settings": settings.model_dump()}
             )
 
-            logger.info("Retention settings updated", user_id=user_id)
+            logger.info("Retention settings updated", user_id=user_id,
+                       log_retention=settings.log_retention,
+                       data_retention=settings.data_retention)
             return True
 
         except Exception as e:
@@ -349,19 +381,29 @@ class RetentionService:
             return self._create_error_result(operation_id, request, start_time,
                                            request.admin_user_id, str(e))
 
-    def _calculate_cutoff_date(self, retention_type: RetentionType, settings: DataRetentionSettings) -> Optional[str]:
-        """Calculate cutoff date based on retention type and settings."""
+    def _calculate_cutoff_date(self, retention_type: RetentionType, settings: RetentionSettings) -> Optional[str]:
+        """Calculate cutoff date based on retention type and settings.
+
+        Uses log_retention for all log types and data_retention for all data types.
+        """
         try:
             now = datetime.now(UTC)
 
-            if retention_type == RetentionType.LOGS:
-                cutoff = now - timedelta(days=settings.log_retention_days)
-            elif retention_type == RetentionType.USER_DATA:
-                cutoff = now - timedelta(days=settings.user_data_retention_days)
-            elif retention_type == RetentionType.METRICS:
-                cutoff = now - timedelta(days=settings.metrics_retention_days)
-            elif retention_type == RetentionType.AUDIT_LOGS:
-                cutoff = now - timedelta(days=settings.audit_log_retention_days)
+            # Log retention types - all use log_retention value
+            if retention_type in (
+                RetentionType.AUDIT_LOGS,
+                RetentionType.ACCESS_LOGS,
+                RetentionType.APPLICATION_LOGS,
+                RetentionType.SERVER_LOGS
+            ):
+                cutoff = now - timedelta(days=settings.log_retention)
+            # Data retention types - all use data_retention value
+            elif retention_type in (
+                RetentionType.METRICS,
+                RetentionType.NOTIFICATIONS,
+                RetentionType.SESSIONS
+            ):
+                cutoff = now - timedelta(days=settings.data_retention)
             else:
                 return None
 
@@ -373,15 +415,21 @@ class RetentionService:
     async def _preview_records_for_deletion(self, retention_type: RetentionType, cutoff_date: str) -> Optional[CleanupPreview]:
         """Preview records that would be deleted without performing deletion."""
         try:
-            if retention_type == RetentionType.LOGS:
-                return await self._preview_log_deletion(cutoff_date)
+            # All log types share the same preview logic
+            if retention_type in (
+                RetentionType.AUDIT_LOGS,
+                RetentionType.ACCESS_LOGS,
+                RetentionType.APPLICATION_LOGS,
+                RetentionType.SERVER_LOGS
+            ):
+                return await self._preview_log_deletion(retention_type, cutoff_date)
             # Add other retention types as needed
             return None
         except Exception as e:
             logger.error("Failed to preview records", retention_type=retention_type, error=str(e))
             return None
 
-    async def _preview_log_deletion(self, cutoff_date: str) -> Optional[CleanupPreview]:
+    async def _preview_log_deletion(self, retention_type: RetentionType, cutoff_date: str) -> Optional[CleanupPreview]:
         """Preview log entries that would be deleted."""
         try:
             async with self.db_service.get_connection() as conn:
@@ -395,7 +443,7 @@ class RetentionService:
 
                 if affected_records == 0:
                     return CleanupPreview(
-                        retention_type=RetentionType.LOGS,
+                        retention_type=retention_type,
                         affected_records=0,
                         cutoff_date=cutoff_date
                     )
@@ -414,7 +462,7 @@ class RetentionService:
                 estimated_space_mb = affected_records * 0.001  # ~1KB per log entry
 
                 return CleanupPreview(
-                    retention_type=RetentionType.LOGS,
+                    retention_type=retention_type,
                     affected_records=affected_records,
                     oldest_record_date=date_result['oldest'] if date_result else None,
                     newest_record_date=date_result['newest'] if date_result else None,
@@ -432,7 +480,13 @@ class RetentionService:
         estimated_space_freed = 0.0
 
         try:
-            if retention_type == RetentionType.LOGS:
+            # All log types share the same deletion logic
+            if retention_type in (
+                RetentionType.AUDIT_LOGS,
+                RetentionType.ACCESS_LOGS,
+                RetentionType.APPLICATION_LOGS,
+                RetentionType.SERVER_LOGS
+            ):
                 total_deleted, estimated_space_freed = await self._delete_logs_batch(cutoff_date, batch_size)
 
             logger.info("Secure deletion completed", retention_type=retention_type,

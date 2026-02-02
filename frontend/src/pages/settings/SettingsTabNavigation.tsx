@@ -2,35 +2,13 @@
  * Settings Tab Navigation Component
  *
  * Tab navigation for switching between different settings sections.
+ * Uses the same styling pattern as the TabNavigation component.
  */
 
-import { Server, Monitor, Shield, Bell } from 'lucide-react'
-import { cn } from '@/utils/cn'
-import { Tab } from './types'
-import { Button } from '@/components/ui/Button'
-
-const tabs: Tab[] = [
-  {
-    id: 'general',
-    label: 'General',
-    icon: Monitor
-  },
-  {
-    id: 'security',
-    label: 'Security',
-    icon: Shield
-  },
-  {
-    id: 'notifications',
-    label: 'Notifications',
-    icon: Bell
-  },
-  {
-    id: 'servers',
-    label: 'Servers',
-    icon: Server
-  }
-]
+import { useTranslation } from 'react-i18next'
+import { Server, Monitor, Shield, Bell, Cog } from 'lucide-react'
+import { ToggleButtonGroup, ToggleButton } from '@mui/material'
+import type { Tab } from './types'
 
 interface SettingsTabNavigationProps {
   activeTab: string
@@ -38,25 +16,73 @@ interface SettingsTabNavigationProps {
 }
 
 export function SettingsTabNavigation({ activeTab, onTabChange }: SettingsTabNavigationProps) {
+  const { t } = useTranslation()
+
+  const tabs: Tab[] = [
+    {
+      id: 'general',
+      label: t('settings.general'),
+      icon: Monitor
+    },
+    {
+      id: 'system',
+      label: t('settings.system'),
+      icon: Cog
+    },
+    {
+      id: 'security',
+      label: t('settings.security'),
+      icon: Shield
+    },
+    {
+      id: 'notifications',
+      label: t('settings.notifications'),
+      icon: Bell
+    },
+    {
+      id: 'servers',
+      label: t('settings.servers'),
+      icon: Server
+    }
+  ]
+
   return (
-    <div className="flex space-x-1 bg-muted p-1 rounded-lg w-fit flex-shrink-0">
+    <ToggleButtonGroup
+      value={activeTab}
+      exclusive
+      onChange={(_e, value) => value && onTabChange(value)}
+      size="small"
+      sx={{ gap: 0.5 }}
+    >
       {tabs.map((tab) => {
         const Icon = tab.icon
+        const isActive = activeTab === tab.id
         return (
-          <Button
+          <ToggleButton
             key={tab.id}
-            variant="ghost"
-            size="sm"
-            onClick={() => onTabChange(tab.id)}
-            className={cn(
-              activeTab === tab.id && 'bg-background shadow-sm text-primary'
-            )}
-            leftIcon={<Icon className="h-4 w-4" />}
+            value={tab.id}
+            disableRipple
+            disableFocusRipple
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1,
+              px: 2,
+              py: 1,
+              border: 'none !important',
+              borderRadius: 1,
+              textTransform: 'none',
+              transition: 'none !important',
+              bgcolor: 'transparent !important',
+              color: isActive ? 'text.primary' : 'text.secondary',
+              fontWeight: isActive ? 600 : 400
+            }}
           >
-            {tab.label}
-          </Button>
+            <Icon style={{ width: 14, height: 14 }} />
+            <span>{tab.label}</span>
+          </ToggleButton>
         )
       })}
-    </div>
+    </ToggleButtonGroup>
   )
 }

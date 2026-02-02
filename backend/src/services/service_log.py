@@ -5,8 +5,7 @@ Provides CRUD operations for log entries using SQLAlchemy and SQLite.
 Handles log creation, retrieval, filtering, and database persistence.
 """
 
-from typing import List, Optional, Dict, Any
-from datetime import datetime
+from typing import List, Optional
 from sqlalchemy import select, func, desc, delete
 from sqlalchemy.exc import SQLAlchemyError
 from database.connection import db_manager
@@ -107,6 +106,30 @@ class LogService:
                     
         except SQLAlchemyError as e:
             logger.error("Failed to retrieve log entry", log_id=log_id, error=str(e))
+            raise
+
+    async def count_logs(self, filters: Optional[LogFilter] = None) -> int:
+        """Count logs with optional filtering (without limit/offset)."""
+        await self._ensure_initialized()
+
+        try:
+            async with db_manager.get_session() as session:
+                query = select(func.count()).select_from(LogEntryTable)
+
+                if filters:
+                    if filters.level:
+                        query = query.where(LogEntryTable.level == filters.level)
+                    if filters.source:
+                        query = query.where(LogEntryTable.source == filters.source)
+
+                result = await session.execute(query)
+                count = result.scalar_one()
+
+            logger.debug("Log count retrieved", count=count, filters=filters)
+            return count
+
+        except SQLAlchemyError as e:
+            logger.error("Failed to count logs", error=str(e))
             raise
 
     async def purge_logs(self) -> int:

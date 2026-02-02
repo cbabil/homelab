@@ -1,0 +1,51 @@
+[Unit]
+Description=Tomo - Infrastructure Management Server
+Documentation=https://github.com/cbabil/tomo
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=tomo
+Group=tomo
+WorkingDirectory=/opt/tomo
+
+# Environment
+Environment=PYTHONPATH=/opt/tomo
+Environment=DATA_DIRECTORY=/var/lib/tomo
+Environment=LOG_DIRECTORY=/var/log/tomo
+Environment=CONFIG_FILE=/etc/tomo/config.yaml
+Environment=PYTHONUNBUFFERED=1
+
+# Start command using virtual environment
+ExecStart=/opt/tomo/venv/bin/python /opt/tomo/main.py
+ExecReload=/bin/kill -HUP $MAINPID
+
+# Restart policy
+Restart=always
+RestartSec=5
+TimeoutStartSec=30
+TimeoutStopSec=30
+
+# Security hardening
+NoNewPrivileges=yes
+ProtectSystem=strict
+ProtectHome=yes
+PrivateTmp=yes
+PrivateDevices=yes
+ProtectKernelTunables=yes
+ProtectKernelModules=yes
+ProtectControlGroups=yes
+RestrictRealtime=yes
+RestrictSUIDSGID=yes
+
+# Allow write access to data and log directories
+ReadWritePaths=/var/lib/tomo
+ReadWritePaths=/var/log/tomo
+
+# Limit resources
+MemoryMax=512M
+TasksMax=100
+
+[Install]
+WantedBy=multi-user.target

@@ -1,6 +1,6 @@
 /**
  * Vitest Test Setup
- * 
+ *
  * Global test configuration and utilities.
  * Includes DOM testing library setup and custom matchers.
  */
@@ -9,27 +9,70 @@ import '@testing-library/jest-dom'
 import { cleanup } from '@testing-library/react'
 import { afterEach, beforeAll, afterAll, vi } from 'vitest'
 import { server } from './mocks/server'
+import i18n from 'i18next'
+import { initReactI18next } from 'react-i18next'
+import enTranslations from '../i18n/locales/en.json'
+
+// Initialize i18n for tests with actual translations
+i18n
+  .use(initReactI18next)
+  .init({
+    lng: 'en',
+    fallbackLng: 'en',
+    ns: ['translation'],
+    defaultNS: 'translation',
+    interpolation: {
+      escapeValue: false
+    },
+    resources: {
+      en: {
+        translation: enTranslations
+      }
+    }
+  })
 
 // Mock authentication services globally
 vi.mock('@/services/settingsService', () => ({
   settingsService: {
     initialize: vi.fn().mockResolvedValue(undefined),
-    getSettings: vi.fn().mockReturnValue({}),
-    updateSettings: vi.fn().mockResolvedValue(undefined)
+    getSettings: vi.fn().mockReturnValue({
+      security: {
+        session: {
+          timeout: 60,
+          showWarningMinutes: 5
+        }
+      }
+    }),
+    updateSettings: vi.fn().mockResolvedValue(undefined),
+    getSessionTimeoutMs: vi.fn().mockReturnValue(3600000)
   }
 }))
 
 vi.mock('@/services/auth/sessionService', () => ({
   sessionService: {
+    initialize: vi.fn().mockResolvedValue(undefined),
     validateSession: vi.fn().mockResolvedValue({
       isValid: false,
       metadata: null
     }),
-    createSession: vi.fn().mockResolvedValue(undefined),
+    createSession: vi.fn().mockResolvedValue({
+      sessionId: 'test-session-id',
+      userId: 'test-user',
+      userAgent: 'Test Agent',
+      ipAddress: '127.0.0.1',
+      startTime: new Date().toISOString(),
+      lastActivity: new Date().toISOString(),
+      expiryTime: new Date(Date.now() + 3600000).toISOString()
+    }),
     clearSession: vi.fn().mockResolvedValue(undefined),
     destroySession: vi.fn().mockResolvedValue(undefined),
     refreshSession: vi.fn().mockResolvedValue({ success: false }),
-    renewSession: vi.fn().mockResolvedValue({ success: false })
+    renewSession: vi.fn().mockResolvedValue({ success: false }),
+    getCurrentSession: vi.fn().mockReturnValue(null),
+    getSessionMetadata: vi.fn().mockReturnValue(null),
+    isSessionValid: vi.fn().mockReturnValue(false),
+    getTimeToExpiry: vi.fn().mockReturnValue(3600000),
+    recordActivity: vi.fn()
   }
 }))
 
@@ -42,7 +85,7 @@ vi.mock('@/services/auth/authService', () => ({
 }))
 
 vi.mock('@/services/mcpClient', () => ({
-  HomelabMCPClient: vi.fn().mockImplementation(() => ({
+  TomoMCPClient: vi.fn().mockImplementation(() => ({
     connect: vi.fn().mockResolvedValue(undefined),
     disconnect: vi.fn().mockResolvedValue(undefined),
     isConnected: vi.fn().mockReturnValue(false)
@@ -80,28 +123,30 @@ Object.defineProperty(window, 'matchMedia', {
 global.IntersectionObserver = class IntersectionObserver {
   root = null
   rootMargin = ''
-  thresholds = []
+  thresholds: readonly number[] = []
 
-  constructor() {}
+  constructor(_callback: IntersectionObserverCallback, _options?: IntersectionObserverInit) {}
   observe() { return null }
   disconnect() { return null }
   unobserve() { return null }
-  takeRecords() { return [] }
-} as any
+  takeRecords(): IntersectionObserverEntry[] { return [] }
+} as unknown as typeof IntersectionObserver
 
 // Mock IndexedDB for authentication services
-class MockIDBRequest {
-  result: any = null
-  error: any = null
-  readyState: string = 'pending'
-  private listeners: { [key: string]: Function[] } = {}
+type EventListener = (event: { type: string }) => void
 
-  addEventListener(type: string, listener: Function) {
+class MockIDBRequest {
+  result: unknown = null
+  error: unknown = null
+  readyState: string = 'pending'
+  private listeners: { [key: string]: EventListener[] } = {}
+
+  addEventListener(type: string, listener: EventListener) {
     if (!this.listeners[type]) this.listeners[type] = []
     this.listeners[type].push(listener)
   }
 
-  removeEventListener(type: string, listener: Function) {
+  removeEventListener(type: string, listener: EventListener) {
     if (this.listeners[type]) {
       this.listeners[type] = this.listeners[type].filter(l => l !== listener)
     }
@@ -113,13 +158,13 @@ class MockIDBRequest {
     }
   }
 
-  succeed(result: any) {
+  succeed(result: unknown) {
     this.result = result
     this.readyState = 'done'
     setTimeout(() => this.dispatchEvent({ type: 'success' }), 0)
   }
 
-  fail(error: any) {
+  fail(error: unknown) {
     this.error = error
     this.readyState = 'done'
     setTimeout(() => this.dispatchEvent({ type: 'error' }), 0)
@@ -200,9 +245,11 @@ if (!global.crypto) {
         encrypt: () => Promise.resolve(new ArrayBuffer(32)),
         decrypt: () => Promise.resolve(new ArrayBuffer(32))
       },
-      getRandomValues: (arr: any) => {
-        for (let i = 0; i < arr.length; i++) {
-          arr[i] = Math.floor(Math.random() * 256)
+      getRandomValues: <T extends ArrayBufferView | null>(arr: T): T => {
+        if (arr && 'length' in arr) {
+          for (let i = 0; i < (arr as unknown as ArrayLike<number>).length; i++) {
+            (arr as unknown as number[])[i] = Math.floor(Math.random() * 256)
+          }
         }
         return arr
       }

@@ -5,9 +5,7 @@ Defines authentication and user management data models using Pydantic.
 Matches frontend TypeScript interfaces for consistency.
 """
 
-import re
-from datetime import datetime
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 from enum import Enum
 from pydantic import BaseModel, Field, EmailStr, model_validator, field_validator
 
@@ -28,11 +26,15 @@ class User(BaseModel):
     """User model representing authenticated user data."""
     id: str = Field(..., description="Unique user identifier")
     username: str = Field(..., min_length=3, max_length=50, description="Username")
-    email: str = Field(..., description="User email address")  # Allow local domains for homelab
+    email: str = Field(..., description="User email address")  # Allow local domains for tomo
     role: UserRole = Field(default=UserRole.USER, description="User role")
     last_login: str = Field(..., description="Last login timestamp")
+    password_changed_at: Optional[str] = Field(None, description="Password last changed timestamp")
     is_active: bool = Field(default=True, description="Account active status")
     preferences: Optional[Dict[str, Any]] = Field(None, description="User preferences")
+    avatar: Optional[str] = Field(None, description="User avatar as base64 data URL")
+    created_at: Optional[str] = Field(None, description="Account creation timestamp")
+    updated_at: Optional[str] = Field(None, description="Account last updated timestamp")
 
 
 class LoginCredentials(BaseModel):
@@ -43,31 +45,22 @@ class LoginCredentials(BaseModel):
 
 
 class RegistrationCredentials(BaseModel):
-    """Registration credentials for new user creation."""
+    """Registration credentials for new user creation.
+
+    Password validation is done at the service layer using settings to support
+    both NIST SP 800-63B-4 mode and legacy complexity mode.
+    Basic length validation is kept here for safety.
+    """
     username: str = Field(..., min_length=3, max_length=50, description="Username")
     email: EmailStr = Field(..., description="Email address")
-    password: str = Field(..., min_length=12, max_length=128, description="Password")
+    password: str = Field(..., min_length=8, max_length=128, description="Password")
     confirm_password: str = Field(..., description="Password confirmation")
     role: Optional[UserRole] = Field(UserRole.USER, description="User role")
     accept_terms: bool = Field(..., description="Terms acceptance")
 
-    @field_validator('password')
-    @classmethod
-    def validate_password_strength(cls, v: str) -> str:
-        """Validate password meets complexity requirements."""
-        if len(v) < 12:
-            raise ValueError('Password must be at least 12 characters')
-        if len(v) > 128:
-            raise ValueError('Password must be at most 128 characters')
-        if not re.search(r'[A-Z]', v):
-            raise ValueError('Password must contain at least one uppercase letter')
-        if not re.search(r'[a-z]', v):
-            raise ValueError('Password must contain at least one lowercase letter')
-        if not re.search(r'\d', v):
-            raise ValueError('Password must contain at least one digit')
-        if not re.search(r'[!@#$%^&*(),.?":{}|<>\-_=+\[\]\\;\'`~]', v):
-            raise ValueError('Password must contain at least one special character')
-        return v
+    # Note: Password length validation is handled by Field(min_length=8, max_length=128)
+    # Complexity requirements are validated at service layer for NIST SP 800-63B-4 compliance
+    # In NIST mode, complexity rules SHALL NOT be imposed
 
     @model_validator(mode="after")
     def passwords_match(cls, values: "RegistrationCredentials") -> "RegistrationCredentials":

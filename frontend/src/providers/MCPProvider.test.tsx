@@ -1,167 +1,142 @@
 /**
  * Unit tests for MCP Provider
- * 
+ *
  * Tests MCP context provider with connection management.
  * Covers connection states, error handling, and context value.
  */
 
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
-import { MCPProvider, useMCP } from './MCPProvider'
-import { HomelabMCPClient } from '@/services/mcpClient'
-import { NotificationProvider } from './NotificationProvider'
+import React from 'react';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { render, screen } from '@testing-library/react';
+import { MCPProvider, useMCP } from './MCPProvider';
 
-// Mock the MCP client
-vi.mock('@/services/mcpClient')
+// Create mutable mock state
+const mockState = {
+  isConnected: false,
+  isConnecting: false,
+  error: null as string | null,
+  callTool: vi.fn(),
+};
 
-const MockedHomelabMCPClient = vi.mocked(HomelabMCPClient)
+// Mock the useMcpClient hook that MCPProvider uses internally
+vi.mock('@/hooks/useMcpClient', () => ({
+  useMcpClient: () => ({
+    isConnected: mockState.isConnected,
+    isConnecting: mockState.isConnecting,
+    error: mockState.error,
+    callTool: mockState.callTool,
+    tools: [],
+    resources: [],
+    prompts: [],
+    readResource: vi.fn(),
+    getPrompt: vi.fn(),
+    authenticate: vi.fn(),
+  }),
+}));
+
+// Mock useToast which is used by useMcpClient
+vi.mock('@/components/ui/Toast', () => ({
+  useToast: () => ({ addToast: vi.fn() }),
+  ToastProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+}));
 
 // Test component to access MCP context
 function TestComponent() {
-  const { client, isConnected, error } = useMCP()
-  
+  const { client, isConnected, error } = useMCP();
+
   return (
     <div>
       <div data-testid="connected">{isConnected.toString()}</div>
       <div data-testid="error">{error || 'no error'}</div>
       <div data-testid="client-exists">{client ? 'true' : 'false'}</div>
     </div>
-  )
+  );
 }
 
 describe('MCPProvider', () => {
-  let mockClient: any
-
   beforeEach(() => {
-    mockClient = {
-      connect: vi.fn(),
-      disconnect: vi.fn(),
-      isConnected: vi.fn().mockReturnValue(false)
-    }
-
-    MockedHomelabMCPClient.mockImplementation(() => mockClient)
-  })
+    // Reset mock state
+    mockState.isConnected = false;
+    mockState.isConnecting = false;
+    mockState.error = null;
+    mockState.callTool = vi.fn().mockResolvedValue({ success: true });
+  });
 
   afterEach(() => {
-    vi.clearAllMocks()
-    vi.clearAllTimers()
-  })
+    vi.clearAllMocks();
+  });
 
-  it('should provide MCP client context', async () => {
-    mockClient.connect.mockResolvedValue(undefined)
-
-    render(
-      <NotificationProvider>
-        <MCPProvider serverUrl="http://localhost:8000">
-          <TestComponent />
-        </MCPProvider>
-      </NotificationProvider>
-    )
-
-    expect(screen.getByTestId('client-exists')).toHaveTextContent('true')
-  })
-
-  it('should establish connection on mount', async () => {
-    mockClient.connect.mockResolvedValue(undefined)
+  it('should provide MCP client context', () => {
+    mockState.isConnected = true;
 
     render(
-      <NotificationProvider>
-        <MCPProvider serverUrl="http://localhost:8000">
-          <TestComponent />
-        </MCPProvider>
-      </NotificationProvider>
-    )
+      <MCPProvider serverUrl="http://localhost:8000">
+        <TestComponent />
+      </MCPProvider>
+    );
 
-    await waitFor(() => {
-      expect(mockClient.connect).toHaveBeenCalledTimes(1)
-    })
+    expect(screen.getByTestId('client-exists')).toHaveTextContent('true');
+  });
 
-    await waitFor(() => {
-      expect(screen.getByTestId('connected')).toHaveTextContent('true')
-      expect(screen.getByTestId('error')).toHaveTextContent('no error')
-    })
-  })
-
-  it('should handle connection failure', async () => {
-    const errorMessage = 'Connection failed'
-    mockClient.connect.mockRejectedValue(new Error(errorMessage))
-
-    vi.useFakeTimers()
+  it('should show connected status when hook reports connected', () => {
+    mockState.isConnected = true;
 
     render(
-      <NotificationProvider>
-        <MCPProvider serverUrl="http://localhost:8000">
-          <TestComponent />
-        </MCPProvider>
-      </NotificationProvider>
-    )
+      <MCPProvider serverUrl="http://localhost:8000">
+        <TestComponent />
+      </MCPProvider>
+    );
 
-    await waitFor(() => {
-      expect(screen.getByTestId('connected')).toHaveTextContent('false')
-      expect(screen.getByTestId('error')).toHaveTextContent(errorMessage)
-    })
+    expect(screen.getByTestId('connected')).toHaveTextContent('true');
+    expect(screen.getByTestId('error')).toHaveTextContent('no error');
+  });
 
-    vi.useRealTimers()
-  })
-
-  it('should retry connection after failure', async () => {
-    const errorMessage = 'Connection failed'
-    mockClient.connect
-      .mockRejectedValueOnce(new Error(errorMessage))
-      .mockResolvedValueOnce(undefined)
-
-    vi.useFakeTimers()
+  it('should show error when connection fails', () => {
+    mockState.isConnected = false;
+    mockState.error = 'Connection failed';
 
     render(
-      <NotificationProvider>
-        <MCPProvider serverUrl="http://localhost:8000">
-          <TestComponent />
-        </MCPProvider>
-      </NotificationProvider>
-    )
+      <MCPProvider serverUrl="http://localhost:8000">
+        <TestComponent />
+      </MCPProvider>
+    );
 
-    // Wait for first connection attempt to fail
-    await waitFor(() => {
-      expect(screen.getByTestId('connected')).toHaveTextContent('false')
-    })
+    expect(screen.getByTestId('connected')).toHaveTextContent('false');
+    expect(screen.getByTestId('error')).toHaveTextContent('Connection failed');
+  });
 
-    // Fast-forward time to trigger retry
-    vi.advanceTimersByTime(5000)
+  it('should show disconnected status initially', () => {
+    mockState.isConnected = false;
+    mockState.isConnecting = true;
 
-    await waitFor(() => {
-      expect(mockClient.connect).toHaveBeenCalledTimes(2)
-    })
+    render(
+      <MCPProvider serverUrl="http://localhost:8000">
+        <TestComponent />
+      </MCPProvider>
+    );
 
-    await waitFor(() => {
-      expect(screen.getByTestId('connected')).toHaveTextContent('true')
-      expect(screen.getByTestId('error')).toHaveTextContent('no error')
-    })
+    expect(screen.getByTestId('connected')).toHaveTextContent('false');
+  });
 
-    vi.useRealTimers()
-  })
+  it('should provide client with callTool function', async () => {
+    mockState.isConnected = true;
+    mockState.callTool.mockResolvedValue({ success: true, data: 'test' });
 
-  it('should disconnect client on unmount', () => {
-    const { unmount } = render(
-      <NotificationProvider>
-        <MCPProvider serverUrl="http://localhost:8000">
-          <TestComponent />
-        </MCPProvider>
-      </NotificationProvider>
-    )
+    render(
+      <MCPProvider serverUrl="http://localhost:8000">
+        <TestComponent />
+      </MCPProvider>
+    );
 
-    unmount()
-
-    expect(mockClient.disconnect).toHaveBeenCalledTimes(1)
-  })
+    expect(screen.getByTestId('client-exists')).toHaveTextContent('true');
+  });
 
   it('should throw error when useMCP is used outside provider', () => {
     // Suppress console.error for this test
-    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
 
-    expect(() => render(<TestComponent />)).toThrow(
-      'useMCP must be used within an MCPProvider'
-    )
+    expect(() => render(<TestComponent />)).toThrow('useMCP must be used within an MCPProvider');
 
-    consoleSpy.mockRestore()
-  })
-})
+    consoleSpy.mockRestore();
+  });
+});

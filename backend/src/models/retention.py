@@ -6,17 +6,22 @@ Implements mandatory security controls for data deletion operations.
 """
 
 from datetime import UTC, datetime
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, Optional
 from enum import Enum
 from pydantic import BaseModel, Field, field_validator, field_serializer
 
 
 class RetentionType(str, Enum):
     """Data retention type definitions."""
-    LOGS = "logs"
-    USER_DATA = "user_data"
-    METRICS = "metrics"
+    # Log types
     AUDIT_LOGS = "audit_logs"
+    ACCESS_LOGS = "access_logs"
+    APPLICATION_LOGS = "application_logs"
+    SERVER_LOGS = "server_logs"
+    # Data types
+    METRICS = "metrics"
+    NOTIFICATIONS = "notifications"
+    SESSIONS = "sessions"
 
 
 class RetentionOperation(str, Enum):
@@ -27,47 +32,21 @@ class RetentionOperation(str, Enum):
     POLICY_VALIDATION = "policy_validation"
 
 
-class DataRetentionSettings(BaseModel):
-    """Data retention policy settings with business logic validation."""
+class RetentionSettings(BaseModel):
+    """Retention settings for logs and data."""
 
-    log_retention_days: int = Field(
+    log_retention: int = Field(
         default=30,
         ge=7,
         le=365,
-        description="Log retention period in days (7-365)"
+        description="Log retention in days (7-365) - applies to all log types"
     )
 
-    user_data_retention_days: int = Field(
-        default=365,
-        ge=30,
-        le=3650,
-        description="User data retention period in days (30-3650)"
-    )
-
-    metrics_retention_days: int = Field(
+    data_retention: int = Field(
         default=90,
         ge=7,
-        le=730,
-        description="Metrics retention period in days (7-730)"
-    )
-
-    audit_log_retention_days: int = Field(
-        default=2555,  # 7 years for compliance
-        ge=365,
-        le=3650,
-        description="Audit log retention period in days (365-3650)"
-    )
-
-    auto_cleanup_enabled: bool = Field(
-        default=False,
-        description="Enable automatic cleanup operations"
-    )
-
-    cleanup_batch_size: int = Field(
-        default=1000,
-        ge=100,
-        le=10000,
-        description="Batch size for cleanup operations (100-10000)"
+        le=365,
+        description="Data retention in days (7-365) - applies to all data types"
     )
 
     last_updated: Optional[str] = Field(
@@ -79,24 +58,6 @@ class DataRetentionSettings(BaseModel):
         default=None,
         description="User ID who last updated settings"
     )
-
-    @field_validator('log_retention_days')
-    @classmethod
-    def validate_log_retention(cls, value: int) -> int:
-        """Validate log retention period."""
-        if value < 7:
-            raise ValueError('Log retention must be at least 7 days')
-        if value > 365:
-            raise ValueError('Log retention cannot exceed 365 days')
-        return value
-
-    @field_validator('audit_log_retention_days')
-    @classmethod
-    def validate_audit_retention(cls, value: int) -> int:
-        """Validate audit log retention period for compliance."""
-        if value < 365:
-            raise ValueError('Audit logs must be retained for at least 1 year')
-        return value
 
 
 class CleanupPreview(BaseModel):
@@ -117,6 +78,7 @@ class CleanupRequest(BaseModel):
     dry_run: bool = Field(default=True, description="Whether to perform dry-run (mandatory for first request)")
     admin_user_id: str = Field(..., min_length=1, description="Admin user requesting cleanup")
     session_token: str = Field(..., min_length=1, description="Session token for verification")
+    csrf_token: Optional[str] = Field(None, min_length=32, description="CSRF token for destructive operations")
     force_cleanup: bool = Field(default=False, description="Force cleanup even if risky (requires additional verification)")
     batch_size: Optional[int] = Field(default=1000, ge=100, le=10000, description="Batch size for cleanup")
 

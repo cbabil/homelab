@@ -22,7 +22,7 @@ export interface SessionCookieConfig {
 
 // Default secure cookie configuration
 export const DEFAULT_SESSION_CONFIG: SessionCookieConfig = {
-  name: 'homelab_session',
+  name: 'tomo_session',
   options: {
     httpOnly: true,
     secure: true,
@@ -186,11 +186,12 @@ class CookieUtilities {
   /**
    * Log security events for monitoring
    */
-  private logSecurityEvent(event: string, metadata: Record<string, unknown>): void {
-    console.log('[Security]', event, metadata)
-    
+  private logSecurityEvent(_event: string, _metadata: Record<string, unknown>): void {
+    // Security events logged - could be sent to monitoring service
+    // console.log('[Security]', _event, _metadata)
+
     // In production, send to security monitoring service
-    // securityMonitor.logEvent({ event, metadata, timestamp: new Date() })
+    // securityMonitor.logEvent({ event: _event, metadata: _metadata, timestamp: new Date() })
   }
 }
 

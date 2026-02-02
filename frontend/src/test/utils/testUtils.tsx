@@ -1,6 +1,6 @@
 /**
  * Test Utilities
- * 
+ *
  * Provides test wrappers with all necessary providers for component testing.
  * Includes AuthProvider, NotificationProvider, MCPProvider, and router setup.
  */
@@ -12,19 +12,22 @@ import { AuthProvider } from '@/providers/AuthProvider'
 import { NotificationProvider } from '@/providers/NotificationProvider'
 import { MCPProvider } from '@/providers/MCPProvider'
 import { ThemeProvider } from '@/providers/ThemeProvider'
+import { ToastProvider } from '@/components/ui/Toast'
 
 // All providers wrapper
 function AllProvidersWrapper({ children }: { children: React.ReactNode }) {
   return (
     <BrowserRouter>
       <ThemeProvider>
-        <NotificationProvider>
-          <AuthProvider>
-            <MCPProvider serverUrl="http://localhost:8000">
-              {children}
-            </MCPProvider>
-          </AuthProvider>
-        </NotificationProvider>
+        <ToastProvider>
+          <MCPProvider serverUrl="http://localhost:8000">
+            <NotificationProvider>
+              <AuthProvider>
+                {children}
+              </AuthProvider>
+            </NotificationProvider>
+          </MCPProvider>
+        </ToastProvider>
       </ThemeProvider>
     </BrowserRouter>
   )
@@ -35,11 +38,13 @@ function AuthProvidersWrapper({ children }: { children: React.ReactNode }) {
   return (
     <BrowserRouter>
       <ThemeProvider>
-        <NotificationProvider>
-          <AuthProvider>
-            {children}
-          </AuthProvider>
-        </NotificationProvider>
+        <ToastProvider>
+          <NotificationProvider>
+            <AuthProvider>
+              {children}
+            </AuthProvider>
+          </NotificationProvider>
+        </ToastProvider>
       </ThemeProvider>
     </BrowserRouter>
   )

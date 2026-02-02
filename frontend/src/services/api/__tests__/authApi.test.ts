@@ -1,6 +1,6 @@
 /**
  * Auth API Tests
- * 
+ *
  * Comprehensive test suite for authentication API service functionality.
  * Tests login, logout, session management, and error handling.
  */
@@ -9,14 +9,17 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
 import { authApi, SessionCreateRequest, SessionRefreshRequest } from '../authApi'
 import { LoginCredentials } from '@/types/auth'
 
-// Mock session service
-const mockSessionService = {
-  createSession: vi.fn(),
-  validateSession: vi.fn(),
-  renewSession: vi.fn(),
-  destroySession: vi.fn(),
-  getCurrentSession: vi.fn()
-}
+// Mock session service - use vi.hoisted to avoid hoisting issues
+const { mockSessionService } = vi.hoisted(() => {
+  const mockSessionService = {
+    createSession: vi.fn(),
+    validateSession: vi.fn(),
+    renewSession: vi.fn(),
+    destroySession: vi.fn(),
+    getCurrentSession: vi.fn()
+  }
+  return { mockSessionService }
+})
 
 vi.mock('../../auth/sessionService', () => ({
   sessionService: mockSessionService
@@ -38,7 +41,7 @@ describe('AuthApiService', () => {
   describe('Login', () => {
     const validCredentials: LoginCredentials = {
       username: 'admin',
-      password: 'HomeLabAdmin123!',
+      password: 'TomoAdmin123!',
       rememberMe: true
     }
 
@@ -81,7 +84,7 @@ describe('AuthApiService', () => {
     it('should login successfully with valid user credentials', async () => {
       const userCredentials: LoginCredentials = {
         username: 'user',
-        password: 'HomeLabUser123!',
+        password: 'TomoUser123!',
         rememberMe: false
       }
 

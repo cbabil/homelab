@@ -5,7 +5,8 @@
  */
 
 import { useState } from 'react'
-import { Search } from 'ui-toolkit'
+import { Search as SearchIcon } from 'lucide-react'
+import { TextField, InputAdornment, Stack } from '@mui/material'
 import { AppCategory, AppFilter } from '@/types/app'
 import { FilterDropdown } from '@/components/applications/FilterDropdown'
 
@@ -30,12 +31,20 @@ export function ApplicationsSearchAndFilter({
   }
 
   return (
-    <div className="flex items-center space-x-2">
-      <Search
+    <Stack direction="row" spacing={1} sx={{ alignItems: 'center' }}>
+      <TextField
+        size="small"
         value={searchValue}
-        onChange={handleSearchChange}
+        onChange={(e) => handleSearchChange(e.target.value)}
         placeholder="Search applications..."
-        className="flex-1 max-w-xs"
+        sx={{ flex: 1, maxWidth: 320 }}
+        InputProps={{
+          startAdornment: (
+            <InputAdornment position="start">
+              <SearchIcon size={16} />
+            </InputAdornment>
+          ),
+        }}
       />
 
       <FilterDropdown
@@ -43,6 +52,6 @@ export function ApplicationsSearchAndFilter({
         onFilterChange={onFilterChange}
         categories={categories}
       />
-    </div>
+    </Stack>
   )
 }

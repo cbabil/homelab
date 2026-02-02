@@ -24,7 +24,7 @@ class ServerExportService {
       
       if (userServers.length === 0) {
         // If no user servers, export all servers for demonstration
-        const filename = `homelab_servers_demo_${new Date().toISOString().split('T')[0]}.json`
+        const filename = `tomo_servers_demo_${new Date().toISOString().split('T')[0]}.json`
         
         this.downloadFile(JSON.stringify(servers, null, 2), filename, 'application/json')
         
@@ -35,7 +35,7 @@ class ServerExportService {
         }
       }
 
-      const filename = `homelab_servers_${new Date().toISOString().split('T')[0]}.json`
+      const filename = `tomo_servers_${new Date().toISOString().split('T')[0]}.json`
       
       this.downloadFile(JSON.stringify(userServers, null, 2), filename, 'application/json')
       

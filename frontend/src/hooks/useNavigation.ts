@@ -7,24 +7,29 @@
 
 import { useLocation } from 'react-router-dom'
 import { useMemo } from 'react'
-import { Home, Server, Package, FileText } from 'lucide-react'
-import { serverStorageService } from '@/services/serverStorageService'
+import { useTranslation } from 'react-i18next'
+import { Home, Server, Package, FileText, Shield, ScrollText, type LucideIcon } from 'lucide-react'
 import { useApplications } from '@/hooks/useApplications'
 
 export interface SubNavItem {
   label: string
   href: string
   count?: number
+  icon?: LucideIcon
 }
 
 export interface NavItem {
   id: string
   label: string
   href: string
-  icon: any
+  icon: LucideIcon
   description: string
   subItems?: SubNavItem[]
   badge?: number | string
+  /** If true, parent item is not clickable - only subItems are navigable */
+  parentOnly?: boolean
+  /** If true, submenu is always visible (no collapse) */
+  alwaysExpanded?: boolean
 }
 
 export interface NavigationStats {
@@ -36,6 +41,7 @@ export interface NavigationStats {
 }
 
 export function useNavigation() {
+  const { t } = useTranslation()
   const location = useLocation()
   const { apps } = useApplications()
 
@@ -51,12 +57,11 @@ export function useNavigation() {
     return { totalApps, installedApps, categoryCounts }
   }, [apps])
 
-  // Get real server stats
+  // Server stats - actual counts come from useServers in ServersPage
+  // Navigation just shows badge when there are disconnected servers
   const serverStats = useMemo(() => {
-    const servers = serverStorageService.getAllServers()
-    const totalServers = servers.length
-    const connectedServers = servers.filter(server => server.status === 'connected').length
-    return { totalServers, connectedServers }
+    // Stats are managed by useServers hook, navigation doesn't fetch servers
+    return { totalServers: 0, connectedServers: 0 }
   }, [])
 
   // Combined stats 
@@ -91,27 +96,27 @@ export function useNavigation() {
   const navigationItems: NavItem[] = useMemo(() => [
     {
       id: 'dashboard',
-      label: 'Dashboard',
+      label: t('nav.dashboard'),
       href: '/',
       icon: Home,
-      description: 'System overview and health'
+      description: t('dashboard.overview', 'System overview and health')
     },
     {
       id: 'servers',
-      label: 'Servers',
+      label: t('nav.servers'),
       href: '/servers',
       icon: Server,
-      description: 'Manage your servers',
-      badge: stats.connectedServers < stats.totalServers ? stats.connectedServers : undefined
+      description: t('servers.title', 'Manage your servers'),
+      badge: stats.connectedServers > 0 && stats.connectedServers < stats.totalServers ? stats.connectedServers : undefined
     },
     {
       id: 'applications',
-      label: 'Applications',
+      label: t('nav.applications'),
       href: '/applications',
       icon: Package,
-      description: 'App marketplace and management',
+      description: t('applications.title', 'App marketplace and management'),
       subItems: [
-        { label: 'All Apps', href: '/applications', count: appCounts.totalApps },
+        { label: t('applications.allApps', 'All Apps'), href: '/applications', count: appCounts.totalApps },
         ...applicationCategories.map(cat => ({
           label: cat.name,
           href: `/applications?category=${cat.id}`,
@@ -121,12 +126,18 @@ export function useNavigation() {
     },
     {
       id: 'logs',
-      label: 'Logs',
+      label: t('nav.logs'),
       href: '/logs',
       icon: FileText,
-      description: 'System and application logs'
+      description: t('logs.title', 'System and application logs'),
+      parentOnly: true,
+      alwaysExpanded: true,
+      subItems: [
+        { label: t('nav.accessLogs'), href: '/logs/access', icon: Shield },
+        { label: t('nav.auditLogs'), href: '/logs/audit', icon: ScrollText }
+      ]
     }
-  ], [stats, appCounts])
+  ], [stats, appCounts, t, applicationCategories])
 
   // Active state detection
   const isActiveItem = (item: NavItem): boolean => {

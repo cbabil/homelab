@@ -1,13 +1,42 @@
 /**
  * Unit tests for Settings State Hook
- * 
+ *
  * Tests state initialization, localStorage persistence, and MCP config management.
  * Covers localStorage loading, saving, and error handling.
  */
 
-import { describe, it, expect, beforeEach, vi } from 'vitest'
+import { describe, it, expect, beforeEach, vi, afterAll } from 'vitest'
 import { renderHook, act } from '@testing-library/react'
 import { useSettingsState } from './useSettingsState'
+
+// Mock MCP provider
+vi.mock('@/providers/MCPProvider', () => ({
+  useMCP: () => ({
+    isConnected: false,
+    error: null
+  })
+}))
+
+// Mock settings context - track updateSettings calls
+const mockUpdateSettings = vi.fn().mockResolvedValue({ success: true })
+
+vi.mock('@/providers/SettingsProvider', () => ({
+  useSettingsContext: () => ({
+    settings: {
+      notifications: { serverAlerts: true, resourceAlerts: true, updateAlerts: false },
+      servers: { connectionTimeout: 30, retryCount: 3, autoRetry: true }
+    },
+    updateSettings: mockUpdateSettings
+  })
+}))
+
+// Mock the SettingsSavingContext
+vi.mock('./SettingsSavingContext', () => ({
+  useSettingsSaving: () => ({
+    isSaving: false,
+    setIsSaving: vi.fn()
+  })
+}))
 
 // Mock localStorage
 const mockLocalStorage = {
@@ -60,7 +89,7 @@ describe('useSettingsState', () => {
     it('should load MCP config from localStorage', () => {
       const savedConfig = {
         mcpServers: {
-          'homelab-assistant': {
+          'tomo': {
             type: 'http',
             url: 'http://localhost:9000',
             name: 'Custom Assistant'
@@ -71,22 +100,22 @@ describe('useSettingsState', () => {
       
       const { result } = renderHook(() => useSettingsState())
 
-      expect(mockLocalStorage.getItem).toHaveBeenCalledWith('homelab-mcp-config')
+      expect(mockLocalStorage.getItem).toHaveBeenCalledWith('tomo-mcp-config')
       expect(result.current.mcpConfig).toEqual(savedConfig)
     })
 
     it('should use default config when localStorage is empty', () => {
       mockLocalStorage.getItem.mockReturnValue(null)
-      
+
       const { result } = renderHook(() => useSettingsState())
 
       expect(result.current.mcpConfig).toEqual({
         mcpServers: {
-          'homelab-assistant': {
+          'tomo': {
             type: 'http',
-            url: 'http://localhost:8000',
-            name: 'Homelab Assistant',
-            description: 'Local homelab management MCP server'
+            url: '/mcp',
+            name: 'Tomo',
+            description: 'Local tomo management MCP server'
           }
         }
       })
@@ -94,20 +123,20 @@ describe('useSettingsState', () => {
 
     it('should handle corrupted localStorage data', () => {
       mockLocalStorage.getItem.mockReturnValue('invalid json}')
-      
+
       const { result } = renderHook(() => useSettingsState())
 
       expect(console.warn).toHaveBeenCalledWith(
-        'Failed to load MCP config from localStorage:',
+        '[Settings] Failed to load MCP config from localStorage',
         expect.any(Error)
       )
       expect(result.current.mcpConfig).toEqual({
         mcpServers: {
-          'homelab-assistant': {
+          'tomo': {
             type: 'http',
-            url: 'http://localhost:8000',
-            name: 'Homelab Assistant',
-            description: 'Local homelab management MCP server'
+            url: '/mcp',
+            name: 'Tomo',
+            description: 'Local tomo management MCP server'
           }
         }
       })
@@ -147,7 +176,7 @@ describe('useSettingsState', () => {
       })
 
       expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
-        'homelab-mcp-config',
+        'tomo-mcp-config',
         JSON.stringify(newConfig)
       )
       expect(result.current.mcpConfig).toEqual(newConfig)
@@ -158,9 +187,9 @@ describe('useSettingsState', () => {
       mockLocalStorage.setItem.mockImplementation(() => {
         throw new Error('Storage quota exceeded')
       })
-      
+
       const { result } = renderHook(() => useSettingsState())
-      
+
       const newConfig = { mcpServers: { 'test': { url: 'test' } } }
 
       act(() => {
@@ -168,7 +197,7 @@ describe('useSettingsState', () => {
       })
 
       expect(console.warn).toHaveBeenCalledWith(
-        'Failed to save MCP config to localStorage:',
+        '[Settings] Failed to save MCP config to localStorage',
         expect.any(Error)
       )
       expect(result.current.mcpConfig).toEqual(newConfig)
@@ -216,27 +245,31 @@ describe('useSettingsState', () => {
 
     it('should update sorting state', () => {
       const { result } = renderHook(() => useSettingsState())
-      
+
       act(() => {
-        result.current.setSortBy('id')
+        result.current.setSortBy('userId')
         result.current.setSortOrder('asc')
       })
 
-      expect(result.current.sortBy).toBe('id')
+      expect(result.current.sortBy).toBe('userId')
       expect(result.current.sortOrder).toBe('asc')
     })
 
     it('should update session data', () => {
       const { result } = renderHook(() => useSettingsState())
-      
+
       const newSessions = [
         {
           id: 'new-session',
+          userId: 'user-1',
+          username: 'testuser',
           status: 'active' as const,
           started: new Date(),
           lastActivity: new Date(),
+          expiresAt: new Date(Date.now() + 3600000),
           location: 'Test Location',
-          ip: '127.0.0.1'
+          ip: '127.0.0.1',
+          isCurrent: false
         }
       ]
 
@@ -247,32 +280,34 @@ describe('useSettingsState', () => {
       expect(result.current.sessions).toEqual(newSessions)
     })
 
-    it('should update alert settings', () => {
+    it('should update alert settings', async () => {
       const { result } = renderHook(() => useSettingsState())
-      
-      act(() => {
+
+      await act(async () => {
         result.current.setServerAlerts(false)
         result.current.setResourceAlerts(false)
         result.current.setUpdateAlerts(true)
       })
 
-      expect(result.current.serverAlerts).toBe(false)
-      expect(result.current.resourceAlerts).toBe(false)
-      expect(result.current.updateAlerts).toBe(true)
+      // Verify updateSettings was called with correct values
+      expect(mockUpdateSettings).toHaveBeenCalledWith('notifications', { serverAlerts: false })
+      expect(mockUpdateSettings).toHaveBeenCalledWith('notifications', { resourceAlerts: false })
+      expect(mockUpdateSettings).toHaveBeenCalledWith('notifications', { updateAlerts: true })
     })
 
-    it('should update connection settings', () => {
+    it('should update connection settings', async () => {
       const { result } = renderHook(() => useSettingsState())
-      
-      act(() => {
+
+      await act(async () => {
         result.current.setAutoRetry(false)
         result.current.setConnectionTimeout('45')
         result.current.setRetryCount('5')
       })
 
-      expect(result.current.autoRetry).toBe(false)
-      expect(result.current.connectionTimeout).toBe('45')
-      expect(result.current.retryCount).toBe('5')
+      // Verify updateSettings was called with correct values
+      expect(mockUpdateSettings).toHaveBeenCalledWith('servers', { autoRetry: false })
+      expect(mockUpdateSettings).toHaveBeenCalledWith('servers', { connectionTimeout: 45 })
+      expect(mockUpdateSettings).toHaveBeenCalledWith('servers', { retryCount: 5 })
     })
 
     it('should update server tab', () => {

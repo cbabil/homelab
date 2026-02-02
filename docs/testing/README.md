@@ -1,6 +1,6 @@
 # Testing Strategy & Guidelines
 
-This document outlines the comprehensive testing strategy for the Homelab Assistant project, ensuring code quality and preventing regressions through systematic testing approaches.
+This document outlines the comprehensive testing strategy for the Tomo project, ensuring code quality and preventing regressions through systematic testing approaches.
 
 ## Table of Contents
 
@@ -288,4 +288,4 @@ pytest --pdb tests/unit/test_encryption.py
 pytest --cov=src --cov-report=term-missing
 ```
 
-This testing strategy ensures comprehensive validation of the Homelab Assistant project while maintaining code quality and preventing regressions.
+This testing strategy ensures comprehensive validation of the Tomo project while maintaining code quality and preventing regressions.

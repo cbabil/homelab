@@ -5,11 +5,7 @@
  * Now integrated with JWT service for real token-based authentication.
  */
 
-import { 
-  LoginCredentials, 
-  LoginResponse, 
-  User 
-} from '@/types/auth'
+import { LoginCredentials, LoginResponse } from '@/types/auth'
 import { sessionService, SessionMetadata } from '../auth/sessionService'
 import { authService } from '../auth/authService'
 
@@ -35,17 +31,9 @@ export interface SessionListResponse {
   total: number
 }
 
-const DEFAULT_CONFIG: AuthApiConfig = {
-  baseUrl: '/api/auth',
-  timeout: 30000,
-  retryAttempts: 3
-}
-
 class AuthApiService {
-  private config: AuthApiConfig
-
-  constructor(config: Partial<AuthApiConfig> = {}) {
-    this.config = { ...DEFAULT_CONFIG, ...config }
+  constructor(_config: Partial<AuthApiConfig> = {}) {
+    // Config available for future use
   }
 
   /**
@@ -247,14 +235,11 @@ class AuthApiService {
    * Log authentication events for security monitoring
    */
   private logAuthEvent(
-    event: string, 
-    metadata: Record<string, unknown>
+    _event: string,
+    _metadata: Record<string, unknown>
   ): void {
-    console.log('[AuthAPI]', event, {
-      ...metadata,
-      timestamp: new Date().toISOString(),
-      userAgent: navigator.userAgent
-    })
+    // Auth events logged - could be sent to monitoring service
+    // console.log('[AuthAPI]', _event, { ..._metadata, timestamp: new Date().toISOString(), userAgent: navigator.userAgent })
   }
 }
 

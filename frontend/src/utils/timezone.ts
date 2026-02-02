@@ -86,13 +86,6 @@ export function formatLogTimestamp(
     return 'Invalid Date'
   }
 
-  // Debug: Log the original date and timezone being used
-  console.log('formatLogTimestamp Debug:', {
-    originalDate: dateObj.toISOString(),
-    timezone: timezone,
-    dateObj: dateObj
-  })
-
   // Use consistent format for logs: YYYY-MM-DD HH:mm:ss (TZ)
   const formatted = dateObj.toLocaleString('en-CA', {
     timeZone: timezone,
@@ -105,18 +98,12 @@ export function formatLogTimestamp(
     hour12: false
   })
 
-  // Debug: Log the formatted result
-  console.log('formatLogTimestamp Result:', {
-    formatted: formatted,
-    timezone: timezone
-  })
-
   // Get timezone abbreviation - try timezone service first, fallback to simple abbreviation
   let tzDisplay = timezone
   try {
     const tz = timezoneService.getTimezoneById(timezone)
     tzDisplay = tz?.abbreviation || timezone
-  } catch (error) {
+  } catch (_error) {
     // If timezone service isn't initialized, use a simple approach
     if (timezone === 'America/New_York') {
       tzDisplay = 'EST/EDT'
@@ -130,6 +117,43 @@ export function formatLogTimestamp(
   }
 
   return `${formatted} (${tzDisplay})`
+}
+
+/**
+ * Format a date as relative time (e.g., "2 hours ago", "3 days ago")
+ */
+export function formatRelativeTime(
+  date: Date | string | number,
+  _timezone: string = 'UTC'
+): string {
+  const dateObj = new Date(date)
+
+  if (isNaN(dateObj.getTime())) {
+    return 'Invalid Date'
+  }
+
+  const now = new Date()
+  const diffMs = now.getTime() - dateObj.getTime()
+  const diffSeconds = Math.floor(diffMs / 1000)
+  const diffMinutes = Math.floor(diffSeconds / 60)
+  const diffHours = Math.floor(diffMinutes / 60)
+  const diffDays = Math.floor(diffHours / 24)
+  const diffWeeks = Math.floor(diffDays / 7)
+  const diffMonths = Math.floor(diffDays / 30)
+
+  if (diffSeconds < 60) {
+    return 'Just now'
+  } else if (diffMinutes < 60) {
+    return `${diffMinutes}m ago`
+  } else if (diffHours < 24) {
+    return `${diffHours}h ago`
+  } else if (diffDays < 7) {
+    return `${diffDays}d ago`
+  } else if (diffWeeks < 4) {
+    return `${diffWeeks}w ago`
+  } else {
+    return `${diffMonths}mo ago`
+  }
 }
 
 /**

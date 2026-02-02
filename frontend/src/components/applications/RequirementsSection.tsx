@@ -1,9 +1,10 @@
 /**
  * Requirements Section Component
- * 
+ *
  * Form section for application system requirements.
  */
 
+import { Box, Typography, TextField, Stack, Grid } from '@mui/material'
 import { AppRequirements } from '@/types/app'
 
 interface RequirementsSectionProps {
@@ -30,70 +31,81 @@ export function RequirementsSection({ requirements, onChange }: RequirementsSect
   }
 
   return (
-    <div className="space-y-1.5 border-t pt-1.5">
-      <h3 className="text-sm font-medium text-foreground mb-2">System Requirements</h3>
-      
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-        <div>
-          <label className="block text-sm font-medium text-foreground mb-1">Min RAM</label>
-          <input
+    <Stack spacing={0.75} sx={{ borderTop: 1, borderColor: 'divider', pt: 0.75 }}>
+      <Typography variant="body2" fontWeight={500} sx={{ mb: 1 }}>System Requirements</Typography>
+
+      <Grid container spacing={1.5}>
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <Typography variant="body2" fontWeight={500} sx={{ mb: 0.5 }}>Min RAM</Typography>
+          <TextField
             type="text"
+            size="small"
+            fullWidth
             value={requirements.minRam || ''}
             onChange={(e) => onChange('minRam', e.target.value)}
-            className="w-full px-3 py-1.5 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20"
             placeholder="512MB, 1GB, 2GB"
           />
-        </div>
+        </Grid>
 
-        <div>
-          <label className="block text-sm font-medium text-foreground mb-1">Min Storage</label>
-          <input
+        <Grid size={{ xs: 12, sm: 6 }}>
+          <Typography variant="body2" fontWeight={500} sx={{ mb: 0.5 }}>Min Storage</Typography>
+          <TextField
             type="text"
+            size="small"
+            fullWidth
             value={requirements.minStorage || ''}
             onChange={(e) => onChange('minStorage', e.target.value)}
-            className="w-full px-3 py-1.5 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20"
             placeholder="100MB, 1GB, 10GB"
           />
-        </div>
-      </div>
+        </Grid>
+      </Grid>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-2.5 mt-2.5">
-        <div>
-          <label className="block text-sm font-medium mb-1">Required Ports</label>
-          <input
+      <Grid container spacing={1.25} sx={{ mt: 1.25 }}>
+        <Grid size={{ xs: 12, lg: 6 }}>
+          <Typography variant="body2" fontWeight={500} sx={{ mb: 0.5 }}>Required Ports</Typography>
+          <TextField
             type="text"
+            size="small"
+            fullWidth
             value={requirements.requiredPorts?.join(', ') || ''}
             onChange={(e) => handlePortsChange(e.target.value)}
-            className="w-full px-3 py-1.5 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20"
             placeholder="80, 443, 8080"
           />
-          <p className="text-xs text-muted-foreground mt-1">Separate ports with commas</p>
-        </div>
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+            Separate ports with commas
+          </Typography>
+        </Grid>
 
-        <div>
-          <label className="block text-sm font-medium mb-1">Supported Architectures</label>
-          <input
+        <Grid size={{ xs: 12, lg: 6 }}>
+          <Typography variant="body2" fontWeight={500} sx={{ mb: 0.5 }}>Supported Architectures</Typography>
+          <TextField
             type="text"
+            size="small"
+            fullWidth
             value={requirements.supportedArchitectures?.join(', ') || ''}
             onChange={(e) => handleArchitecturesChange(e.target.value)}
-            className="w-full px-3 py-1.5 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20"
             placeholder="amd64, arm64, armv7"
           />
-          <p className="text-xs text-muted-foreground mt-1">Separate architectures with commas</p>
-        </div>
-      </div>
+          <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+            Separate architectures with commas
+          </Typography>
+        </Grid>
+      </Grid>
 
-      <div className="mt-2.5">
-        <label className="block text-sm font-medium mb-1">Dependencies</label>
-        <input
+      <Box sx={{ mt: 1.25 }}>
+        <Typography variant="body2" fontWeight={500} sx={{ mb: 0.5 }}>Dependencies</Typography>
+        <TextField
           type="text"
+          size="small"
+          fullWidth
           value={requirements.dependencies?.join(', ') || ''}
           onChange={(e) => handleDependenciesChange(e.target.value)}
-          className="w-full px-3 py-1.5 border border-input bg-background text-foreground rounded-md focus:outline-none focus:ring-2 focus:ring-primary/20"
           placeholder="docker, postgresql, redis"
         />
-        <p className="text-xs text-muted-foreground mt-1">Separate dependencies with commas</p>
-      </div>
-    </div>
+        <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+          Separate dependencies with commas
+        </Typography>
+      </Box>
+    </Stack>
   )
 }

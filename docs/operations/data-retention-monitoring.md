@@ -84,13 +84,13 @@ Monitor application logs for retention-related events:
 
 ```bash
 # Monitor retention operations in real-time
-tail -f /var/log/homelab/backend.log | grep -i "retention"
+tail -f /var/log/tomo/backend.log | grep -i "retention"
 
 # Watch for security events
-tail -f /var/log/homelab/backend.log | grep -E "(retention.*admin|retention.*failed|retention.*security)"
+tail -f /var/log/tomo/backend.log | grep -E "(retention.*admin|retention.*failed|retention.*security)"
 
 # Monitor cleanup progress
-tail -f /var/log/homelab/backend.log | grep -E "(cleanup.*progress|cleanup.*complete)"
+tail -f /var/log/tomo/backend.log | grep -E "(cleanup.*progress|cleanup.*complete)"
 ```
 
 #### Database Monitoring
@@ -134,7 +134,7 @@ ORDER BY timestamp DESC;
 **Alert Script Example**:
 ```bash
 #!/bin/bash
-# /opt/homelab/scripts/retention-alerts.sh
+# /opt/tomo/scripts/retention-alerts.sh
 
 # Check for failed operations in last hour
 FAILED_OPS=$(psql -t -c "SELECT COUNT(*) FROM retention_audit_log
@@ -181,13 +181,13 @@ fi
 **Daily Status Script**:
 ```bash
 #!/bin/bash
-# /opt/homelab/scripts/daily-retention-status.sh
+# /opt/tomo/scripts/daily-retention-status.sh
 
 echo "=== Daily Retention Status Report - $(date) ==="
 
 # Check service status
 echo "Service Status:"
-systemctl status homelab-backend | grep -E "(Active|Main PID)"
+systemctl status tomo-backend | grep -E "(Active|Main PID)"
 
 # Last 24 hours operations summary
 echo -e "\nLast 24 Hours Operations:"
@@ -254,16 +254,16 @@ Manage application log files to prevent storage issues:
 
 ```bash
 #!/bin/bash
-# /opt/homelab/scripts/log-maintenance.sh
+# /opt/tomo/scripts/log-maintenance.sh
 
 # Rotate application logs
-logrotate /etc/logrotate.d/homelab
+logrotate /etc/logrotate.d/tomo
 
 # Archive old retention audit logs to external storage
 pg_dump --table=retention_audit_log \
         --data-only \
         --where="timestamp < NOW() - INTERVAL '1 year'" \
-        homelab_db > /backup/retention_audit_$(date +%Y%m%d).sql
+        tomo_db > /backup/retention_audit_$(date +%Y%m%d).sql
 
 # Compress archived logs
 gzip /backup/retention_audit_$(date +%Y%m%d).sql
@@ -304,21 +304,21 @@ Ensure retention data and configuration are properly backed up:
 
 ```bash
 #!/bin/bash
-# /opt/homelab/scripts/retention-backup.sh
+# /opt/tomo/scripts/retention-backup.sh
 
 BACKUP_DIR="/backup/retention/$(date +%Y%m%d)"
 mkdir -p "$BACKUP_DIR"
 
 # Backup retention settings
-pg_dump --table=retention_settings homelab_db > "$BACKUP_DIR/retention_settings.sql"
+pg_dump --table=retention_settings tomo_db > "$BACKUP_DIR/retention_settings.sql"
 
 # Backup audit logs (last 90 days)
 pg_dump --table=retention_audit_log \
         --where="timestamp > NOW() - INTERVAL '90 days'" \
-        homelab_db > "$BACKUP_DIR/retention_audit_recent.sql"
+        tomo_db > "$BACKUP_DIR/retention_audit_recent.sql"
 
 # Backup application configuration
-cp /opt/homelab/config/retention.conf "$BACKUP_DIR/"
+cp /opt/tomo/config/retention.conf "$BACKUP_DIR/"
 
 # Create backup manifest
 echo "Retention backup created: $(date)" > "$BACKUP_DIR/manifest.txt"
@@ -337,20 +337,20 @@ Steps for recovering retention system after failures:
 1. **Service Recovery**:
 ```bash
 # Restart retention service
-systemctl restart homelab-backend
+systemctl restart tomo-backend
 
 # Verify service startup
-systemctl status homelab-backend
-tail -f /var/log/homelab/backend.log
+systemctl status tomo-backend
+tail -f /var/log/tomo/backend.log
 ```
 
 2. **Data Recovery**:
 ```bash
 # Restore retention settings
-psql homelab_db < /backup/retention/20250114/retention_settings.sql
+psql tomo_db < /backup/retention/20250114/retention_settings.sql
 
 # Restore audit logs if needed
-psql homelab_db < /backup/retention/20250114/retention_audit_recent.sql
+psql tomo_db < /backup/retention/20250114/retention_audit_recent.sql
 
 # Verify data integrity
 psql -c "SELECT COUNT(*) FROM retention_settings;"
@@ -360,10 +360,10 @@ psql -c "SELECT MAX(timestamp) FROM retention_audit_log;"
 3. **Configuration Recovery**:
 ```bash
 # Restore configuration
-cp /backup/retention/20250114/retention.conf /opt/homelab/config/
+cp /backup/retention/20250114/retention.conf /opt/tomo/config/
 
 # Restart service with restored config
-systemctl restart homelab-backend
+systemctl restart tomo-backend
 ```
 
 ## Troubleshooting Guide
@@ -391,7 +391,7 @@ WHERE psa.query LIKE '%retention%' OR psa.query LIKE '%log_entries%';
 
 2. Check system resources:
 ```bash
-top -p $(pgrep -f "homelab-backend")
+top -p $(pgrep -f "tomo-backend")
 iostat -x 1 5
 ```
 
@@ -419,7 +419,7 @@ free -h
 ps aux --sort=-%mem | head -10
 
 # Check database memory usage
-psql -c "SELECT * FROM pg_stat_database WHERE datname = 'homelab_db';"
+psql -c "SELECT * FROM pg_stat_database WHERE datname = 'tomo_db';"
 ```
 
 **Resolution**:

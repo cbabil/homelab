@@ -5,8 +5,7 @@ Defines server connection and configuration data models using Pydantic.
 Implements strict validation as per architectural requirements.
 """
 
-from datetime import datetime
-from typing import Optional, Dict, Any
+from typing import Optional
 from enum import Enum
 from pydantic import BaseModel, Field, field_validator
 import ipaddress
@@ -32,8 +31,9 @@ class SystemInfo(BaseModel):
     os: str = Field(..., description="Operating system information")
     kernel: str = Field(..., description="Kernel version")
     architecture: str = Field(..., description="System architecture")
-    uptime: str = Field(..., description="System uptime")
     docker_version: Optional[str] = Field(None, description="Docker version if installed")
+    agent_status: Optional[str] = Field(None, description="Agent container status (running/not running)")
+    agent_version: Optional[str] = Field(None, description="Agent version if installed")
 
 
 class ServerConnection(BaseModel):
@@ -48,6 +48,8 @@ class ServerConnection(BaseModel):
     created_at: str = Field(..., description="Creation timestamp (ISO format)")
     last_connected: Optional[str] = Field(None, description="Last connection timestamp")
     system_info: Optional[SystemInfo] = Field(None, description="System information")
+    docker_installed: bool = Field(default=False, description="Whether Docker is installed")
+    system_info_updated_at: Optional[str] = Field(None, description="When system info was last updated")
     
     @field_validator('host')
     @classmethod

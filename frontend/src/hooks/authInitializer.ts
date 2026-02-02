@@ -16,10 +16,11 @@ import {
   createAuthenticatedState,
   createErrorState
 } from './authStateHelpers'
+import type { AuthState } from '@/types/auth'
 
 export interface AuthInitResult {
   success: boolean
-  authState?: any
+  authState?: Partial<AuthState>
   error?: string
 }
 

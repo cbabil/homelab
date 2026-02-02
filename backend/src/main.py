@@ -1,28 +1,12 @@
-"""Homelab Assistant MCP Server Entry Point."""
+"""Tomo MCP Server Entry Point."""
 
 import structlog
 from fastmcp import FastMCP
 
-from database.connection import db_manager
-from services.app_service import AppService
-from services.auth_service import AuthService
-from services.activity_service import ActivityService
-from services.backup_service import BackupService
-from services.catalog_service import CatalogService
-from services.dashboard_service import DashboardService
-from services.database_service import DatabaseService
-from services.deployment_service import DeploymentService
-from services.marketplace_service import MarketplaceService
-from services.metrics_service import MetricsService
-from services.monitoring_service import MonitoringService
-from services.preparation_service import PreparationService
-from services.retention_service import RetentionService
-from services.server_service import ServerService
-from services.settings_service import SettingsService
-from services.ssh_service import SSHService
 from lib.tool_loader import register_all_tools
 from lib.logging_config import setup_logging
 from lib.config import load_config, resolve_data_directory
+from services.factory import create_services
 
 # Setup structured logging
 setup_logging()
@@ -32,107 +16,60 @@ logger = structlog.get_logger("main")
 config = load_config()
 data_directory = resolve_data_directory(config)
 
-# Ensure shared database components use the resolved configuration
-db_manager.set_data_directory(data_directory)
-database_service = DatabaseService(data_directory=data_directory)
-
 logger.info(
     "Configuration loaded",
     data_directory=str(data_directory),
     app_env=config.get("app_env"),
 )
 
-app_service = AppService()
-auth_service = AuthService(db_service=database_service)
-ssh_service = SSHService()
-monitoring_service = MonitoringService()
-server_service = ServerService()
-retention_service = RetentionService(db_service=database_service, auth_service=auth_service)
-settings_service = SettingsService(db_service=database_service)
-
-# Additional services
-catalog_dirs = [str(data_directory / "catalog")]
-catalog_service = CatalogService(catalog_dirs=catalog_dirs)
-catalog_service.load_catalog()
-
-deployment_service = DeploymentService(
-    ssh_service=ssh_service,
-    server_service=server_service,
-    catalog_service=catalog_service,
-    db_service=database_service
-)
-
-backup_service = BackupService(db_service=database_service)
-activity_service = ActivityService(db_service=database_service)
-
-metrics_service = MetricsService(
-    ssh_service=ssh_service,
-    db_service=database_service,
-    server_service=server_service
-)
-
-dashboard_service = DashboardService(
-    server_service=server_service,
-    deployment_service=deployment_service,
-    metrics_service=metrics_service,
-    activity_service=activity_service
-)
-
-preparation_service = PreparationService(
-    ssh_service=ssh_service,
-    server_service=server_service,
-    db_service=database_service
-)
-
-marketplace_service = MarketplaceService()
+# Create all services
+services = create_services(data_directory, config)
 
 # Create FastMCP app
 app = FastMCP(
-    name="homelab-assistant",
+    name="tomo",
     version="0.1.0",
-    instructions="Homelab management and automation server"
+    instructions="Tomo management and automation server",
 )
 
-# Add CORS middleware (if possible with FastMCP)
-# Note: This might need to be handled at the underlying FastAPI/Uvicorn level
-
 # Register modular tools dynamically
-tool_dependencies = {
-    "config": config,
-    "app_service": app_service,
-    "auth_service": auth_service,
-    "ssh_service": ssh_service,
-    "server_service": server_service,
-    "monitoring_service": monitoring_service,
-    "retention_service": retention_service,
-    "settings_service": settings_service,
-    "database_service": database_service,
-    "catalog_service": catalog_service,
-    "deployment_service": deployment_service,
-    "backup_service": backup_service,
-    "activity_service": activity_service,
-    "metrics_service": metrics_service,
-    "dashboard_service": dashboard_service,
-    "preparation_service": preparation_service,
-    "marketplace_service": marketplace_service,
-}
+register_all_tools(app, config, services)
 
-register_all_tools(app, config, tool_dependencies)
+# Export for WebSocket handler access
+agent_websocket_handler = services["agent_websocket_handler"]
+agent_lifecycle = services["agent_lifecycle"]
+database_service = services["database_service"]
 
 
 if __name__ == "__main__":
     import asyncio
     import os
+    import uvicorn
     from starlette.middleware.cors import CORSMiddleware
     from starlette.middleware import Middleware
+    from starlette.routing import WebSocketRoute
+
+    # Run database migrations and initializations
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(database_service.run_installed_apps_migrations())
+    loop.run_until_complete(database_service.run_users_migrations())
+    loop.run_until_complete(database_service.initialize_system_info_table())
+    loop.run_until_complete(database_service.initialize_users_table())
+    loop.run_until_complete(database_service.initialize_sessions_table())
+    loop.run_until_complete(database_service.initialize_account_locks_table())
+    loop.run_until_complete(database_service.initialize_notifications_table())
+    loop.run_until_complete(database_service.initialize_retention_settings_table())
+    loop.run_until_complete(database_service.initialize_servers_table())
+    loop.run_until_complete(database_service.initialize_agents_table())
+    loop.run_until_complete(database_service.initialize_installed_apps_table())
+    loop.run_until_complete(database_service.initialize_metrics_tables())
 
     # Configure CORS origins from environment variable
-    # Default to localhost for development; override in production
     default_origins = "http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003"
     allowed_origins = os.getenv("ALLOWED_ORIGINS", default_origins).split(",")
     allowed_origins = [origin.strip() for origin in allowed_origins if origin.strip()]
 
-    # Configure CORS middleware with explicit methods and headers
+    # Configure CORS middleware
     cors_middleware = Middleware(
         CORSMiddleware,
         allow_origins=allowed_origins,
@@ -140,8 +77,55 @@ if __name__ == "__main__":
         allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "Authorization", "mcp-session-id"],
         expose_headers=["mcp-session-id"],
-        max_age=3600
+        max_age=3600,
     )
 
-    logger.info("FastMCP HTTP server initialized", version="0.1.0", allowed_origins=allowed_origins)
-    asyncio.run(app.run_http_async(host="0.0.0.0", port=8000, middleware=[cors_middleware]))
+    # Get Starlette app with MCP routes
+    starlette_app = app.http_app(
+        path="/mcp",
+        stateless_http=True,
+        json_response=True,
+        middleware=[cors_middleware],
+    )
+
+    # Add WebSocket route for agent connections
+    starlette_app.routes.append(
+        WebSocketRoute("/ws/agent", agent_websocket_handler.handle_connection)
+    )
+
+    # Add lifecycle event handlers
+    agent_service = services["agent_service"]
+    agent_manager = services["agent_manager"]
+
+    @starlette_app.on_event("startup")
+    async def startup_lifecycle():
+        """Start agent lifecycle manager and rotation scheduler on app startup."""
+        logger.info("Starting agent lifecycle manager")
+        # Reset any stale CONNECTED statuses from previous run
+        reset_count = await agent_service.reset_stale_agent_statuses()
+        if reset_count > 0:
+            logger.info(f"Reset {reset_count} stale agent status(es) to DISCONNECTED")
+        await agent_lifecycle.start()
+
+        # Start automatic token rotation scheduler
+        logger.info("Starting token rotation scheduler")
+        agent_service.set_rotation_callback(agent_manager.send_rotation_request)
+        await agent_service.start_rotation_scheduler(check_interval=3600)  # 1 hour
+
+    @starlette_app.on_event("shutdown")
+    async def shutdown_lifecycle():
+        """Stop agent lifecycle manager and rotation scheduler on app shutdown."""
+        logger.info("Stopping token rotation scheduler")
+        await agent_service.stop_rotation_scheduler()
+        logger.info("Stopping agent lifecycle manager")
+        await agent_lifecycle.stop()
+
+    logger.info(
+        "FastMCP HTTP server initialized",
+        version="0.1.0",
+        allowed_origins=allowed_origins,
+        mcp_path="/mcp",
+        ws_path="/ws/agent",
+    )
+
+    uvicorn.run(starlette_app, host="0.0.0.0", port=8000)

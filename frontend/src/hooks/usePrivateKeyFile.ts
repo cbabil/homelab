@@ -4,7 +4,7 @@
  * Handles private key file selection, validation, and state management.
  */
 
-import { useState, useEffect } from 'react'
+import React, { useState, useEffect } from 'react'
 import { 
   validatePrivateKeyFile, 
   validatePrivateKeyContent, 

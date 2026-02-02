@@ -1,0 +1,20 @@
+Package: tomo
+Version: 1.0.0-1
+Section: admin
+Priority: optional
+Architecture: amd64
+Depends: python3 (>= 3.11), python3-venv, python3-pip, nginx, nodejs (>= 18)
+Recommends: sqlite3, certbot, python3-certbot-nginx
+Maintainer: Christophe Babilotte <christophe@babilotte.com>
+Homepage: https://github.com/cbabil/tomo
+Description: Self-hosted infrastructure management platform
+ Tomo is a web-based platform for managing
+ self-hosted infrastructure including:
+  - Server management and monitoring
+  - Docker container orchestration
+  - Application marketplace
+  - Automated agent deployment
+  - Backup and restore functionality
+ .
+ This package includes the backend API server, web frontend,
+ and CLI administration tool.

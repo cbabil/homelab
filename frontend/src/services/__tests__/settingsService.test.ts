@@ -7,7 +7,7 @@
 
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { settingsService } from '../settingsService'
-import { DEFAULT_SETTINGS, SETTINGS_STORAGE_KEYS } from '@/types/settings'
+import { DEFAULT_SETTINGS, SETTINGS_STORAGE_KEYS, SessionTimeout } from '@/types/settings'
 
 // Mock localStorage
 const localStorageMock = {
@@ -114,8 +114,8 @@ describe('SettingsService', () => {
           showWarningMinutes: 10,
           extendOnActivity: false
         }
-      })
-      
+      } as Partial<typeof DEFAULT_SETTINGS.security>)
+
       expect(result.success).toBe(true)
       expect(result.settings?.security.session.timeout).toBe('4h')
       expect(result.settings?.security.session.idleDetection).toBe(false)
@@ -124,10 +124,13 @@ describe('SettingsService', () => {
     it('should validate timeout values', async () => {
       const result = await settingsService.updateSettings('security', {
         session: {
-          timeout: 'invalid' as any
+          timeout: 'invalid' as unknown as SessionTimeout,
+          idleDetection: true,
+          showWarningMinutes: 5,
+          extendOnActivity: true
         }
-      })
-      
+      } as Partial<typeof DEFAULT_SETTINGS.security>)
+
       expect(result.success).toBe(false)
       expect(result.error).toContain('Invalid session timeout value')
     })

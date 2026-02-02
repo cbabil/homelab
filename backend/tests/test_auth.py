@@ -25,7 +25,7 @@ async def test_authentication():
     # Test with admin credentials
     admin_creds = LoginCredentials(
         username="admin",
-        password="HomeLabAdmin123!",
+        password="TomoAdmin123!",
         remember_me=False
     )
 
@@ -57,7 +57,7 @@ async def test_authentication():
             # Test password verification directly
             from lib.auth_helpers import verify_password
             stored_hash = auth_service._user_passwords["admin"]
-            verification = verify_password("HomeLabAdmin123!", stored_hash)
+            verification = verify_password("TomoAdmin123!", stored_hash)
             print(f"Direct password verification: {verification}")
         else:
             print("❌ Admin password hash missing")
@@ -65,7 +65,7 @@ async def test_authentication():
     # Test with user credentials
     user_creds = LoginCredentials(
         username="user",
-        password="HomeLabUser123!",
+        password="TomoUser123!",
         remember_me=False
     )
 

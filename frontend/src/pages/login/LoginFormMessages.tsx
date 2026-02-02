@@ -1,41 +1,30 @@
 /**
  * Login Form Messages Component
- * 
- * Error messages and informational content for the login form.
- * Extracted to maintain 100-line limit per CLAUDE.md rules.
+ *
+ * Simple error text for the login form.
+ * No background, no animations - just text.
+ * Always reserves space to prevent layout shift.
  */
 
-import React from 'react'
-import { AlertCircle } from 'lucide-react'
+import Typography from '@mui/material/Typography'
 
 interface LoginFormMessagesProps {
   submitError?: string
-  authError?: string
 }
 
-export function LoginFormMessages({ submitError, authError }: LoginFormMessagesProps) {
+export function LoginFormMessages({ submitError }: LoginFormMessagesProps) {
   return (
-    <>
-      {/* Global Error Message */}
-      {(submitError || authError) && (
-        <div className="form-feedback form-feedback-error">
-          <div className="flex items-center gap-2">
-            <AlertCircle className="h-4 w-4 flex-shrink-0" />
-            <span>{submitError || authError}</span>
-          </div>
-        </div>
-      )}
-
-      {/* Demo Credentials Info */}
-      <div className="form-feedback form-feedback-info">
-        <div className="text-sm">
-          <strong>Demo Credentials:</strong>
-          <div className="mt-1 space-y-1">
-            <div>Admin: <code className="text-xs">admin / HomeLabAdmin123!</code></div>
-            <div>User: <code className="text-xs">user / HomeLabUser123!</code></div>
-          </div>
-        </div>
-      </div>
-    </>
+    <Typography
+      color="error"
+      variant="body2"
+      align="center"
+      sx={{
+        mb: 1,
+        minHeight: '1.5em',
+        visibility: submitError ? 'visible' : 'hidden'
+      }}
+    >
+      {submitError || ' '}
+    </Typography>
   )
 }

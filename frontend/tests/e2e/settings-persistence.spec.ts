@@ -461,7 +461,7 @@ test.describe('Settings Persistence System', () => {
           language: 'en',
           version: 1 // Old version
         }
-        localStorage.setItem('homelab_settings', JSON.stringify(oldSettings))
+        localStorage.setItem('tomo_settings', JSON.stringify(oldSettings))
       })
 
       await loginAsAdmin(page)
@@ -481,7 +481,7 @@ test.describe('Settings Persistence System', () => {
       // Set up corrupted settings data
       await page.goto(`${TEST_CONFIG.FRONTEND_URL}`)
       await page.evaluate(() => {
-        localStorage.setItem('homelab_settings', 'corrupted_json_data{{{')
+        localStorage.setItem('tomo_settings', 'corrupted_json_data{{{')
       })
 
       await loginAsAdmin(page)

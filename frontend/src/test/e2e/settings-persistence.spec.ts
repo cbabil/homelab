@@ -13,41 +13,8 @@
 import { test, expect, Page } from '@playwright/test'
 
 // Test configuration
-const BACKEND_URL = 'http://localhost:8000'
 const FRONTEND_URL = 'http://localhost:5173'
 const ADMIN_CREDENTIALS = { username: 'admin', password: 'admin123' }
-
-// Test data for settings validation
-const TEST_SETTINGS = {
-  ui: {
-    theme: 'dark',
-    language: 'en',
-    compactMode: false,
-    notifications: true
-  },
-  security: {
-    session: {
-      timeout: '2h',
-      idleDetection: true,
-      extendOnActivity: true,
-      showWarningMinutes: 5
-    },
-    twoFactorEnabled: false,
-    requirePasswordChange: false,
-    passwordChangeInterval: 90
-  },
-  system: {
-    autoRefresh: true,
-    refreshInterval: 30,
-    enableDebugMode: false,
-    maxLogEntries: 1000,
-    dataRetention: {
-      logRetentionDays: 14,
-      otherDataRetentionDays: 14,
-      autoCleanupEnabled: false
-    }
-  }
-}
 
 test.describe('Settings Persistence System E2E', () => {
   let page: Page
@@ -155,7 +122,7 @@ test.describe('Settings Persistence System E2E', () => {
 
     // Step 3: Test localStorage fallback
     const localStorageSettings = await page.evaluate(() => {
-      return localStorage.getItem('homelab_user_settings')
+      return localStorage.getItem('tomo_user_settings')
     })
     expect(localStorageSettings).toBeDefined()
   })
@@ -276,7 +243,7 @@ async function verifyAuditTrail(page: Page) {
 
   // Verify recent settings changes are logged
   const auditEntries = page.locator('[data-testid="audit-entry"]')
-  await expect(auditEntries).toHaveCountGreaterThan(0)
+  await expect(auditEntries).not.toHaveCount(0)
 
   // Verify entry contains expected information
   const firstEntry = auditEntries.first()

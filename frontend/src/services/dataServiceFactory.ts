@@ -10,6 +10,11 @@ import { DataServiceOptions } from '@/types/dataService'
 import { LogsDataService } from './logsDataService'
 import { ApplicationsDataService } from './applicationsDataService'
 
+// Interface for services with optional cache clearing
+interface CacheableService {
+  clearCache?: () => void
+}
+
 export interface ServiceFactoryOptions {
   defaultOptions?: DataServiceOptions
   enableCaching?: boolean
@@ -95,8 +100,9 @@ export class DataServiceFactory {
    */
   clearDataCaches(): void {
     for (const service of this.serviceInstances.values()) {
-      if ('clearCache' in service && typeof (service as any).clearCache === 'function') {
-        (service as any).clearCache()
+      const cacheableService = service as CacheableService
+      if (cacheableService.clearCache) {
+        cacheableService.clearCache()
       }
     }
   }

@@ -10,20 +10,22 @@
  */
 
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest'
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { DataRetentionSettings } from '../DataRetentionSettings'
 
 // Mock the retention settings hook
-const mockUpdateRetentionSettings = vi.fn()
-const mockPreviewCleanup = vi.fn()
+const { mockUpdateRetentionSettings, mockPreviewCleanup } = vi.hoisted(() => {
+  const mockUpdateRetentionSettings = vi.fn()
+  const mockPreviewCleanup = vi.fn()
+  return { mockUpdateRetentionSettings, mockPreviewCleanup }
+})
 
 vi.mock('@/hooks/useRetentionSettings', () => ({
   useRetentionSettings: () => ({
     settings: {
       logRetentionDays: 30,
-      otherDataRetentionDays: 365,
-      autoCleanupEnabled: false
+      otherDataRetentionDays: 90
     },
     isLoading: false,
     error: null,
@@ -33,13 +35,14 @@ vi.mock('@/hooks/useRetentionSettings', () => ({
       otherDataAffected: 25,
       estimatedSpaceFreed: '2.5 MB'
     },
+    isBackendConnected: true,
     updateRetentionSettings: mockUpdateRetentionSettings,
     previewCleanup: mockPreviewCleanup,
     limits: {
-      LOG_MIN_DAYS: 7,
+      LOG_MIN_DAYS: 14,
       LOG_MAX_DAYS: 365,
-      OTHER_DATA_MIN_DAYS: 30,
-      OTHER_DATA_MAX_DAYS: 3650
+      OTHER_DATA_MIN_DAYS: 14,
+      OTHER_DATA_MAX_DAYS: 365
     }
   })
 }))
@@ -62,7 +65,6 @@ describe('DataRetentionSettings', () => {
       render(<DataRetentionSettings />)
 
       expect(screen.getByText('Data Retention')).toBeInTheDocument()
-      expect(screen.getByLabelText(/auto-cleanup/i)).toBeInTheDocument()
       expect(screen.getByText(/log retention/i)).toBeInTheDocument()
       expect(screen.getByText(/other data/i)).toBeInTheDocument()
     })
@@ -75,7 +77,7 @@ describe('DataRetentionSettings', () => {
       const dataSlider = screen.getByRole('slider', { name: /other data/i })
 
       expect(logSlider).toHaveValue('30')
-      expect(dataSlider).toHaveValue('365')
+      expect(dataSlider).toHaveValue('90')
     })
 
     it('should show loading state when settings are loading', () => {
@@ -85,13 +87,14 @@ describe('DataRetentionSettings', () => {
         error: null,
         isOperationInProgress: false,
         previewResult: null,
+        isBackendConnected: true,
         updateRetentionSettings: mockUpdateRetentionSettings,
         previewCleanup: mockPreviewCleanup,
         limits: {
-          LOG_MIN_DAYS: 7,
+          LOG_MIN_DAYS: 14,
           LOG_MAX_DAYS: 365,
-          OTHER_DATA_MIN_DAYS: 30,
-          OTHER_DATA_MAX_DAYS: 3650
+          OTHER_DATA_MIN_DAYS: 14,
+          OTHER_DATA_MAX_DAYS: 365
         }
       })
 
@@ -106,13 +109,14 @@ describe('DataRetentionSettings', () => {
         error: 'Failed to load settings',
         isOperationInProgress: false,
         previewResult: null,
+        isBackendConnected: true,
         updateRetentionSettings: mockUpdateRetentionSettings,
         previewCleanup: mockPreviewCleanup,
         limits: {
-          LOG_MIN_DAYS: 7,
+          LOG_MIN_DAYS: 14,
           LOG_MAX_DAYS: 365,
-          OTHER_DATA_MIN_DAYS: 30,
-          OTHER_DATA_MAX_DAYS: 3650
+          OTHER_DATA_MIN_DAYS: 14,
+          OTHER_DATA_MAX_DAYS: 365
         }
       })
 
@@ -122,17 +126,6 @@ describe('DataRetentionSettings', () => {
   })
 
   describe('User Interactions', () => {
-    it('should update auto-cleanup setting when toggle is clicked', async () => {
-      render(<DataRetentionSettings />)
-
-      const toggleButton = screen.getByLabelText(/auto-cleanup/i)
-      await user.click(toggleButton)
-
-      expect(mockUpdateRetentionSettings).toHaveBeenCalledWith({
-        autoCleanupEnabled: true
-      })
-    })
-
     it('should update log retention days when slider is moved', async () => {
       render(<DataRetentionSettings />)
 
@@ -150,10 +143,10 @@ describe('DataRetentionSettings', () => {
 
       const dataSlider = screen.getByRole('slider', { name: /other data/i })
 
-      fireEvent.change(dataSlider, { target: { value: '730' } })
+      fireEvent.change(dataSlider, { target: { value: '180' } })
 
       expect(mockUpdateRetentionSettings).toHaveBeenCalledWith({
-        otherDataRetentionDays: 730
+        otherDataRetentionDays: 180
       })
     })
 
@@ -163,10 +156,10 @@ describe('DataRetentionSettings', () => {
       const logSlider = screen.getByRole('slider', { name: /log retention/i })
       const dataSlider = screen.getByRole('slider', { name: /other data/i })
 
-      expect(logSlider).toHaveAttribute('min', '7')
+      expect(logSlider).toHaveAttribute('min', '14')
       expect(logSlider).toHaveAttribute('max', '365')
-      expect(dataSlider).toHaveAttribute('min', '30')
-      expect(dataSlider).toHaveAttribute('max', '3650')
+      expect(dataSlider).toHaveAttribute('min', '14')
+      expect(dataSlider).toHaveAttribute('max', '365')
     })
   })
 

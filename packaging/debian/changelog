@@ -1,0 +1,17 @@
+tomo (1.0.0-1) stable; urgency=medium
+
+  * Initial release
+  * Backend: FastMCP-based API server with SQLite database
+  * Frontend: React 19 SPA with TypeScript
+  * CLI: Node.js-based admin tool
+  * Features:
+    - Server management and monitoring
+    - Docker container orchestration
+    - Application marketplace
+    - Agent-based remote management
+    - JWT authentication with session management
+    - Data retention policies
+    - Backup and restore functionality
+    - NIST-compliant password policies
+
+ -- Christophe Babilotte <christophe@babilotte.com>  Fri, 31 Jan 2026 19:00:00 +0000

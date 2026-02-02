@@ -32,59 +32,135 @@ jobs:
             exit 1
           fi
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-          cache: 'yarn'
-          cache-dependency-path: frontend/yarn.lock
-
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v4
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
       - name: Install frontend dependencies
         working-directory: frontend
-        run: yarn install --frozen-lockfile
+        run: bun install --frozen-lockfile
 
       - name: Build frontend
         working-directory: frontend
-        run: yarn build
+        run: bun run build
 
       - name: Install backend dependencies
         working-directory: backend
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+        run: uv sync
 
       - name: Run tests
         working-directory: backend
         run: |
-          pip install pytest pytest-asyncio pytest-cov
-          PYTHONPATH=src pytest tests/unit/test_security.py tests/unit/test_backup*.py -v --no-cov
+          uv run pytest tests/unit/test_security.py tests/unit/test_backup*.py -v --no-cov
+
+      - name: Install CLI dependencies
+        working-directory: cli
+        run: bun install --frozen-lockfile
+
+      - name: Build CLI
+        working-directory: cli
+        run: bun run build
 
       - name: Create release archive
         run: |
           VERSION=${{ steps.version.outputs.VERSION }}
-          mkdir -p release/homelab-assistant-${VERSION}
+          mkdir -p release/tomo-${VERSION}
 
           # Copy backend
-          cp -r backend/src release/homelab-assistant-${VERSION}/backend
-          cp backend/requirements.txt release/homelab-assistant-${VERSION}/
+          cp -r backend/src release/tomo-${VERSION}/backend
+          cp backend/requirements.txt release/tomo-${VERSION}/
 
           # Copy frontend build
-          cp -r frontend/dist release/homelab-assistant-${VERSION}/static
+          cp -r frontend/dist release/tomo-${VERSION}/static
 
           # Copy packaging files
-          cp -r packaging release/homelab-assistant-${VERSION}/
+          cp -r packaging release/tomo-${VERSION}/
 
           # Copy docs
-          cp README.md release/homelab-assistant-${VERSION}/
+          cp README.md release/tomo-${VERSION}/
 
           # Create tarball
           cd release
-          tar -czvf homelab-assistant-${VERSION}.tar.gz homelab-assistant-${VERSION}
+          tar -czvf tomo-${VERSION}.tar.gz tomo-${VERSION}
+
+      - name: Build DEB package
+        run: |
+          VERSION=${{ steps.version.outputs.VERSION }}
+
+          # Create package directory structure
+          PKG_DIR="packaging/build/tomo_${VERSION}-1_amd64"
+          mkdir -p "${PKG_DIR}/DEBIAN"
+          mkdir -p "${PKG_DIR}/opt/tomo/backend"
+          mkdir -p "${PKG_DIR}/opt/tomo/cli"
+          mkdir -p "${PKG_DIR}/var/www/tomo"
+          mkdir -p "${PKG_DIR}/etc/tomo"
+          mkdir -p "${PKG_DIR}/etc/nginx/conf.d"
+          mkdir -p "${PKG_DIR}/etc/systemd/system"
+          mkdir -p "${PKG_DIR}/usr/local/bin"
+
+          # Copy DEBIAN control files
+          cp packaging/debian/control "${PKG_DIR}/DEBIAN/"
+          cp packaging/debian/conffiles "${PKG_DIR}/DEBIAN/"
+          cp packaging/debian/preinst "${PKG_DIR}/DEBIAN/"
+          cp packaging/debian/postinst "${PKG_DIR}/DEBIAN/"
+          cp packaging/debian/prerm "${PKG_DIR}/DEBIAN/"
+          cp packaging/debian/postrm "${PKG_DIR}/DEBIAN/"
+          cp packaging/debian/copyright "${PKG_DIR}/DEBIAN/"
+
+          # Make scripts executable
+          chmod 755 "${PKG_DIR}/DEBIAN/preinst"
+          chmod 755 "${PKG_DIR}/DEBIAN/postinst"
+          chmod 755 "${PKG_DIR}/DEBIAN/prerm"
+          chmod 755 "${PKG_DIR}/DEBIAN/postrm"
+
+          # Update version in control file
+          sed -i "s/^Version:.*/Version: ${VERSION}-1/" "${PKG_DIR}/DEBIAN/control"
+
+          # Copy application files
+          cp -r backend/src/* "${PKG_DIR}/opt/tomo/backend/"
+          cp -r backend/sql "${PKG_DIR}/opt/tomo/backend/" 2>/dev/null || true
+
+          # Export requirements.txt from uv.lock for pip install on target systems
+          cd backend && uv export --no-dev --no-hashes > "${PKG_DIR}/opt/tomo/backend/requirements.txt" && cd ..
+          cp -r frontend/dist/* "${PKG_DIR}/var/www/tomo/"
+          cp -r cli/dist "${PKG_DIR}/opt/tomo/cli/"
+          cp -r cli/node_modules "${PKG_DIR}/opt/tomo/cli/"
+          cp cli/package.json "${PKG_DIR}/opt/tomo/cli/"
+
+          # Create CLI symlink
+          ln -sf /opt/tomo/cli/dist/src/bin/tomo.js \
+              "${PKG_DIR}/usr/local/bin/tomo"
+
+          # Copy config files
+          cp packaging/debian/tomo.service "${PKG_DIR}/etc/systemd/system/"
+          cp packaging/debian/tomo.nginx "${PKG_DIR}/etc/nginx/conf.d/tomo.conf"
+
+          # Create VERSION file
+          echo "${VERSION}" > "${PKG_DIR}/opt/tomo/VERSION"
+
+          # Set permissions
+          find "${PKG_DIR}" -type d -exec chmod 755 {} \;
+          find "${PKG_DIR}" -type f -exec chmod 644 {} \;
+          chmod 755 "${PKG_DIR}/DEBIAN/preinst"
+          chmod 755 "${PKG_DIR}/DEBIAN/postinst"
+          chmod 755 "${PKG_DIR}/DEBIAN/prerm"
+          chmod 755 "${PKG_DIR}/DEBIAN/postrm"
+          chmod 755 "${PKG_DIR}/usr/local/bin/tomo"
+
+          # Build DEB package
+          dpkg-deb --build --root-owner-group "${PKG_DIR}"
+          mv "${PKG_DIR}.deb" "release/tomo_${VERSION}-1_amd64.deb"
+
+          echo "DEB package built: release/tomo_${VERSION}-1_amd64.deb"
 
       - name: Create tag
         run: |
@@ -147,7 +223,9 @@ jobs:
           tag_name: v${{ steps.version.outputs.VERSION }}
           name: v${{ steps.version.outputs.VERSION }}
           body_path: RELEASE_NOTES.md
-          files: release/homelab-assistant-${{ steps.version.outputs.VERSION }}.tar.gz
+          files: |
+            release/tomo-${{ steps.version.outputs.VERSION }}.tar.gz
+            release/tomo_${{ steps.version.outputs.VERSION }}-1_amd64.deb
           draft: false
           prerelease: false
         env:

@@ -46,7 +46,9 @@ export function useAuthLogic() {
 
   const logout = useCallback(async () => {
     const result = await performLogout()
-    setAuthState(result.authState)
+    if (result.authState) {
+      setAuthState(prev => ({ ...prev, ...result.authState }))
+    }
   }, [])
 
   const refreshSession = useCallback(async () => {

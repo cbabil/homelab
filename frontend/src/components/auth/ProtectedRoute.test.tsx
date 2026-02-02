@@ -5,6 +5,7 @@
  * role-based access control, loading states, and redirect logic.
  */
 
+import React from 'react'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
@@ -12,13 +13,17 @@ import { ProtectedRoute, AdminRoute, UserRoute, PublicRoute } from './ProtectedR
 import { User } from '@/types/auth'
 
 // Mock the auth hook
-const mockAuthState = {
-  isAuthenticated: false,
-  isLoading: false,
-  error: null,
-  user: null as User | null,
-  refreshSession: vi.fn()
-}
+const { mockAuthState } = vi.hoisted(() => {
+  const mockAuthState = {
+    isAuthenticated: false,
+    isLoading: false,
+    error: null,
+    user: null as User | null,
+    refreshSession: vi.fn()
+  }
+
+  return { mockAuthState }
+})
 
 vi.mock('@/providers/AuthProvider', () => ({
   useAuth: () => mockAuthState
@@ -57,30 +62,28 @@ describe('ProtectedRoute', () => {
   describe('Loading State', () => {
     it('should show loading screen while authenticating', () => {
       Object.assign(mockAuthState, { isLoading: true })
-      
+
       renderWithRouter(
         <ProtectedRoute>
           <ProtectedContent />
-        </ProtectedRoute>,
-        ['/test']
+        </ProtectedRoute>
       )
-      
+
       expect(screen.getByText(/authenticating/i)).toBeInTheDocument()
       expect(screen.getByText(/please wait while we verify/i)).toBeInTheDocument()
     })
 
     it('should use custom fallback during loading', () => {
       Object.assign(mockAuthState, { isLoading: true })
-      
+
       const customFallback = <div data-testid="custom-loading">Custom Loading...</div>
-      
+
       renderWithRouter(
         <ProtectedRoute fallback={customFallback}>
           <ProtectedContent />
-        </ProtectedRoute>,
-        ['/test']
+        </ProtectedRoute>
       )
-      
+
       expect(screen.getByTestId('custom-loading')).toBeInTheDocument()
     })
   })
@@ -90,10 +93,9 @@ describe('ProtectedRoute', () => {
       renderWithRouter(
         <ProtectedRoute>
           <ProtectedContent />
-        </ProtectedRoute>,
-        ['/test']
+        </ProtectedRoute>
       )
-      
+
       expect(screen.getByTestId('login-page')).toBeInTheDocument()
       expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument()
     })
@@ -107,19 +109,18 @@ describe('ProtectedRoute', () => {
         lastLogin: '2023-01-01T00:00:00Z',
         isActive: true
       }
-      
+
       Object.assign(mockAuthState, {
         isAuthenticated: true,
         user: mockUser
       })
-      
+
       renderWithRouter(
         <ProtectedRoute>
           <ProtectedContent />
-        </ProtectedRoute>,
-        ['/test']
+        </ProtectedRoute>
       )
-      
+
       expect(screen.getByTestId('protected-content')).toBeInTheDocument()
     })
 
@@ -151,10 +152,9 @@ describe('ProtectedRoute', () => {
       renderWithRouter(
         <ProtectedRoute requireAuth={false}>
           <PublicContent />
-        </ProtectedRoute>,
-        ['/test']
+        </ProtectedRoute>
       )
-      
+
       expect(screen.getByTestId('public-content')).toBeInTheDocument()
     })
 
@@ -162,10 +162,9 @@ describe('ProtectedRoute', () => {
       renderWithRouter(
         <ProtectedRoute requireAuth={false}>
           <PublicContent />
-        </ProtectedRoute>,
-        ['/test']
+        </ProtectedRoute>
       )
-      
+
       expect(screen.getByTestId('public-content')).toBeInTheDocument()
       expect(screen.queryByTestId('login-page')).not.toBeInTheDocument()
     })
@@ -181,19 +180,18 @@ describe('ProtectedRoute', () => {
         lastLogin: '2023-01-01T00:00:00Z',
         isActive: true
       }
-      
+
       Object.assign(mockAuthState, {
         isAuthenticated: true,
         user: adminUser
       })
-      
+
       renderWithRouter(
         <ProtectedRoute allowedRoles={['admin']}>
           <ProtectedContent />
-        </ProtectedRoute>,
-        ['/test']
+        </ProtectedRoute>
       )
-      
+
       expect(screen.getByTestId('protected-content')).toBeInTheDocument()
     })
 
@@ -206,19 +204,18 @@ describe('ProtectedRoute', () => {
         lastLogin: '2023-01-01T00:00:00Z',
         isActive: true
       }
-      
+
       Object.assign(mockAuthState, {
         isAuthenticated: true,
         user: userRole
       })
-      
+
       renderWithRouter(
         <ProtectedRoute allowedRoles={['admin']}>
           <ProtectedContent />
-        </ProtectedRoute>,
-        ['/test']
+        </ProtectedRoute>
       )
-      
+
       expect(screen.getByText(/access denied/i)).toBeInTheDocument()
       expect(screen.getByText(/admin role access/i)).toBeInTheDocument()
       expect(screen.queryByTestId('protected-content')).not.toBeInTheDocument()
@@ -233,19 +230,18 @@ describe('ProtectedRoute', () => {
         lastLogin: '2023-01-01T00:00:00Z',
         isActive: true
       }
-      
+
       Object.assign(mockAuthState, {
         isAuthenticated: true,
         user: userRole
       })
-      
+
       renderWithRouter(
         <ProtectedRoute allowedRoles={['admin', 'user']}>
           <ProtectedContent />
-        </ProtectedRoute>,
-        ['/test']
+        </ProtectedRoute>
       )
-      
+
       expect(screen.getByTestId('protected-content')).toBeInTheDocument()
     })
   })
@@ -260,19 +256,18 @@ describe('ProtectedRoute', () => {
         lastLogin: '2023-01-01T00:00:00Z',
         isActive: false
       }
-      
+
       Object.assign(mockAuthState, {
         isAuthenticated: true,
         user: inactiveUser
       })
-      
+
       renderWithRouter(
         <ProtectedRoute>
           <ProtectedContent />
-        </ProtectedRoute>,
-        ['/test']
+        </ProtectedRoute>
       )
-      
+
       expect(screen.getByText(/access denied/i)).toBeInTheDocument()
       expect(screen.getByText(/account has been deactivated/i)).toBeInTheDocument()
     })
@@ -283,14 +278,13 @@ describe('ProtectedRoute', () => {
       Object.assign(mockAuthState, {
         error: 'Authentication failed'
       })
-      
+
       renderWithRouter(
         <ProtectedRoute>
           <ProtectedContent />
-        </ProtectedRoute>,
-        ['/test']
+        </ProtectedRoute>
       )
-      
+
       expect(screen.getByText(/access denied/i)).toBeInTheDocument()
       expect(screen.getByText(/authentication error: authentication failed/i)).toBeInTheDocument()
     })
@@ -301,17 +295,16 @@ describe('ProtectedRoute', () => {
         error: 'Session expired',
         refreshSession: mockRefreshSession
       })
-      
+
       renderWithRouter(
         <ProtectedRoute>
           <ProtectedContent />
-        </ProtectedRoute>,
-        ['/test']
+        </ProtectedRoute>
       )
-      
+
       const retryButton = screen.getByText(/try again/i)
       expect(retryButton).toBeInTheDocument()
-      
+
       // Note: In a real test, you'd click the button and verify the refresh is called
     })
   })
@@ -326,19 +319,18 @@ describe('ProtectedRoute', () => {
         lastLogin: '2023-01-01T00:00:00Z',
         isActive: true
       }
-      
+
       Object.assign(mockAuthState, {
         isAuthenticated: true,
         user: adminUser
       })
-      
+
       renderWithRouter(
         <AdminRoute>
           <ProtectedContent />
-        </AdminRoute>,
-        ['/test']
+        </AdminRoute>
       )
-      
+
       expect(screen.getByTestId('protected-content')).toBeInTheDocument()
     })
 
@@ -351,19 +343,18 @@ describe('ProtectedRoute', () => {
         lastLogin: '2023-01-01T00:00:00Z',
         isActive: true
       }
-      
+
       Object.assign(mockAuthState, {
         isAuthenticated: true,
         user: userRole
       })
-      
+
       renderWithRouter(
         <AdminRoute>
           <ProtectedContent />
-        </AdminRoute>,
-        ['/test']
+        </AdminRoute>
       )
-      
+
       expect(screen.getByText(/access denied/i)).toBeInTheDocument()
     })
   })
@@ -378,19 +369,18 @@ describe('ProtectedRoute', () => {
         lastLogin: '2023-01-01T00:00:00Z',
         isActive: true
       }
-      
+
       Object.assign(mockAuthState, {
         isAuthenticated: true,
         user: userRole
       })
-      
+
       renderWithRouter(
         <UserRoute>
           <ProtectedContent />
-        </UserRoute>,
-        ['/test']
+        </UserRoute>
       )
-      
+
       expect(screen.getByTestId('protected-content')).toBeInTheDocument()
     })
   })
@@ -400,10 +390,9 @@ describe('ProtectedRoute', () => {
       renderWithRouter(
         <PublicRoute>
           <PublicContent />
-        </PublicRoute>,
-        ['/test']
+        </PublicRoute>
       )
-      
+
       expect(screen.getByTestId('public-content')).toBeInTheDocument()
     })
 
@@ -416,19 +405,18 @@ describe('ProtectedRoute', () => {
         lastLogin: '2023-01-01T00:00:00Z',
         isActive: true
       }
-      
+
       Object.assign(mockAuthState, {
         isAuthenticated: true,
         user: mockUser
       })
-      
+
       renderWithRouter(
         <PublicRoute>
           <PublicContent />
-        </PublicRoute>,
-        ['/test']
+        </PublicRoute>
       )
-      
+
       expect(screen.getByTestId('home-page')).toBeInTheDocument()
       expect(screen.queryByTestId('public-content')).not.toBeInTheDocument()
     })
@@ -474,26 +462,25 @@ describe('ProtectedRoute', () => {
     it('should accept configuration object', () => {
       const config = {
         requireAuth: true,
-        allowedRoles: ['admin'],
+        allowedRoles: ['admin'] as User['role'][],
         redirectTo: '/login'
       }
-      
+
       renderWithRouter(
         <ProtectedRoute config={config}>
           <ProtectedContent />
-        </ProtectedRoute>,
-        ['/test']
+        </ProtectedRoute>
       )
-      
+
       expect(screen.getByTestId('login-page')).toBeInTheDocument()
     })
 
     it('should merge config with props (props take precedence)', () => {
       const config = {
         requireAuth: true,
-        allowedRoles: ['user']
+        allowedRoles: ['user'] as User['role'][]
       }
-      
+
       const adminUser: User = {
         id: '1',
         username: 'admin',
@@ -502,19 +489,18 @@ describe('ProtectedRoute', () => {
         lastLogin: '2023-01-01T00:00:00Z',
         isActive: true
       }
-      
+
       Object.assign(mockAuthState, {
         isAuthenticated: true,
         user: adminUser
       })
-      
+
       renderWithRouter(
         <ProtectedRoute config={config} allowedRoles={['admin']}>
           <ProtectedContent />
-        </ProtectedRoute>,
-        ['/test']
+        </ProtectedRoute>
       )
-      
+
       // Props should override config
       expect(screen.getByTestId('protected-content')).toBeInTheDocument()
     })

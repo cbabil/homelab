@@ -1,71 +1,100 @@
 /**
  * Dashboard Status Cards Component
- * 
+ *
  * Status cards displaying system metrics and health information.
  */
 
+import React from 'react'
 import { CheckCircle, AlertCircle, Activity, Package, Clock } from 'lucide-react'
+import { Box, Card, Typography, Stack, Grid } from '@mui/material'
 import { HealthStatus } from '@/types/mcp'
-import { cn } from '@/utils/cn'
 
 interface DashboardStatusCardsProps {
   healthStatus: HealthStatus | null
 }
 
+interface StatusCardData {
+  title: string
+  value: string
+  icon: React.ComponentType<{ className?: string; style?: React.CSSProperties }>
+  color: string
+  accentColor: string
+}
+
 export function DashboardStatusCards({ healthStatus }: DashboardStatusCardsProps) {
-  const statusCards = [
+  const statusCards: StatusCardData[] = [
     {
       title: 'System Status',
       value: healthStatus?.status || 'Unknown',
       icon: healthStatus?.status === 'healthy' ? CheckCircle : AlertCircle,
-      color: healthStatus?.status === 'healthy' ? 'text-green-500' : 'text-red-500',
-      bgColor: healthStatus?.status === 'healthy' ? 'bg-green-50 dark:bg-green-950/50' : 'bg-red-50 dark:bg-red-950/50'
+      color: healthStatus?.status === 'healthy' ? '#10b981' : '#ef4444',
+      accentColor: healthStatus?.status === 'healthy' ? 'linear-gradient(to right, #10b981, #34d399)' : 'linear-gradient(to right, #ef4444, #f87171)'
     },
     {
       title: 'Version',
       value: healthStatus?.version || 'N/A',
       icon: Activity,
-      color: 'text-blue-500',
-      bgColor: 'bg-blue-50 dark:bg-blue-950/50'
+      color: '#3b82f6',
+      accentColor: 'linear-gradient(to right, #3b82f6, #60a5fa)'
     },
     {
       title: 'Components',
       value: healthStatus?.components ? Object.keys(healthStatus.components).length.toString() : '0',
       icon: Package,
-      color: 'text-purple-500',
-      bgColor: 'bg-purple-50 dark:bg-purple-950/50'
+      color: '#8b5cf6',
+      accentColor: 'linear-gradient(to right, #8b5cf6, #a78bfa)'
     },
     {
       title: 'Last Updated',
       value: healthStatus?.timestamp ? new Date(healthStatus.timestamp).toLocaleTimeString() : 'N/A',
       icon: Clock,
-      color: 'text-orange-500',
-      bgColor: 'bg-orange-50 dark:bg-orange-950/50'
+      color: '#f59e0b',
+      accentColor: 'linear-gradient(to right, #f59e0b, #fbbf24)'
     }
   ]
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <Grid container spacing={3}>
       {statusCards.map((card) => (
-        <div 
-          key={card.title}
-          className={cn(
-            "bg-card p-6 rounded-xl border card-hover",
-            card.bgColor
-          )}
-        >
-          <div className="flex items-center justify-between mb-4">
-            <div className={cn("p-2 rounded-lg", card.bgColor)}>
-              <card.icon className={cn("w-5 h-5", card.color)} />
-            </div>
-          </div>
-          
-          <div className="space-y-1">
-            <p className="text-2xl font-bold">{card.value}</p>
-            <p className="text-sm text-muted-foreground">{card.title}</p>
-          </div>
-        </div>
+        <Grid size={{ xs: 12, sm: 6, lg: 3 }} key={card.title}>
+          <Card
+            sx={{
+              position: 'relative',
+              p: 2.5,
+              overflow: 'hidden',
+              transition: 'all 0.2s',
+              '&:hover': {
+                boxShadow: 4,
+                transform: 'translateY(-2px)'
+              }
+            }}
+          >
+            {/* Accent line */}
+            <Box
+              sx={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                right: 0,
+                height: 4,
+                background: card.accentColor
+              }}
+            />
+
+            <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+              <Box sx={{ flex: 1 }}>
+                <Typography variant="body2" color="text.secondary" fontWeight={500} sx={{ mb: 0.5 }}>
+                  {card.title}
+                </Typography>
+                <Typography variant="h3" fontWeight={700} sx={{ mb: 0.5, letterSpacing: '-0.02em', textTransform: 'capitalize' }}>
+                  {card.value}
+                </Typography>
+              </Box>
+              <card.icon className="w-5 h-5" style={{ color: card.color }} />
+            </Stack>
+          </Card>
+        </Grid>
       ))}
-    </div>
+    </Grid>
   )
 }

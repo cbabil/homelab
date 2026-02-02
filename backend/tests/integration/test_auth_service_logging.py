@@ -5,7 +5,6 @@ Tests the actual _log_security_event method with a real database.
 """
 
 import pytest
-import asyncio
 from datetime import datetime, UTC
 from pathlib import Path
 import sys
@@ -29,7 +28,7 @@ class TestAuthServiceLogging:
         from services.service_log import log_service
         from services.auth_service import AuthService
 
-        print(f"\n=== Testing Auth Service Logging ===")
+        print("\n=== Testing Auth Service Logging ===")
         print(f"Database path: {db_manager.database_path}")
 
         # Clear any existing logs for clean test
@@ -67,8 +66,11 @@ class TestAuthServiceLogging:
         logs = await log_service.get_logs()
         print(f"Final log count: {len(logs)}")
 
-        # Find our log entry
-        security_logs = [l for l in logs if l.source == "auth_service" and "integration_test_user" in l.message]
+        # Find our log entry (source is "auth" as set in _log_security_event)
+        security_logs = [
+            entry for entry in logs
+            if entry.source == "auth" and "integration_test_user" in entry.message
+        ]
         print(f"Security logs for integration_test_user: {len(security_logs)}")
 
         for log in security_logs:
@@ -82,7 +84,7 @@ class TestAuthServiceLogging:
         from services import auth_service as auth_module
         from services.service_log import log_service
 
-        print(f"\n=== Checking log_service instance ===")
+        print("\n=== Checking log_service instance ===")
         print(f"log_service in auth_service module: {auth_module.log_service}")
         print(f"global log_service: {log_service}")
         print(f"Same instance: {auth_module.log_service is log_service}")
@@ -93,7 +95,7 @@ class TestAuthServiceLogging:
     @pytest.mark.asyncio
     async def test_log_entry_model_conversion(self):
         """Test that LogEntry can be properly converted to table model."""
-        from models.log import LogEntry, LogEntryTable
+        from models.log import LogEntry
         import uuid
 
         log_entry = LogEntry(
@@ -109,7 +111,7 @@ class TestAuthServiceLogging:
         # Convert to table model
         table_model = log_entry.to_table_model()
 
-        print(f"\n=== LogEntry to Table Model ===")
+        print("\n=== LogEntry to Table Model ===")
         print(f"id: {table_model.id}")
         print(f"timestamp: {table_model.timestamp}")
         print(f"level: {table_model.level}")
@@ -129,7 +131,6 @@ class TestAuthServiceLogging:
         os.environ["DATA_DIRECTORY"] = str(Path(__file__).resolve().parents[2] / "data")
 
         from database.connection import db_manager
-        from models.log import LogEntryTable
         from sqlalchemy import text
         import uuid
 
@@ -137,7 +138,7 @@ class TestAuthServiceLogging:
 
         test_id = f"commit-test-{uuid.uuid4().hex[:8]}"
 
-        print(f"\n=== Testing Database Commit ===")
+        print("\n=== Testing Database Commit ===")
         print(f"Test ID: {test_id}")
 
         # Insert directly using raw SQL

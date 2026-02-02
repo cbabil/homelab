@@ -9,7 +9,8 @@ PRAGMA foreign_keys = ON;
 CREATE TABLE IF NOT EXISTS system_settings (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     setting_key TEXT NOT NULL,
-    setting_value TEXT NOT NULL, -- JSON-encoded value
+    setting_value TEXT NOT NULL, -- JSON-encoded current value
+    default_value TEXT NOT NULL, -- JSON-encoded factory default for reset
     category TEXT NOT NULL,
     scope TEXT NOT NULL DEFAULT 'system',
     data_type TEXT NOT NULL,
@@ -34,6 +35,11 @@ CREATE TABLE IF NOT EXISTS system_settings (
     CONSTRAINT chk_setting_value_json CHECK (
         setting_value IS NOT NULL AND
         json_valid(setting_value) = 1
+    ),
+
+    CONSTRAINT chk_default_value_json CHECK (
+        default_value IS NOT NULL AND
+        json_valid(default_value) = 1
     ),
 
     CONSTRAINT chk_category_valid CHECK (

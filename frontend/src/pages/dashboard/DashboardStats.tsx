@@ -1,116 +1,231 @@
 /**
  * Dashboard Stats Component
  *
- * Displays server and application statistics in card format.
+ * Displays key metrics in a clean, modern card layout.
  */
 
-import { Server, Package, CheckCircle, XCircle, AlertTriangle } from 'lucide-react'
+import React, { useMemo } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useTranslation } from 'react-i18next'
+import { Server, Package, Play, AlertCircle } from 'lucide-react'
+import { Box, Card, Typography, Stack, Grid } from '@mui/material'
 import { DashboardSummary } from '@/types/mcp'
+import { AgentInfo } from '@/types/server'
+import { AgentIcon } from '@/components/servers/ServerIcons'
 
 interface DashboardStatsProps {
   data: DashboardSummary | null
+  agentStatuses?: Map<string, AgentInfo | null>
+}
+
+interface QuickLink {
+  label: string
+  onClick: () => void
 }
 
 interface StatCardProps {
   title: string
   value: number
+  subtitle: string
   icon: React.ReactNode
-  iconBg: string
-  subtitle?: string
-  badge?: {
-    label: string
-    variant: 'success' | 'warning' | 'danger' | 'neutral'
-  }
+  accentColor: string
+  onClick?: () => void
+  links?: QuickLink[]
 }
 
-const badgeStyles = {
-  success: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-400',
-  warning: 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-400',
-  danger: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-400',
-  neutral: 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-400'
-}
-
-function StatCard({ title, value, icon, iconBg, subtitle, badge }: StatCardProps) {
+function StatCard({ title, value, subtitle, icon, accentColor, onClick, links }: StatCardProps) {
   return (
-    <div className="bg-card border border-border rounded-lg p-4 h-full">
-      <div className="flex items-start justify-between mb-3">
-        <div className={`p-2 rounded-lg ${iconBg}`}>
+    <Card
+      sx={{
+        position: 'relative',
+        p: 2,
+        overflow: 'hidden',
+        height: '100%',
+        display: 'flex',
+        flexDirection: 'column'
+      }}
+    >
+      {/* Accent line */}
+      <Box
+        sx={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          height: 4,
+          background: accentColor
+        }}
+      />
+
+      <Box
+        onClick={onClick}
+        sx={{
+          cursor: onClick ? 'pointer' : 'default',
+          '&:hover .stat-value': onClick ? { color: 'primary.main' } : {}
+        }}
+      >
+        <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
+          <Box sx={{ flex: 1 }}>
+            <Typography variant="body2" color="text.secondary" fontWeight={500} sx={{ mb: 0.25 }}>
+              {title}
+            </Typography>
+            <Typography variant="h4" fontWeight={700} className="stat-value" sx={{ mb: 0.25, letterSpacing: '-0.02em', transition: 'color 0.15s' }}>
+              {value}
+            </Typography>
+            <Typography variant="caption" color="text.secondary" sx={{ fontSize: 10 }}>
+              {subtitle}
+            </Typography>
+          </Box>
           {icon}
-        </div>
-        {badge && (
-          <span className={`px-2 py-1 text-xs font-medium rounded-full ${badgeStyles[badge.variant]}`}>
-            {badge.label}
-          </span>
-        )}
-      </div>
-      <div className="space-y-1">
-        <p className="text-3xl font-bold">{value}</p>
-        <p className="text-sm font-medium text-foreground">{title}</p>
-        {subtitle && (
-          <p className="text-xs text-muted-foreground">{subtitle}</p>
-        )}
-      </div>
-    </div>
+        </Stack>
+      </Box>
+
+      {links && links.length > 0 && (
+        <Stack direction="row" spacing={1.5} sx={{ mt: 'auto', pt: 1.5 }}>
+          {links.map((link, index) => (
+            <Typography
+              key={index}
+              component="button"
+              onClick={(e) => { e.stopPropagation(); link.onClick(); }}
+              sx={{
+                fontSize: 10,
+                color: 'primary.main',
+                background: 'none',
+                border: 'none',
+                p: 0,
+                cursor: 'pointer',
+                '&:hover': { textDecoration: 'underline' }
+              }}
+            >
+              {link.label}
+            </Typography>
+          ))}
+        </Stack>
+      )}
+    </Card>
   )
 }
 
-export function DashboardStats({ data }: DashboardStatsProps) {
-  const stats: StatCardProps[] = [
-    {
-      title: 'Total Servers',
-      value: data?.total_servers ?? 0,
-      icon: <Server className="w-5 h-5 text-blue-600" />,
-      iconBg: 'bg-blue-100 dark:bg-blue-900/30',
-      subtitle: data ? `${data.online_servers} online, ${data.offline_servers} offline` : undefined,
-      badge: data && data.online_servers > 0 ? {
-        label: `${data.online_servers} Online`,
-        variant: 'success'
-      } : data && data.offline_servers > 0 ? {
-        label: `${data.offline_servers} Offline`,
-        variant: 'warning'
-      } : undefined
-    },
-    {
-      title: 'Total Applications',
-      value: data?.total_apps ?? 0,
-      icon: <Package className="w-5 h-5 text-purple-600" />,
-      iconBg: 'bg-purple-100 dark:bg-purple-900/30',
-      subtitle: data ? `${data.running_apps} running, ${data.stopped_apps} stopped` : undefined
-    },
-    {
-      title: 'Running Apps',
-      value: data?.running_apps ?? 0,
-      icon: <CheckCircle className="w-5 h-5 text-green-600" />,
-      iconBg: 'bg-green-100 dark:bg-green-900/30',
-      badge: data && data.running_apps > 0 ? {
-        label: 'Healthy',
-        variant: 'success'
-      } : undefined
-    },
-    {
-      title: 'Issues',
-      value: (data?.stopped_apps ?? 0) + (data?.error_apps ?? 0),
-      icon: data?.error_apps ? <XCircle className="w-5 h-5 text-red-600" /> : <AlertTriangle className="w-5 h-5 text-yellow-600" />,
-      iconBg: data?.error_apps ? 'bg-red-100 dark:bg-red-900/30' : 'bg-yellow-100 dark:bg-yellow-900/30',
-      subtitle: data?.error_apps ? `${data.error_apps} errors, ${data.stopped_apps} stopped` : `${data?.stopped_apps ?? 0} stopped`,
-      badge: data?.error_apps ? {
-        label: 'Errors',
-        variant: 'danger'
-      } : data?.stopped_apps ? {
-        label: 'Stopped',
-        variant: 'warning'
-      } : {
-        label: 'All Clear',
-        variant: 'success'
+export function DashboardStats({ data, agentStatuses }: DashboardStatsProps) {
+  const { t } = useTranslation()
+  const navigate = useNavigate()
+
+  const onlineServers = data?.online_servers ?? 0
+  const offlineServers = data?.offline_servers ?? 0
+  const totalServers = data?.total_servers ?? 0
+  const runningApps = data?.running_apps ?? 0
+  const stoppedApps = data?.stopped_apps ?? 0
+  const errorApps = data?.error_apps ?? 0
+  const totalApps = data?.total_apps ?? 0
+  const issues = stoppedApps + errorApps
+
+  // Calculate agent health counts
+  const agentCounts = useMemo(() => {
+    const counts = { healthy: 0, degraded: 0, offline: 0, total: 0 }
+    if (!agentStatuses) return counts
+
+    agentStatuses.forEach((agent) => {
+      if (!agent) return
+      counts.total++
+      if (agent.status === 'connected' && agent.is_connected) {
+        counts.healthy++
+      } else if (agent.status === 'disconnected' || !agent.is_connected) {
+        counts.offline++
+      } else {
+        counts.degraded++
       }
-    }
-  ]
+    })
+    return counts
+  }, [agentStatuses])
+
+  const agentIssues = agentCounts.degraded + agentCounts.offline
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      {stats.map((stat) => (
-        <StatCard key={stat.title} {...stat} />
-      ))}
-    </div>
+    <Grid container spacing={2}>
+      <Grid size={{ xs: 6, md: 4, xl: 2.4 }}>
+        <StatCard
+          title={t('nav.servers')}
+          value={totalServers}
+          subtitle={totalServers > 0 ? `${onlineServers} online, ${offlineServers} offline` : t('dashboard.noServers')}
+          icon={<Server className="w-5 h-5" style={{ color: '#3b82f6' }} />}
+          accentColor="linear-gradient(to right, #3b82f6, #60a5fa)"
+          onClick={() => navigate('/servers')}
+          links={[
+            { label: t('common.viewAll'), onClick: () => navigate('/servers') },
+            { label: t('common.add'), onClick: () => navigate('/servers?action=add') }
+          ]}
+        />
+      </Grid>
+
+      <Grid size={{ xs: 6, md: 4, xl: 2.4 }}>
+        <StatCard
+          title={t('nav.applications')}
+          value={totalApps}
+          subtitle={totalApps > 0 ? `${runningApps} running, ${stoppedApps} stopped` : t('applications.noApplications')}
+          icon={<Package className="w-5 h-5" style={{ color: '#8b5cf6' }} />}
+          accentColor="linear-gradient(to right, #8b5cf6, #a78bfa)"
+          onClick={() => navigate('/applications')}
+          links={[
+            { label: t('common.viewAll'), onClick: () => navigate('/applications') },
+            { label: t('nav.marketplace'), onClick: () => navigate('/marketplace') }
+          ]}
+        />
+      </Grid>
+
+      <Grid size={{ xs: 6, md: 4, xl: 2.4 }}>
+        <StatCard
+          title={t('dashboard.running')}
+          value={runningApps}
+          subtitle={runningApps > 0 ? t('dashboard.allSystemsOperational', 'All systems operational') : t('dashboard.noRunningApps', 'No running applications')}
+          icon={<Play className="w-5 h-5" style={{ color: '#10b981' }} />}
+          accentColor="linear-gradient(to right, #10b981, #34d399)"
+          onClick={() => navigate('/applications?status=running')}
+          links={[
+            { label: t('common.viewAll'), onClick: () => navigate('/applications?status=running') }
+          ]}
+        />
+      </Grid>
+
+      <Grid size={{ xs: 6, md: 4, xl: 2.4 }}>
+        <StatCard
+          title={t('dashboard.issues', 'Issues')}
+          value={issues}
+          subtitle={
+            errorApps > 0
+              ? `${errorApps} error, ${stoppedApps} stopped`
+              : issues > 0
+                ? `${stoppedApps} stopped`
+                : t('dashboard.allClear', 'All clear')
+          }
+          icon={<AlertCircle className="w-5 h-5" style={{ color: issues > 0 ? '#f59e0b' : '#10b981' }} />}
+          accentColor={issues > 0 ? 'linear-gradient(to right, #f59e0b, #fbbf24)' : 'linear-gradient(to right, #10b981, #34d399)'}
+          onClick={() => navigate('/applications?status=issues')}
+          links={issues > 0 ? [
+            { label: t('dashboard.viewIssues', 'View issues'), onClick: () => navigate('/applications?status=issues') }
+          ] : undefined}
+        />
+      </Grid>
+
+      <Grid size={{ xs: 6, md: 4, xl: 2.4 }}>
+        <StatCard
+          title={t('dashboard.agentHealth')}
+          value={agentCounts.total}
+          subtitle={
+            agentCounts.total === 0
+              ? t('dashboard.noAgentsInstalled')
+              : agentIssues > 0
+                ? `${agentCounts.healthy} healthy, ${agentIssues} issues`
+                : t('dashboard.allSystemsOperational')
+          }
+          icon={<AgentIcon style={{ width: 20, height: 20, color: agentIssues > 0 ? '#f59e0b' : '#6366f1' }} />}
+          accentColor={agentIssues > 0 ? 'linear-gradient(to right, #f59e0b, #fbbf24)' : 'linear-gradient(to right, #6366f1, #818cf8)'}
+          onClick={() => navigate('/servers')}
+          links={agentCounts.total > 0 ? [
+            { label: t('common.viewAll'), onClick: () => navigate('/servers') },
+            { label: t('audit.viewAll'), onClick: () => navigate('/settings?tab=security') }
+          ] : undefined}
+        />
+      </Grid>
+    </Grid>
   )
 }

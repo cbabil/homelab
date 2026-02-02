@@ -1,312 +1,245 @@
 /**
  * Applications Page Component
  *
- * Modern app marketplace with search, filters, and installation management.
+ * Manage deployed/installed applications.
+ * Shows installed apps in a table with a side panel for details.
  */
 
-import { useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { Power, Trash2, X } from 'lucide-react'
-import { Alert, Button, Card, Typography } from 'ui-toolkit'
-import { App } from '@/types/app'
-import { AppCard } from '@/components/applications/AppCard'
-import { ApplicationFormDialog } from '@/components/applications/ApplicationFormDialog'
-import { useApplications } from '@/hooks/useApplications'
-import { useServers } from '@/hooks/useServers'
-import { useToast } from '@/components/ui/Toast'
-import { applicationLogger } from '@/services/systemLogger'
-import { ApplicationsPageHeader } from './ApplicationsPageHeader'
-import { ApplicationsSearchAndFilter } from './ApplicationsSearchAndFilter'
-import { ApplicationsEmptyState } from './ApplicationsEmptyState'
+import { useState, useMemo, useEffect, useRef } from 'react'
+import { RefreshCw, Package } from 'lucide-react'
+import {
+  Box,
+  Alert,
+  Typography,
+  CircularProgress
+} from '@mui/material'
+import { SearchInput } from '@/components/ui/SearchInput'
+import { Button } from '@/components/ui/Button'
+import { useTranslation } from 'react-i18next'
+import { PageHeader } from '@/components/layout/PageHeader'
+import { useInstalledApps, InstalledAppInfo } from '@/hooks/useInstalledApps'
+import { useMCP } from '@/providers/MCPProvider'
+import { useNotifications } from '@/providers/NotificationProvider'
+import { useSettingsContext } from '@/providers/SettingsProvider'
+import { InstalledAppsTable } from './InstalledAppsTable'
+import { AppDetailsPanel } from './AppDetailsPanel'
 
 export function ApplicationsPage() {
-  const [searchParams] = useSearchParams()
-  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false)
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
-  const [isRemoving, setIsRemoving] = useState(false)
-  const [isUninstalling, setIsUninstalling] = useState(false)
-  const { addToast } = useToast()
-  const {
-    apps,
-    categories,
-    filter,
-    setFilter,
-    updateFilter,
-    addApplication,
-    removeApplications,
-    uninstallApplication,
-    uninstallApplications,
-    isLoading,
-    error
-  } = useApplications()
-  const { servers } = useServers()
+  const { t } = useTranslation()
+  const { client, isConnected } = useMCP()
+  const { addNotification } = useNotifications()
+  const { apps, isLoading, isRefreshingStatus, error, refresh, refreshLiveStatus } = useInstalledApps()
 
-  // Read URL parameters and update filter
-  useEffect(() => {
-    const categoryParam = searchParams.get('category') || undefined
-    updateFilter({ category: categoryParam })
-  }, [searchParams, updateFilter])
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedApp, setSelectedApp] = useState<InstalledAppInfo | null>(null)
 
-  const handleSearch = (value: string) => {
-    updateFilter({ search: value })
-  }
+  // Filter apps by search query
+  const filteredApps = useMemo(() => {
+    if (!searchQuery.trim()) return apps
 
-  const handleAddApp = () => {
-    setIsAddDialogOpen(true)
-  }
+    const query = searchQuery.toLowerCase()
+    return apps.filter(
+      (app) =>
+        app.appName.toLowerCase().includes(query) ||
+        app.serverName.toLowerCase().includes(query) ||
+        app.appDescription?.toLowerCase().includes(query)
+    )
+  }, [apps, searchQuery])
 
-  const handleSaveApp = async (appData: Partial<App>) => {
+  // Handle app actions
+  const handleStart = async (app: InstalledAppInfo) => {
+    if (!isConnected) return
+
     try {
-      await addApplication(appData)
-      setIsAddDialogOpen(false)
-    } catch (error) {
-      console.error('Failed to add application:', error)
-    }
-  }
+      const response = await client.callTool('start_app', {
+        server_id: app.serverId,
+        app_id: app.appId
+      })
 
-  // Selection handlers
-  const handleToggleSelect = (appId: string) => {
-    setSelectedIds(prev => {
-      const next = new Set(prev)
-      if (next.has(appId)) {
-        next.delete(appId)
+      if (response.success) {
+        addNotification({ type: 'success', title: t('applications.actions.start'), message: `${app.appName} ${t('applications.status.starting')}` })
+        await refresh()
+        refreshLiveStatus()
       } else {
-        next.add(appId)
+        addNotification({ type: 'error', title: t('common.error'), message: response.message || t('applications.actions.start') })
       }
-      return next
-    })
+    } catch (_err) {
+      addNotification({ type: 'error', title: t('common.error'), message: t('applications.actions.start') })
+    }
   }
 
-  const handleClearSelection = () => {
-    setSelectedIds(new Set())
-  }
+  const handleStop = async (app: InstalledAppInfo) => {
+    if (!isConnected) return
 
-  const handleSelectAll = () => {
-    setSelectedIds(new Set(apps.map(app => app.id)))
-  }
-
-  const handleBulkRemove = async () => {
-    if (selectedIds.size === 0) return
-
-    setIsRemoving(true)
     try {
-      const result = await removeApplications(Array.from(selectedIds))
-      setSelectedIds(new Set())
-
-      if (result.removedCount > 0) {
-        addToast({
-          type: 'success',
-          title: `Removed ${result.removedCount} application${result.removedCount > 1 ? 's' : ''}`
-        })
-      }
-      if (result.skippedCount > 0) {
-        addToast({
-          type: 'warning',
-          title: `Skipped ${result.skippedCount} installed app${result.skippedCount > 1 ? 's' : ''}`,
-          message: 'Uninstall them first to remove from catalog'
-        })
-      }
-    } catch (err) {
-      addToast({
-        type: 'error',
-        title: 'Failed to remove applications'
+      const response = await client.callTool('stop_app', {
+        server_id: app.serverId,
+        app_id: app.appId
       })
-    } finally {
-      setIsRemoving(false)
+
+      if (response.success) {
+        addNotification({ type: 'success', title: t('applications.actions.stop'), message: `${app.appName} ${t('applications.status.stopping')}` })
+        await refresh()
+        refreshLiveStatus()
+      } else {
+        addNotification({ type: 'error', title: t('common.error'), message: response.message || t('applications.actions.stop') })
+      }
+    } catch (_err) {
+      addNotification({ type: 'error', title: t('common.error'), message: t('applications.actions.stop') })
     }
   }
 
-  const handleUninstall = async (appId: string, serverId?: string) => {
+  const handleRestart = async (app: InstalledAppInfo) => {
+    await handleStop(app)
+    // Small delay before starting
+    await new Promise((resolve) => setTimeout(resolve, 1000))
+    await handleStart(app)
+  }
+
+  const handleUninstall = async (app: InstalledAppInfo) => {
+    if (!isConnected) return
+
     try {
-      await uninstallApplication(appId, serverId)
-      addToast({
-        type: 'success',
-        title: 'Application uninstalled'
+      const response = await client.callTool('delete_app', {
+        server_id: app.serverId,
+        app_id: app.appId
       })
-    } catch (err) {
-      addToast({
-        type: 'error',
-        title: 'Failed to uninstall application'
-      })
-    }
-  }
 
-  const handleDeploy = (appId: string) => {
-    const app = apps.find(a => a.id === appId)
-
-    if (servers.length === 0) {
-      applicationLogger.warn('Deploy attempted with no servers configured', {
-        source: 'ApplicationsPage',
-        appId,
-        appName: app?.name
-      })
-      addToast({
-        type: 'warning',
-        title: 'No servers configured',
-        message: 'Add a server in the Servers page before deploying applications'
-      })
-      return
-    }
-    // TODO: Open deployment dialog to select server and configure
-    console.log('Deploy app:', app?.name, 'to one of', servers.length, 'servers')
-  }
-
-  const handleBulkUninstall = async () => {
-    const installedSelectedIds = Array.from(selectedIds).filter(id => {
-      const app = apps.find(a => a.id === id)
-      return app?.status === 'installed'
-    })
-
-    if (installedSelectedIds.length === 0) return
-
-    setIsUninstalling(true)
-    try {
-      const result = await uninstallApplications(installedSelectedIds)
-      setSelectedIds(new Set())
-
-      if (result.uninstalledCount > 0) {
-        addToast({
-          type: 'success',
-          title: `Uninstalled ${result.uninstalledCount} application${result.uninstalledCount > 1 ? 's' : ''}`
-        })
+      if (response.success) {
+        addNotification({ type: 'success', title: t('common.success'), message: `${app.appName} ${t('applications.deleteApplication')}` })
+        setSelectedApp(null)
+        refresh()
+      } else {
+        addNotification({ type: 'error', title: t('common.error'), message: response.message || t('applications.deleteApplication') })
       }
-      if (result.skippedCount > 0) {
-        addToast({
-          type: 'warning',
-          title: `Skipped ${result.skippedCount} app${result.skippedCount > 1 ? 's' : ''}`,
-          message: 'Some applications could not be uninstalled'
-        })
-      }
-    } catch (err) {
-      addToast({
-        type: 'error',
-        title: 'Failed to uninstall applications'
-      })
-    } finally {
-      setIsUninstalling(false)
+    } catch (_err) {
+      addNotification({ type: 'error', title: t('common.error'), message: t('applications.deleteApplication') })
     }
   }
 
-  const selectedCount = selectedIds.size
-  const installedCount = apps.filter(app => app.status === 'installed').length
+  const handleRefresh = async () => {
+    await refresh()
+    await refreshLiveStatus()
+  }
 
-  // Count selected by type
-  const selectedInstalledCount = Array.from(selectedIds).filter(id => {
-    const app = apps.find(a => a.id === id)
-    return app?.status === 'installed'
-  }).length
-  const selectedNonInstalledCount = selectedCount - selectedInstalledCount
+  // Settings for auto-refresh
+  const { settings } = useSettingsContext()
+  const refreshIntervalRef = useRef<NodeJS.Timeout | null>(null)
 
-  const allSelected = apps.length > 0 && selectedCount === apps.length
+  // Auto-refresh applications based on settings.ui.refreshRate
+  useEffect(() => {
+    if (refreshIntervalRef.current) {
+      clearInterval(refreshIntervalRef.current)
+      refreshIntervalRef.current = null
+    }
+
+    const refreshRate = settings?.ui?.refreshRate
+    if (!refreshRate || refreshRate <= 0 || !isConnected) return
+
+    refreshIntervalRef.current = setInterval(handleRefresh, refreshRate * 1000)
+
+    return () => {
+      if (refreshIntervalRef.current) {
+        clearInterval(refreshIntervalRef.current)
+        refreshIntervalRef.current = null
+      }
+    }
+  }, [settings?.ui?.refreshRate, isConnected])
 
   return (
-    <div className="space-y-4">
-      {/* Ultra-compact header with inline Add App button */}
-      <div className="space-y-2">
-        <ApplicationsPageHeader onAddApp={handleAddApp} />
-
-        {/* Ultra-compact search and filters in single line */}
-        <ApplicationsSearchAndFilter
-          filter={filter}
-          onFilterChange={setFilter}
-          onSearch={handleSearch}
-          categories={categories}
-        />
-      </div>
-
-      {/* Bulk action bar */}
-      {apps.length > 0 && (
-        <Card padding="sm" elevation="xs" className="flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            {selectedCount > 0 ? (
-              <>
-                <Typography variant="body-strong">
-                  {selectedCount} selected
-                  {selectedInstalledCount > 0 && selectedNonInstalledCount > 0 && (
-                    <Typography as="span" variant="body" muted>
-                      {' '}({selectedInstalledCount} deployed, {selectedNonInstalledCount} available)
-                    </Typography>
-                  )}
-                </Typography>
-                <button
-                  type="button"
-                  onClick={handleClearSelection}
-                  className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-                  title="Clear selection"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </>
-            ) : (
-              <Typography variant="body" muted>
-                {apps.length} app{apps.length > 1 ? 's' : ''} in catalog
-                {installedCount > 0 && ` (${installedCount} deployed)`}
-              </Typography>
-            )}
-          </div>
-          <div className="flex items-center gap-2">
-            {!allSelected && (
-              <Button variant="ghost" size="sm" onClick={handleSelectAll}>
-                Select all
-              </Button>
-            )}
-            {selectedInstalledCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleBulkUninstall}
-                disabled={isUninstalling}
-                leftIcon={<Power size={14} />}
-                className="text-orange-600 hover:text-orange-700"
-              >
-                {isUninstalling ? 'Uninstalling...' : `Uninstall (${selectedInstalledCount})`}
-              </Button>
-            )}
-            {selectedNonInstalledCount > 0 && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={handleBulkRemove}
-                disabled={isRemoving}
-                leftIcon={<Trash2 size={14} />}
-                className="text-red-600 hover:text-red-700"
-              >
-                {isRemoving ? 'Removing...' : `Remove (${selectedNonInstalledCount})`}
-              </Button>
-            )}
-          </div>
-        </Card>
-      )}
-
-      {/* Ultra-compact grid with minimal gaps */}
-      <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 lg:grid-cols-10 xl:grid-cols-12 2xl:grid-cols-14 gap-1.5">
-        {apps.map((app) => (
-          <AppCard
-            key={app.id}
-            app={app}
-            isSelected={selectedIds.has(app.id)}
-            onToggleSelect={handleToggleSelect}
-            onUninstall={app.status === 'installed' ? handleUninstall : undefined}
-            onDeploy={app.status !== 'installed' ? handleDeploy : undefined}
-          />
-        ))}
-      </div>
-
-      {!isLoading && apps.length === 0 && <ApplicationsEmptyState />}
-
-      {error && (
-        <Alert variant="danger" title="Error">
-          {error}
-        </Alert>
-      )}
-
-      <ApplicationFormDialog
-        isOpen={isAddDialogOpen}
-        onClose={() => setIsAddDialogOpen(false)}
-        onSave={handleSaveApp}
-        categories={categories}
-        title="Add Custom Application"
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      <PageHeader
+        title={t('applications.title')}
+        actions={
+          <>
+            <SearchInput
+              value={searchQuery}
+              onChange={setSearchQuery}
+              placeholder={t('applications.searchPlaceholder')}
+            />
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleRefresh}
+              disabled={isLoading || isRefreshingStatus}
+              leftIcon={<RefreshCw style={{ width: 12, height: 12 }} className={isLoading || isRefreshingStatus ? 'animate-spin' : ''} />}
+              sx={{ fontSize: '0.7rem', py: 0.25, px: 1.5, minHeight: 26 }}
+            >
+              {t('common.refresh')}
+            </Button>
+          </>
+        }
       />
-    </div>
+
+      {/* App count */}
+      <Typography variant="body2" color="text.secondary" fontWeight={600} sx={{ mb: 2 }}>
+        {searchQuery
+          ? t('applications.appCountFiltered', { filtered: filteredApps.length, total: apps.length })
+          : t('applications.appCount', { count: apps.length })}
+      </Typography>
+
+      {/* Content */}
+      <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        {/* Error */}
+        {error && (
+          <Alert severity="error" sx={{ mb: 2 }}>
+            {error}
+          </Alert>
+        )}
+
+        {/* Loading */}
+        {isLoading && apps.length === 0 && (
+          <Box sx={{
+            flex: 1,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <CircularProgress size={32} />
+          </Box>
+        )}
+
+        {/* Empty State */}
+        {!isLoading && apps.length === 0 && !error && (
+          <Box sx={{
+            flex: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center'
+          }}>
+            <Box sx={{ mb: 2, color: 'text.secondary' }}>
+              <Package size={64} style={{ opacity: 0.5 }} />
+            </Box>
+            <Typography variant="h6" sx={{ mb: 1 }}>{t('applications.noApplications')}</Typography>
+            <Typography variant="body2" color="text.secondary">
+              {t('applications.noApplicationsDescription')}
+            </Typography>
+          </Box>
+        )}
+
+        {/* Apps Table */}
+        {apps.length > 0 && (
+          <Box sx={{ flex: 1, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+            <InstalledAppsTable
+              apps={filteredApps}
+              onSelect={setSelectedApp}
+              selectedId={selectedApp?.id}
+              onStart={handleStart}
+              onStop={handleStop}
+              onRestart={handleRestart}
+              onUninstall={handleUninstall}
+            />
+          </Box>
+        )}
+      </Box>
+
+      {/* Side Panel */}
+      <AppDetailsPanel
+        app={selectedApp}
+        onClose={() => setSelectedApp(null)}
+      />
+    </Box>
   )
 }

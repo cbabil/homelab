@@ -11,7 +11,7 @@ import { test, expect, Page, Locator } from '@playwright/test'
 class NavigationHelper {
   constructor(private page: Page) {}
 
-  async login(username: string = 'admin', password: string = 'HomeLabAdmin123!'): Promise<void> {
+  async login(username: string = 'admin', password: string = 'TomoAdmin123!'): Promise<void> {
     // Check if already authenticated by trying to go to a protected page
     await this.page.goto('/')
     const currentUrl = this.page.url()

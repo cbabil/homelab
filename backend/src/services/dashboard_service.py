@@ -4,9 +4,9 @@ Dashboard Service
 Aggregates data for dashboard display.
 """
 
-from typing import List
+import asyncio
 import structlog
-from models.metrics import DashboardSummary, ActivityLog
+from models.metrics import DashboardSummary
 from models.server import ServerStatus
 
 logger = structlog.get_logger("dashboard_service")
@@ -24,7 +24,7 @@ class DashboardService:
         logger.info("Dashboard service initialized")
 
     async def get_summary(self) -> DashboardSummary:
-        """Get aggregated dashboard summary."""
+        """Get aggregated dashboard summary with parallel queries."""
         try:
             # Get server counts
             servers = await self.server_service.get_all_servers()
@@ -32,14 +32,38 @@ class DashboardService:
             online_servers = sum(1 for s in servers if getattr(s, 'status', None) == ServerStatus.CONNECTED or getattr(s, 'status', '') == 'connected')
             offline_servers = total_servers - online_servers
 
-            # Get app counts across all servers
+            # Fetch app counts and metrics in parallel for all servers
+            async def get_server_apps(server_id: str):
+                try:
+                    return await self.deployment_service.get_installed_apps(server_id)
+                except Exception:
+                    return []
+
+            async def get_server_metrics_safe(server_id: str):
+                try:
+                    return await self.metrics_service.get_server_metrics(server_id, period="1h")
+                except Exception:
+                    return None
+
+            # Parallel fetch: apps for all servers, metrics for all servers, recent activities
+            server_ids = [s.id for s in servers]
+            apps_tasks = [get_server_apps(sid) for sid in server_ids]
+            metrics_tasks = [get_server_metrics_safe(sid) for sid in server_ids]
+
+            # Run all tasks in parallel
+            all_apps_results, all_metrics_results, recent_activities = await asyncio.gather(
+                asyncio.gather(*apps_tasks),
+                asyncio.gather(*metrics_tasks),
+                self.activity_service.get_recent_activities(limit=10)
+            )
+
+            # Count apps by status
             total_apps = 0
             running_apps = 0
             stopped_apps = 0
             error_apps = 0
 
-            for server in servers:
-                apps = await self.deployment_service.get_installed_apps(server.id)
+            for apps in all_apps_results:
                 for app in apps:
                     total_apps += 1
                     status = app.get('status', '') if isinstance(app, dict) else getattr(app, 'status', '')
@@ -55,8 +79,7 @@ class DashboardService:
             memory_values = []
             disk_values = []
 
-            for server in servers:
-                metrics = await self.metrics_service.get_server_metrics(server.id, period="1h")
+            for metrics in all_metrics_results:
                 if metrics:
                     latest = metrics[0]
                     cpu_values.append(latest.cpu_percent)
@@ -66,9 +89,6 @@ class DashboardService:
             avg_cpu = sum(cpu_values) / len(cpu_values) if cpu_values else 0.0
             avg_memory = sum(memory_values) / len(memory_values) if memory_values else 0.0
             avg_disk = sum(disk_values) / len(disk_values) if disk_values else 0.0
-
-            # Get recent activities
-            recent_activities = await self.activity_service.get_recent_activities(limit=10)
 
             return DashboardSummary(
                 total_servers=total_servers,

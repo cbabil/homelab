@@ -37,7 +37,7 @@ class DatabaseManager:
             configured_path = (backend_root / configured_path).resolve()
 
         self.data_directory = str(configured_path)
-        self.database_path = str(configured_path / "homelab.db")
+        self.database_path = str(configured_path / "tomo.db")
         self.database_url = f"sqlite+aiosqlite:///{self.database_path}"
 
     def set_data_directory(self, data_directory: str | Path) -> None:

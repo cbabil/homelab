@@ -7,6 +7,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import type { SortKey } from '@/pages/settings/types'
+import type { SessionTimeout } from '@/types/settings'
 import { sessionService } from '@/services/auth/sessionService'
 import { settingsService } from '@/services/settingsService'
 import { useRealSessionDataWithSort } from './useRealSessionData'
@@ -24,8 +25,7 @@ export function useSecuritySettings() {
     terminateSession: realTerminateSession,
     restoreSession: realRestoreSession
   } = useRealSessionDataWithSort({ autoRefresh: true })
-  
-  const [hoveredStatus, setHoveredStatus] = useState<string | null>(null)
+
   const [sessionTimeout, setSessionTimeout] = useState('1h')
   const [isLoading, setIsLoading] = useState(true)
 
@@ -66,7 +66,7 @@ export function useSecuritySettings() {
     try {
       const result = await settingsService.updateSettings('security', {
         session: { 
-          timeout: timeout as any,
+          timeout: timeout as SessionTimeout,
           idleDetection: true,
           showWarningMinutes: 5,
           extendOnActivity: true
@@ -79,7 +79,6 @@ export function useSecuritySettings() {
         await sessionService.renewSession()
         // Refresh sessions to show updated data
         await refreshSessions()
-        console.log('[useSecuritySettings] Session timeout updated:', timeout)
       }
     } catch (error) {
       console.error('[useSecuritySettings] Failed to update session timeout:', error)
@@ -88,12 +87,8 @@ export function useSecuritySettings() {
 
   const handleTerminateSession = useCallback(async (sessionId: string) => {
     try {
-      console.log('[useSecuritySettings] Terminating session:', sessionId)
-      
       // Use real session termination
       await realTerminateSession(sessionId)
-      
-      console.log('[useSecuritySettings] Session terminated successfully:', sessionId)
     } catch (error) {
       console.error('[useSecuritySettings] Failed to terminate session:', error)
       // Could show user notification here
@@ -103,12 +98,8 @@ export function useSecuritySettings() {
 
   const handleRestoreSession = useCallback(async (sessionId: string) => {
     try {
-      console.log('[useSecuritySettings] Restoring session:', sessionId)
-      
       // Use real session restoration
       await realRestoreSession(sessionId)
-      
-      console.log('[useSecuritySettings] Session restored successfully:', sessionId)
     } catch (error) {
       console.error('[useSecuritySettings] Failed to restore session:', error)
       // Could show user notification here
@@ -120,14 +111,12 @@ export function useSecuritySettings() {
     sessions: sortedSessions, // Use sorted sessions from real data
     sortBy,
     sortOrder,
-    hoveredStatus,
     sessionTimeout,
     isLoading,
     error: sessionsError,
     onSort: handleSort,
     onTerminateSession: handleTerminateSession,
     onRestoreSession: handleRestoreSession,
-    onHoveredStatusChange: setHoveredStatus,
     onSessionTimeoutChange: handleSessionTimeoutChange,
     refreshSessions
   }

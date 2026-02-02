@@ -1,6 +1,6 @@
 /**
  * Authentication Provider
- * 
+ *
  * Secure authentication provider with JWT token support, cookie-based session management,
  * activity tracking, and settings integration.
  */
@@ -11,7 +11,6 @@ import type { JWTPayload } from '@/types/jwt'
 import { useAuthState } from '@/hooks/useAuthState'
 import { useAuthActions } from '@/hooks/useAuthActions'
 import { authService } from '@/services/auth/authService'
-import { jwtService } from '@/services/auth/jwtService'
 
 // Create authentication context
 const AuthContext = createContext<AuthContextType | undefined>(undefined)

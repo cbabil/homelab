@@ -1,7 +1,7 @@
 /**
  * Application Types
- * 
- * Type definitions for the homelab application marketplace.
+ *
+ * Type definitions for the tomo application marketplace.
  */
 
 import { LucideIcon } from 'lucide-react'
@@ -61,7 +61,7 @@ export interface AppInstallation {
   version: string
   installedAt: string
   lastUpdated?: string
-  config?: Record<string, any>
+  config?: Record<string, unknown>
   logs?: string[]
 }
 

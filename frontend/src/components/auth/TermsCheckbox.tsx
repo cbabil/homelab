@@ -1,10 +1,16 @@
 /**
  * Terms Acceptance Checkbox Component
- * 
+ *
  * Terms of service and privacy policy acceptance checkbox
  * for registration form with modal popups.
  */
 
+import FormControl from '@mui/material/FormControl'
+import FormControlLabel from '@mui/material/FormControlLabel'
+import Checkbox from '@mui/material/Checkbox'
+import FormHelperText from '@mui/material/FormHelperText'
+import Button from '@mui/material/Button'
+import Typography from '@mui/material/Typography'
 
 interface TermsCheckboxProps {
   checked: boolean
@@ -19,7 +25,7 @@ export function TermsCheckbox({
   isSubmitting,
   onChange
 }: TermsCheckboxProps) {
-  
+
   const openTermsPopup = () => {
     window.open('/terms-of-service', 'termsPopup', 'width=600,height=800,scrollbars=yes,resizable=yes')
   }
@@ -29,42 +35,69 @@ export function TermsCheckbox({
   }
 
   return (
-    <>
-      <div className="flex items-start gap-3">
-        <input
-          id="reg-accept-terms"
-          type="checkbox"
-          className="checkbox-input mt-0.5"
-          checked={checked}
-          onChange={(e) => onChange(e.target.checked)}
-          disabled={isSubmitting}
-        />
-        <label htmlFor="reg-accept-terms" className="text-sm text-foreground cursor-pointer">
-          I accept the{' '}
-          <button
-            type="button"
-            onClick={openTermsPopup}
-            className="text-primary hover:text-primary/80 underline"
+    <FormControl error={!!error} sx={{ width: '100%' }}>
+      <FormControlLabel
+        control={
+          <Checkbox
+            id="reg-accept-terms"
+            checked={checked}
+            onChange={(e) => onChange(e.target.checked)}
             disabled={isSubmitting}
-          >
-            Terms of Service
-          </button>{' '}
-          and{' '}
-          <button
-            type="button"
-            onClick={openPrivacyPopup}
-            className="text-primary hover:text-primary/80 underline"
-            disabled={isSubmitting}
-          >
-            Privacy Policy
-          </button>
-        </label>
-      </div>
+          />
+        }
+        label={
+          <Typography variant="body2" component="span">
+            I accept the{' '}
+            <Button
+              type="button"
+              onClick={openTermsPopup}
+              disabled={isSubmitting}
+              sx={{
+                p: 0,
+                minWidth: 'auto',
+                textDecoration: 'underline',
+                verticalAlign: 'baseline',
+                fontSize: 'inherit',
+                textTransform: 'none',
+                '&:hover': {
+                  textDecoration: 'underline',
+                  bgcolor: 'transparent',
+                },
+              }}
+            >
+              Terms of Service
+            </Button>{' '}
+            and{' '}
+            <Button
+              type="button"
+              onClick={openPrivacyPopup}
+              disabled={isSubmitting}
+              sx={{
+                p: 0,
+                minWidth: 'auto',
+                textDecoration: 'underline',
+                verticalAlign: 'baseline',
+                fontSize: 'inherit',
+                textTransform: 'none',
+                '&:hover': {
+                  textDecoration: 'underline',
+                  bgcolor: 'transparent',
+                },
+              }}
+            >
+              Privacy Policy
+            </Button>
+          </Typography>
+        }
+        sx={{
+          alignItems: 'flex-start',
+          ml: 0,
+          mr: 0,
+        }}
+      />
       {error && (
-        <div className="form-error-message -mt-2">
-          {error}
-        </div>
+        <FormHelperText sx={{ mt: 0 }}>{error}</FormHelperText>
       )}
-    </>
+    </FormControl>
   )
 }
