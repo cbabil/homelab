@@ -8,46 +8,46 @@
  * correctly returns failure responses when the backend is unavailable.
  */
 
-import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { authService } from '../authService'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
+import { authService } from '../authService';
 
 describe('AuthService offline behavior', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-  })
+    vi.clearAllMocks();
+  });
 
   afterEach(() => {
-    vi.clearAllMocks()
-  })
+    vi.clearAllMocks();
+  });
 
   it('returns failure when backend is offline', async () => {
     const result = await authService.login({
       username: 'admin',
-      password: 'TomoAdmin123!'
-    })
+      password: 'TomoAdmin123!',
+    });
 
     // Global mock returns { success: false }
-    expect(result).toEqual({ success: false })
-  })
+    expect(result).toEqual({ success: false });
+  });
 
   it('returns failure for any credentials when offline', async () => {
     const result = await authService.login({
       username: 'user',
-      password: 'password'
-    })
+      password: 'password',
+    });
 
     // Global mock returns { success: false }
-    expect(result).toEqual({ success: false })
-  })
+    expect(result).toEqual({ success: false });
+  });
 
   it('requires backend connectivity for successful authentication', async () => {
     // Without backend, login should return failure
     const result = await authService.login({
       username: 'admin',
-      password: 'TomoAdmin123!'
-    })
+      password: 'TomoAdmin123!',
+    });
 
     // The mock returns { success: false } to indicate authentication unavailable
-    expect(result.success).toBe(false)
-  })
-})
+    expect(result).toEqual({ success: false });
+  });
+});
