@@ -468,3 +468,62 @@ class CommandRouter:
                 method=ExecutionMethod.SSH,
                 error=str(e),
             )
+
+
+class RoutedExecutor:
+    """Simple wrapper providing tuple-based command execution interface.
+
+    Wraps CommandRouter to provide a simpler (success, output) tuple
+    interface for code that doesn't need the full CommandResult details.
+    """
+
+    def __init__(self, router: CommandRouter):
+        """Initialize with a CommandRouter instance.
+
+        Args:
+            router: The CommandRouter to delegate execution to.
+        """
+        self._router = router
+
+    async def execute(
+        self,
+        server_id: str,
+        command: str,
+        timeout: float = 120.0,
+    ) -> tuple[bool, str]:
+        """Execute a command and return simple tuple result.
+
+        Args:
+            server_id: Target server identifier.
+            command: Shell command to execute.
+            timeout: Execution timeout in seconds.
+
+        Returns:
+            Tuple of (success, output).
+        """
+        result = await self._router.execute(server_id, command, timeout)
+        return result.success, result.output
+
+    async def execute_with_exit_code(
+        self,
+        server_id: str,
+        command: str,
+        timeout: float = 120.0,
+    ) -> tuple[int, str, str]:
+        """Execute a command and return exit code with stdout/stderr.
+
+        Args:
+            server_id: Target server identifier.
+            command: Shell command to execute.
+            timeout: Execution timeout in seconds.
+
+        Returns:
+            Tuple of (exit_code, stdout, stderr).
+        """
+        result = await self._router.execute(server_id, command, timeout)
+        exit_code = result.exit_code if result.exit_code is not None else (
+            0 if result.success else 1
+        )
+        if result.success:
+            return exit_code, result.output, ""
+        return exit_code, "", result.error or ""
