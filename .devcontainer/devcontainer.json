@@ -56,7 +56,7 @@
     }
   },
   "postCreateCommand": ".devcontainer/post-create.sh",
-  "postStartCommand": "echo 'Development container ready! Run: cd backend && python src/main.py (backend) or cd frontend && yarn dev (frontend)'",
+  "postStartCommand": "echo 'Development container ready! Run: cd backend && uv run python src/main.py (backend) or cd frontend && bun dev (frontend)'",
   "remoteUser": "vscode",
   "containerEnv": {
     "PYTHON_ENV": "development",

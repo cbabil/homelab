@@ -1,12 +1,17 @@
 # Tomo Development Container
-# Includes Python 3.11, Node.js 20, and development tools
+# Includes Python 3.12, Node.js 20, uv, and bun
 
-FROM mcr.microsoft.com/devcontainers/python:1-3.11-bookworm
+FROM mcr.microsoft.com/devcontainers/python:1-3.12-bookworm
 
-# Install Node.js 20
+# Install Node.js 20 and bun
 RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
     && apt-get install -y nodejs \
-    && npm install -g yarn
+    && curl -fsSL https://bun.sh/install | bash \
+    && mv /root/.bun/bin/bun /usr/local/bin/
+
+# Install uv for Python package management
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
+    && mv /root/.local/bin/uv /usr/local/bin/
 
 # Install additional system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -16,16 +21,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     openssh-client \
     sqlite3 \
     && rm -rf /var/lib/apt/lists/*
-
-# Install Python development tools globally
-RUN pip install --no-cache-dir \
-    black \
-    flake8 \
-    mypy \
-    pytest \
-    pytest-asyncio \
-    pytest-cov \
-    ruff
 
 # Create workspace directory
 WORKDIR /workspaces/tomo

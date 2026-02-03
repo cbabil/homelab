@@ -12,7 +12,7 @@ echo "========================================"
 echo ""
 echo "Installing backend Python dependencies..."
 cd /workspaces/tomo/backend
-pip install -e ".[dev]" 2>/dev/null || pip install -r requirements.txt
+uv sync
 
 # Create data directory if it doesn't exist
 mkdir -p /workspaces/tomo/backend/data
@@ -21,14 +21,14 @@ mkdir -p /workspaces/tomo/backend/data
 echo ""
 echo "Installing frontend Node.js dependencies..."
 cd /workspaces/tomo/frontend
-yarn install
+bun install
 
 # Install CLI dependencies (if exists)
 if [ -d "/workspaces/tomo/cli" ]; then
     echo ""
     echo "Installing CLI dependencies..."
     cd /workspaces/tomo/cli
-    yarn install 2>/dev/null || true
+    bun install 2>/dev/null || true
 fi
 
 # Create .env file from template if it doesn't exist
@@ -61,10 +61,10 @@ echo "Development environment setup complete!"
 echo "========================================"
 echo ""
 echo "Quick start commands:"
-echo "  Backend:  cd backend && python src/main.py"
-echo "  Frontend: cd frontend && yarn dev"
-echo "  Tests:    cd backend && pytest"
-echo "            cd frontend && yarn test"
+echo "  Backend:  cd backend && uv run python src/main.py"
+echo "  Frontend: cd frontend && bun dev"
+echo "  Tests:    cd backend && uv run pytest"
+echo "            cd frontend && bun test"
 echo ""
 echo "Access the application at: http://localhost:3001"
 echo ""
