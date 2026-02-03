@@ -9,11 +9,8 @@
 </p>
 
 <p align="center">
-  <a href="https://github.com/cbabil/tomo/actions/workflows/test.yml">
-    <img src="https://github.com/cbabil/tomo/actions/workflows/test.yml/badge.svg" alt="CI Status">
-  </a>
-  <a href="https://codecov.io/gh/cbabil/tomo">
-    <img src="https://codecov.io/gh/cbabil/tomo/branch/main/graph/badge.svg" alt="Coverage">
+  <a href="https://github.com/cbabil/tomo/releases/latest">
+    <img src="https://img.shields.io/github/v/release/cbabil/tomo?label=release" alt="Latest Release">
   </a>
   <img src="https://img.shields.io/badge/python-3.12+-blue.svg" alt="Python 3.12+">
   <img src="https://img.shields.io/badge/typescript-5.0+-blue.svg" alt="TypeScript 5.0+">
