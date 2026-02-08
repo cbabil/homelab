@@ -5,17 +5,17 @@ Provides CSRF token generation and validation for destructive operations.
 Tokens are stored server-side with user session association and expiration.
 """
 
-import secrets
 import hashlib
-from datetime import datetime, timedelta, UTC
-from typing import Optional, Dict
+import secrets
+from datetime import UTC, datetime, timedelta
+
 import structlog
 
 logger = structlog.get_logger("csrf_service")
 
 # In-memory token storage (in production, use Redis or database)
 # Format: { token_hash: { user_id, session_id, expires_at, used } }
-_csrf_tokens: Dict[str, Dict] = {}
+_csrf_tokens: dict[str, dict] = {}
 
 # Token configuration
 TOKEN_LENGTH = 64  # 64 hex chars = 256 bits of entropy
@@ -38,7 +38,8 @@ class CSRFService:
         """Remove expired tokens from storage."""
         now = datetime.now(UTC)
         expired_keys = [
-            key for key, data in _csrf_tokens.items()
+            key
+            for key, data in _csrf_tokens.items()
             if datetime.fromisoformat(data["expires_at"]) < now
         ]
         for key in expired_keys:
@@ -50,7 +51,8 @@ class CSRFService:
     def _cleanup_user_tokens(self, user_id: str):
         """Limit tokens per user to prevent memory exhaustion."""
         user_tokens = [
-            (key, data) for key, data in _csrf_tokens.items()
+            (key, data)
+            for key, data in _csrf_tokens.items()
             if data["user_id"] == user_id
         ]
 
@@ -86,19 +88,19 @@ class CSRFService:
             "user_id": user_id,
             "session_id": session_id,
             "expires_at": expires_at.isoformat(),
-            "used": False
+            "used": False,
         }
 
-        logger.info("CSRF token generated", user_id=user_id, expires_in_minutes=TOKEN_EXPIRY_MINUTES)
+        logger.info(
+            "CSRF token generated",
+            user_id=user_id,
+            expires_in_minutes=TOKEN_EXPIRY_MINUTES,
+        )
         return token
 
     def validate_token(
-        self,
-        token: str,
-        user_id: str,
-        session_id: str,
-        consume: bool = True
-    ) -> tuple[bool, Optional[str]]:
+        self, token: str, user_id: str, session_id: str, consume: bool = True
+    ) -> tuple[bool, str | None]:
         """Validate a CSRF token.
 
         Args:
@@ -136,7 +138,11 @@ class CSRFService:
 
         # Verify user and session match
         if token_data["user_id"] != user_id:
-            logger.warning("CSRF token user mismatch", expected=token_data["user_id"], actual=user_id)
+            logger.warning(
+                "CSRF token user mismatch",
+                expected=token_data["user_id"],
+                actual=user_id,
+            )
             return False, "Token does not belong to this user"
 
         if token_data["session_id"] != session_id:
@@ -162,15 +168,16 @@ class CSRFService:
             Number of tokens revoked.
         """
         keys_to_delete = [
-            key for key, data in _csrf_tokens.items()
-            if data["user_id"] == user_id
+            key for key, data in _csrf_tokens.items() if data["user_id"] == user_id
         ]
 
         for key in keys_to_delete:
             del _csrf_tokens[key]
 
         if keys_to_delete:
-            logger.info("User CSRF tokens revoked", user_id=user_id, count=len(keys_to_delete))
+            logger.info(
+                "User CSRF tokens revoked", user_id=user_id, count=len(keys_to_delete)
+            )
 
         return len(keys_to_delete)
 

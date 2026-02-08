@@ -4,8 +4,9 @@ Unit tests for DeploymentValidator.validate_config method.
 Tests configuration validation against app definitions.
 """
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 
 from services.deployment.validation import DeploymentValidator
 
@@ -61,22 +62,22 @@ def mock_app_with_env_vars():
     """Create mock app with required environment variables."""
     app = MagicMock()
     app.docker = MagicMock()
-    
+
     required_env = MagicMock()
     required_env.name = "DATABASE_URL"
     required_env.required = True
     required_env.default = None
-    
+
     optional_env = MagicMock()
     optional_env.name = "LOG_LEVEL"
     optional_env.required = False
     optional_env.default = "info"
-    
+
     required_with_default = MagicMock()
     required_with_default.name = "PORT"
     required_with_default.required = True
     required_with_default.default = "8080"
-    
+
     app.docker.environment = [required_env, optional_env, required_with_default]
     app.docker.ports = []
     app.requirements = None
@@ -89,15 +90,15 @@ def mock_app_with_ports():
     app = MagicMock()
     app.docker = MagicMock()
     app.docker.environment = []
-    
+
     port1 = MagicMock()
     port1.container = 80
     port1.host = 8080
-    
+
     port2 = MagicMock()
     port2.container = 443
     port2.host = 8443
-    
+
     app.docker.ports = [port1, port2]
     app.requirements = None
     return app
@@ -116,7 +117,7 @@ class TestValidateConfigInit:
                 marketplace_service=mock_marketplace_service,
                 server_service=mock_server_service,
             )
-        
+
         assert validator.ssh is mock_ssh_executor
         assert validator.marketplace_service is mock_marketplace_service
         assert validator.server_service is mock_server_service

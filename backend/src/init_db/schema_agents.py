@@ -6,6 +6,7 @@ agent management. Agents replace SSH for server communication.
 """
 
 import structlog
+
 from database.connection import DatabaseManager
 
 logger = structlog.get_logger("schema_agents")

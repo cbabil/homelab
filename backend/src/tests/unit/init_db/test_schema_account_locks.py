@@ -4,8 +4,9 @@ Account Locks Schema Unit Tests
 Tests for schema_account_locks.py - SQL schema and initialization.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from init_db.schema_account_locks import (
     ACCOUNT_LOCKS_SCHEMA,
@@ -81,10 +82,12 @@ class TestInitializeAccountLocksSchema:
         async def mock_get_connection():
             return mock_conn
 
-        manager.get_connection = MagicMock(return_value=AsyncMock(
-            __aenter__=AsyncMock(return_value=mock_conn),
-            __aexit__=AsyncMock(return_value=None),
-        ))
+        manager.get_connection = MagicMock(
+            return_value=AsyncMock(
+                __aenter__=AsyncMock(return_value=mock_conn),
+                __aexit__=AsyncMock(return_value=None),
+            )
+        )
         return manager, mock_conn
 
     @pytest.mark.asyncio
@@ -107,14 +110,18 @@ class TestInitializeAccountLocksSchema:
         mock_conn.commit = AsyncMock()
 
         mock_manager = MagicMock()
-        mock_manager.get_connection = MagicMock(return_value=AsyncMock(
-            __aenter__=AsyncMock(return_value=mock_conn),
-            __aexit__=AsyncMock(return_value=None),
-        ))
+        mock_manager.get_connection = MagicMock(
+            return_value=AsyncMock(
+                __aenter__=AsyncMock(return_value=mock_conn),
+                __aexit__=AsyncMock(return_value=None),
+            )
+        )
 
         with (
-            patch("init_db.schema_account_locks.DatabaseManager",
-                  return_value=mock_manager),
+            patch(
+                "init_db.schema_account_locks.DatabaseManager",
+                return_value=mock_manager,
+            ),
             patch("init_db.schema_account_locks.logger"),
         ):
             result = await initialize_account_locks_schema(None)

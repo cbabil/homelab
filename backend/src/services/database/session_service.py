@@ -5,7 +5,7 @@ Database operations for account locks and login security.
 
 import uuid
 from datetime import UTC, datetime, timedelta
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import structlog
 
@@ -27,7 +27,7 @@ class SessionDatabaseService:
 
     async def is_account_locked(
         self, identifier: str, identifier_type: str = "username"
-    ) -> Tuple[bool, Optional[Dict[str, Any]]]:
+    ) -> tuple[bool, dict[str, Any] | None]:
         """Check if an account or IP is currently locked.
 
         Args:
@@ -77,11 +77,11 @@ class SessionDatabaseService:
         self,
         identifier: str,
         identifier_type: str = "username",
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
         max_attempts: int = 5,
         lock_duration_minutes: int = 15,
-    ) -> Tuple[bool, int, Optional[str]]:
+    ) -> tuple[bool, int, str | None]:
         """Record a failed login attempt and lock if threshold reached.
 
         Args:
@@ -163,7 +163,7 @@ class SessionDatabaseService:
 
                 else:
                     record_id = str(uuid.uuid4())
-                    should_lock = 1 >= max_attempts
+                    should_lock = max_attempts <= 1
 
                     await conn.execute(
                         """INSERT INTO account_locks
@@ -234,7 +234,7 @@ class SessionDatabaseService:
 
     async def get_locked_accounts(
         self, include_expired: bool = False, include_unlocked: bool = False
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         """Get all locked accounts.
 
         Args:
@@ -248,7 +248,7 @@ class SessionDatabaseService:
             now = datetime.now(UTC).isoformat()
 
             query = "SELECT * FROM account_locks WHERE locked_at IS NOT NULL"
-            params: List[Any] = []
+            params: list[Any] = []
 
             if not include_unlocked:
                 query += " AND unlocked_at IS NULL"
@@ -288,7 +288,7 @@ class SessionDatabaseService:
             return []
 
     async def unlock_account(
-        self, lock_id: str, unlocked_by: str, notes: Optional[str] = None
+        self, lock_id: str, unlocked_by: str, notes: str | None = None
     ) -> bool:
         """Unlock a locked account.
 
@@ -330,7 +330,7 @@ class SessionDatabaseService:
         self,
         lock_id: str,
         locked_by: str,
-        notes: Optional[str] = None,
+        notes: str | None = None,
         lock_duration_minutes: int = 15,
     ) -> bool:
         """Lock an account (re-lock after unlock or extend lock).
@@ -383,7 +383,7 @@ class SessionDatabaseService:
             )
             return False
 
-    async def get_lock_by_id(self, lock_id: str) -> Optional[Dict[str, Any]]:
+    async def get_lock_by_id(self, lock_id: str) -> dict[str, Any] | None:
         """Get a lock record by ID.
 
         Args:

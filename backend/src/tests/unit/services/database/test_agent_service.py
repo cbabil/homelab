@@ -4,13 +4,14 @@ Unit tests for services/database/agent_service.py.
 Tests AgentDatabaseService methods.
 """
 
-import pytest
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from services.database.agent_service import AgentDatabaseService
+import pytest
+
 from models.agent import AgentConfig, AgentCreate, AgentStatus, AgentUpdate
+from services.database.agent_service import AgentDatabaseService
 
 
 @pytest.fixture
@@ -28,9 +29,11 @@ def service(mock_connection):
 
 def create_mock_context(mock_conn):
     """Create async context manager for database connection."""
+
     @asynccontextmanager
     async def context():
         yield mock_conn
+
     return context()
 
 
@@ -63,7 +66,9 @@ class TestAgentDatabaseServiceInit:
 
     def test_init_creates_registration_code_service(self, mock_connection):
         """Service should create RegistrationCodeDatabaseService."""
-        with patch("services.database.agent_service.RegistrationCodeDatabaseService") as mock_reg:
+        with patch(
+            "services.database.agent_service.RegistrationCodeDatabaseService"
+        ) as mock_reg:
             AgentDatabaseService(mock_connection)
         mock_reg.assert_called_once_with(mock_connection)
 
@@ -127,7 +132,9 @@ class TestCreateAgent:
     """Tests for create_agent method."""
 
     @pytest.mark.asyncio
-    async def test_create_agent_success(self, service, mock_connection, sample_agent_row):
+    async def test_create_agent_success(
+        self, service, mock_connection, sample_agent_row
+    ):
         """create_agent should return created Agent."""
         mock_cursor = AsyncMock()
         mock_cursor.fetchone = AsyncMock(return_value=sample_agent_row)
@@ -135,8 +142,10 @@ class TestCreateAgent:
         mock_conn.execute = AsyncMock(return_value=mock_cursor)
         mock_connection.get_connection.return_value = create_mock_context(mock_conn)
 
-        with patch("services.database.agent_service.logger"), \
-             patch("services.database.agent_service.uuid4") as mock_uuid:
+        with (
+            patch("services.database.agent_service.logger"),
+            patch("services.database.agent_service.uuid4") as mock_uuid,
+        ):
             mock_uuid.return_value = MagicMock()
             mock_uuid.return_value.__str__ = lambda s: "agent-123"
             result = await service.create_agent(AgentCreate(server_id="server-456"))
@@ -195,7 +204,9 @@ class TestGetAgentByServer:
     """Tests for get_agent_by_server method."""
 
     @pytest.mark.asyncio
-    async def test_get_agent_by_server_found(self, service, mock_connection, sample_agent_row):
+    async def test_get_agent_by_server_found(
+        self, service, mock_connection, sample_agent_row
+    ):
         """get_agent_by_server should return agent when found."""
         mock_cursor = AsyncMock()
         mock_cursor.fetchone = AsyncMock(return_value=sample_agent_row)
@@ -231,7 +242,9 @@ class TestListAllAgents:
     async def test_list_all_agents(self, service, mock_connection, sample_agent_row):
         """list_all_agents should return list of agents."""
         mock_cursor = AsyncMock()
-        mock_cursor.fetchall = AsyncMock(return_value=[sample_agent_row, sample_agent_row])
+        mock_cursor.fetchall = AsyncMock(
+            return_value=[sample_agent_row, sample_agent_row]
+        )
         mock_conn = AsyncMock()
         mock_conn.execute = AsyncMock(return_value=mock_cursor)
         mock_connection.get_connection.return_value = create_mock_context(mock_conn)
@@ -260,7 +273,9 @@ class TestGetAgentByTokenHash:
     """Tests for get_agent_by_token_hash method."""
 
     @pytest.mark.asyncio
-    async def test_get_agent_by_token_hash_found(self, service, mock_connection, sample_agent_row):
+    async def test_get_agent_by_token_hash_found(
+        self, service, mock_connection, sample_agent_row
+    ):
         """get_agent_by_token_hash should return agent when found."""
         mock_cursor = AsyncMock()
         mock_cursor.fetchone = AsyncMock(return_value=sample_agent_row)
@@ -292,7 +307,9 @@ class TestUpdateAgent:
     """Tests for update_agent method."""
 
     @pytest.mark.asyncio
-    async def test_update_agent_success(self, service, mock_connection, sample_agent_row):
+    async def test_update_agent_success(
+        self, service, mock_connection, sample_agent_row
+    ):
         """update_agent should return updated agent."""
         mock_cursor = AsyncMock()
         mock_cursor.rowcount = 1
@@ -302,13 +319,17 @@ class TestUpdateAgent:
         mock_connection.get_connection.return_value = create_mock_context(mock_conn)
 
         with patch("services.database.agent_service.logger"):
-            result = await service.update_agent("agent-123", AgentUpdate(version="2.0.0"))
+            result = await service.update_agent(
+                "agent-123", AgentUpdate(version="2.0.0")
+            )
 
         assert result is not None
         mock_conn.commit.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_update_agent_empty_updates(self, service, mock_connection, sample_agent_row):
+    async def test_update_agent_empty_updates(
+        self, service, mock_connection, sample_agent_row
+    ):
         """update_agent should return current agent when no updates."""
         mock_cursor = AsyncMock()
         mock_cursor.fetchone = AsyncMock(return_value=sample_agent_row)
@@ -424,7 +445,9 @@ class TestDeleteAgent:
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_delete_agent_deletes_registration_codes(self, service, mock_connection):
+    async def test_delete_agent_deletes_registration_codes(
+        self, service, mock_connection
+    ):
         """delete_agent should delete registration codes first."""
         mock_cursor = AsyncMock()
         mock_cursor.rowcount = 1
@@ -504,7 +527,9 @@ class TestGetAgentsWithExpiringTokens:
         assert "token_hash IS NOT NULL" in query
 
     @pytest.mark.asyncio
-    async def test_returns_expired_agents(self, service, mock_connection, sample_agent_row):
+    async def test_returns_expired_agents(
+        self, service, mock_connection, sample_agent_row
+    ):
         """get_agents_with_expiring_tokens should return agents with expired tokens."""
         expired_row = dict(sample_agent_row)
         expired_row["token_expires_at"] = (

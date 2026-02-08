@@ -4,12 +4,13 @@ Unit tests for tools/auth/login_tool.py - LoginTool class.
 Tests for login authentication functionality.
 """
 
-import pytest
-from datetime import datetime, timedelta, UTC
-from unittest.mock import MagicMock, AsyncMock, patch
+from datetime import UTC, datetime, timedelta
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
+from models.auth import LoginResponse, TokenType, User, UserRole
 from tools.auth.login_tool import LoginTool
-from models.auth import LoginResponse, UserRole, TokenType, User
 
 
 @pytest.fixture
@@ -49,7 +50,7 @@ def mock_user():
         email="test@example.com",
         role=UserRole.USER,
         last_login="2024-01-15T10:00:00Z",
-        is_active=True
+        is_active=True,
     )
 
 
@@ -113,22 +114,23 @@ class TestLogin:
     """Tests for login method."""
 
     @pytest.mark.asyncio
-    async def test_login_success(self, login_tool, mock_auth_service, mock_context, mock_user):
+    async def test_login_success(
+        self, login_tool, mock_auth_service, mock_context, mock_user
+    ):
         """Test successful login."""
         mock_auth_service.authenticate_user.return_value = LoginResponse(
             user=mock_user,
             token="test-token",
             token_type=TokenType.BEARER,
             expires_in=3600,
-            session_id="session-123"
+            session_id="session-123",
         )
 
         with patch("tools.auth.login_tool.login_rate_limiter") as mock_limiter:
             mock_limiter.is_allowed.return_value = True
 
             result = await login_tool.login(
-                {"username": "testuser", "password": "password123"},
-                ctx=mock_context
+                {"username": "testuser", "password": "password123"}, ctx=mock_context
             )
 
         assert result["success"] is True
@@ -136,25 +138,24 @@ class TestLogin:
         assert result["data"]["session_id"] == "session-123"
 
     @pytest.mark.asyncio
-    async def test_login_with_nested_credentials(self, login_tool, mock_auth_service, mock_user):
+    async def test_login_with_nested_credentials(
+        self, login_tool, mock_auth_service, mock_user
+    ):
         """Test login with nested credentials structure."""
         mock_auth_service.authenticate_user.return_value = LoginResponse(
             user=mock_user,
             token="test-token",
             token_type=TokenType.BEARER,
             expires_in=3600,
-            session_id="session-123"
+            session_id="session-123",
         )
 
         with patch("tools.auth.login_tool.login_rate_limiter") as mock_limiter:
             mock_limiter.is_allowed.return_value = True
 
-            result = await login_tool.login({
-                "credentials": {
-                    "username": "testuser",
-                    "password": "password123"
-                }
-            })
+            result = await login_tool.login(
+                {"credentials": {"username": "testuser", "password": "password123"}}
+            )
 
         assert result["success"] is True
 
@@ -177,7 +178,7 @@ class TestLogin:
         """Test login when username is locked."""
         mock_auth_service.db_service.is_account_locked.return_value = (
             True,
-            {"lock_expires_at": "2024-01-15T12:00:00Z"}
+            {"lock_expires_at": "2024-01-15T12:00:00Z"},
         )
 
         with patch("tools.auth.login_tool.login_rate_limiter") as mock_limiter:
@@ -197,15 +198,14 @@ class TestLogin:
         # Second call returns True (IP is locked)
         mock_auth_service.db_service.is_account_locked.side_effect = [
             (False, {}),
-            (True, {"lock_expires_at": "2024-01-15T12:00:00Z"})
+            (True, {"lock_expires_at": "2024-01-15T12:00:00Z"}),
         ]
 
         with patch("tools.auth.login_tool.login_rate_limiter") as mock_limiter:
             mock_limiter.is_allowed.return_value = True
 
             result = await login_tool.login(
-                {"username": "testuser", "password": "password123"},
-                ctx=mock_context
+                {"username": "testuser", "password": "password123"}, ctx=mock_context
             )
 
         assert result["success"] is False
@@ -242,7 +242,9 @@ class TestLogin:
 
         assert result["success"] is False
         assert result["error"] == "LOGIN_ERROR"
-        assert "Database error" in result["message"]
+        # Error message should be sanitized (no raw exception details)
+        assert "Database error" not in result["message"]
+        assert "Login failed" in result["message"]
 
     @pytest.mark.asyncio
     async def test_login_context_extraction_exception(
@@ -254,7 +256,7 @@ class TestLogin:
             token="test-token",
             token_type=TokenType.BEARER,
             expires_in=3600,
-            session_id="session-123"
+            session_id="session-123",
         )
 
         ctx = MagicMock()
@@ -264,8 +266,7 @@ class TestLogin:
             mock_limiter.is_allowed.return_value = True
 
             result = await login_tool.login(
-                {"username": "testuser", "password": "password123"},
-                ctx=ctx
+                {"username": "testuser", "password": "password123"}, ctx=ctx
             )
 
         # Should still succeed, just use default client_ip
@@ -280,7 +281,7 @@ class TestLogin:
             email="admin@example.com",
             role=UserRole.ADMIN,
             last_login="2024-01-15T10:00:00Z",
-            is_active=True
+            is_active=True,
         )
 
         mock_auth_service.authenticate_user.return_value = LoginResponse(
@@ -288,7 +289,7 @@ class TestLogin:
             token="test-token",
             token_type=TokenType.BEARER,
             expires_in=3600,
-            session_id="session-123"
+            session_id="session-123",
         )
 
         with patch("tools.auth.login_tool.login_rate_limiter") as mock_limiter:
@@ -302,22 +303,23 @@ class TestLogin:
         assert result["data"]["user"]["role"] == "admin"
 
     @pytest.mark.asyncio
-    async def test_login_without_context(self, login_tool, mock_auth_service, mock_user):
+    async def test_login_without_context(
+        self, login_tool, mock_auth_service, mock_user
+    ):
         """Test login works without context."""
         mock_auth_service.authenticate_user.return_value = LoginResponse(
             user=mock_user,
             token="test-token",
             token_type=TokenType.BEARER,
             expires_in=3600,
-            session_id="session-123"
+            session_id="session-123",
         )
 
         with patch("tools.auth.login_tool.login_rate_limiter") as mock_limiter:
             mock_limiter.is_allowed.return_value = True
 
             result = await login_tool.login(
-                {"username": "testuser", "password": "password123"},
-                ctx=None
+                {"username": "testuser", "password": "password123"}, ctx=None
             )
 
         assert result["success"] is True

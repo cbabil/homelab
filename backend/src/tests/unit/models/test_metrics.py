@@ -9,12 +9,12 @@ import pytest
 from pydantic import ValidationError
 
 from models.metrics import (
-    MetricType,
-    ActivityType,
-    ServerMetrics,
-    ContainerMetrics,
     ActivityLog,
+    ActivityType,
+    ContainerMetrics,
     DashboardSummary,
+    MetricType,
+    ServerMetrics,
 )
 
 

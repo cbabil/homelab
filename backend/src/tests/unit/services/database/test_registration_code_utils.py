@@ -4,13 +4,10 @@ Unit tests for services/database/registration_code_service.py utility functions.
 Tests constant_time_compare and hash_code helper functions.
 """
 
-import pytest
-
 from services.database.registration_code_service import (
     constant_time_compare,
     hash_code,
 )
-
 
 # =============================================================================
 # Tests for constant_time_compare function

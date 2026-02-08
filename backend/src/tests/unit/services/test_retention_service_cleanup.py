@@ -4,19 +4,20 @@ Unit tests for services/retention_service.py - Cleanup operations.
 Tests preview_cleanup, perform_cleanup, cutoff date calculation, and deletion.
 """
 
-import pytest
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from services.retention_service import RetentionService
+import pytest
+
 from models.retention import (
-    RetentionSettings,
-    CleanupRequest,
     CleanupPreview,
-    RetentionType,
+    CleanupRequest,
     RetentionOperation,
+    RetentionSettings,
+    RetentionType,
     SecurityValidationResult,
 )
+from services.retention_service import RetentionService
 
 
 @pytest.fixture
@@ -650,9 +651,7 @@ class TestCalculateCutoffDate:
         mock_settings.log_retention = property(
             lambda self: (_ for _ in ()).throw(ValueError("Invalid settings"))
         )
-        type(mock_settings).log_retention = property(
-            lambda self: self._raise_error()
-        )
+        type(mock_settings).log_retention = property(lambda self: self._raise_error())
 
         # Simpler approach: make log_retention a property that raises
         class BrokenSettings:

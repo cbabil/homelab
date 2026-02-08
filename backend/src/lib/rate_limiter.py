@@ -6,7 +6,7 @@ Simple in-memory rate limiting for auth endpoints.
 
 import time
 from collections import defaultdict
-from typing import Dict, List
+
 import structlog
 
 logger = structlog.get_logger("rate_limiter")
@@ -14,6 +14,9 @@ logger = structlog.get_logger("rate_limiter")
 
 class RateLimiter:
     """In-memory rate limiter with sliding window."""
+
+    # Run full cleanup every N calls to is_allowed
+    _CLEANUP_INTERVAL = 100
 
     def __init__(self, max_requests: int = 10, window_seconds: int = 60):
         """
@@ -25,7 +28,8 @@ class RateLimiter:
         """
         self.max_requests = max_requests
         self.window_seconds = window_seconds
-        self.requests: Dict[str, List[float]] = defaultdict(list)
+        self.requests: dict[str, list[float]] = defaultdict(list)
+        self._call_count = 0
 
     def is_allowed(self, key: str) -> bool:
         """
@@ -40,11 +44,14 @@ class RateLimiter:
         now = time.time()
         window_start = now - self.window_seconds
 
+        # Periodic cleanup of stale keys to prevent memory leak
+        self._call_count += 1
+        if self._call_count >= self._CLEANUP_INTERVAL:
+            self._call_count = 0
+            self._cleanup_stale_keys(window_start)
+
         # Clean old requests
-        self.requests[key] = [
-            ts for ts in self.requests[key]
-            if ts > window_start
-        ]
+        self.requests[key] = [ts for ts in self.requests[key] if ts > window_start]
 
         # Check limit
         if len(self.requests[key]) >= self.max_requests:
@@ -64,9 +71,18 @@ class RateLimiter:
         now = time.time()
         window_start = now - self.window_seconds
 
-        current = len([
-            ts for ts in self.requests[key]
-            if ts > window_start
-        ])
+        current = len([ts for ts in self.requests[key] if ts > window_start])
 
         return max(0, self.max_requests - current)
+
+    def _cleanup_stale_keys(self, window_start: float) -> None:
+        """Remove keys with no recent requests to prevent memory growth."""
+        stale_keys = [
+            key
+            for key, timestamps in self.requests.items()
+            if not timestamps or all(ts <= window_start for ts in timestamps)
+        ]
+        for key in stale_keys:
+            del self.requests[key]
+        if stale_keys:
+            logger.debug("Cleaned stale rate limit keys", count=len(stale_keys))

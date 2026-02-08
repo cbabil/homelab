@@ -4,13 +4,13 @@ Unit tests for lib/logging_config.py
 Tests structured logging configuration and sensitive data filtering.
 """
 
-import os
 import logging
-import pytest
-from unittest.mock import patch, MagicMock
-import structlog
+import os
+from unittest.mock import patch
 
-from lib.logging_config import setup_logging, _filter_sensitive_data
+import pytest
+
+from lib.logging_config import _filter_sensitive_data, setup_logging
 
 
 @pytest.fixture
@@ -107,7 +107,7 @@ class TestFilterSensitiveData:
             "message": "test",
             "password": "pass1",
             "token": "token1",
-            "credentials": "creds1"
+            "credentials": "creds1",
         }
         result = _filter_sensitive_data(None, "info", event_dict)
         assert result["password"] == "[REDACTED]"
@@ -120,7 +120,7 @@ class TestFilterSensitiveData:
             "message": "test message",
             "user_id": "user123",
             "action": "login",
-            "timestamp": "2024-01-15"
+            "timestamp": "2024-01-15",
         }
         result = _filter_sensitive_data(None, "info", event_dict)
         assert result["message"] == "test message"

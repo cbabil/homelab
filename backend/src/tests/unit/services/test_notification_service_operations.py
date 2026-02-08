@@ -4,11 +4,12 @@ Unit tests for services/notification_service.py - Operations.
 Tests mark_as_read, dismiss, cleanup, delete, and helpers.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from services.notification_service import NotificationService
+import pytest
+
 from models.notification import NotificationCountResponse
+from services.notification_service import NotificationService
 
 
 @pytest.fixture
@@ -44,9 +45,7 @@ class TestMarkAsRead:
     """Tests for mark_as_read method."""
 
     @pytest.mark.asyncio
-    async def test_mark_as_read_success(
-        self, notification_service, mock_connection
-    ):
+    async def test_mark_as_read_success(self, notification_service, mock_connection):
         """mark_as_read should update notification."""
         mock_cursor = AsyncMock()
         mock_cursor.rowcount = 1
@@ -59,9 +58,7 @@ class TestMarkAsRead:
         mock_connection.commit.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_mark_as_read_not_found(
-        self, notification_service, mock_connection
-    ):
+    async def test_mark_as_read_not_found(self, notification_service, mock_connection):
         """mark_as_read should return False when not found."""
         mock_cursor = AsyncMock()
         mock_cursor.rowcount = 0
@@ -107,9 +104,7 @@ class TestMarkAllAsRead:
         mock_connection.commit.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_mark_all_as_read_none(
-        self, notification_service, mock_connection
-    ):
+    async def test_mark_all_as_read_none(self, notification_service, mock_connection):
         """mark_all_as_read should return 0 when no unread."""
         mock_cursor = AsyncMock()
         mock_cursor.rowcount = 0
@@ -121,9 +116,7 @@ class TestMarkAllAsRead:
         assert result == 0
 
     @pytest.mark.asyncio
-    async def test_mark_all_as_read_logs(
-        self, notification_service, mock_connection
-    ):
+    async def test_mark_all_as_read_logs(self, notification_service, mock_connection):
         """mark_all_as_read should log result."""
         mock_cursor = AsyncMock()
         mock_cursor.rowcount = 3
@@ -193,9 +186,7 @@ class TestDismissAll:
     """Tests for dismiss_all method."""
 
     @pytest.mark.asyncio
-    async def test_dismiss_all_success(
-        self, notification_service, mock_connection
-    ):
+    async def test_dismiss_all_success(self, notification_service, mock_connection):
         """dismiss_all should dismiss all notifications for user."""
         mock_cursor = AsyncMock()
         mock_cursor.rowcount = 10
@@ -208,9 +199,7 @@ class TestDismissAll:
         mock_connection.commit.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_dismiss_all_none(
-        self, notification_service, mock_connection
-    ):
+    async def test_dismiss_all_none(self, notification_service, mock_connection):
         """dismiss_all should return 0 when no notifications."""
         mock_cursor = AsyncMock()
         mock_cursor.rowcount = 0
@@ -222,9 +211,7 @@ class TestDismissAll:
         assert result == 0
 
     @pytest.mark.asyncio
-    async def test_dismiss_all_logs(
-        self, notification_service, mock_connection
-    ):
+    async def test_dismiss_all_logs(self, notification_service, mock_connection):
         """dismiss_all should log result."""
         mock_cursor = AsyncMock()
         mock_cursor.rowcount = 7
@@ -259,9 +246,7 @@ class TestGetUnreadCount:
         assert result.unread_count == 8
 
     @pytest.mark.asyncio
-    async def test_get_unread_count_empty(
-        self, notification_service, mock_connection
-    ):
+    async def test_get_unread_count_empty(self, notification_service, mock_connection):
         """get_unread_count should handle None values."""
         count_row = {"total": None, "unread_count": None}
         mock_cursor = AsyncMock()
@@ -279,9 +264,7 @@ class TestCleanupExpiredNotifications:
     """Tests for cleanup_expired_notifications method."""
 
     @pytest.mark.asyncio
-    async def test_cleanup_expired_success(
-        self, notification_service, mock_connection
-    ):
+    async def test_cleanup_expired_success(self, notification_service, mock_connection):
         """cleanup_expired_notifications should dismiss expired."""
         mock_cursor = AsyncMock()
         mock_cursor.rowcount = 3
@@ -337,8 +320,7 @@ class TestCleanupExpiredNotifications:
             await notification_service.cleanup_expired_notifications()
 
             info_calls = [
-                c for c in mock_logger.info.call_args_list
-                if "cleaned up" in str(c)
+                c for c in mock_logger.info.call_args_list if "cleaned up" in str(c)
             ]
             assert len(info_calls) == 0
 
@@ -347,9 +329,7 @@ class TestDeleteOldNotifications:
     """Tests for delete_old_notifications method."""
 
     @pytest.mark.asyncio
-    async def test_delete_old_success(
-        self, notification_service, mock_connection
-    ):
+    async def test_delete_old_success(self, notification_service, mock_connection):
         """delete_old_notifications should delete old dismissed."""
         mock_cursor = AsyncMock()
         mock_cursor.rowcount = 20
@@ -362,9 +342,7 @@ class TestDeleteOldNotifications:
         mock_connection.commit.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_delete_old_custom_days(
-        self, notification_service, mock_connection
-    ):
+    async def test_delete_old_custom_days(self, notification_service, mock_connection):
         """delete_old_notifications should use custom days parameter."""
         mock_cursor = AsyncMock()
         mock_cursor.rowcount = 5
@@ -406,7 +384,6 @@ class TestDeleteOldNotifications:
             await notification_service.delete_old_notifications()
 
             delete_logs = [
-                c for c in mock_logger.info.call_args_list
-                if "deleted" in str(c)
+                c for c in mock_logger.info.call_args_list if "deleted" in str(c)
             ]
             assert len(delete_logs) == 0

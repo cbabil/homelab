@@ -6,19 +6,17 @@ These scripts are designed to run in a single SSH connection to prevent
 overwhelming sshd with many rapid connections.
 """
 
-import pytest
-
 from services.deployment.scripts import (
+    background_pull_script,
     cleanup_container_script,
+    cleanup_failed_deployment_script,
+    cleanup_pull_job_script,
     create_container_script,
+    health_check_script,
+    poll_pull_status_script,
+    preflight_check_script,
     status_check_script,
     uninstall_script,
-    cleanup_failed_deployment_script,
-    background_pull_script,
-    poll_pull_status_script,
-    cleanup_pull_job_script,
-    preflight_check_script,
-    health_check_script,
 )
 
 
@@ -93,7 +91,7 @@ class TestCreateContainerScript:
         script = create_container_script("docker run -d test")
 
         assert "FAILED:$EXIT_CODE" in script
-        assert 'if [ $EXIT_CODE -eq 0 ]' in script
+        assert "if [ $EXIT_CODE -eq 0 ]" in script
 
     def test_complex_run_command(self):
         """Script should handle complex docker run commands."""
@@ -297,7 +295,7 @@ class TestCleanupFailedDeploymentScript:
         script = cleanup_failed_deployment_script("app", "myimage:v1")
 
         assert "--filter ancestor=myimage:v1" in script
-        assert 'USERS=$(docker ps -a' in script
+        assert "USERS=$(docker ps -a" in script
 
     def test_reports_container_removed(self):
         """Script should report when container is removed."""

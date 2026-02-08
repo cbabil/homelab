@@ -9,17 +9,17 @@ import os
 import re
 import shlex
 from datetime import UTC, datetime
-from typing import Any, Dict, Optional
+from typing import Any
 
 import structlog
 
 from models.agent import AgentInfo, AgentStatus
-from services.agent_manager import AgentManager
 from services.agent_lifecycle import AgentLifecycleManager
-from services.agent_service import AgentService
+from services.agent_manager import AgentManager
 from services.agent_packager import AgentPackager
-from services.ssh_service import SSHService
+from services.agent_service import AgentService
 from services.server_service import ServerService
+from services.ssh_service import SSHService
 from tools.common import log_event
 
 logger = structlog.get_logger("agent_tools")
@@ -39,8 +39,8 @@ class AgentTools:
         agent_manager: AgentManager,
         ssh_service: SSHService,
         server_service: ServerService,
-        agent_packager: Optional[AgentPackager] = None,
-        agent_lifecycle: Optional[AgentLifecycleManager] = None,
+        agent_packager: AgentPackager | None = None,
+        agent_lifecycle: AgentLifecycleManager | None = None,
     ):
         """Initialize agent tools.
 
@@ -96,7 +96,21 @@ class AgentTools:
             return False
         # Allow http/https/ws/wss URLs with standard characters
         # Block shell metacharacters that could be used for injection
-        dangerous_chars = [';', '|', '`', '$', '(', ')', '<', '>', '\\', '\n', '\r', "'", '"']
+        dangerous_chars = [
+            ";",
+            "|",
+            "`",
+            "$",
+            "(",
+            ")",
+            "<",
+            ">",
+            "\\",
+            "\n",
+            "\r",
+            "'",
+            '"',
+        ]
         if any(char in url for char in dangerous_chars):
             return False
         # Must start with http(s) or ws(s)
@@ -120,7 +134,10 @@ class AgentTools:
         """
         # Validate inputs to prevent command injection
         if not self._validate_registration_code(code):
-            logger.error("Invalid registration code format", code_preview=code[:10] if code else "empty")
+            logger.error(
+                "Invalid registration code format",
+                code_preview=code[:10] if code else "empty",
+            )
             raise ValueError("Invalid registration code format")
         if not self._validate_server_url(server_url):
             logger.error("Invalid server URL format", url=server_url)
@@ -183,7 +200,7 @@ docker ps --filter name={AGENT_CONTAINER_NAME} --format '{{{{.Status}}}}'
 echo "Agent installation complete!"
 """
 
-    async def install_agent(self, server_id: str) -> Dict[str, Any]:
+    async def install_agent(self, server_id: str) -> dict[str, Any]:
         """Install an agent on a server via SSH.
 
         Creates a new agent record, generates a registration code, and
@@ -225,7 +242,11 @@ echo "Agent installation complete!"
                     "ERROR",
                     f"Agent install failed: Docker not installed on server '{server.name}'",
                     AGENT_TAGS,
-                    {"server_id": server_id, "server_name": server.name, "error": "DOCKER_NOT_INSTALLED"},
+                    {
+                        "server_id": server_id,
+                        "server_name": server.name,
+                        "error": "DOCKER_NOT_INSTALLED",
+                    },
                 )
                 return {
                     "success": False,
@@ -241,7 +262,11 @@ echo "Agent installation complete!"
                     "ERROR",
                     f"Agent install failed: credentials not found for server '{server.name}'",
                     AGENT_TAGS,
-                    {"server_id": server_id, "server_name": server.name, "error": "CREDENTIALS_NOT_FOUND"},
+                    {
+                        "server_id": server_id,
+                        "server_name": server.name,
+                        "error": "CREDENTIALS_NOT_FOUND",
+                    },
                 )
                 return {
                     "success": False,
@@ -329,7 +354,9 @@ echo "Agent installation complete!"
                 updated_info = server.system_info.model_dump()
                 updated_info["agent_status"] = "running"
                 updated_info["agent_version"] = agent_version
-                await self.server_service.update_server_system_info(server_id, updated_info)
+                await self.server_service.update_server_system_info(
+                    server_id, updated_info
+                )
 
             return {
                 "success": True,
@@ -362,7 +389,7 @@ echo "Agent installation complete!"
                 "error": "INSTALL_AGENT_ERROR",
             }
 
-    async def get_agent_status(self, server_id: str) -> Dict[str, Any]:
+    async def get_agent_status(self, server_id: str) -> dict[str, Any]:
         """Get agent status for a server.
 
         Returns agent information including connection status, version,
@@ -417,7 +444,7 @@ echo "Agent installation complete!"
                 "error": "GET_AGENT_STATUS_ERROR",
             }
 
-    async def revoke_agent_token(self, server_id: str) -> Dict[str, Any]:
+    async def revoke_agent_token(self, server_id: str) -> dict[str, Any]:
         """Revoke an agent's authentication token.
 
         Disconnects the agent WebSocket connection and invalidates
@@ -493,7 +520,7 @@ echo "Agent installation complete!"
                 "error": "REVOKE_TOKEN_ERROR",
             }
 
-    async def uninstall_agent(self, server_id: str) -> Dict[str, Any]:
+    async def uninstall_agent(self, server_id: str) -> dict[str, Any]:
         """Uninstall agent from a server.
 
         Stops and removes the agent container via SSH, then removes
@@ -525,7 +552,11 @@ echo "Agent installation complete!"
                     "ERROR",
                     "Agent uninstall failed: server not found",
                     AGENT_TAGS,
-                    {"server_id": server_id, "agent_id": agent.id if agent else None, "error": "SERVER_NOT_FOUND"},
+                    {
+                        "server_id": server_id,
+                        "agent_id": agent.id if agent else None,
+                        "error": "SERVER_NOT_FOUND",
+                    },
                 )
                 return {
                     "success": False,
@@ -540,7 +571,12 @@ echo "Agent installation complete!"
                     "ERROR",
                     f"Agent uninstall failed: credentials not found for '{server.name}'",
                     AGENT_TAGS,
-                    {"server_id": server_id, "server_name": server.name, "agent_id": agent.id if agent else None, "error": "CREDENTIALS_NOT_FOUND"},
+                    {
+                        "server_id": server_id,
+                        "server_name": server.name,
+                        "agent_id": agent.id if agent else None,
+                        "error": "CREDENTIALS_NOT_FOUND",
+                    },
                 )
                 return {
                     "success": False,
@@ -589,19 +625,29 @@ echo "Agent uninstalled"
 
             # Update server system_info to reflect agent is no longer running
             if server.system_info:
-                updated_info = dict(server.system_info) if hasattr(server.system_info, '__iter__') else {}
-                if hasattr(server.system_info, 'model_dump'):
+                updated_info = (
+                    dict(server.system_info)
+                    if hasattr(server.system_info, "__iter__")
+                    else {}
+                )
+                if hasattr(server.system_info, "model_dump"):
                     updated_info = server.system_info.model_dump()
                 updated_info["agent_status"] = "not running"
                 updated_info["agent_version"] = ""
-                await self.server_service.update_server_system_info(server_id, updated_info)
+                await self.server_service.update_server_system_info(
+                    server_id, updated_info
+                )
 
             await log_event(
                 "agent",
                 "INFO",
                 f"Agent uninstalled from server: {server.name}",
                 AGENT_TAGS,
-                {"agent_id": agent_id, "server_id": server_id, "server_name": server.name},
+                {
+                    "agent_id": agent_id,
+                    "server_id": server_id,
+                    "server_name": server.name,
+                },
             )
 
             logger.info(
@@ -641,8 +687,8 @@ echo "Agent uninstalled"
         self,
         server_id: str,
         method: str,
-        params: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        params: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Send a command to an agent via WebSocket.
 
         Sends a JSON-RPC command to the agent and waits for response.
@@ -733,7 +779,7 @@ echo "Agent uninstalled"
                 "error": "SEND_COMMAND_ERROR",
             }
 
-    async def check_agent_health(self, server_id: str) -> Dict[str, Any]:
+    async def check_agent_health(self, server_id: str) -> dict[str, Any]:
         """Check comprehensive health status of an agent.
 
         Returns health status including connectivity, staleness, and version.
@@ -797,7 +843,7 @@ echo "Agent uninstalled"
                 "error": "CHECK_HEALTH_ERROR",
             }
 
-    async def ping_agent(self, server_id: str, timeout: float = 5.0) -> Dict[str, Any]:
+    async def ping_agent(self, server_id: str, timeout: float = 5.0) -> dict[str, Any]:
         """Ping an agent to verify connectivity.
 
         Sends a ping request and measures response latency.
@@ -848,7 +894,7 @@ echo "Agent uninstalled"
                 "error": "PING_ERROR",
             }
 
-    async def check_agent_version(self, server_id: str) -> Dict[str, Any]:
+    async def check_agent_version(self, server_id: str) -> dict[str, Any]:
         """Check if an agent needs updating.
 
         Compares current agent version against latest available version.
@@ -903,7 +949,7 @@ echo "Agent uninstalled"
                 "error": "CHECK_VERSION_ERROR",
             }
 
-    async def trigger_agent_update(self, server_id: str) -> Dict[str, Any]:
+    async def trigger_agent_update(self, server_id: str) -> dict[str, Any]:
         """Trigger an agent update.
 
         Marks the agent for update and sends update command if connected.
@@ -992,7 +1038,7 @@ echo "Agent uninstalled"
                 "error": "TRIGGER_UPDATE_ERROR",
             }
 
-    async def list_stale_agents(self) -> Dict[str, Any]:
+    async def list_stale_agents(self) -> dict[str, Any]:
         """List all agents that have missed heartbeats.
 
         Returns list of agents that haven't responded within the
@@ -1034,7 +1080,7 @@ echo "Agent uninstalled"
                 "error": "LIST_STALE_ERROR",
             }
 
-    async def list_agents(self) -> Dict[str, Any]:
+    async def list_agents(self) -> dict[str, Any]:
         """List all registered agents.
 
         Returns all agents in the system with their current status.
@@ -1077,7 +1123,7 @@ echo "Agent uninstalled"
                 "error": "LIST_AGENTS_ERROR",
             }
 
-    async def rotate_agent_token(self, server_id: str) -> Dict[str, Any]:
+    async def rotate_agent_token(self, server_id: str) -> dict[str, Any]:
         """Rotate an agent's authentication token.
 
         Generates a new token for the agent and sends it via WebSocket.
@@ -1193,7 +1239,7 @@ echo "Agent uninstalled"
                 "error": "ROTATE_TOKEN_ERROR",
             }
 
-    async def reset_agent_status(self, server_id: Optional[str] = None) -> Dict[str, Any]:
+    async def reset_agent_status(self, server_id: str | None = None) -> dict[str, Any]:
         """Reset stale or pending agent status to disconnected.
 
         Resets agent status for agents that are stuck in CONNECTED or PENDING

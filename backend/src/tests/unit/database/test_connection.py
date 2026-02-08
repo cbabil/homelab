@@ -11,7 +11,7 @@ from unittest.mock import MagicMock, patch
 
 import pytest
 
-from database.connection import DatabaseManager, Base, db_manager
+from database.connection import Base, DatabaseManager, db_manager
 
 
 class TestDatabaseManager:

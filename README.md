@@ -79,8 +79,8 @@ sudo apt install ./tomo_1.0.0-1_amd64.deb
 # Start service
 sudo systemctl start tomo
 
-# Create admin account
-tomo admin create
+# Launch CLI and run /admin create to set up admin account
+tomo
 
 # Access web UI
 open http://localhost
@@ -167,8 +167,11 @@ tomo/
 │   └── bun.lock
 ├── cli/                  # Command-line interface
 │   ├── src/
-│   │   ├── commands/     # CLI commands
-│   │   └── lib/          # MCP client
+│   │   ├── app/          # Interactive TUI (React Ink)
+│   │   ├── bin/          # CLI entry point
+│   │   ├── components/   # Shared UI components
+│   │   ├── hooks/        # React hooks
+│   │   └── lib/          # MCP client, auth, utilities
 │   ├── package.json
 │   └── bun.lock
 ├── agent/                # Remote server agent
@@ -199,24 +202,30 @@ tomo/
 ## CLI Commands
 
 ```bash
-# Admin management
-tomo admin create              # Create admin user
-tomo admin reset-password      # Reset admin password
+# Launch interactive TUI
+tomo
+tomo -m <url>                  # With custom MCP server URL
+tomo --version                 # Show version
+```
 
-# User management
-tomo user list                 # List all users
-tomo user create               # Create new user
+All management commands are entered as slash commands inside the interactive TUI:
 
-# Backup & restore
-tomo backup export             # Export encrypted backup
-tomo backup import             # Import backup
+```
+/help                          Show available commands
+/status                        Show connection status
+/login                         Authenticate as admin
+/logout                        Clear authentication
+/view <tab>                    Switch view (dashboard|agents|logs|settings)
+/refresh                       Force data refresh
 
-# Agent management
-tomo agent list                # List connected agents
-tomo agent rotate-token        # Rotate agent tokens
-
-# Updates
-tomo update                    # Check for updates
+/agent list|status|ping|rotate|install <server>
+/server list
+/update                        Check for updates
+/security list-locked|unlock <id>
+/backup export [path]          Export encrypted backup
+/backup import <path>          Import backup from file
+/user reset-password <user>    Reset a user's password
+/admin create                  Initial admin setup
 ```
 
 ---
@@ -246,6 +255,10 @@ uv run pytest tests/unit/ -v
 cd frontend
 bun run test
 bun run test:e2e
+
+# CLI
+cd cli
+bun run test
 
 # All tests
 make test

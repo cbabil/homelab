@@ -4,14 +4,15 @@ Pytest Configuration and Fixtures
 Shared fixtures for all tests.
 """
 
-import pytest
 import asyncio
-from unittest.mock import MagicMock, AsyncMock
+from unittest.mock import AsyncMock, MagicMock
 
+import pytest
 
 # -------------------------------------------------------------------------
 # Event Loop Fixture
 # -------------------------------------------------------------------------
+
 
 @pytest.fixture(scope="session")
 def event_loop():
@@ -25,13 +26,16 @@ def event_loop():
 # Mock Service Fixtures
 # -------------------------------------------------------------------------
 
+
 @pytest.fixture
 def mock_ssh_service():
     """Mock SSH service for testing."""
     service = MagicMock()
     service.execute_command = AsyncMock(return_value=(True, "success"))
     service.execute_command_with_progress = AsyncMock(return_value=(True, "success"))
-    service.test_connection = AsyncMock(return_value=(True, "Connected", {"os": "Linux"}))
+    service.test_connection = AsyncMock(
+        return_value=(True, "Connected", {"os": "Linux"})
+    )
     return service
 
 
@@ -51,14 +55,16 @@ def mock_db_service():
 def mock_server_service():
     """Mock server service for testing."""
     service = MagicMock()
-    service.get_server = AsyncMock(return_value=MagicMock(
-        id="server-1",
-        name="Test Server",
-        host="192.168.1.100",
-        port=22,
-        username="admin",
-        auth_type=MagicMock(value="key")
-    ))
+    service.get_server = AsyncMock(
+        return_value=MagicMock(
+            id="server-1",
+            name="Test Server",
+            host="192.168.1.100",
+            port=22,
+            username="admin",
+            auth_type=MagicMock(value="key"),
+        )
+    )
     service.get_credentials = AsyncMock(return_value={"private_key": "test-key"})
     return service
 
@@ -67,20 +73,22 @@ def mock_server_service():
 def mock_marketplace_service():
     """Mock marketplace service for testing."""
     service = MagicMock()
-    service.get_app = AsyncMock(return_value=MagicMock(
-        id="app-1",
-        name="Test App",
-        docker=MagicMock(
-            image="test/app:latest",
-            ports=[],
-            volumes=[],
-            environment=[],
-            restart_policy="unless-stopped",
-            network_mode=None,
-            privileged=False,
-            capabilities=[]
+    service.get_app = AsyncMock(
+        return_value=MagicMock(
+            id="app-1",
+            name="Test App",
+            docker=MagicMock(
+                image="test/app:latest",
+                ports=[],
+                volumes=[],
+                environment=[],
+                restart_policy="unless-stopped",
+                network_mode=None,
+                privileged=False,
+                capabilities=[],
+            ),
         )
-    ))
+    )
     return service
 
 
@@ -98,17 +106,16 @@ def mock_agent_manager():
 def mock_agent_service():
     """Mock agent service for testing."""
     service = MagicMock()
-    service.get_agent_by_server = AsyncMock(return_value=MagicMock(
-        id="agent-1",
-        server_id="server-1",
-        status="connected"
-    ))
+    service.get_agent_by_server = AsyncMock(
+        return_value=MagicMock(id="agent-1", server_id="server-1", status="connected")
+    )
     return service
 
 
 # -------------------------------------------------------------------------
 # Sample Data Fixtures
 # -------------------------------------------------------------------------
+
 
 @pytest.fixture
 def sample_server_data():
@@ -119,7 +126,7 @@ def sample_server_data():
         "host": "192.168.1.100",
         "port": 22,
         "username": "admin",
-        "auth_type": "key"
+        "auth_type": "key",
     }
 
 
@@ -131,7 +138,7 @@ def sample_app_data():
         "name": "Portainer",
         "version": "2.19.4",
         "category": "Management",
-        "description": "Docker management UI"
+        "description": "Docker management UI",
     }
 
 
@@ -145,5 +152,5 @@ def sample_installation_data():
         "container_name": "portainer-abc1",
         "container_id": "abc123def456",
         "status": "running",
-        "config": {"ports": {"9000": 9000}}
+        "config": {"ports": {"9000": 9000}},
     }

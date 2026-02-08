@@ -5,22 +5,23 @@ Tests sync_repo and _upsert_app methods.
 """
 
 import json
-import pytest
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from services.marketplace_service import MarketplaceService
+import pytest
+
 from models.marketplace import (
-    MarketplaceApp,
-    MarketplaceRepo,
-    RepoType,
-    RepoStatus,
-    DockerConfig,
     AppRequirements,
-    MarketplaceRepoTable,
+    DockerConfig,
+    MarketplaceApp,
     MarketplaceAppTable,
+    MarketplaceRepo,
+    MarketplaceRepoTable,
+    RepoStatus,
+    RepoType,
 )
+from services.marketplace_service import MarketplaceService
 
 
 @pytest.fixture
@@ -169,9 +170,7 @@ class TestSyncRepo:
             assert session.execute.called
 
     @pytest.mark.asyncio
-    async def test_sync_repo_with_local_path_skips_git(
-        self, mock_db_session, tmp_path
-    ):
+    async def test_sync_repo_with_local_path_skips_git(self, mock_db_session, tmp_path):
         """sync_repo with local_path should skip git operations."""
         session, context_manager = mock_db_session
         mock_result = MagicMock()
@@ -289,9 +288,7 @@ class TestSyncRepo:
             patch("services.marketplace_service.db_manager") as mock_db,
             patch("services.marketplace_service.initialize_marketplace_database"),
             patch("services.marketplace_service.GitSync", return_value=mock_git_sync),
-            patch.object(
-                MarketplaceService, "_is_casaos_repo", return_value=False
-            ),
+            patch.object(MarketplaceService, "_is_casaos_repo", return_value=False),
         ):
             mock_db.get_session.return_value = context_manager
             service = MarketplaceService()

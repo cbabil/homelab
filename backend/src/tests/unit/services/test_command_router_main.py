@@ -4,8 +4,9 @@ Unit tests for services/command_router.py - Main execute methods.
 Tests for execute, execute_with_progress methods.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from services.command_router import (
     CommandRouter,

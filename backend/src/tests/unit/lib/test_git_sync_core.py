@@ -6,17 +6,18 @@ Tests Git repository sync utilities for marketplace (validation, clone/pull, app
 
 import subprocess
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 from lib.git_sync import (
-    GitSync,
-    validate_git_url,
-    validate_branch_name,
-    VALID_GIT_URL_PATTERN,
-    VALID_BRANCH_PATTERN,
-    CASAOS_APPSTORE_URL,
     CASAOS_APPSTORE_BRANCH,
+    CASAOS_APPSTORE_URL,
+    VALID_BRANCH_PATTERN,
+    VALID_GIT_URL_PATTERN,
+    GitSync,
+    validate_branch_name,
+    validate_git_url,
 )
 
 
@@ -35,11 +36,13 @@ class TestConstants:
     def test_valid_git_url_pattern_type(self):
         """VALID_GIT_URL_PATTERN should be a compiled regex."""
         import re
+
         assert isinstance(VALID_GIT_URL_PATTERN, re.Pattern)
 
     def test_valid_branch_pattern_type(self):
         """VALID_BRANCH_PATTERN should be a compiled regex."""
         import re
+
         assert isinstance(VALID_BRANCH_PATTERN, re.Pattern)
 
 
@@ -160,9 +163,10 @@ class TestGitSyncInit:
 class TestCloneOrPull:
     """Tests for clone_or_pull method."""
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_clone_new_repo(self, mock_run, tmp_path):
         """clone_or_pull should clone new repositories."""
+
         def side_effect(*args, **kwargs):
             cmd = args[0]
             if "clone" in cmd:
@@ -178,7 +182,7 @@ class TestCloneOrPull:
         call_args = mock_run.call_args[0][0]
         assert "clone" in call_args
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_pull_existing_repo(self, mock_run, tmp_path):
         """clone_or_pull should pull existing repositories."""
         mock_run.return_value = MagicMock(returncode=0)
@@ -192,10 +196,10 @@ class TestCloneOrPull:
 
         assert mock_run.call_count == 2  # fetch + reset
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_clone_or_pull_git_error(self, mock_run, tmp_path):
         """clone_or_pull should raise on git errors."""
-        mock_error = subprocess.CalledProcessError(1, ['git', 'clone'])
+        mock_error = subprocess.CalledProcessError(1, ["git", "clone"])
         mock_error.stderr = b"fatal: repository not found"
         mock_run.side_effect = mock_error
 
@@ -204,10 +208,10 @@ class TestCloneOrPull:
             sync.clone_or_pull("https://github.com/test/repo.git", "main")
         assert "repository not found" in str(exc_info.value)
 
-    @patch('subprocess.run')
+    @patch("subprocess.run")
     def test_clone_or_pull_no_stderr(self, mock_run, tmp_path):
         """clone_or_pull should handle missing stderr."""
-        mock_error = subprocess.CalledProcessError(1, ['git', 'clone'])
+        mock_error = subprocess.CalledProcessError(1, ["git", "clone"])
         mock_error.stderr = None
         mock_run.side_effect = mock_error
 
@@ -410,12 +414,7 @@ docker:
         assert app.docker.environment[1].default == "secret"
 
     def test_parse_app_with_env_vars_string_equals(self):
-        """parse_app_yaml raises when string env vars have equals sign.
-
-        Note: This is a bug in the source code - AppEnvVar requires 'required'
-        field but the parsing code doesn't provide it. Test documents behavior.
-        """
-        from pydantic import ValidationError
+        """parse_app_yaml should parse string env vars with equals sign."""
         yaml_content = """
 name: test-app
 version: 1.0.0
@@ -427,9 +426,12 @@ docker:
     - DATABASE_URL=postgres://localhost/db
 """
         sync = GitSync()
-        with pytest.raises(ValidationError) as exc_info:
-            sync.parse_app_yaml(yaml_content, "repo")
-        assert "required" in str(exc_info.value)
+        app = sync.parse_app_yaml(yaml_content, "repo")
+
+        assert len(app.docker.environment) == 1
+        assert app.docker.environment[0].name == "DATABASE_URL"
+        assert app.docker.environment[0].default == "postgres://localhost/db"
+        assert app.docker.environment[0].required is False
 
     def test_parse_app_with_env_vars_string_no_equals(self):
         """parse_app_yaml should parse string env vars without equals sign."""

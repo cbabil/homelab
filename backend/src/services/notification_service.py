@@ -6,15 +6,16 @@ Handles notification CRUD operations for persistent notification management.
 
 import json
 import uuid
-from datetime import datetime, UTC
-from typing import Optional, List
+from datetime import UTC, datetime
+
 import structlog
+
 from models.notification import (
     Notification,
-    NotificationType,
+    NotificationCountResponse,
     NotificationListResponse,
     NotificationListResult,
-    NotificationCountResponse,
+    NotificationType,
 )
 from services.database_service import DatabaseService
 
@@ -24,7 +25,7 @@ logger = structlog.get_logger("notification_service")
 class NotificationService:
     """Service for managing user notifications."""
 
-    def __init__(self, db_service: Optional[DatabaseService] = None):
+    def __init__(self, db_service: DatabaseService | None = None):
         """Initialize notification service.
 
         Args:
@@ -39,9 +40,9 @@ class NotificationService:
         notification_type: NotificationType,
         title: str,
         message: str,
-        source: Optional[str] = None,
-        metadata: Optional[dict] = None,
-        expires_at: Optional[datetime] = None,
+        source: str | None = None,
+        metadata: dict | None = None,
+        expires_at: datetime | None = None,
     ) -> Notification:
         """Create a new notification.
 
@@ -102,7 +103,7 @@ class NotificationService:
             expires_at=expires_at,
         )
 
-    async def get_notification(self, notification_id: str) -> Optional[Notification]:
+    async def get_notification(self, notification_id: str) -> Notification | None:
         """Get a notification by ID.
 
         Args:
@@ -126,8 +127,8 @@ class NotificationService:
     async def list_notifications(
         self,
         user_id: str,
-        read_filter: Optional[bool] = None,
-        notification_type: Optional[NotificationType] = None,
+        read_filter: bool | None = None,
+        notification_type: NotificationType | None = None,
         limit: int = 50,
         offset: int = 0,
     ) -> NotificationListResult:
@@ -151,7 +152,7 @@ class NotificationService:
             SELECT * FROM notifications
             WHERE user_id = ? AND dismissed_at IS NULL
         """
-        params: List = [user_id]
+        params: list = [user_id]
 
         if read_filter is not None:
             query += " AND read = ?"
@@ -282,9 +283,7 @@ class NotificationService:
             dismissed = cursor.rowcount > 0
 
         if dismissed:
-            logger.debug(
-                "Notification dismissed", notification_id=notification_id
-            )
+            logger.debug("Notification dismissed", notification_id=notification_id)
         return dismissed
 
     async def dismiss_all(self, user_id: str) -> int:
@@ -340,7 +339,7 @@ class NotificationService:
             unread_count=row["unread_count"] or 0, total=row["total"] or 0
         )
 
-    async def cleanup_expired_notifications(self, user_id: Optional[str] = None) -> int:
+    async def cleanup_expired_notifications(self, user_id: str | None = None) -> int:
         """Dismiss expired notifications.
 
         Args:

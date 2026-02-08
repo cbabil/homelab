@@ -4,8 +4,9 @@ App Tools Unit Tests - Update, Start, Stop Operations
 Tests for update_app, start_app, and stop_app methods.
 """
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 
 from tools.app.tools import AppTools
 
@@ -25,7 +26,7 @@ class TestUpdateApp:
     @pytest.fixture
     def app_tools(self, mock_services):
         """Create AppTools instance."""
-        with patch('tools.app.tools.logger'):
+        with patch("tools.app.tools.logger"):
             return AppTools(
                 mock_services["app_service"],
                 mock_services["marketplace_service"],
@@ -68,7 +69,7 @@ class TestUpdateApp:
             return_value=installation
         )
 
-        with patch('tools.app.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.app.tools.log_event", new_callable=AsyncMock):
             result = await app_tools.update_app(
                 server_id="server-123",
                 app_id="nginx",
@@ -92,7 +93,7 @@ class TestUpdateApp:
             return_value=installation
         )
 
-        with patch('tools.app.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.app.tools.log_event", new_callable=AsyncMock):
             result = await app_tools.update_app(
                 server_id="server-123",
                 app_id="nginx",
@@ -116,7 +117,7 @@ class TestUpdateApp:
             return_value=installation
         )
 
-        with patch('tools.app.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.app.tools.log_event", new_callable=AsyncMock):
             result = await app_tools.update_app(
                 server_id="server-123",
                 app_ids=["nginx", "redis"],
@@ -140,7 +141,7 @@ class TestUpdateApp:
             return_value=installation
         )
 
-        with patch('tools.app.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.app.tools.log_event", new_callable=AsyncMock):
             result = await app_tools.update_app(
                 server_id="server-123",
                 app_ids=["nginx", "redis"],
@@ -167,7 +168,7 @@ class TestUpdateApp:
             return_value=installation
         )
 
-        with patch('tools.app.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.app.tools.log_event", new_callable=AsyncMock):
             result = await app_tools.update_app(
                 server_id="server-123",
                 app_ids=["nginx", "redis"],
@@ -183,7 +184,7 @@ class TestUpdateApp:
             side_effect=Exception("DB error")
         )
 
-        with patch('tools.app.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.app.tools.log_event", new_callable=AsyncMock):
             result = await app_tools.update_app(
                 server_id="server-123",
                 app_id="nginx",
@@ -208,7 +209,7 @@ class TestStartApp:
     @pytest.fixture
     def app_tools(self, mock_services):
         """Create AppTools instance."""
-        with patch('tools.app.tools.logger'):
+        with patch("tools.app.tools.logger"):
             return AppTools(
                 mock_services["app_service"],
                 mock_services["marketplace_service"],
@@ -220,7 +221,7 @@ class TestStartApp:
         """Test successful app start."""
         mock_services["deployment_service"].start_app = AsyncMock(return_value=True)
 
-        with patch('tools.app.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.app.tools.log_event", new_callable=AsyncMock):
             result = await app_tools.start_app(
                 server_id="server-123",
                 app_id="nginx",
@@ -234,7 +235,7 @@ class TestStartApp:
         """Test app start failure."""
         mock_services["deployment_service"].start_app = AsyncMock(return_value=False)
 
-        with patch('tools.app.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.app.tools.log_event", new_callable=AsyncMock):
             result = await app_tools.start_app(
                 server_id="server-123",
                 app_id="nginx",
@@ -250,7 +251,7 @@ class TestStartApp:
             side_effect=Exception("Docker error")
         )
 
-        with patch('tools.app.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.app.tools.log_event", new_callable=AsyncMock):
             result = await app_tools.start_app(
                 server_id="server-123",
                 app_id="nginx",
@@ -275,7 +276,7 @@ class TestStopApp:
     @pytest.fixture
     def app_tools(self, mock_services):
         """Create AppTools instance."""
-        with patch('tools.app.tools.logger'):
+        with patch("tools.app.tools.logger"):
             return AppTools(
                 mock_services["app_service"],
                 mock_services["marketplace_service"],
@@ -287,7 +288,7 @@ class TestStopApp:
         """Test successful app stop."""
         mock_services["deployment_service"].stop_app = AsyncMock(return_value=True)
 
-        with patch('tools.app.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.app.tools.log_event", new_callable=AsyncMock):
             result = await app_tools.stop_app(
                 server_id="server-123",
                 app_id="nginx",
@@ -301,7 +302,7 @@ class TestStopApp:
         """Test app stop failure."""
         mock_services["deployment_service"].stop_app = AsyncMock(return_value=False)
 
-        with patch('tools.app.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.app.tools.log_event", new_callable=AsyncMock):
             result = await app_tools.stop_app(
                 server_id="server-123",
                 app_id="nginx",
@@ -317,7 +318,7 @@ class TestStopApp:
             side_effect=Exception("Docker error")
         )
 
-        with patch('tools.app.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.app.tools.log_event", new_callable=AsyncMock):
             result = await app_tools.stop_app(
                 server_id="server-123",
                 app_id="nginx",

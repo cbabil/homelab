@@ -4,12 +4,13 @@ Unit tests for services/database/metrics_service.py.
 Tests MetricsDatabaseService methods.
 """
 
-import pytest
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
+from models.metrics import ActivityLog, ActivityType, ContainerMetrics, ServerMetrics
 from services.database.metrics_service import MetricsDatabaseService
-from models.metrics import ServerMetrics, ContainerMetrics, ActivityLog, ActivityType
 
 
 @pytest.fixture
@@ -26,9 +27,11 @@ def service(mock_connection):
 
 def create_mock_context(mock_conn):
     """Create async context manager for database connection."""
+
     @asynccontextmanager
     async def context():
         yield mock_conn
+
     return context()
 
 
@@ -216,9 +219,7 @@ class TestGetServerMetrics:
         mock_connection.get_connection.return_value = create_mock_context(mock_conn)
 
         with patch("services.database.metrics_service.logger"):
-            await service.get_server_metrics(
-                "server-456", since="2024-01-15T00:00:00"
-            )
+            await service.get_server_metrics("server-456", since="2024-01-15T00:00:00")
 
         call_args = mock_conn.execute.call_args[0]
         assert "timestamp >=" in call_args[0]
@@ -502,9 +503,7 @@ class TestGetActivityLogs:
         assert "timestamp <=" in call_args[0]
 
     @pytest.mark.asyncio
-    async def test_get_activity_logs_empty_details(
-        self, service, mock_connection
-    ):
+    async def test_get_activity_logs_empty_details(self, service, mock_connection):
         """get_activity_logs should handle empty details."""
         row = {
             "id": "log-123",
@@ -694,9 +693,7 @@ class TestDeleteLogEntriesBeforeDate:
         mock_cursor2 = AsyncMock()
         mock_cursor2.rowcount = 500
         mock_conn = AsyncMock()
-        mock_conn.execute = AsyncMock(
-            side_effect=[None, mock_cursor1, mock_cursor2]
-        )
+        mock_conn.execute = AsyncMock(side_effect=[None, mock_cursor1, mock_cursor2])
         mock_connection.get_connection.return_value = create_mock_context(mock_conn)
 
         with patch("services.database.metrics_service.logger"):
@@ -711,9 +708,7 @@ class TestDeleteLogEntriesBeforeDate:
     async def test_delete_exception_in_loop(self, service, mock_connection):
         """delete_log_entries_before_date should rollback on exception in loop."""
         mock_conn = AsyncMock()
-        mock_conn.execute = AsyncMock(
-            side_effect=[None, Exception("Delete failed")]
-        )
+        mock_conn.execute = AsyncMock(side_effect=[None, Exception("Delete failed")])
         mock_connection.get_connection.return_value = create_mock_context(mock_conn)
 
         with patch("services.database.metrics_service.logger"):

@@ -5,9 +5,10 @@ Tests the core SSH service functionality including initialization,
 connection creation, and connection management.
 """
 
-import pytest
-from unittest.mock import MagicMock, patch, AsyncMock
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import paramiko
+import pytest
 
 from services.ssh_service import SSHService
 
@@ -38,8 +39,10 @@ def mock_ssh_client():
 @pytest.fixture
 def ssh_service():
     """Create an SSHService instance with mocked dependencies."""
-    with patch("services.ssh_service.logger"), \
-         patch("services.ssh_service.SSHConnectionPool") as MockPool:
+    with (
+        patch("services.ssh_service.logger"),
+        patch("services.ssh_service.SSHConnectionPool") as MockPool,
+    ):
         # Set up async mock methods on the pool
         mock_pool = MagicMock()
         mock_pool._make_key.return_value = "host:22:user"
@@ -58,16 +61,20 @@ class TestSSHServiceInit:
 
     def test_init_creates_pool(self):
         """SSHService should create connection pool."""
-        with patch("services.ssh_service.logger"), \
-             patch("services.ssh_service.SSHConnectionPool") as MockPool:
+        with (
+            patch("services.ssh_service.logger"),
+            patch("services.ssh_service.SSHConnectionPool") as MockPool,
+        ):
             service = SSHService()
             MockPool.assert_called_once()
             assert service._pool is MockPool.return_value
 
     def test_init_with_explicit_strict_checking(self):
         """SSHService should use explicit strict_host_key_checking."""
-        with patch("services.ssh_service.logger"), \
-             patch("services.ssh_service.SSHConnectionPool"):
+        with (
+            patch("services.ssh_service.logger"),
+            patch("services.ssh_service.SSHConnectionPool"),
+        ):
             service = SSHService(strict_host_key_checking=True)
             assert service.strict_host_key_checking is True
 
@@ -76,19 +83,23 @@ class TestSSHServiceInit:
 
     def test_init_defaults_to_production_env(self):
         """SSHService should default to production behavior from env."""
-        with patch("services.ssh_service.logger"), \
-             patch("services.ssh_service.SSHConnectionPool"), \
-             patch.dict("os.environ", {"APP_ENV": "production"}):
+        with (
+            patch("services.ssh_service.logger"),
+            patch("services.ssh_service.SSHConnectionPool"),
+            patch.dict("os.environ", {"APP_ENV": "production"}),
+        ):
             service = SSHService()
             assert service.strict_host_key_checking is True
 
-    def test_init_development_env(self):
-        """SSHService should use non-strict checking in development."""
-        with patch("services.ssh_service.logger"), \
-             patch("services.ssh_service.SSHConnectionPool"), \
-             patch.dict("os.environ", {"APP_ENV": "development"}):
+    def test_init_always_strict_by_default(self):
+        """SSHService should use strict checking by default regardless of env."""
+        with (
+            patch("services.ssh_service.logger"),
+            patch("services.ssh_service.SSHConnectionPool"),
+            patch.dict("os.environ", {"APP_ENV": "development"}),
+        ):
             service = SSHService()
-            assert service.strict_host_key_checking is False
+            assert service.strict_host_key_checking is True
 
     def test_init_default_config_values(self, ssh_service):
         """SSHService should have correct default configs."""
@@ -101,8 +112,10 @@ class TestSSHServiceInit:
 
     def test_init_logs_message(self):
         """SSHService should log initialization."""
-        with patch("services.ssh_service.logger") as mock_logger, \
-             patch("services.ssh_service.SSHConnectionPool"):
+        with (
+            patch("services.ssh_service.logger") as mock_logger,
+            patch("services.ssh_service.SSHConnectionPool"),
+        ):
             SSHService(strict_host_key_checking=True)
             mock_logger.info.assert_called_with(
                 "SSH service initialized with connection pooling",
@@ -115,8 +128,10 @@ class TestCreateSSHClient:
 
     def test_creates_paramiko_client(self, ssh_service):
         """_create_ssh_client should create paramiko.SSHClient."""
-        with patch("services.ssh_service.paramiko") as mock_paramiko, \
-             patch("services.ssh_service.logger"):
+        with (
+            patch("services.ssh_service.paramiko") as mock_paramiko,
+            patch("services.ssh_service.logger"),
+        ):
             mock_paramiko.SSHClient.return_value = MagicMock()
             client = ssh_service._create_ssh_client()
             mock_paramiko.SSHClient.assert_called_once()
@@ -126,9 +141,11 @@ class TestCreateSSHClient:
         """_create_ssh_client should load known_hosts if exists."""
         mock_client = MagicMock()
 
-        with patch("services.ssh_service.paramiko") as mock_paramiko, \
-             patch("services.ssh_service.Path") as MockPath, \
-             patch("services.ssh_service.logger"):
+        with (
+            patch("services.ssh_service.paramiko") as mock_paramiko,
+            patch("services.ssh_service.Path") as MockPath,
+            patch("services.ssh_service.logger"),
+        ):
             mock_paramiko.SSHClient.return_value = mock_client
             mock_path = MagicMock()
             mock_path.exists.return_value = True
@@ -142,9 +159,11 @@ class TestCreateSSHClient:
         mock_client = MagicMock()
         mock_client.load_host_keys.side_effect = Exception("Parse error")
 
-        with patch("services.ssh_service.paramiko") as mock_paramiko, \
-             patch("services.ssh_service.Path") as MockPath, \
-             patch("services.ssh_service.logger") as mock_logger:
+        with (
+            patch("services.ssh_service.paramiko") as mock_paramiko,
+            patch("services.ssh_service.Path") as MockPath,
+            patch("services.ssh_service.logger") as mock_logger,
+        ):
             mock_paramiko.SSHClient.return_value = mock_client
             mock_path = MagicMock()
             mock_path.exists.return_value = True
@@ -156,10 +175,12 @@ class TestCreateSSHClient:
 
     def test_sets_reject_policy_when_strict(self):
         """_create_ssh_client should use RejectPolicy when strict."""
-        with patch("services.ssh_service.logger"), \
-             patch("services.ssh_service.SSHConnectionPool"), \
-             patch("services.ssh_service.paramiko") as mock_paramiko, \
-             patch("services.ssh_service.Path") as MockPath:
+        with (
+            patch("services.ssh_service.logger"),
+            patch("services.ssh_service.SSHConnectionPool"),
+            patch("services.ssh_service.paramiko") as mock_paramiko,
+            patch("services.ssh_service.Path") as MockPath,
+        ):
             MockPath.home.return_value.__truediv__.return_value.__truediv__.return_value.exists.return_value = False
             mock_client = MagicMock()
             mock_paramiko.SSHClient.return_value = mock_client
@@ -173,10 +194,12 @@ class TestCreateSSHClient:
 
     def test_sets_warning_policy_when_not_strict(self):
         """_create_ssh_client should use WarningPolicy when not strict."""
-        with patch("services.ssh_service.logger"), \
-             patch("services.ssh_service.SSHConnectionPool"), \
-             patch("services.ssh_service.paramiko") as mock_paramiko, \
-             patch("services.ssh_service.Path") as MockPath:
+        with (
+            patch("services.ssh_service.logger"),
+            patch("services.ssh_service.SSHConnectionPool"),
+            patch("services.ssh_service.paramiko") as mock_paramiko,
+            patch("services.ssh_service.Path") as MockPath,
+        ):
             MockPath.home.return_value.__truediv__.return_value.__truediv__.return_value.exists.return_value = False
             mock_client = MagicMock()
             mock_paramiko.SSHClient.return_value = mock_client
@@ -210,9 +233,13 @@ class TestGetConnection:
         ssh_service._pool.get = AsyncMock(return_value=None)
         mock_client = MagicMock()
 
-        with patch.object(ssh_service, "_create_ssh_client", return_value=mock_client), \
-             patch("services.ssh_service.logger"), \
-             patch("services.helpers.ssh_helpers.connect_password", new_callable=AsyncMock):
+        with (
+            patch.object(ssh_service, "_create_ssh_client", return_value=mock_client),
+            patch("services.ssh_service.logger"),
+            patch(
+                "services.helpers.ssh_helpers.connect_password", new_callable=AsyncMock
+            ),
+        ):
             async with ssh_service._get_connection(
                 "host", 22, "user", "password", {"password": "secret"}
             ) as client:
@@ -224,9 +251,13 @@ class TestGetConnection:
         ssh_service._pool.get = AsyncMock(return_value=None)
         mock_client = MagicMock()
 
-        with patch.object(ssh_service, "_create_ssh_client", return_value=mock_client), \
-             patch("services.ssh_service.logger"), \
-             patch("services.helpers.ssh_helpers.connect_password", new_callable=AsyncMock) as mock_connect:
+        with (
+            patch.object(ssh_service, "_create_ssh_client", return_value=mock_client),
+            patch("services.ssh_service.logger"),
+            patch(
+                "services.helpers.ssh_helpers.connect_password", new_callable=AsyncMock
+            ) as mock_connect,
+        ):
             async with ssh_service._get_connection(
                 "host", 22, "user", "password", {"password": "secret"}
             ):
@@ -238,9 +269,13 @@ class TestGetConnection:
         ssh_service._pool.get = AsyncMock(return_value=None)
         mock_client = MagicMock()
 
-        with patch.object(ssh_service, "_create_ssh_client", return_value=mock_client), \
-             patch("services.ssh_service.logger"), \
-             patch("services.helpers.ssh_helpers.connect_key", new_callable=AsyncMock) as mock_connect:
+        with (
+            patch.object(ssh_service, "_create_ssh_client", return_value=mock_client),
+            patch("services.ssh_service.logger"),
+            patch(
+                "services.helpers.ssh_helpers.connect_key", new_callable=AsyncMock
+            ) as mock_connect,
+        ):
             async with ssh_service._get_connection(
                 "host", 22, "user", "key", {"private_key": "..."}
             ):
@@ -252,9 +287,11 @@ class TestGetConnection:
         ssh_service._pool.get = AsyncMock(return_value=None)
         mock_client = MagicMock()
 
-        with patch.object(ssh_service, "_create_ssh_client", return_value=mock_client), \
-             patch("services.ssh_service.logger"), \
-             pytest.raises(ValueError, match="Unsupported auth type"):
+        with (
+            patch.object(ssh_service, "_create_ssh_client", return_value=mock_client),
+            patch("services.ssh_service.logger"),
+            pytest.raises(ValueError, match="Unsupported auth type"),
+        ):
             async with ssh_service._get_connection(
                 "host", 22, "user", "certificate", {}
             ):
@@ -267,9 +304,13 @@ class TestGetConnection:
         ssh_service._pool.put = AsyncMock()
         mock_client = MagicMock()
 
-        with patch.object(ssh_service, "_create_ssh_client", return_value=mock_client), \
-             patch("services.ssh_service.logger"), \
-             patch("services.helpers.ssh_helpers.connect_password", new_callable=AsyncMock):
+        with (
+            patch.object(ssh_service, "_create_ssh_client", return_value=mock_client),
+            patch("services.ssh_service.logger"),
+            patch(
+                "services.helpers.ssh_helpers.connect_password", new_callable=AsyncMock
+            ),
+        ):
             async with ssh_service._get_connection(
                 "host", 22, "user", "password", {"password": "secret"}
             ):
@@ -284,9 +325,7 @@ class TestGetConnection:
         ssh_service._pool.release = AsyncMock()
 
         with patch("services.ssh_service.logger"):
-            async with ssh_service._get_connection(
-                "host", 22, "user", "password", {}
-            ):
+            async with ssh_service._get_connection("host", 22, "user", "password", {}):
                 pass
 
             ssh_service._pool.release.assert_called_once()
@@ -297,9 +336,13 @@ class TestGetConnection:
         ssh_service._pool.get = AsyncMock(return_value=None)
         mock_client = MagicMock()
 
-        with patch.object(ssh_service, "_create_ssh_client", return_value=mock_client), \
-             patch("services.ssh_service.logger"), \
-             patch("services.helpers.ssh_helpers.connect_password", new_callable=AsyncMock) as mock_connect:
+        with (
+            patch.object(ssh_service, "_create_ssh_client", return_value=mock_client),
+            patch("services.ssh_service.logger"),
+            patch(
+                "services.helpers.ssh_helpers.connect_password", new_callable=AsyncMock
+            ) as mock_connect,
+        ):
             mock_connect.side_effect = Exception("Connection failed")
 
             with pytest.raises(Exception, match="Connection failed"):

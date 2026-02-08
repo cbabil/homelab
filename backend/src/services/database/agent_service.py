@@ -5,7 +5,6 @@ Database operations for agents and registration codes.
 
 import json
 from datetime import UTC, datetime
-from typing import List, Optional
 from uuid import uuid4
 
 import structlog
@@ -19,7 +18,7 @@ from models.agent import (
     RegistrationCode,
 )
 
-from .base import DatabaseConnection
+from .base import ALLOWED_AGENT_COLUMNS, DatabaseConnection
 from .registration_code_service import RegistrationCodeDatabaseService
 
 logger = structlog.get_logger("database.agent")
@@ -49,13 +48,13 @@ class AgentDatabaseService:
 
         # Handle token rotation fields (may not exist in older schemas)
         pending_token_hash = (
-            row["pending_token_hash"] if "pending_token_hash" in row.keys() else None
+            row["pending_token_hash"] if "pending_token_hash" in row else None
         )
         token_issued_at = None
         token_expires_at = None
-        if "token_issued_at" in row.keys() and row["token_issued_at"]:
+        if "token_issued_at" in row and row["token_issued_at"]:
             token_issued_at = datetime.fromisoformat(row["token_issued_at"])
-        if "token_expires_at" in row.keys() and row["token_expires_at"]:
+        if "token_expires_at" in row and row["token_expires_at"]:
             token_expires_at = datetime.fromisoformat(row["token_expires_at"])
 
         return Agent(
@@ -104,7 +103,7 @@ class AgentDatabaseService:
         logger.info("Agent created", agent_id=agent_id, server_id=data.server_id)
         return self._row_to_agent(row)
 
-    async def get_agent(self, agent_id: str) -> Optional[Agent]:
+    async def get_agent(self, agent_id: str) -> Agent | None:
         """Get agent by ID."""
         async with self._conn.get_connection() as conn:
             cursor = await conn.execute(
@@ -114,7 +113,7 @@ class AgentDatabaseService:
 
         return self._row_to_agent(row) if row else None
 
-    async def get_agent_by_server(self, server_id: str) -> Optional[Agent]:
+    async def get_agent_by_server(self, server_id: str) -> Agent | None:
         """Get agent by associated server ID."""
         async with self._conn.get_connection() as conn:
             cursor = await conn.execute(
@@ -124,7 +123,7 @@ class AgentDatabaseService:
 
         return self._row_to_agent(row) if row else None
 
-    async def list_all_agents(self) -> List[Agent]:
+    async def list_all_agents(self) -> list[Agent]:
         """List all agents."""
         async with self._conn.get_connection() as conn:
             cursor = await conn.execute("SELECT * FROM agents ORDER BY created_at DESC")
@@ -132,7 +131,7 @@ class AgentDatabaseService:
 
         return [self._row_to_agent(row) for row in rows]
 
-    async def get_agent_by_token_hash(self, token_hash: str) -> Optional[Agent]:
+    async def get_agent_by_token_hash(self, token_hash: str) -> Agent | None:
         """Get agent by authentication token hash."""
         async with self._conn.get_connection() as conn:
             cursor = await conn.execute(
@@ -142,7 +141,7 @@ class AgentDatabaseService:
 
         return self._row_to_agent(row) if row else None
 
-    async def get_agent_by_pending_token_hash(self, token_hash: str) -> Optional[Agent]:
+    async def get_agent_by_pending_token_hash(self, token_hash: str) -> Agent | None:
         """Get agent by pending token hash (during rotation)."""
         async with self._conn.get_connection() as conn:
             cursor = await conn.execute(
@@ -152,7 +151,7 @@ class AgentDatabaseService:
 
         return self._row_to_agent(row) if row else None
 
-    async def get_agents_with_expiring_tokens(self, before: datetime) -> List[Agent]:
+    async def get_agents_with_expiring_tokens(self, before: datetime) -> list[Agent]:
         """Get agents whose tokens expire before the given datetime.
 
         Used by the rotation scheduler to find agents needing token rotation.
@@ -177,16 +176,26 @@ class AgentDatabaseService:
 
         return [self._row_to_agent(row) for row in rows]
 
-    async def update_agent(self, agent_id: str, data: AgentUpdate) -> Optional[Agent]:
+    async def update_agent(self, agent_id: str, data: AgentUpdate) -> Agent | None:
         """Update an agent record."""
         updates = data.model_dump(exclude_unset=True)
         if not updates:
             return await self.get_agent(agent_id)
 
+        # Validate columns against whitelist (SQL injection prevention)
+        invalid = set(updates.keys()) - ALLOWED_AGENT_COLUMNS
+        if invalid:
+            logger.warning(
+                "Rejected invalid agent update columns",
+                agent_id=agent_id,
+                invalid_columns=sorted(invalid),
+            )
+            raise ValueError(f"Invalid update columns: {sorted(invalid)}")
+
         updates["updated_at"] = datetime.now(UTC).isoformat()
         self._serialize_update_fields(updates)
 
-        set_clause = ", ".join(f"{key} = ?" for key in updates.keys())
+        set_clause = ", ".join(f"{key} = ?" for key in updates)
         values = list(updates.values()) + [agent_id]
 
         async with self._conn.get_connection() as conn:
@@ -259,7 +268,7 @@ class AgentDatabaseService:
         """Create a registration code for an agent."""
         return await self._registration_codes.create(agent_id, expiry_minutes)
 
-    async def get_registration_code(self, code: str) -> Optional[RegistrationCode]:
+    async def get_registration_code(self, code: str) -> RegistrationCode | None:
         """Get a registration code by its value."""
         return await self._registration_codes.get_by_code(code)
 

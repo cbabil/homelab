@@ -1,15 +1,15 @@
 """Data models for the Tomo backend."""
 
 from .agent import (
-    AgentStatus,
-    AgentConfig,
     Agent,
+    AgentConfig,
     AgentCreate,
-    AgentUpdate,
-    RegistrationCode,
+    AgentInfo,
     AgentRegistrationRequest,
     AgentRegistrationResponse,
-    AgentInfo,
+    AgentStatus,
+    AgentUpdate,
+    RegistrationCode,
 )
 
 __all__ = [

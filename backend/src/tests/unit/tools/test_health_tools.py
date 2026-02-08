@@ -4,8 +4,9 @@ Unit tests for tools/health/tools.py - HealthTools class.
 Tests for health check functionality.
 """
 
-import pytest
 from unittest.mock import patch
+
+import pytest
 
 from tools.health.tools import HealthTools
 
@@ -13,11 +14,7 @@ from tools.health.tools import HealthTools
 @pytest.fixture
 def config():
     """Sample config for health tools."""
-    return {
-        "version": "1.0.0",
-        "ssh_timeout": 30,
-        "max_concurrent_connections": 10
-    }
+    return {"version": "1.0.0", "ssh_timeout": 30, "max_concurrent_connections": 10}
 
 
 @pytest.fixture
@@ -38,6 +35,7 @@ class TestHealthToolsInit:
     def test_initialization_with_mapping(self):
         """Test HealthTools accepts any mapping type."""
         from collections import ChainMap
+
         config = ChainMap({"version": "2.0.0"}, {"ssh_timeout": 60})
         tools = HealthTools(config)
         assert tools.config["version"] == "2.0.0"

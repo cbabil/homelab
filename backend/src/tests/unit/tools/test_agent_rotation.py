@@ -4,11 +4,12 @@ Agent Tools Unit Tests - Token Rotation
 Tests for rotate_agent_token MCP tool.
 """
 
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from tools.agent.tools import AgentTools
+import pytest
+
 from models.agent import Agent, AgentStatus
+from tools.agent.tools import AgentTools
 
 
 class TestRotateAgentToken:
@@ -43,7 +44,9 @@ class TestRotateAgentToken:
     @pytest.mark.asyncio
     async def test_rotate_token_agent_not_found(self, agent_tools, mock_services):
         """Test rotate fails when no agent for server."""
-        mock_services["agent_service"].get_agent_by_server = AsyncMock(return_value=None)
+        mock_services["agent_service"].get_agent_by_server = AsyncMock(
+            return_value=None
+        )
 
         result = await agent_tools.rotate_agent_token("server-123")
 
@@ -60,7 +63,9 @@ class TestRotateAgentToken:
             token_hash="hash",
             status=AgentStatus.DISCONNECTED,
         )
-        mock_services["agent_service"].get_agent_by_server = AsyncMock(return_value=agent)
+        mock_services["agent_service"].get_agent_by_server = AsyncMock(
+            return_value=agent
+        )
         mock_services["agent_manager"].is_connected = MagicMock(return_value=False)
 
         result = await agent_tools.rotate_agent_token("server-1")
@@ -78,7 +83,9 @@ class TestRotateAgentToken:
             token_hash="hash",
             status=AgentStatus.CONNECTED,
         )
-        mock_services["agent_service"].get_agent_by_server = AsyncMock(return_value=agent)
+        mock_services["agent_service"].get_agent_by_server = AsyncMock(
+            return_value=agent
+        )
         mock_services["agent_manager"].is_connected = MagicMock(return_value=True)
         mock_services["agent_service"].initiate_rotation = AsyncMock(
             return_value="new-token-123"
@@ -111,7 +118,9 @@ class TestRotateAgentToken:
             token_hash="hash",
             status=AgentStatus.CONNECTED,
         )
-        mock_services["agent_service"].get_agent_by_server = AsyncMock(return_value=agent)
+        mock_services["agent_service"].get_agent_by_server = AsyncMock(
+            return_value=agent
+        )
         mock_services["agent_manager"].is_connected = MagicMock(return_value=True)
         mock_services["agent_service"].initiate_rotation = AsyncMock(return_value=None)
 
@@ -121,7 +130,9 @@ class TestRotateAgentToken:
         assert result["error"] == "ROTATION_INIT_FAILED"
 
     @pytest.mark.asyncio
-    async def test_rotate_token_websocket_send_failure(self, agent_tools, mock_services):
+    async def test_rotate_token_websocket_send_failure(
+        self, agent_tools, mock_services
+    ):
         """Test rotate cancels when WebSocket send fails."""
         agent = Agent(
             id="agent-123",
@@ -129,7 +140,9 @@ class TestRotateAgentToken:
             token_hash="hash",
             status=AgentStatus.CONNECTED,
         )
-        mock_services["agent_service"].get_agent_by_server = AsyncMock(return_value=agent)
+        mock_services["agent_service"].get_agent_by_server = AsyncMock(
+            return_value=agent
+        )
         mock_services["agent_manager"].is_connected = MagicMock(return_value=True)
         mock_services["agent_service"].initiate_rotation = AsyncMock(
             return_value="new-token-123"
@@ -160,7 +173,9 @@ class TestRotateAgentToken:
             token_hash="hash",
             status=AgentStatus.CONNECTED,
         )
-        mock_services["agent_service"].get_agent_by_server = AsyncMock(return_value=agent)
+        mock_services["agent_service"].get_agent_by_server = AsyncMock(
+            return_value=agent
+        )
         mock_services["agent_manager"].is_connected = MagicMock(return_value=True)
         mock_services["agent_service"].initiate_rotation = AsyncMock(
             return_value="new-token"

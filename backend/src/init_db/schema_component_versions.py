@@ -6,6 +6,7 @@ backend, frontend, and mcp components.
 """
 
 import structlog
+
 from database.connection import DatabaseManager
 
 logger = structlog.get_logger("schema_component_versions")
@@ -35,7 +36,9 @@ END;
 """
 
 
-async def initialize_component_versions_schema(db_manager: DatabaseManager = None) -> bool:
+async def initialize_component_versions_schema(
+    db_manager: DatabaseManager = None,
+) -> bool:
     """Initialize the component_versions table schema.
 
     Args:

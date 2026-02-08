@@ -6,22 +6,23 @@ Tests configuration loading, feature flags, and data directory resolution.
 
 import os
 from pathlib import Path
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
+
 import pytest
 
 from lib.config import (
+    BACKEND_ROOT,
     DEFAULT_ENV_VALUES,
     PROJECT_ROOT,
-    BACKEND_ROOT,
+    _cached_config,
     _load_env_file,
     _resolve_data_directory,
-    _cached_config,
+    get_feature_flags,
+    is_feature_enabled,
     load_config,
     reload_config,
-    resolve_data_directory,
-    is_feature_enabled,
-    get_feature_flags,
     require_feature,
+    resolve_data_directory,
 )
 
 
@@ -101,7 +102,7 @@ class TestLoadEnvFile:
     def test_load_env_file_strips_quotes(self, clean_env, tmp_path):
         """_load_env_file should strip quotes from values."""
         env_file = tmp_path / ".env"
-        env_file.write_text('DOUBLE="double_quoted"\nSINGLE=\'single_quoted\'')
+        env_file.write_text("DOUBLE=\"double_quoted\"\nSINGLE='single_quoted'")
 
         with patch("lib.config.PROJECT_ROOT", tmp_path):
             result = _load_env_file()
@@ -385,10 +386,11 @@ class TestRequireFeature:
         assert "test operation" in str(exc_info.value)
 
     def test_require_feature_unset_uses_default(self, clean_env):
-        """require_feature should use default (True) when not set."""
+        """require_feature should use default (False) when not set."""
         os.environ.pop("FEATURE_UNSET", None)
-        # Default is True, so should not raise
-        require_feature("UNSET", "test operation")
+        # Default is False (fail-closed), so should raise
+        with pytest.raises(PermissionError):
+            require_feature("UNSET", "test operation")
 
     def test_require_feature_error_message_format(self, clean_env):
         """require_feature error should have correct format."""

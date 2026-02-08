@@ -4,7 +4,8 @@ Deployment Validation
 Preflight checks and configuration validation for deployments.
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Any
+
 import structlog
 
 logger = structlog.get_logger("deployment.validation")
@@ -25,7 +26,9 @@ class DeploymentValidator:
         self.marketplace_service = marketplace_service
         self.server_service = server_service
 
-    async def validate_config(self, app_id: str, config: Dict[str, Any]) -> Dict[str, Any]:
+    async def validate_config(
+        self, app_id: str, config: dict[str, Any]
+    ) -> dict[str, Any]:
         """Validate deployment configuration against app definition.
 
         Args:
@@ -35,11 +38,7 @@ class DeploymentValidator:
         Returns:
             Dict with valid, errors, and warnings
         """
-        validation = {
-            "valid": True,
-            "errors": [],
-            "warnings": []
-        }
+        validation = {"valid": True, "errors": [], "warnings": []}
 
         try:
             app = await self.marketplace_service.get_app(app_id)
@@ -99,11 +98,8 @@ class DeploymentValidator:
             return validation
 
     async def run_preflight_checks(
-        self,
-        server_id: str,
-        app_id: str,
-        config: Dict[str, Any] = None
-    ) -> Dict[str, Any]:
+        self, server_id: str, app_id: str, config: dict[str, Any] = None
+    ) -> dict[str, Any]:
         """Run pre-flight validation before deployment.
 
         Args:
@@ -125,12 +121,14 @@ class DeploymentValidator:
             if not app or not server:
                 return {
                     "passed": False,
-                    "checks": [{
-                        "name": "resources",
-                        "passed": False,
-                        "message": "App or server not found"
-                    }],
-                    "can_proceed": False
+                    "checks": [
+                        {
+                            "name": "resources",
+                            "passed": False,
+                            "message": "App or server not found",
+                        }
+                    ],
+                    "can_proceed": False,
                 }
 
             # Check 1: Docker running
@@ -142,7 +140,7 @@ class DeploymentValidator:
             # Check 2: Disk space
             min_storage = None
             if app.requirements:
-                min_storage = getattr(app.requirements, 'min_storage', None)
+                min_storage = getattr(app.requirements, "min_storage", None)
             disk_check = await self._check_disk_space(server_id, min_storage)
             checks.append(disk_check)
             if not disk_check["passed"]:
@@ -164,27 +162,23 @@ class DeploymentValidator:
             # Check 4: Architecture compatibility
             supported_archs = []
             if app.requirements:
-                supported_archs = getattr(app.requirements, 'architectures', [])
+                supported_archs = getattr(app.requirements, "architectures", [])
             arch_check = await self._check_architecture(server_id, supported_archs)
             checks.append(arch_check)
             if not arch_check["passed"]:
                 all_passed = False
 
-            return {
-                "passed": all_passed,
-                "checks": checks,
-                "can_proceed": all_passed
-            }
+            return {"passed": all_passed, "checks": checks, "can_proceed": all_passed}
 
         except Exception as e:
             logger.error("Preflight checks failed", error=str(e))
             return {
                 "passed": False,
                 "checks": [{"name": "error", "passed": False, "message": str(e)}],
-                "can_proceed": False
+                "can_proceed": False,
             }
 
-    async def _check_docker_running(self, server_id: str) -> Dict[str, Any]:
+    async def _check_docker_running(self, server_id: str) -> dict[str, Any]:
         """Check if Docker daemon is running."""
         cmd = "docker info > /dev/null 2>&1 && echo 'running' || echo 'not running'"
         exit_code, stdout, _ = await self.ssh.execute(server_id, cmd)
@@ -193,12 +187,14 @@ class DeploymentValidator:
         return {
             "name": "docker_running",
             "passed": running,
-            "message": "Docker is running" if running else "Docker daemon is not running"
+            "message": "Docker is running"
+            if running
+            else "Docker daemon is not running",
         }
 
     async def _check_disk_space(
-        self, server_id: str, min_mb: Optional[int]
-    ) -> Dict[str, Any]:
+        self, server_id: str, min_mb: int | None
+    ) -> dict[str, Any]:
         """Check available disk space."""
         cmd = "df -m / | tail -1 | awk '{print $4}'"
         exit_code, stdout, _ = await self.ssh.execute(server_id, cmd)
@@ -207,7 +203,7 @@ class DeploymentValidator:
             return {
                 "name": "disk_space",
                 "passed": False,
-                "message": "Could not check disk space"
+                "message": "Could not check disk space",
             }
 
         try:
@@ -219,28 +215,29 @@ class DeploymentValidator:
                 "name": "disk_space",
                 "passed": passed,
                 "message": (
-                    f"{available_mb}MB available" if passed
+                    f"{available_mb}MB available"
+                    if passed
                     else f"Need {required_mb}MB, only {available_mb}MB available"
                 ),
                 "available_mb": available_mb,
-                "required_mb": required_mb
+                "required_mb": required_mb,
             }
         except ValueError:
             return {
                 "name": "disk_space",
                 "passed": False,
-                "message": "Could not parse disk space"
+                "message": "Could not parse disk space",
             }
 
     async def _check_ports_available(
-        self, server_id: str, ports: List[int]
-    ) -> Dict[str, Any]:
+        self, server_id: str, ports: list[int]
+    ) -> dict[str, Any]:
         """Check if required ports are available."""
         if not ports:
             return {
                 "name": "port_availability",
                 "passed": True,
-                "message": "No ports to check"
+                "message": "No ports to check",
             }
 
         unavailable = []
@@ -257,15 +254,14 @@ class DeploymentValidator:
             "name": "port_availability",
             "passed": passed,
             "message": (
-                "All ports available" if passed
-                else f"Ports in use: {unavailable}"
+                "All ports available" if passed else f"Ports in use: {unavailable}"
             ),
-            "unavailable_ports": unavailable
+            "unavailable_ports": unavailable,
         }
 
     async def _check_architecture(
-        self, server_id: str, supported: List[str]
-    ) -> Dict[str, Any]:
+        self, server_id: str, supported: list[str]
+    ) -> dict[str, Any]:
         """Check if server architecture is supported."""
         cmd = "uname -m"
         exit_code, stdout, _ = await self.ssh.execute(server_id, cmd)
@@ -274,7 +270,7 @@ class DeploymentValidator:
             return {
                 "name": "architecture",
                 "passed": False,
-                "message": "Could not determine architecture"
+                "message": "Could not determine architecture",
             }
 
         arch = stdout.strip().lower()
@@ -287,9 +283,10 @@ class DeploymentValidator:
             "name": "architecture",
             "passed": passed,
             "message": (
-                f"Architecture {normalized} supported" if passed
+                f"Architecture {normalized} supported"
+                if passed
                 else f"Architecture {normalized} not in {supported}"
             ),
             "server_arch": normalized,
-            "supported_archs": supported
+            "supported_archs": supported,
         }

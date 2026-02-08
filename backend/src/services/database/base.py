@@ -5,9 +5,9 @@ for SQL injection prevention.
 """
 
 import os
+from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import AsyncIterator
 
 import aiosqlite
 import structlog
@@ -43,6 +43,20 @@ ALLOWED_INSTALLATION_COLUMNS = frozenset(
         "networks",
         "named_volumes",
         "bind_mounts",
+    }
+)
+ALLOWED_AGENT_COLUMNS = frozenset(
+    {
+        "server_id",
+        "token_hash",
+        "version",
+        "status",
+        "last_seen",
+        "registered_at",
+        "config",
+        "pending_token_hash",
+        "token_issued_at",
+        "token_expires_at",
     }
 )
 ALLOWED_SYSTEM_INFO_COLUMNS = frozenset(

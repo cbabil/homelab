@@ -4,10 +4,11 @@ Unit tests for services/database/session_service.py.
 Tests SessionDatabaseService methods for account locks and login security.
 """
 
-import pytest
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from services.database.session_service import SessionDatabaseService
 
@@ -26,9 +27,11 @@ def service(mock_connection):
 
 def create_mock_context(mock_conn):
     """Create async context manager for database connection."""
+
     @asynccontextmanager
     async def context():
         yield mock_conn
+
     return context()
 
 
@@ -177,9 +180,7 @@ class TestRecordFailedLoginAttempt:
         assert expires is not None
 
     @pytest.mark.asyncio
-    async def test_record_existing_attempt_increments(
-        self, service, mock_connection
-    ):
+    async def test_record_existing_attempt_increments(self, service, mock_connection):
         """Existing record should increment attempt count."""
         existing = {
             "attempt_count": 2,
@@ -334,7 +335,9 @@ class TestClearFailedAttempts:
         mock_connection.get_connection.return_value = create_mock_context(mock_conn)
 
         with patch("services.database.session_service.logger"):
-            result = await service.clear_failed_attempts("10.0.0.1", identifier_type="ip")
+            result = await service.clear_failed_attempts(
+                "10.0.0.1", identifier_type="ip"
+            )
 
         assert result is True
         call_args = mock_conn.execute.call_args[0]
@@ -386,9 +389,7 @@ class TestGetLockedAccounts:
         assert result == []
 
     @pytest.mark.asyncio
-    async def test_get_locked_accounts_include_expired(
-        self, service, mock_connection
-    ):
+    async def test_get_locked_accounts_include_expired(self, service, mock_connection):
         """get_locked_accounts should modify query for include_expired."""
         mock_cursor = AsyncMock()
         mock_cursor.fetchall = AsyncMock(return_value=[])
@@ -403,9 +404,7 @@ class TestGetLockedAccounts:
         assert "lock_expires_at" not in call_args[0] or "IS NULL OR" in call_args[0]
 
     @pytest.mark.asyncio
-    async def test_get_locked_accounts_include_unlocked(
-        self, service, mock_connection
-    ):
+    async def test_get_locked_accounts_include_unlocked(self, service, mock_connection):
         """get_locked_accounts should modify query for include_unlocked."""
         mock_cursor = AsyncMock()
         mock_cursor.fetchall = AsyncMock(return_value=[])
@@ -568,9 +567,7 @@ class TestGetLockById:
     """Tests for get_lock_by_id method."""
 
     @pytest.mark.asyncio
-    async def test_get_lock_found(
-        self, service, mock_connection, sample_lock_row
-    ):
+    async def test_get_lock_found(self, service, mock_connection, sample_lock_row):
         """get_lock_by_id should return lock info when found."""
         mock_cursor = AsyncMock()
         mock_cursor.fetchone = AsyncMock(return_value=sample_lock_row)

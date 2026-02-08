@@ -5,11 +5,12 @@ Provides server connection and management capabilities for the MCP server.
 Includes routed command execution through agent or SSH.
 """
 
-from typing import Any, Dict, Optional
+import uuid
+from typing import Any
 
 import structlog
-import uuid
 
+from lib.security import validate_command
 from models.server import ServerStatus
 from services.agent_service import AgentService
 from services.command_router import CommandRouter
@@ -30,7 +31,7 @@ class ServerTools:
         ssh_service: SSHService,
         server_service: ServerService,
         agent_service: AgentService,
-        command_router: Optional[CommandRouter] = None,
+        command_router: CommandRouter | None = None,
     ):
         """Initialize server tools.
 
@@ -56,8 +57,8 @@ class ServerTools:
         password: str = None,
         private_key: str = None,
         server_id: str = None,
-        system_info: Dict[str, Any] = None,
-    ) -> Dict[str, Any]:
+        system_info: dict[str, Any] = None,
+    ) -> dict[str, Any]:
         """Add a new server with credentials and optional system info."""
         try:
             # Use provided server_id or generate a new one
@@ -157,13 +158,15 @@ class ServerTools:
                 SERVER_TAGS,
                 {"error": str(e)},
             )
+            from tools.common import safe_error_message
+
             return {
                 "success": False,
-                "message": f"Failed to add server: {str(e)}",
+                "message": safe_error_message(e, "Add server"),
                 "error": "ADD_SERVER_ERROR",
             }
 
-    async def get_server(self, server_id: str) -> Dict[str, Any]:
+    async def get_server(self, server_id: str) -> dict[str, Any]:
         """Get server by ID."""
         try:
             server = await self.server_service.get_server(server_id)
@@ -188,7 +191,7 @@ class ServerTools:
                 "error": "GET_SERVER_ERROR",
             }
 
-    async def list_servers(self) -> Dict[str, Any]:
+    async def list_servers(self) -> dict[str, Any]:
         """List all servers."""
         try:
             servers = await self.server_service.get_all_servers()
@@ -213,7 +216,7 @@ class ServerTools:
         host: str = None,
         port: int = None,
         username: str = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Update server configuration."""
         try:
             success = await self.server_service.update_server(
@@ -244,13 +247,15 @@ class ServerTools:
                 SERVER_TAGS,
                 {"error": str(e)},
             )
+            from tools.common import safe_error_message
+
             return {
                 "success": False,
-                "message": f"Failed to update server: {str(e)}",
+                "message": safe_error_message(e, "Update server"),
                 "error": "UPDATE_SERVER_ERROR",
             }
 
-    async def delete_server(self, server_id: str) -> Dict[str, Any]:
+    async def delete_server(self, server_id: str) -> dict[str, Any]:
         """Delete a server."""
         try:
             # Get server name before deletion for logging
@@ -290,13 +295,15 @@ class ServerTools:
                 SERVER_TAGS,
                 {"error": str(e)},
             )
+            from tools.common import safe_error_message
+
             return {
                 "success": False,
-                "message": f"Failed to delete server: {str(e)}",
+                "message": safe_error_message(e, "Delete server"),
                 "error": "DELETE_SERVER_ERROR",
             }
 
-    async def test_connection(self, server_id: str) -> Dict[str, Any]:
+    async def test_connection(self, server_id: str) -> dict[str, Any]:
         """Test SSH connection to a server."""
         try:
             server = await self.server_service.get_server(server_id)
@@ -331,23 +338,39 @@ class ServerTools:
                     await self.server_service.update_server_system_info(
                         server_id, system_info
                     )
-                docker_version = system_info.get("docker_version", "Not installed") if system_info else "Not installed"
+                docker_version = (
+                    system_info.get("docker_version", "Not installed")
+                    if system_info
+                    else "Not installed"
+                )
                 docker_installed = docker_version != "Not installed"
-                agent_status = system_info.get("agent_status", "not running") if system_info else "not running"
+                agent_status = (
+                    system_info.get("agent_status", "not running")
+                    if system_info
+                    else "not running"
+                )
                 agent_installed = agent_status == "running"
 
                 # Sync agent DB status with actual container state
                 agent = await self.agent_service.get_agent_by_server(server_id)
                 if agent:
-                    from models.agent import AgentStatus as AgentStatusEnum, AgentUpdate
-                    if agent_status == "running" and agent.status == AgentStatusEnum.DISCONNECTED:
+                    from models.agent import AgentStatus as AgentStatusEnum
+                    from models.agent import AgentUpdate
+
+                    if (
+                        agent_status == "running"
+                        and agent.status == AgentStatusEnum.DISCONNECTED
+                    ):
                         # Container running but DB says disconnected - agent will reconnect via WebSocket
                         logger.info(
                             "Agent container running, awaiting WebSocket reconnection",
                             agent_id=agent.id,
                             server_id=server_id,
                         )
-                    elif agent_status != "running" and agent.status != AgentStatusEnum.DISCONNECTED:
+                    elif (
+                        agent_status != "running"
+                        and agent.status != AgentStatusEnum.DISCONNECTED
+                    ):
                         # Container not running but DB says connected/pending - update to disconnected
                         logger.info(
                             "Agent container not running, updating status to DISCONNECTED",
@@ -416,7 +439,7 @@ class ServerTools:
         timeout: int = 120,
         force_ssh: bool = False,
         force_agent: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Execute a command on a server using agent or SSH.
 
         Routes the command through the agent if connected, otherwise
@@ -433,6 +456,15 @@ class ServerTools:
             Dict containing execution result with method used.
         """
         try:
+            # Validate command for dangerous patterns
+            cmd_validation = validate_command(command)
+            if not cmd_validation["valid"]:
+                return {
+                    "success": False,
+                    "message": cmd_validation["error"],
+                    "error": "DANGEROUS_COMMAND",
+                }
+
             # Use command router if available
             if self.command_router:
                 result = await self.command_router.execute(
@@ -473,7 +505,7 @@ class ServerTools:
                 "error": "EXECUTE_COMMAND_ERROR",
             }
 
-    async def get_execution_methods(self, server_id: str) -> Dict[str, Any]:
+    async def get_execution_methods(self, server_id: str) -> dict[str, Any]:
         """Get available command execution methods for a server.
 
         Returns which methods (agent, SSH) are available for executing
@@ -523,9 +555,7 @@ class ServerTools:
                 "error": "GET_METHODS_ERROR",
             }
 
-    async def update_server_status(
-        self, server_id: str, status: str
-    ) -> Dict[str, Any]:
+    async def update_server_status(self, server_id: str, status: str) -> dict[str, Any]:
         """Update server connection status.
 
         Args:
@@ -575,7 +605,7 @@ class ServerTools:
 
     async def _execute_via_ssh(
         self, server_id: str, command: str, timeout: int
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Execute command via direct SSH (fallback when no router)."""
         server = await self.server_service.get_server(server_id)
         if not server:

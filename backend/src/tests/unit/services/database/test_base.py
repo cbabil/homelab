@@ -4,15 +4,16 @@ Unit tests for services/database/base.py
 Tests database connection manager and column whitelists.
 """
 
-import pytest
-from unittest.mock import AsyncMock, patch
 from pathlib import Path
+from unittest.mock import AsyncMock, patch
+
+import pytest
 
 from services.database.base import (
-    DatabaseConnection,
-    ALLOWED_SERVER_COLUMNS,
     ALLOWED_INSTALLATION_COLUMNS,
+    ALLOWED_SERVER_COLUMNS,
     ALLOWED_SYSTEM_INFO_COLUMNS,
+    DatabaseConnection,
 )
 
 
@@ -175,7 +176,9 @@ class TestGetConnection:
         mock_connection.__aenter__ = AsyncMock(return_value=mock_connection)
         mock_connection.__aexit__ = AsyncMock(return_value=False)
 
-        with patch("services.database.base.aiosqlite.connect", return_value=mock_connection):
+        with patch(
+            "services.database.base.aiosqlite.connect", return_value=mock_connection
+        ):
             with pytest.raises(RuntimeError):
                 async with conn.get_connection():
                     raise RuntimeError("Test error")

@@ -5,12 +5,13 @@ Tests initialization, get_idle_timeout, mark_idle_sessions, create_session,
 get_session, and helper methods.
 """
 
-import pytest
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from services.session_service import SessionService, DEFAULT_IDLE_TIMEOUT_SECONDS
+import pytest
+
 from models.session import Session, SessionStatus
+from services.session_service import DEFAULT_IDLE_TIMEOUT_SECONDS, SessionService
 
 
 @pytest.fixture
@@ -70,8 +71,10 @@ class TestSessionServiceInit:
 
     def test_init_creates_default_db_service(self):
         """SessionService should create default db_service if not provided."""
-        with patch("services.session_service.logger"), \
-             patch("services.session_service.DatabaseService") as MockDB:
+        with (
+            patch("services.session_service.logger"),
+            patch("services.session_service.DatabaseService") as MockDB,
+        ):
             MockDB.return_value = MagicMock()
             service = SessionService()
             assert service.db_service is MockDB.return_value
@@ -101,9 +104,7 @@ class TestGetIdleTimeoutSeconds:
         assert result == 1800
 
     @pytest.mark.asyncio
-    async def test_get_idle_timeout_no_setting(
-        self, session_service, mock_connection
-    ):
+    async def test_get_idle_timeout_no_setting(self, session_service, mock_connection):
         """get_idle_timeout_seconds should return default when no setting."""
         mock_cursor = AsyncMock()
         mock_cursor.fetchone = AsyncMock(return_value=None)
@@ -115,9 +116,7 @@ class TestGetIdleTimeoutSeconds:
         assert result == DEFAULT_IDLE_TIMEOUT_SECONDS
 
     @pytest.mark.asyncio
-    async def test_get_idle_timeout_empty_value(
-        self, session_service, mock_connection
-    ):
+    async def test_get_idle_timeout_empty_value(self, session_service, mock_connection):
         """get_idle_timeout_seconds should return default when value empty."""
         mock_cursor = AsyncMock()
         mock_cursor.fetchone = AsyncMock(return_value={"setting_value": None})
@@ -146,15 +145,14 @@ class TestMarkIdleSessions:
     """Tests for mark_idle_sessions method."""
 
     @pytest.mark.asyncio
-    async def test_mark_idle_sessions_success(
-        self, session_service, mock_connection
-    ):
+    async def test_mark_idle_sessions_success(self, session_service, mock_connection):
         """mark_idle_sessions should update inactive sessions."""
         # Mock get_idle_timeout_seconds
         with patch.object(
-            session_service, "get_idle_timeout_seconds",
+            session_service,
+            "get_idle_timeout_seconds",
             new_callable=AsyncMock,
-            return_value=900
+            return_value=900,
         ):
             mock_cursor = AsyncMock()
             mock_cursor.rowcount = 3
@@ -167,14 +165,13 @@ class TestMarkIdleSessions:
         mock_connection.commit.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_mark_idle_sessions_none(
-        self, session_service, mock_connection
-    ):
+    async def test_mark_idle_sessions_none(self, session_service, mock_connection):
         """mark_idle_sessions should return 0 when no sessions to mark."""
         with patch.object(
-            session_service, "get_idle_timeout_seconds",
+            session_service,
+            "get_idle_timeout_seconds",
             new_callable=AsyncMock,
-            return_value=900
+            return_value=900,
         ):
             mock_cursor = AsyncMock()
             mock_cursor.rowcount = 0
@@ -191,9 +188,10 @@ class TestMarkIdleSessions:
     ):
         """mark_idle_sessions should log when sessions marked."""
         with patch.object(
-            session_service, "get_idle_timeout_seconds",
+            session_service,
+            "get_idle_timeout_seconds",
             new_callable=AsyncMock,
-            return_value=900
+            return_value=900,
         ):
             mock_cursor = AsyncMock()
             mock_cursor.rowcount = 5
@@ -211,9 +209,7 @@ class TestCreateSession:
     """Tests for create_session method."""
 
     @pytest.mark.asyncio
-    async def test_create_session_success(
-        self, session_service, mock_connection
-    ):
+    async def test_create_session_success(self, session_service, mock_connection):
         """create_session should create new session."""
         expires = datetime.now(UTC) + timedelta(hours=12)
 
@@ -222,7 +218,7 @@ class TestCreateSession:
                 user_id="user-123",
                 expires_at=expires,
                 ip_address="192.168.1.100",
-                user_agent="Mozilla/5.0"
+                user_agent="Mozilla/5.0",
             )
 
         assert isinstance(result, Session)
@@ -243,24 +239,20 @@ class TestCreateSession:
 
         with patch("services.session_service.logger"):
             result = await session_service.create_session(
-                user_id="user-123",
-                expires_at=expires
+                user_id="user-123", expires_at=expires
             )
 
         assert result.ip_address is None
         assert result.user_agent is None
 
     @pytest.mark.asyncio
-    async def test_create_session_logs_success(
-        self, session_service, mock_connection
-    ):
+    async def test_create_session_logs_success(self, session_service, mock_connection):
         """create_session should log creation."""
         expires = datetime.now(UTC) + timedelta(hours=12)
 
         with patch("services.session_service.logger") as mock_logger:
             result = await session_service.create_session(
-                user_id="user-123",
-                expires_at=expires
+                user_id="user-123", expires_at=expires
             )
 
         mock_logger.info.assert_called()
@@ -292,9 +284,7 @@ class TestGetSession:
         assert result.status == SessionStatus.ACTIVE
 
     @pytest.mark.asyncio
-    async def test_get_session_not_found(
-        self, session_service, mock_connection
-    ):
+    async def test_get_session_not_found(self, session_service, mock_connection):
         """get_session should return None when not found."""
         mock_cursor = AsyncMock()
         mock_cursor.fetchone = AsyncMock(return_value=None)
@@ -314,7 +304,7 @@ class TestGetSession:
             **base_session_row,
             "status": "terminated",
             "terminated_at": "2024-01-15T12:00:00+00:00",
-            "terminated_by": "admin-user"
+            "terminated_by": "admin-user",
         }
         mock_cursor = AsyncMock()
         mock_cursor.fetchone = AsyncMock(return_value=row)
@@ -372,7 +362,7 @@ class TestRowToSession:
             **base_session_row,
             "status": "terminated",
             "terminated_at": "2024-01-15T12:00:00+00:00",
-            "terminated_by": "system"
+            "terminated_by": "system",
         }
 
         result = session_service._row_to_session(row)

@@ -4,15 +4,16 @@ Deployment Service Unit Tests
 Tests for the deployment service module.
 """
 
+from unittest.mock import AsyncMock, MagicMock
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock
 
 from services.deployment import DeploymentService
 from services.deployment.docker_commands import build_run_command, parse_pull_progress
 from services.deployment.scripts import (
     cleanup_container_script,
     create_container_script,
-    uninstall_script
+    uninstall_script,
 )
 
 
@@ -44,7 +45,7 @@ class TestDockerCommands:
         docker_config.restart_policy = "always"
         docker_config.ports = [
             MagicMock(container=80, host=8080, protocol="tcp"),
-            MagicMock(container=443, host=8443, protocol="tcp")
+            MagicMock(container=443, host=8443, protocol="tcp"),
         ]
         docker_config.volumes = []
         docker_config.network_mode = None
@@ -76,7 +77,9 @@ class TestDockerCommands:
         """Test parsing docker pull downloading progress."""
         layer_progress = {}
 
-        _progress = parse_pull_progress("abc123: Downloading [====>    ] 10MB/100MB", layer_progress)
+        _progress = parse_pull_progress(
+            "abc123: Downloading [====>    ] 10MB/100MB", layer_progress
+        )
 
         assert "abc123" in layer_progress
         assert layer_progress["abc123"] == 10
@@ -147,7 +150,7 @@ class TestDeploymentService:
         mock_marketplace_service,
         mock_db_service,
         mock_agent_manager,
-        mock_agent_service
+        mock_agent_service,
     ):
         """Create deployment service with mocked dependencies."""
         return DeploymentService(
@@ -157,16 +160,15 @@ class TestDeploymentService:
             db_service=mock_db_service,
             activity_service=None,
             agent_manager=mock_agent_manager,
-            agent_service=mock_agent_service
+            agent_service=mock_agent_service,
         )
 
     @pytest.mark.asyncio
     async def test_start_app_success(self, deployment_service, mock_db_service):
         """Test starting an app successfully."""
-        mock_db_service.get_installation = AsyncMock(return_value=MagicMock(
-            id="inst-1",
-            container_name="test-container"
-        ))
+        mock_db_service.get_installation = AsyncMock(
+            return_value=MagicMock(id="inst-1", container_name="test-container")
+        )
 
         result = await deployment_service.start_app("server-1", "app-1")
 
@@ -185,10 +187,9 @@ class TestDeploymentService:
     @pytest.mark.asyncio
     async def test_stop_app_success(self, deployment_service, mock_db_service):
         """Test stopping an app successfully."""
-        mock_db_service.get_installation = AsyncMock(return_value=MagicMock(
-            id="inst-1",
-            container_name="test-container"
-        ))
+        mock_db_service.get_installation = AsyncMock(
+            return_value=MagicMock(id="inst-1", container_name="test-container")
+        )
 
         result = await deployment_service.stop_app("server-1", "app-1")
 

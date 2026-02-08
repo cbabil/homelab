@@ -4,8 +4,9 @@ Unit tests for services/deployment/service.py - Lifecycle Operations
 Tests for uninstall_app, start_app, stop_app, and cleanup methods.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 
 @pytest.fixture
@@ -479,8 +480,8 @@ class TestLogActivity:
     @pytest.mark.asyncio
     async def test_skips_logging_when_no_service(self, mock_services):
         """Should skip logging when activity service is None."""
-        from services.deployment.service import DeploymentService
         from models.metrics import ActivityType
+        from services.deployment.service import DeploymentService
 
         with patch("services.deployment.service.logger"):
             service = DeploymentService(

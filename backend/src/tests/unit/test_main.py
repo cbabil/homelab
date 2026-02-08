@@ -6,8 +6,9 @@ Note: main.py has module-level initialization that makes testing challenging.
 We test the module can be imported with mocked dependencies.
 """
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, patch, AsyncMock
 
 
 class TestMainModuleImport:
@@ -27,9 +28,12 @@ class TestMainModuleImport:
         }
 
         with (
-            patch.dict("sys.modules", {
-                "fastmcp": MagicMock(FastMCP=mock_fastmcp),
-            }),
+            patch.dict(
+                "sys.modules",
+                {
+                    "fastmcp": MagicMock(FastMCP=mock_fastmcp),
+                },
+            ),
             patch("lib.tool_loader.register_all_tools"),
             patch("lib.logging_config.setup_logging"),
             patch("lib.config.load_config", return_value={"app_env": "test"}),
@@ -71,11 +75,19 @@ class TestMainModuleImport:
         with (
             patch("lib.logging_config.setup_logging") as mock_setup_logging,
             patch("structlog.get_logger", return_value=mock_logger) as mock_get_logger,
-            patch("lib.config.load_config", return_value={"app_env": "test"}) as mock_load_config,
-            patch("lib.config.resolve_data_directory", return_value="/tmp/data") as mock_resolve,
-            patch("services.factory.create_services", return_value=mock_services) as mock_create,
+            patch(
+                "lib.config.load_config", return_value={"app_env": "test"}
+            ) as mock_load_config,
+            patch(
+                "lib.config.resolve_data_directory", return_value="/tmp/data"
+            ) as mock_resolve,
+            patch(
+                "services.factory.create_services", return_value=mock_services
+            ) as mock_create,
             patch("lib.tool_loader.register_all_tools") as mock_register,
-            patch.dict("sys.modules", {"fastmcp": MagicMock(FastMCP=mock_fastmcp_class)}),
+            patch.dict(
+                "sys.modules", {"fastmcp": MagicMock(FastMCP=mock_fastmcp_class)}
+            ),
         ):
             # Import the module - this triggers initialization
             import main
@@ -130,7 +142,9 @@ class TestMainModuleImport:
             patch("lib.config.resolve_data_directory", return_value="/var/data"),
             patch("services.factory.create_services", return_value=mock_services),
             patch("lib.tool_loader.register_all_tools"),
-            patch.dict("sys.modules", {"fastmcp": MagicMock(FastMCP=mock_fastmcp_class)}),
+            patch.dict(
+                "sys.modules", {"fastmcp": MagicMock(FastMCP=mock_fastmcp_class)}
+            ),
         ):
             import main
 
@@ -244,7 +258,9 @@ class TestCorsConfiguration:
         """Test default CORS origins parsing."""
         default_origins = "http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003"
         allowed_origins = default_origins.split(",")
-        allowed_origins = [origin.strip() for origin in allowed_origins if origin.strip()]
+        allowed_origins = [
+            origin.strip() for origin in allowed_origins if origin.strip()
+        ]
 
         assert len(allowed_origins) == 4
         assert "http://localhost:3000" in allowed_origins
@@ -254,18 +270,27 @@ class TestCorsConfiguration:
         """Test custom CORS origins from environment variable."""
         import os
 
-        with patch.dict(os.environ, {"ALLOWED_ORIGINS": "https://example.com,https://api.example.com"}):
+        with patch.dict(
+            os.environ,
+            {"ALLOWED_ORIGINS": "https://example.com,https://api.example.com"},
+        ):
             custom_origins = os.getenv("ALLOWED_ORIGINS", "").split(",")
-            custom_origins = [origin.strip() for origin in custom_origins if origin.strip()]
+            custom_origins = [
+                origin.strip() for origin in custom_origins if origin.strip()
+            ]
 
             assert len(custom_origins) == 2
             assert "https://example.com" in custom_origins
 
     def test_cors_origins_with_whitespace(self):
         """Test CORS origins parsing handles whitespace."""
-        origins_with_spaces = "http://localhost:3000 , http://localhost:3001 , http://localhost:3002"
+        origins_with_spaces = (
+            "http://localhost:3000 , http://localhost:3001 , http://localhost:3002"
+        )
         allowed_origins = origins_with_spaces.split(",")
-        allowed_origins = [origin.strip() for origin in allowed_origins if origin.strip()]
+        allowed_origins = [
+            origin.strip() for origin in allowed_origins if origin.strip()
+        ]
 
         assert len(allowed_origins) == 3
         assert "http://localhost:3000" in allowed_origins

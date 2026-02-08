@@ -5,12 +5,14 @@ Defines models for server metrics, container metrics, and activity logging.
 """
 
 from enum import Enum
-from typing import Optional, List, Dict, Any
+from typing import Any
+
 from pydantic import BaseModel, Field
 
 
 class MetricType(str, Enum):
     """Types of metrics collected."""
+
     CPU = "cpu"
     MEMORY = "memory"
     DISK = "disk"
@@ -19,6 +21,7 @@ class MetricType(str, Enum):
 
 class ActivityType(str, Enum):
     """Types of logged activities."""
+
     # User activities
     USER_LOGIN = "user_login"
     USER_LOGOUT = "user_logout"
@@ -54,6 +57,7 @@ class ActivityType(str, Enum):
 
 class ServerMetrics(BaseModel):
     """Server resource metrics snapshot."""
+
     id: str = Field(..., description="Metric record ID")
     server_id: str = Field(..., description="Server ID")
     cpu_percent: float = Field(..., description="CPU usage percentage")
@@ -65,15 +69,16 @@ class ServerMetrics(BaseModel):
     disk_total_gb: int = Field(..., description="Total disk in GB")
     network_rx_bytes: int = Field(default=0, description="Network bytes received")
     network_tx_bytes: int = Field(default=0, description="Network bytes transmitted")
-    load_average_1m: Optional[float] = Field(None, description="1 minute load average")
-    load_average_5m: Optional[float] = Field(None, description="5 minute load average")
-    load_average_15m: Optional[float] = Field(None, description="15 minute load average")
-    uptime_seconds: Optional[int] = Field(None, description="Server uptime in seconds")
+    load_average_1m: float | None = Field(None, description="1 minute load average")
+    load_average_5m: float | None = Field(None, description="5 minute load average")
+    load_average_15m: float | None = Field(None, description="15 minute load average")
+    uptime_seconds: int | None = Field(None, description="Server uptime in seconds")
     timestamp: str = Field(..., description="Collection timestamp")
 
 
 class ContainerMetrics(BaseModel):
     """Docker container metrics snapshot."""
+
     id: str = Field(..., description="Metric record ID")
     server_id: str = Field(..., description="Server ID")
     container_id: str = Field(..., description="Docker container ID")
@@ -89,18 +94,22 @@ class ContainerMetrics(BaseModel):
 
 class ActivityLog(BaseModel):
     """Activity log entry."""
+
     id: str = Field(..., description="Log entry ID")
     activity_type: ActivityType = Field(..., description="Type of activity")
-    user_id: Optional[str] = Field(None, description="User who performed action")
-    server_id: Optional[str] = Field(None, description="Related server")
-    app_id: Optional[str] = Field(None, description="Related app")
+    user_id: str | None = Field(None, description="User who performed action")
+    server_id: str | None = Field(None, description="Related server")
+    app_id: str | None = Field(None, description="Related app")
     message: str = Field(..., description="Human-readable message")
-    details: Dict[str, Any] = Field(default_factory=dict, description="Additional details")
+    details: dict[str, Any] = Field(
+        default_factory=dict, description="Additional details"
+    )
     timestamp: str = Field(..., description="Activity timestamp")
 
 
 class DashboardSummary(BaseModel):
     """Aggregated dashboard data."""
+
     total_servers: int = Field(default=0)
     online_servers: int = Field(default=0)
     offline_servers: int = Field(default=0)
@@ -111,4 +120,4 @@ class DashboardSummary(BaseModel):
     avg_cpu_percent: float = Field(default=0.0)
     avg_memory_percent: float = Field(default=0.0)
     avg_disk_percent: float = Field(default=0.0)
-    recent_activities: List[ActivityLog] = Field(default_factory=list)
+    recent_activities: list[ActivityLog] = Field(default_factory=list)

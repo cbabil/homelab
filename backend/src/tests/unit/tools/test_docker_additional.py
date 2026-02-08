@@ -4,8 +4,9 @@ Docker Tools Unit Tests - Additional Methods
 Tests for tracked installation, get_docker_install_status, remove_docker, update_docker.
 """
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 
 from tools.docker.tools import DockerTools, _build_docker_install_script
 
@@ -205,12 +206,8 @@ class TestInstallDockerFailure:
 
         # Mock _build_docker_install_script to return None
         with (
-            patch(
-                "tools.docker.tools._build_docker_install_script", return_value=None
-            ),
-            patch(
-                "tools.docker.tools._detect_os_type", return_value="ubuntu"
-            ),
+            patch("tools.docker.tools._build_docker_install_script", return_value=None),
+            patch("tools.docker.tools._detect_os_type", return_value="ubuntu"),
         ):
             result = await docker_tools.install_docker(server_id="server-123")
 

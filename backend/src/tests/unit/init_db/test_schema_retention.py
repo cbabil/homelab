@@ -4,7 +4,7 @@ Retention Schema Unit Tests
 Tests for schema_retention.py - SQL schema and retention constraints.
 """
 
-from init_db.schema_retention import SCHEMA, RETENTION_CONSTRAINTS
+from init_db.schema_retention import RETENTION_CONSTRAINTS, SCHEMA
 
 
 class TestRetentionSchema:
@@ -76,8 +76,9 @@ class TestRetentionConstraints:
         for field, constraint in RETENTION_CONSTRAINTS.items():
             assert constraint["min"] > 0, f"Invalid min in {field}"
             assert constraint["max"] > constraint["min"], f"max <= min in {field}"
-            assert constraint["min"] <= constraint["default"] <= constraint["max"], \
+            assert constraint["min"] <= constraint["default"] <= constraint["max"], (
                 f"default outside range in {field}"
+            )
 
     def test_audit_log_has_longer_retention(self):
         """Test that audit logs have minimum 90 days retention."""

@@ -4,11 +4,12 @@ App Tools Unit Tests - Add and Delete Operations
 Tests for add_app and delete_app methods.
 """
 
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from tools.app.tools import AppTools
+import pytest
+
 from services.deployment import DeploymentError
+from tools.app.tools import AppTools
 
 
 class TestAddApp:
@@ -26,7 +27,7 @@ class TestAddApp:
     @pytest.fixture
     def app_tools(self, mock_services):
         """Create AppTools instance."""
-        with patch('tools.app.tools.logger'):
+        with patch("tools.app.tools.logger"):
             return AppTools(
                 mock_services["app_service"],
                 mock_services["marketplace_service"],
@@ -51,7 +52,7 @@ class TestAddApp:
         )
         mock_services["app_service"].mark_app_installed = AsyncMock()
 
-        with patch('tools.app.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.app.tools.log_event", new_callable=AsyncMock):
             result = await app_tools.add_app(
                 server_id="server-123",
                 app_id="nginx",
@@ -75,7 +76,7 @@ class TestAddApp:
         )
         mock_services["app_service"].mark_app_installed = AsyncMock()
 
-        with patch('tools.app.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.app.tools.log_event", new_callable=AsyncMock):
             result = await app_tools.add_app(
                 server_id="server-123",
                 app_ids=["nginx", "redis"],
@@ -96,7 +97,7 @@ class TestAddApp:
         )
         mock_services["app_service"].mark_app_installed = AsyncMock()
 
-        with patch('tools.app.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.app.tools.log_event", new_callable=AsyncMock):
             result = await app_tools.add_app(
                 server_id="server-123",
                 app_ids=["nginx", "redis"],
@@ -118,7 +119,7 @@ class TestAddApp:
             side_effect=DeploymentError("Docker not running")
         )
 
-        with patch('tools.app.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.app.tools.log_event", new_callable=AsyncMock):
             result = await app_tools.add_app(
                 server_id="server-123",
                 app_id="nginx",
@@ -140,7 +141,7 @@ class TestAddApp:
             side_effect=Exception("Unexpected error")
         )
 
-        with patch('tools.app.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.app.tools.log_event", new_callable=AsyncMock):
             result = await app_tools.add_app(
                 server_id="server-123",
                 app_id="nginx",
@@ -165,7 +166,7 @@ class TestDeleteApp:
     @pytest.fixture
     def app_tools(self, mock_services):
         """Create AppTools instance."""
-        with patch('tools.app.tools.logger'):
+        with patch("tools.app.tools.logger"):
             return AppTools(
                 mock_services["app_service"],
                 mock_services["marketplace_service"],
@@ -186,7 +187,7 @@ class TestDeleteApp:
         mock_services["deployment_service"].uninstall_app = AsyncMock(return_value=True)
         mock_services["app_service"].mark_app_uninstalled = AsyncMock()
 
-        with patch('tools.app.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.app.tools.log_event", new_callable=AsyncMock):
             result = await app_tools.delete_app(
                 server_id="server-123",
                 app_id="nginx",
@@ -199,9 +200,11 @@ class TestDeleteApp:
     @pytest.mark.asyncio
     async def test_delete_app_single_failure(self, app_tools, mock_services):
         """Test single app deletion failure."""
-        mock_services["deployment_service"].uninstall_app = AsyncMock(return_value=False)
+        mock_services["deployment_service"].uninstall_app = AsyncMock(
+            return_value=False
+        )
 
-        with patch('tools.app.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.app.tools.log_event", new_callable=AsyncMock):
             result = await app_tools.delete_app(
                 server_id="server-123",
                 app_id="nginx",
@@ -216,7 +219,7 @@ class TestDeleteApp:
         mock_services["deployment_service"].uninstall_app = AsyncMock(return_value=True)
         mock_services["app_service"].mark_app_uninstalled = AsyncMock()
 
-        with patch('tools.app.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.app.tools.log_event", new_callable=AsyncMock):
             result = await app_tools.delete_app(
                 server_id="server-123",
                 app_ids=["nginx", "redis"],
@@ -234,7 +237,7 @@ class TestDeleteApp:
         )
         mock_services["app_service"].mark_app_uninstalled = AsyncMock()
 
-        with patch('tools.app.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.app.tools.log_event", new_callable=AsyncMock):
             result = await app_tools.delete_app(
                 server_id="server-123",
                 app_ids=["nginx", "redis"],
@@ -244,14 +247,16 @@ class TestDeleteApp:
         assert result["data"]["succeeded"] == 1
 
     @pytest.mark.asyncio
-    async def test_delete_app_bulk_uninstall_returns_false(self, app_tools, mock_services):
+    async def test_delete_app_bulk_uninstall_returns_false(
+        self, app_tools, mock_services
+    ):
         """Test bulk deletion when uninstall_app returns False."""
         mock_services["deployment_service"].uninstall_app = AsyncMock(
             side_effect=[True, False]
         )
         mock_services["app_service"].mark_app_uninstalled = AsyncMock()
 
-        with patch('tools.app.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.app.tools.log_event", new_callable=AsyncMock):
             result = await app_tools.delete_app(
                 server_id="server-123",
                 app_ids=["nginx", "redis"],
@@ -267,7 +272,7 @@ class TestDeleteApp:
             side_effect=Exception("DB error")
         )
 
-        with patch('tools.app.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.app.tools.log_event", new_callable=AsyncMock):
             result = await app_tools.delete_app(
                 server_id="server-123",
                 app_id="nginx",

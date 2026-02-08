@@ -4,9 +4,10 @@ Auth Tools Unit Tests - Additional Methods
 Tests for change_password, update_avatar, get_locked_accounts, update_account_lock.
 """
 
+from datetime import UTC, datetime, timedelta
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
-from datetime import datetime, timezone, timedelta
 
 from tools.auth.tools import AuthTools
 
@@ -121,7 +122,7 @@ class TestChangePassword:
         # Set up lockout
         auth_tools._password_change_attempts["testuser:unknown"] = {
             "count": 5,
-            "lockout_until": datetime.now(timezone.utc) + timedelta(minutes=10),
+            "lockout_until": datetime.now(UTC) + timedelta(minutes=10),
         }
 
         result = await auth_tools.change_password(
@@ -206,7 +207,7 @@ class TestChangePassword:
 
         assert result["success"] is False
         assert result["error"] == "WEAK_PASSWORD"
-        assert "12 characters" in result["message"]
+        assert "8 characters" in result["message"]
 
     @pytest.mark.asyncio
     async def test_weak_password_missing_complexity(

@@ -4,16 +4,16 @@ Unit tests for services/agent_websocket.py
 Tests WebSocket handler for agent registration and authentication.
 """
 
-import asyncio
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 from starlette.websockets import WebSocketDisconnect
 
 from services.agent_websocket import (
-    AgentWebSocketHandler,
+    WS_AUTH_TIMEOUT_SECONDS,
     WS_CLOSE_AUTH_FAILED,
     WS_CLOSE_NORMAL,
-    WS_AUTH_TIMEOUT_SECONDS,
+    AgentWebSocketHandler,
 )
 
 
@@ -90,25 +90,34 @@ class TestHandleConnection:
         """handle_connection should accept the WebSocket."""
         mock_websocket.receive_json.side_effect = WebSocketDisconnect()
 
-        with patch("services.agent_websocket.get_client_info", return_value={}), \
-             patch("services.agent_websocket.ws_rate_limiter") as mock_limiter, \
-             patch("services.agent_websocket.close_websocket", new_callable=AsyncMock), \
-             patch("services.agent_websocket.logger"):
+        with (
+            patch("services.agent_websocket.get_client_info", return_value={}),
+            patch("services.agent_websocket.ws_rate_limiter") as mock_limiter,
+            patch("services.agent_websocket.close_websocket", new_callable=AsyncMock),
+            patch("services.agent_websocket.logger"),
+        ):
             mock_limiter.is_allowed.return_value = True
             await handler.handle_connection(mock_websocket)
 
         mock_websocket.accept.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_handle_connection_rate_limited(
-        self, handler, mock_websocket
-    ):
+    async def test_handle_connection_rate_limited(self, handler, mock_websocket):
         """handle_connection should reject rate-limited connections."""
-        with patch("services.agent_websocket.get_client_info", return_value={"client_host": "1.2.3.4"}), \
-             patch("services.agent_websocket.ws_rate_limiter") as mock_limiter, \
-             patch("services.agent_websocket.send_error", new_callable=AsyncMock) as mock_send_error, \
-             patch("services.agent_websocket.close_websocket", new_callable=AsyncMock) as mock_close, \
-             patch("services.agent_websocket.logger"):
+        with (
+            patch(
+                "services.agent_websocket.get_client_info",
+                return_value={"client_host": "1.2.3.4"},
+            ),
+            patch("services.agent_websocket.ws_rate_limiter") as mock_limiter,
+            patch(
+                "services.agent_websocket.send_error", new_callable=AsyncMock
+            ) as mock_send_error,
+            patch(
+                "services.agent_websocket.close_websocket", new_callable=AsyncMock
+            ) as mock_close,
+            patch("services.agent_websocket.logger"),
+        ):
             mock_limiter.is_allowed.return_value = False
 
             await handler.handle_connection(mock_websocket)
@@ -121,13 +130,18 @@ class TestHandleConnection:
         self, handler, mock_websocket, mock_agent_manager
     ):
         """handle_connection should record failure on auth failure."""
-        with patch("services.agent_websocket.get_client_info", return_value={"client_host": "1.2.3.4"}), \
-             patch("services.agent_websocket.ws_rate_limiter") as mock_limiter, \
-             patch("services.agent_websocket.close_websocket", new_callable=AsyncMock), \
-             patch("services.agent_websocket.send_error", new_callable=AsyncMock), \
-             patch("services.agent_websocket.logger"):
+        with (
+            patch(
+                "services.agent_websocket.get_client_info",
+                return_value={"client_host": "1.2.3.4"},
+            ),
+            patch("services.agent_websocket.ws_rate_limiter") as mock_limiter,
+            patch("services.agent_websocket.close_websocket", new_callable=AsyncMock),
+            patch("services.agent_websocket.send_error", new_callable=AsyncMock),
+            patch("services.agent_websocket.logger"),
+        ):
             mock_limiter.is_allowed.return_value = True
-            mock_websocket.receive_json.side_effect = asyncio.TimeoutError()
+            mock_websocket.receive_json.side_effect = TimeoutError()
 
             await handler.handle_connection(mock_websocket)
 
@@ -147,13 +161,20 @@ class TestHandleConnection:
             return_value=("agent-123", {"config": "data"}, "server-456")
         )
 
-        with patch("services.agent_websocket.get_client_info", return_value={"client_host": "1.2.3.4"}), \
-             patch("services.agent_websocket.ws_rate_limiter") as mock_limiter, \
-             patch("services.agent_websocket.close_websocket", new_callable=AsyncMock), \
-             patch("services.agent_websocket.send_authenticated", new_callable=AsyncMock), \
-             patch("services.agent_websocket.message_loop", new_callable=AsyncMock), \
-             patch("services.agent_websocket.log_event", new_callable=AsyncMock), \
-             patch("services.agent_websocket.logger"):
+        with (
+            patch(
+                "services.agent_websocket.get_client_info",
+                return_value={"client_host": "1.2.3.4"},
+            ),
+            patch("services.agent_websocket.ws_rate_limiter") as mock_limiter,
+            patch("services.agent_websocket.close_websocket", new_callable=AsyncMock),
+            patch(
+                "services.agent_websocket.send_authenticated", new_callable=AsyncMock
+            ),
+            patch("services.agent_websocket.message_loop", new_callable=AsyncMock),
+            patch("services.agent_websocket.log_event", new_callable=AsyncMock),
+            patch("services.agent_websocket.logger"),
+        ):
             mock_limiter.is_allowed.return_value = True
 
             await handler.handle_connection(mock_websocket)
@@ -176,19 +197,27 @@ class TestHandleConnection:
             return_value=("agent-123", {}, "server-456")
         )
 
-        with patch("services.agent_websocket.get_client_info", return_value={}), \
-             patch("services.agent_websocket.ws_rate_limiter") as mock_limiter, \
-             patch("services.agent_websocket.close_websocket", new_callable=AsyncMock), \
-             patch("services.agent_websocket.send_authenticated", new_callable=AsyncMock), \
-             patch("services.agent_websocket.message_loop", new_callable=AsyncMock) as mock_loop, \
-             patch("services.agent_websocket.log_event", new_callable=AsyncMock), \
-             patch("services.agent_websocket.logger"):
+        with (
+            patch("services.agent_websocket.get_client_info", return_value={}),
+            patch("services.agent_websocket.ws_rate_limiter") as mock_limiter,
+            patch("services.agent_websocket.close_websocket", new_callable=AsyncMock),
+            patch(
+                "services.agent_websocket.send_authenticated", new_callable=AsyncMock
+            ),
+            patch(
+                "services.agent_websocket.message_loop", new_callable=AsyncMock
+            ) as mock_loop,
+            patch("services.agent_websocket.log_event", new_callable=AsyncMock),
+            patch("services.agent_websocket.logger"),
+        ):
             mock_limiter.is_allowed.return_value = True
             mock_loop.side_effect = WebSocketDisconnect()
 
             await handler.handle_connection(mock_websocket)
 
-            mock_agent_manager.unregister_connection.assert_called_once_with("agent-123")
+            mock_agent_manager.unregister_connection.assert_called_once_with(
+                "agent-123"
+            )
 
     @pytest.mark.asyncio
     async def test_handle_connection_unregisters_on_error(
@@ -203,19 +232,27 @@ class TestHandleConnection:
             return_value=("agent-123", {}, "server-456")
         )
 
-        with patch("services.agent_websocket.get_client_info", return_value={}), \
-             patch("services.agent_websocket.ws_rate_limiter") as mock_limiter, \
-             patch("services.agent_websocket.close_websocket", new_callable=AsyncMock), \
-             patch("services.agent_websocket.send_authenticated", new_callable=AsyncMock), \
-             patch("services.agent_websocket.message_loop", new_callable=AsyncMock) as mock_loop, \
-             patch("services.agent_websocket.log_event", new_callable=AsyncMock), \
-             patch("services.agent_websocket.logger"):
+        with (
+            patch("services.agent_websocket.get_client_info", return_value={}),
+            patch("services.agent_websocket.ws_rate_limiter") as mock_limiter,
+            patch("services.agent_websocket.close_websocket", new_callable=AsyncMock),
+            patch(
+                "services.agent_websocket.send_authenticated", new_callable=AsyncMock
+            ),
+            patch(
+                "services.agent_websocket.message_loop", new_callable=AsyncMock
+            ) as mock_loop,
+            patch("services.agent_websocket.log_event", new_callable=AsyncMock),
+            patch("services.agent_websocket.logger"),
+        ):
             mock_limiter.is_allowed.return_value = True
             mock_loop.side_effect = Exception("Connection error")
 
             await handler.handle_connection(mock_websocket)
 
-            mock_agent_manager.unregister_connection.assert_called_once_with("agent-123")
+            mock_agent_manager.unregister_connection.assert_called_once_with(
+                "agent-123"
+            )
 
 
 class TestAuthenticateConnection:
@@ -224,11 +261,17 @@ class TestAuthenticateConnection:
     @pytest.mark.asyncio
     async def test_authenticate_timeout(self, handler, mock_websocket):
         """_authenticate_connection should handle timeout."""
-        mock_websocket.receive_json.side_effect = asyncio.TimeoutError()
+        mock_websocket.receive_json.side_effect = TimeoutError()
 
-        with patch("services.agent_websocket.send_error", new_callable=AsyncMock) as mock_error, \
-             patch("services.agent_websocket.close_websocket", new_callable=AsyncMock) as mock_close, \
-             patch("services.agent_websocket.logger"):
+        with (
+            patch(
+                "services.agent_websocket.send_error", new_callable=AsyncMock
+            ) as mock_error,
+            patch(
+                "services.agent_websocket.close_websocket", new_callable=AsyncMock
+            ) as mock_close,
+            patch("services.agent_websocket.logger"),
+        ):
             result = await handler._authenticate_connection(mock_websocket)
 
             assert result is None
@@ -240,9 +283,13 @@ class TestAuthenticateConnection:
         """_authenticate_connection should handle invalid message."""
         mock_websocket.receive_json.side_effect = ValueError("Invalid JSON")
 
-        with patch("services.agent_websocket.send_error", new_callable=AsyncMock) as mock_error, \
-             patch("services.agent_websocket.close_websocket", new_callable=AsyncMock), \
-             patch("services.agent_websocket.logger"):
+        with (
+            patch(
+                "services.agent_websocket.send_error", new_callable=AsyncMock
+            ) as mock_error,
+            patch("services.agent_websocket.close_websocket", new_callable=AsyncMock),
+            patch("services.agent_websocket.logger"),
+        ):
             result = await handler._authenticate_connection(mock_websocket)
 
             assert result is None
@@ -253,9 +300,11 @@ class TestAuthenticateConnection:
         """_authenticate_connection should reject unknown message type."""
         mock_websocket.receive_json.return_value = {"type": "unknown"}
 
-        with patch("services.agent_websocket.send_error", new_callable=AsyncMock), \
-             patch("services.agent_websocket.close_websocket", new_callable=AsyncMock), \
-             patch("services.agent_websocket.logger"):
+        with (
+            patch("services.agent_websocket.send_error", new_callable=AsyncMock),
+            patch("services.agent_websocket.close_websocket", new_callable=AsyncMock),
+            patch("services.agent_websocket.logger"),
+        ):
             result = await handler._authenticate_connection(mock_websocket)
 
             assert result is None
@@ -274,8 +323,10 @@ class TestAuthenticateConnection:
             return_value=("agent-1", "token-1", {}, "server-1")
         )
 
-        with patch("services.agent_websocket.send_registered", new_callable=AsyncMock), \
-             patch("services.agent_websocket.logger"):
+        with (
+            patch("services.agent_websocket.send_registered", new_callable=AsyncMock),
+            patch("services.agent_websocket.logger"),
+        ):
             result = await handler._authenticate_connection(mock_websocket)
 
             assert result == ("agent-1", "server-1")
@@ -293,9 +344,13 @@ class TestAuthenticateConnection:
             return_value=("agent-1", {}, "server-1")
         )
 
-        with patch("services.agent_websocket.send_authenticated", new_callable=AsyncMock), \
-             patch("services.agent_websocket.log_event", new_callable=AsyncMock), \
-             patch("services.agent_websocket.logger"):
+        with (
+            patch(
+                "services.agent_websocket.send_authenticated", new_callable=AsyncMock
+            ),
+            patch("services.agent_websocket.log_event", new_callable=AsyncMock),
+            patch("services.agent_websocket.logger"),
+        ):
             result = await handler._authenticate_connection(mock_websocket)
 
             assert result == ("agent-1", "server-1")
@@ -309,9 +364,11 @@ class TestHandleRegistration:
         """_handle_registration should reject missing code."""
         msg = {"type": "register"}
 
-        with patch("services.agent_websocket.send_error", new_callable=AsyncMock), \
-             patch("services.agent_websocket.close_websocket", new_callable=AsyncMock), \
-             patch("services.agent_websocket.logger"):
+        with (
+            patch("services.agent_websocket.send_error", new_callable=AsyncMock),
+            patch("services.agent_websocket.close_websocket", new_callable=AsyncMock),
+            patch("services.agent_websocket.logger"),
+        ):
             result = await handler._handle_registration(mock_websocket, msg)
 
             assert result is None
@@ -324,9 +381,11 @@ class TestHandleRegistration:
         msg = {"type": "register", "code": "invalid-code"}
         mock_agent_service.register_agent = AsyncMock(return_value=None)
 
-        with patch("services.agent_websocket.send_error", new_callable=AsyncMock), \
-             patch("services.agent_websocket.close_websocket", new_callable=AsyncMock), \
-             patch("services.agent_websocket.logger"):
+        with (
+            patch("services.agent_websocket.send_error", new_callable=AsyncMock),
+            patch("services.agent_websocket.close_websocket", new_callable=AsyncMock),
+            patch("services.agent_websocket.logger"),
+        ):
             result = await handler._handle_registration(mock_websocket, msg)
 
             assert result is None
@@ -341,8 +400,12 @@ class TestHandleRegistration:
             return_value=("agent-123", "token-abc", {"key": "config"}, "server-456")
         )
 
-        with patch("services.agent_websocket.send_registered", new_callable=AsyncMock) as mock_send, \
-             patch("services.agent_websocket.logger"):
+        with (
+            patch(
+                "services.agent_websocket.send_registered", new_callable=AsyncMock
+            ) as mock_send,
+            patch("services.agent_websocket.logger"),
+        ):
             result = await handler._handle_registration(mock_websocket, msg)
 
             assert result == ("agent-123", "server-456")
@@ -359,9 +422,11 @@ class TestHandleAuthentication:
         """_handle_authentication should reject missing token."""
         msg = {"type": "authenticate"}
 
-        with patch("services.agent_websocket.send_error", new_callable=AsyncMock), \
-             patch("services.agent_websocket.close_websocket", new_callable=AsyncMock), \
-             patch("services.agent_websocket.logger"):
+        with (
+            patch("services.agent_websocket.send_error", new_callable=AsyncMock),
+            patch("services.agent_websocket.close_websocket", new_callable=AsyncMock),
+            patch("services.agent_websocket.logger"),
+        ):
             result = await handler._handle_authentication(mock_websocket, msg)
 
             assert result is None
@@ -374,9 +439,11 @@ class TestHandleAuthentication:
         msg = {"type": "authenticate", "token": "invalid-token"}
         mock_agent_service.authenticate_agent = AsyncMock(return_value=None)
 
-        with patch("services.agent_websocket.send_error", new_callable=AsyncMock), \
-             patch("services.agent_websocket.close_websocket", new_callable=AsyncMock), \
-             patch("services.agent_websocket.logger"):
+        with (
+            patch("services.agent_websocket.send_error", new_callable=AsyncMock),
+            patch("services.agent_websocket.close_websocket", new_callable=AsyncMock),
+            patch("services.agent_websocket.logger"),
+        ):
             result = await handler._handle_authentication(mock_websocket, msg)
 
             assert result is None
@@ -391,9 +458,13 @@ class TestHandleAuthentication:
             return_value=("agent-123", {"config": "data"}, "server-456")
         )
 
-        with patch("services.agent_websocket.send_authenticated", new_callable=AsyncMock) as mock_send, \
-             patch("services.agent_websocket.log_event", new_callable=AsyncMock), \
-             patch("services.agent_websocket.logger"):
+        with (
+            patch(
+                "services.agent_websocket.send_authenticated", new_callable=AsyncMock
+            ) as mock_send,
+            patch("services.agent_websocket.log_event", new_callable=AsyncMock),
+            patch("services.agent_websocket.logger"),
+        ):
             result = await handler._handle_authentication(mock_websocket, msg)
 
             assert result == ("agent-123", "server-456")
@@ -411,9 +482,15 @@ class TestHandleAuthentication:
             return_value=("agent-123", {}, "server-456")
         )
 
-        with patch("services.agent_websocket.send_authenticated", new_callable=AsyncMock), \
-             patch("services.agent_websocket.log_event", new_callable=AsyncMock) as mock_log, \
-             patch("services.agent_websocket.logger"):
+        with (
+            patch(
+                "services.agent_websocket.send_authenticated", new_callable=AsyncMock
+            ),
+            patch(
+                "services.agent_websocket.log_event", new_callable=AsyncMock
+            ) as mock_log,
+            patch("services.agent_websocket.logger"),
+        ):
             await handler._handle_authentication(mock_websocket, msg)
 
             mock_log.assert_called_once()
@@ -428,8 +505,12 @@ class TestCloseWithError:
     @pytest.mark.asyncio
     async def test_close_with_error_sends_error(self, handler, mock_websocket):
         """_close_with_error should send error message."""
-        with patch("services.agent_websocket.send_error", new_callable=AsyncMock) as mock_send, \
-             patch("services.agent_websocket.close_websocket", new_callable=AsyncMock):
+        with (
+            patch(
+                "services.agent_websocket.send_error", new_callable=AsyncMock
+            ) as mock_send,
+            patch("services.agent_websocket.close_websocket", new_callable=AsyncMock),
+        ):
             await handler._close_with_error(mock_websocket, "Test error")
 
             mock_send.assert_called_once_with(mock_websocket, "Test error")
@@ -437,8 +518,12 @@ class TestCloseWithError:
     @pytest.mark.asyncio
     async def test_close_with_error_closes_connection(self, handler, mock_websocket):
         """_close_with_error should close with auth failed code."""
-        with patch("services.agent_websocket.send_error", new_callable=AsyncMock), \
-             patch("services.agent_websocket.close_websocket", new_callable=AsyncMock) as mock_close:
+        with (
+            patch("services.agent_websocket.send_error", new_callable=AsyncMock),
+            patch(
+                "services.agent_websocket.close_websocket", new_callable=AsyncMock
+            ) as mock_close,
+        ):
             await handler._close_with_error(mock_websocket, "Test error")
 
             mock_close.assert_called_once_with(mock_websocket, WS_CLOSE_AUTH_FAILED)

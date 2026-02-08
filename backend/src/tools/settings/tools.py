@@ -1,6 +1,6 @@
 """Settings-related MCP tools."""
 
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import structlog
 from fastmcp import Context
@@ -20,7 +20,7 @@ class SettingsTools:
     def __init__(self, settings_service: SettingsService) -> None:
         self._settings_service = settings_service
 
-    async def _verify_authentication(self, ctx: Optional[Context]) -> Optional[str]:
+    async def _verify_authentication(self, ctx: Context | None) -> str | None:
         """Return authenticated user id from context when present."""
         if not ctx:
             return None
@@ -34,7 +34,7 @@ class SettingsTools:
             logger.error("Authentication verification failed", error=str(exc))
         return None
 
-    async def _extract_client_info(self, ctx: Optional[Context]) -> Tuple[str, str]:
+    async def _extract_client_info(self, ctx: Context | None) -> tuple[str, str]:
         """Extract client IP and user agent metadata."""
         client_ip = "unknown"
         user_agent = "unknown"
@@ -48,13 +48,13 @@ class SettingsTools:
 
     async def get_settings(
         self,
-        user_id: Optional[str] = None,
-        category: Optional[str] = None,
-        setting_keys: Optional[List[str]] = None,
+        user_id: str | None = None,
+        category: str | None = None,
+        setting_keys: list[str] | None = None,
         include_system_defaults: bool = True,
         include_user_overrides: bool = True,
-        ctx: Optional[Context] = None,
-    ) -> Dict[str, Any]:
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
         """Return settings for the current or provided user."""
         try:
             logger.info("Getting settings", category=category, keys=setting_keys)
@@ -68,7 +68,7 @@ class SettingsTools:
                     "error": "AUTHENTICATION_REQUIRED",
                 }
 
-            parsed_category: Optional[SettingCategory] = None
+            parsed_category: SettingCategory | None = None
             if category:
                 try:
                     parsed_category = SettingCategory(category)
@@ -113,12 +113,12 @@ class SettingsTools:
 
     async def update_settings(
         self,
-        settings: Dict[str, Any],
-        user_id: Optional[str] = None,
-        change_reason: Optional[str] = None,
+        settings: dict[str, Any],
+        user_id: str | None = None,
+        change_reason: str | None = None,
         validate_only: bool = False,
-        ctx: Optional[Context] = None,
-    ) -> Dict[str, Any]:
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
         """Update settings with validation and auditing."""
         try:
             logger.info(
@@ -157,17 +157,26 @@ class SettingsTools:
             response = await self._settings_service.update_settings(request)
 
             if response.success:
-                await log_event("settings", "INFO", f"Settings updated by user: {active_user_id}", SETTINGS_TAGS, {
-                    "user_id": active_user_id,
-                    "setting_count": len(settings) if settings else 0,
-                    "change_reason": change_reason,
-                    "client_ip": client_ip
-                })
+                await log_event(
+                    "settings",
+                    "INFO",
+                    f"Settings updated by user: {active_user_id}",
+                    SETTINGS_TAGS,
+                    {
+                        "user_id": active_user_id,
+                        "setting_count": len(settings) if settings else 0,
+                        "change_reason": change_reason,
+                        "client_ip": client_ip,
+                    },
+                )
             else:
-                await log_event("settings", "WARNING", f"Settings update failed for user: {active_user_id}", SETTINGS_TAGS, {
-                    "user_id": active_user_id,
-                    "error": response.error
-                })
+                await log_event(
+                    "settings",
+                    "WARNING",
+                    f"Settings update failed for user: {active_user_id}",
+                    SETTINGS_TAGS,
+                    {"user_id": active_user_id, "error": response.error},
+                )
 
             return {
                 "success": response.success,
@@ -178,7 +187,13 @@ class SettingsTools:
             }
         except Exception as exc:  # pylint: disable=broad-except
             logger.error("Failed to update settings", error=str(exc))
-            await log_event("settings", "ERROR", "Settings update error", SETTINGS_TAGS, {"error": str(exc)})
+            await log_event(
+                "settings",
+                "ERROR",
+                "Settings update error",
+                SETTINGS_TAGS,
+                {"error": str(exc)},
+            )
             return {
                 "success": False,
                 "message": f"Failed to update settings: {exc}",
@@ -187,10 +202,10 @@ class SettingsTools:
 
     async def reset_user_settings(
         self,
-        user_id: Optional[str] = None,
-        category: Optional[str] = None,
-        ctx: Optional[Context] = None,
-    ) -> Dict[str, Any]:
+        user_id: str | None = None,
+        category: str | None = None,
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
         """Reset user settings to system defaults by deleting user overrides."""
         try:
             logger.info("Resetting user settings", category=category)
@@ -205,7 +220,7 @@ class SettingsTools:
                 }
 
             # Parse category if provided
-            parsed_category: Optional[SettingCategory] = None
+            parsed_category: SettingCategory | None = None
             if category:
                 try:
                     parsed_category = SettingCategory(category)
@@ -221,20 +236,31 @@ class SettingsTools:
                 user_id=active_user_id,
                 category=parsed_category,
                 client_ip=client_ip,
-                user_agent=user_agent
+                user_agent=user_agent,
             )
 
             if response.success:
-                await log_event("settings", "INFO", f"User settings reset: {active_user_id}", SETTINGS_TAGS, {
-                    "user_id": active_user_id,
-                    "category": category,
-                    "deleted_count": response.data.get("deleted_count") if response.data else 0
-                })
+                await log_event(
+                    "settings",
+                    "INFO",
+                    f"User settings reset: {active_user_id}",
+                    SETTINGS_TAGS,
+                    {
+                        "user_id": active_user_id,
+                        "category": category,
+                        "deleted_count": response.data.get("deleted_count")
+                        if response.data
+                        else 0,
+                    },
+                )
             else:
-                await log_event("settings", "WARNING", f"User settings reset failed: {active_user_id}", SETTINGS_TAGS, {
-                    "user_id": active_user_id,
-                    "error": response.error
-                })
+                await log_event(
+                    "settings",
+                    "WARNING",
+                    f"User settings reset failed: {active_user_id}",
+                    SETTINGS_TAGS,
+                    {"user_id": active_user_id, "error": response.error},
+                )
 
             return {
                 "success": response.success,
@@ -244,7 +270,13 @@ class SettingsTools:
             }
         except Exception as exc:  # pylint: disable=broad-except
             logger.error("Failed to reset user settings", error=str(exc))
-            await log_event("settings", "ERROR", "User settings reset error", SETTINGS_TAGS, {"error": str(exc)})
+            await log_event(
+                "settings",
+                "ERROR",
+                "User settings reset error",
+                SETTINGS_TAGS,
+                {"error": str(exc)},
+            )
             return {
                 "success": False,
                 "message": f"Failed to reset user settings: {exc}",
@@ -253,10 +285,10 @@ class SettingsTools:
 
     async def reset_system_settings(
         self,
-        user_id: Optional[str] = None,
-        category: Optional[str] = None,
-        ctx: Optional[Context] = None,
-    ) -> Dict[str, Any]:
+        user_id: str | None = None,
+        category: str | None = None,
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
         """Reset system settings to factory defaults (admin only)."""
         try:
             logger.info("Resetting system settings to defaults", category=category)
@@ -271,7 +303,7 @@ class SettingsTools:
                 }
 
             # Parse category if provided
-            parsed_category: Optional[SettingCategory] = None
+            parsed_category: SettingCategory | None = None
             if category:
                 try:
                     parsed_category = SettingCategory(category)
@@ -287,20 +319,31 @@ class SettingsTools:
                 user_id=active_user_id,
                 category=parsed_category,
                 client_ip=client_ip,
-                user_agent=user_agent
+                user_agent=user_agent,
             )
 
             if response.success:
-                await log_event("settings", "INFO", f"System settings reset by: {active_user_id}", SETTINGS_TAGS, {
-                    "user_id": active_user_id,
-                    "category": category,
-                    "reset_count": response.data.get("reset_count") if response.data else 0
-                })
+                await log_event(
+                    "settings",
+                    "INFO",
+                    f"System settings reset by: {active_user_id}",
+                    SETTINGS_TAGS,
+                    {
+                        "user_id": active_user_id,
+                        "category": category,
+                        "reset_count": response.data.get("reset_count")
+                        if response.data
+                        else 0,
+                    },
+                )
             else:
-                await log_event("settings", "WARNING", f"System settings reset failed: {active_user_id}", SETTINGS_TAGS, {
-                    "user_id": active_user_id,
-                    "error": response.error
-                })
+                await log_event(
+                    "settings",
+                    "WARNING",
+                    f"System settings reset failed: {active_user_id}",
+                    SETTINGS_TAGS,
+                    {"user_id": active_user_id, "error": response.error},
+                )
 
             return {
                 "success": response.success,
@@ -310,7 +353,13 @@ class SettingsTools:
             }
         except Exception as exc:  # pylint: disable=broad-except
             logger.error("Failed to reset system settings", error=str(exc))
-            await log_event("settings", "ERROR", "System settings reset error", SETTINGS_TAGS, {"error": str(exc)})
+            await log_event(
+                "settings",
+                "ERROR",
+                "System settings reset error",
+                SETTINGS_TAGS,
+                {"error": str(exc)},
+            )
             return {
                 "success": False,
                 "message": f"Failed to reset system settings: {exc}",
@@ -319,15 +368,15 @@ class SettingsTools:
 
     async def get_default_settings(
         self,
-        category: Optional[str] = None,
-        ctx: Optional[Context] = None,
-    ) -> Dict[str, Any]:
+        category: str | None = None,
+        ctx: Context | None = None,
+    ) -> dict[str, Any]:
         """Get factory default settings values."""
         try:
             logger.info("Getting default settings", category=category)
 
             # Parse category if provided
-            parsed_category: Optional[SettingCategory] = None
+            parsed_category: SettingCategory | None = None
             if category:
                 try:
                     parsed_category = SettingCategory(category)

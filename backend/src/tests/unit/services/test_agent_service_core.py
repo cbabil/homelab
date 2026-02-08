@@ -6,17 +6,18 @@ and event logging.
 """
 
 import hashlib
-import pytest
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from services.agent_service import AgentService
+import pytest
+
 from models.agent import (
     Agent,
     AgentConfig,
     AgentStatus,
     RegistrationCode,
 )
+from services.agent_service import AgentService
 
 
 @pytest.fixture
@@ -109,9 +110,11 @@ class TestAgentServiceInit:
 
     def test_init_creates_default_services(self):
         """AgentService should create default services if not provided."""
-        with patch("services.agent_service.logger"), \
-             patch("services.agent_service.DatabaseService") as MockDB, \
-             patch("services.agent_service.SettingsService") as MockSettings:
+        with (
+            patch("services.agent_service.logger"),
+            patch("services.agent_service.DatabaseService") as MockDB,
+            patch("services.agent_service.SettingsService") as MockSettings,
+        ):
             MockDB.return_value = MagicMock()
             MockSettings.return_value = MagicMock()
             service = AgentService()
@@ -155,11 +158,10 @@ class TestGetAgentDb:
             )
 
         # Patch at module level where imports happen inside the method
-        with patch(
-            "services.database.DatabaseConnection"
-        ) as MockConn, patch(
-            "services.database.AgentDatabaseService"
-        ) as MockAgentDB:
+        with (
+            patch("services.database.DatabaseConnection") as MockConn,
+            patch("services.database.AgentDatabaseService") as MockAgentDB,
+        ):
             MockConn.return_value = MagicMock()
             MockAgentDB.return_value = MagicMock()
 
@@ -289,9 +291,7 @@ class TestGetServerName:
         self, agent_service, mock_db_service
     ):
         """_get_server_name should return server_id on error."""
-        mock_db_service.get_server_by_id = AsyncMock(
-            side_effect=Exception("DB error")
-        )
+        mock_db_service.get_server_by_id = AsyncMock(side_effect=Exception("DB error"))
 
         with patch("services.agent_service.logger") as mock_logger:
             result = await agent_service._get_server_name("srv-123")
@@ -323,6 +323,7 @@ class TestGetAgentConfig:
         self, agent_service, mock_settings_service
     ):
         """_get_agent_config should load values from settings."""
+
         def create_setting(value):
             setting = MagicMock()
             setting.setting_value = MagicMock()
@@ -351,6 +352,7 @@ class TestGetAgentConfig:
         self, agent_service, mock_settings_service
     ):
         """_get_agent_config should use defaults for missing settings."""
+
         def create_setting(value):
             setting = MagicMock()
             setting.setting_value = MagicMock()

@@ -4,14 +4,14 @@ Database operations for app installations.
 """
 
 import json
-from typing import List, Optional
 
 import structlog
 
-from models.app_catalog import InstalledApp, InstallationStatus
+from models.app_catalog import InstallationStatus, InstalledApp
+
 from .base import (
-    DatabaseConnection,
     ALLOWED_INSTALLATION_COLUMNS,
+    DatabaseConnection,
 )
 
 logger = structlog.get_logger("database.app")
@@ -39,7 +39,7 @@ class AppDatabaseService:
         status: str,
         config: dict,
         installed_at: str,
-    ) -> Optional[InstalledApp]:
+    ) -> InstalledApp | None:
         """Create a new installation record."""
         try:
             config_json = json.dumps(config) if config else "{}"
@@ -104,7 +104,7 @@ class AppDatabaseService:
 
     async def get_installation(
         self, server_id: str, app_id: str
-    ) -> Optional[InstalledApp]:
+    ) -> InstalledApp | None:
         """Get installation by server and app ID.
 
         Handles ID mismatch: marketplace apps use 'casaos-X' prefix,
@@ -147,7 +147,7 @@ class AppDatabaseService:
             logger.error("Failed to get installation", error=str(e))
             return None
 
-    async def get_installation_by_id(self, install_id: str) -> Optional[InstalledApp]:
+    async def get_installation_by_id(self, install_id: str) -> InstalledApp | None:
         """Get installation by installation ID (for status polling)."""
         try:
             async with self._conn.get_connection() as conn:
@@ -198,7 +198,7 @@ class AppDatabaseService:
             logger.error("Failed to get installation by id", error=str(e))
             return None
 
-    async def get_installations(self, server_id: str) -> List[InstalledApp]:
+    async def get_installations(self, server_id: str) -> list[InstalledApp]:
         """Get all installations for a server."""
         try:
             async with self._conn.get_connection() as conn:
@@ -226,7 +226,7 @@ class AppDatabaseService:
             logger.error("Failed to get installations", error=str(e))
             return []
 
-    async def get_all_installations(self) -> List[InstalledApp]:
+    async def get_all_installations(self) -> list[InstalledApp]:
         """Get all installations across all servers."""
         try:
             async with self._conn.get_connection() as conn:

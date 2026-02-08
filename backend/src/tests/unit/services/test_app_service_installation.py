@@ -5,20 +5,21 @@ Tests mark_app_installed, mark_app_uninstalled, install_app,
 and bulk installation operations.
 """
 
-import pytest
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime, UTC
 
-from services.app_service import AppService
+import pytest
+
 from models.app import (
     App,
     AppCategory,
-    AppRequirements,
-    AppStatus,
-    ApplicationTable,
     AppCategoryTable,
     AppInstallation,
+    ApplicationTable,
+    AppRequirements,
+    AppStatus,
 )
+from services.app_service import AppService
 
 
 @pytest.fixture
@@ -121,9 +122,11 @@ class TestMarkAppUninstalled:
         result.first.return_value = (sample_app_table,)
         session.execute = AsyncMock(return_value=result)
 
-        with patch("services.app_service.logger") as mock_logger, \
-             patch("services.app_service.initialize_app_database"), \
-             patch("services.app_service.db_manager") as mock_db:
+        with (
+            patch("services.app_service.logger") as mock_logger,
+            patch("services.app_service.initialize_app_database"),
+            patch("services.app_service.db_manager") as mock_db,
+        ):
             mock_db.get_session.return_value = context_manager
 
             service = AppService()
@@ -145,9 +148,11 @@ class TestMarkAppUninstalled:
         result.first.return_value = None
         session.execute = AsyncMock(return_value=result)
 
-        with patch("services.app_service.logger"), \
-             patch("services.app_service.initialize_app_database"), \
-             patch("services.app_service.db_manager") as mock_db:
+        with (
+            patch("services.app_service.logger"),
+            patch("services.app_service.initialize_app_database"),
+            patch("services.app_service.db_manager") as mock_db,
+        ):
             mock_db.get_session.return_value = context_manager
 
             service = AppService()
@@ -160,9 +165,7 @@ class TestMarkAppInstalled:
     """Tests for mark_app_installed method."""
 
     @pytest.mark.asyncio
-    async def test_mark_app_installed_success(
-        self, mock_db_session, sample_app_table
-    ):
+    async def test_mark_app_installed_success(self, mock_db_session, sample_app_table):
         """mark_app_installed should update status and server_id."""
         session, context_manager = mock_db_session
 
@@ -170,9 +173,11 @@ class TestMarkAppInstalled:
         result.first.return_value = (sample_app_table,)
         session.execute = AsyncMock(return_value=result)
 
-        with patch("services.app_service.logger") as mock_logger, \
-             patch("services.app_service.initialize_app_database"), \
-             patch("services.app_service.db_manager") as mock_db:
+        with (
+            patch("services.app_service.logger") as mock_logger,
+            patch("services.app_service.initialize_app_database"),
+            patch("services.app_service.db_manager") as mock_db,
+        ):
             mock_db.get_session.return_value = context_manager
 
             service = AppService()
@@ -182,9 +187,7 @@ class TestMarkAppInstalled:
             assert sample_app_table.status == "installed"
             assert sample_app_table.connected_server_id == "srv-123"
             mock_logger.info.assert_any_call(
-                "Application marked as installed",
-                app_id="plex",
-                server_id="srv-123"
+                "Application marked as installed", app_id="plex", server_id="srv-123"
             )
 
     @pytest.mark.asyncio
@@ -196,9 +199,11 @@ class TestMarkAppInstalled:
         result.first.return_value = None
         session.execute = AsyncMock(return_value=result)
 
-        with patch("services.app_service.logger") as mock_logger, \
-             patch("services.app_service.initialize_app_database"), \
-             patch("services.app_service.db_manager") as mock_db:
+        with (
+            patch("services.app_service.logger") as mock_logger,
+            patch("services.app_service.initialize_app_database"),
+            patch("services.app_service.db_manager") as mock_db,
+        ):
             mock_db.get_session.return_value = context_manager
 
             service = AppService()
@@ -206,8 +211,7 @@ class TestMarkAppInstalled:
 
             assert success is False
             mock_logger.warning.assert_called_with(
-                "Application not found for marking installed",
-                app_id="nonexistent"
+                "Application not found for marking installed", app_id="nonexistent"
             )
 
     @pytest.mark.asyncio
@@ -231,9 +235,11 @@ class TestMarkAppInstalled:
 
         session.execute = AsyncMock(side_effect=execute_side_effect)
 
-        with patch("services.app_service.logger"), \
-             patch("services.app_service.initialize_app_database"), \
-             patch("services.app_service.db_manager") as mock_db:
+        with (
+            patch("services.app_service.logger"),
+            patch("services.app_service.initialize_app_database"),
+            patch("services.app_service.db_manager") as mock_db,
+        ):
             mock_db.get_session.return_value = context_manager
 
             service = AppService()
@@ -251,9 +257,11 @@ class TestMarkAppInstalled:
         result.first.return_value = None
         session.execute = AsyncMock(return_value=result)
 
-        with patch("services.app_service.logger"), \
-             patch("services.app_service.initialize_app_database"), \
-             patch("services.app_service.db_manager") as mock_db:
+        with (
+            patch("services.app_service.logger"),
+            patch("services.app_service.initialize_app_database"),
+            patch("services.app_service.db_manager") as mock_db,
+        ):
             mock_db.get_session.return_value = context_manager
 
             service = AppService()
@@ -277,15 +285,15 @@ class TestMarkAppsUninstalledBulk:
         result.first.return_value = (sample_app_table,)
         session.execute = AsyncMock(return_value=result)
 
-        with patch("services.app_service.logger"), \
-             patch("services.app_service.initialize_app_database"), \
-             patch("services.app_service.db_manager") as mock_db:
+        with (
+            patch("services.app_service.logger"),
+            patch("services.app_service.initialize_app_database"),
+            patch("services.app_service.db_manager") as mock_db,
+        ):
             mock_db.get_session.return_value = context_manager
 
             service = AppService()
-            result = await service.mark_apps_uninstalled_bulk(
-                ["plex", "jellyfin"]
-            )
+            result = await service.mark_apps_uninstalled_bulk(["plex", "jellyfin"])
 
             assert result["uninstalled_count"] == 2
             assert len(result["uninstalled"]) == 2
@@ -311,9 +319,11 @@ class TestMarkAppsUninstalledBulk:
 
         session.execute = AsyncMock(side_effect=execute_side_effect)
 
-        with patch("services.app_service.logger"), \
-             patch("services.app_service.initialize_app_database"), \
-             patch("services.app_service.db_manager") as mock_db:
+        with (
+            patch("services.app_service.logger"),
+            patch("services.app_service.initialize_app_database"),
+            patch("services.app_service.db_manager") as mock_db,
+        ):
             mock_db.get_session.return_value = context_manager
 
             service = AppService()
@@ -323,17 +333,17 @@ class TestMarkAppsUninstalledBulk:
             assert result["skipped_count"] == 1
 
     @pytest.mark.asyncio
-    async def test_mark_apps_uninstalled_bulk_error_handling(
-        self, mock_db_session
-    ):
+    async def test_mark_apps_uninstalled_bulk_error_handling(self, mock_db_session):
         """mark_apps_uninstalled_bulk should handle exceptions."""
         session, context_manager = mock_db_session
 
         session.execute = AsyncMock(side_effect=Exception("DB error"))
 
-        with patch("services.app_service.logger"), \
-             patch("services.app_service.initialize_app_database"), \
-             patch("services.app_service.db_manager") as mock_db:
+        with (
+            patch("services.app_service.logger"),
+            patch("services.app_service.initialize_app_database"),
+            patch("services.app_service.db_manager") as mock_db,
+        ):
             mock_db.get_session.return_value = context_manager
 
             service = AppService()
@@ -358,9 +368,11 @@ class TestInstallApp:
         result.first.return_value = (sample_app_table, sample_category_table)
         session.execute = AsyncMock(return_value=result)
 
-        with patch("services.app_service.logger") as mock_logger, \
-             patch("services.app_service.initialize_app_database"), \
-             patch("services.app_service.db_manager") as mock_db:
+        with (
+            patch("services.app_service.logger") as mock_logger,
+            patch("services.app_service.initialize_app_database"),
+            patch("services.app_service.db_manager") as mock_db,
+        ):
             mock_db.get_session.return_value = context_manager
 
             service = AppService()
@@ -386,9 +398,11 @@ class TestInstallApp:
         result.first.return_value = (sample_app_table, sample_category_table)
         session.execute = AsyncMock(return_value=result)
 
-        with patch("services.app_service.logger"), \
-             patch("services.app_service.initialize_app_database"), \
-             patch("services.app_service.db_manager") as mock_db:
+        with (
+            patch("services.app_service.logger"),
+            patch("services.app_service.initialize_app_database"),
+            patch("services.app_service.db_manager") as mock_db,
+        ):
             mock_db.get_session.return_value = context_manager
 
             service = AppService()
@@ -406,9 +420,11 @@ class TestInstallApp:
         result.first.return_value = None
         session.execute = AsyncMock(return_value=result)
 
-        with patch("services.app_service.logger"), \
-             patch("services.app_service.initialize_app_database"), \
-             patch("services.app_service.db_manager") as mock_db:
+        with (
+            patch("services.app_service.logger"),
+            patch("services.app_service.initialize_app_database"),
+            patch("services.app_service.db_manager") as mock_db,
+        ):
             mock_db.get_session.return_value = context_manager
 
             service = AppService()
@@ -426,9 +442,11 @@ class TestInstallApp:
         result.first.return_value = (sample_app_table, sample_category_table)
         session.execute = AsyncMock(return_value=result)
 
-        with patch("services.app_service.logger"), \
-             patch("services.app_service.initialize_app_database"), \
-             patch("services.app_service.db_manager") as mock_db:
+        with (
+            patch("services.app_service.logger"),
+            patch("services.app_service.initialize_app_database"),
+            patch("services.app_service.db_manager") as mock_db,
+        ):
             mock_db.get_session.return_value = context_manager
 
             service = AppService()
@@ -448,9 +466,11 @@ class TestInstallApp:
         result.first.return_value = (sample_app_table, sample_category_table)
         session.execute = AsyncMock(return_value=result)
 
-        with patch("services.app_service.logger"), \
-             patch("services.app_service.initialize_app_database"), \
-             patch("services.app_service.db_manager") as mock_db:
+        with (
+            patch("services.app_service.logger"),
+            patch("services.app_service.initialize_app_database"),
+            patch("services.app_service.db_manager") as mock_db,
+        ):
             mock_db.get_session.return_value = context_manager
 
             service = AppService()
@@ -469,9 +489,11 @@ class TestInstallApp:
         result.first.return_value = (sample_app_table, sample_category_table)
         session.execute = AsyncMock(return_value=result)
 
-        with patch("services.app_service.logger"), \
-             patch("services.app_service.initialize_app_database"), \
-             patch("services.app_service.db_manager") as mock_db:
+        with (
+            patch("services.app_service.logger"),
+            patch("services.app_service.initialize_app_database"),
+            patch("services.app_service.db_manager") as mock_db,
+        ):
             mock_db.get_session.return_value = context_manager
 
             service = AppService()

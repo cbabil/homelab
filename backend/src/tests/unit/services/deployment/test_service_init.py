@@ -4,8 +4,9 @@ Unit tests for services/deployment/service.py - Initialization
 Tests for DeploymentService initialization and helper methods.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 
 @pytest.fixture

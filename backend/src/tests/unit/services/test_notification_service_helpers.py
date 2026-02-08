@@ -4,11 +4,12 @@ Unit tests for services/notification_service.py - Helper methods.
 Tests _dict_factory and _row_to_notification conversions.
 """
 
-import pytest
 from unittest.mock import MagicMock, patch
 
-from services.notification_service import NotificationService
+import pytest
+
 from models.notification import Notification, NotificationType
+from services.notification_service import NotificationService
 
 
 @pytest.fixture

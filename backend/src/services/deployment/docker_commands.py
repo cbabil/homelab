@@ -5,15 +5,17 @@ Builds docker commands and parses docker output.
 """
 
 import re
-from typing import Dict, Any
+import shlex
+from typing import Any
+
 from models.marketplace import DockerConfig
 
 
 def build_run_command(
     docker: DockerConfig,
     container_name: str,
-    config: Dict[str, Any],
-    restart_policy: str = None
+    config: dict[str, Any],
+    restart_policy: str = None,
 ) -> str:
     """Build docker run command for an app.
 
@@ -29,30 +31,34 @@ def build_run_command(
     parts = ["docker run -d"]
 
     # Container name
-    parts.append(f"--name {container_name}")
+    parts.append(f"--name {shlex.quote(container_name)}")
 
     # Restart policy - use override or default from config
     policy = restart_policy if restart_policy is not None else docker.restart_policy
-    parts.append(f"--restart {policy}")
+    parts.append(f"--restart {shlex.quote(policy)}")
 
     # Port mappings
     for port in docker.ports:
         host_port = config.get("ports", {}).get(str(port.container), port.host)
-        parts.append(f"-p {host_port}:{port.container}/{port.protocol}")
+        parts.append(
+            f"-p {shlex.quote(f'{host_port}:{port.container}/{port.protocol}')}"
+        )
 
     # Volume mappings
     for volume in docker.volumes:
-        host_path = config.get("volumes", {}).get(volume.container_path, volume.host_path)
+        host_path = config.get("volumes", {}).get(
+            volume.container_path, volume.host_path
+        )
         ro = ":ro" if volume.readonly else ""
-        parts.append(f"-v {host_path}:{volume.container_path}{ro}")
+        parts.append(f"-v {shlex.quote(f'{host_path}:{volume.container_path}{ro}')}")
 
     # Environment variables from config
     for key, value in config.get("env", {}).items():
-        parts.append(f"-e {key}={value}")
+        parts.append(f"-e {shlex.quote(f'{key}={value}')}")
 
     # Network mode
     if docker.network_mode:
-        parts.append(f"--network {docker.network_mode}")
+        parts.append(f"--network {shlex.quote(docker.network_mode)}")
 
     # Privileged mode
     if docker.privileged:
@@ -60,10 +66,10 @@ def build_run_command(
 
     # Capabilities
     for cap in docker.capabilities:
-        parts.append(f"--cap-add {cap}")
+        parts.append(f"--cap-add {shlex.quote(cap)}")
 
     # Image
-    parts.append(docker.image)
+    parts.append(shlex.quote(docker.image))
 
     return " ".join(parts)
 
@@ -87,8 +93,8 @@ def parse_pull_progress(line: str, layer_progress: dict) -> int:
     try:
         # Match downloading progress
         download_match = re.match(
-            r'^([a-f0-9]+): Downloading.*?(\d+(?:\.\d+)?)\s*[MKG]?B?/(\d+(?:\.\d+)?)\s*[MKG]?B',
-            line
+            r"^([a-f0-9]+): Downloading.*?(\d+(?:\.\d+)?)\s*[MKG]?B?/(\d+(?:\.\d+)?)\s*[MKG]?B",
+            line,
         )
         if download_match:
             layer_id = download_match.group(1)
@@ -99,8 +105,8 @@ def parse_pull_progress(line: str, layer_progress: dict) -> int:
 
         # Match extracting progress
         extract_match = re.match(
-            r'^([a-f0-9]+): Extracting.*?(\d+(?:\.\d+)?)\s*[MKG]?B?/(\d+(?:\.\d+)?)\s*[MKG]?B',
-            line
+            r"^([a-f0-9]+): Extracting.*?(\d+(?:\.\d+)?)\s*[MKG]?B?/(\d+(?:\.\d+)?)\s*[MKG]?B",
+            line,
         )
         if extract_match:
             layer_id = extract_match.group(1)
@@ -112,15 +118,14 @@ def parse_pull_progress(line: str, layer_progress: dict) -> int:
 
         # Match completed states
         complete_match = re.match(
-            r'^([a-f0-9]+): (Download complete|Pull complete|Already exists)',
-            line
+            r"^([a-f0-9]+): (Download complete|Pull complete|Already exists)", line
         )
         if complete_match:
             layer_id = complete_match.group(1)
             layer_progress[layer_id] = 100
 
         # Match pulling layer (started)
-        pulling_match = re.match(r'^([a-f0-9]+): Pulling fs layer', line)
+        pulling_match = re.match(r"^([a-f0-9]+): Pulling fs layer", line)
         if pulling_match:
             layer_id = pulling_match.group(1)
             if layer_id not in layer_progress:
@@ -135,7 +140,7 @@ def parse_pull_progress(line: str, layer_progress: dict) -> int:
         return 0
 
 
-def parse_container_inspect(stdout: str) -> Dict[str, Any]:
+def parse_container_inspect(stdout: str) -> dict[str, Any]:
     """Parse docker inspect JSON output.
 
     Args:
@@ -146,11 +151,7 @@ def parse_container_inspect(stdout: str) -> Dict[str, Any]:
     """
     import json
 
-    result = {
-        "networks": [],
-        "named_volumes": [],
-        "bind_mounts": []
-    }
+    result = {"networks": [], "named_volumes": [], "bind_mounts": []}
 
     try:
         container_info = json.loads(stdout)
@@ -167,19 +168,27 @@ def parse_container_inspect(stdout: str) -> Dict[str, Any]:
         for mount in info.get("Mounts", []):
             mount_type = mount.get("Type", "")
             if mount_type == "volume":
-                result["named_volumes"].append({
-                    "name": mount.get("Name", ""),
-                    "destination": mount.get("Destination", ""),
-                    "mode": mount.get("Mode", "rw")
-                })
+                result["named_volumes"].append(
+                    {
+                        "name": mount.get("Name", ""),
+                        "destination": mount.get("Destination", ""),
+                        "mode": mount.get("Mode", "rw"),
+                    }
+                )
             elif mount_type == "bind":
-                result["bind_mounts"].append({
-                    "source": mount.get("Source", ""),
-                    "destination": mount.get("Destination", ""),
-                    "mode": mount.get("Mode", "rw")
-                })
+                result["bind_mounts"].append(
+                    {
+                        "source": mount.get("Source", ""),
+                        "destination": mount.get("Destination", ""),
+                        "mode": mount.get("Mode", "rw"),
+                    }
+                )
 
-    except Exception:
-        pass
+    except Exception as e:
+        import structlog
+
+        structlog.get_logger("docker_commands").debug(
+            "Failed to parse container inspect output", error=str(e)
+        )
 
     return result

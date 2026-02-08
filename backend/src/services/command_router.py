@@ -5,10 +5,10 @@ when the agent is unavailable. Provides a unified interface for command
 execution regardless of transport mechanism.
 """
 
+from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from enum import Enum
-from typing import Callable, Optional
 
 import structlog
 
@@ -35,9 +35,9 @@ class CommandResult:
     success: bool
     output: str
     method: ExecutionMethod
-    exit_code: Optional[int] = None
-    error: Optional[str] = None
-    execution_time_ms: Optional[float] = None
+    exit_code: int | None = None
+    error: str | None = None
+    execution_time_ms: float | None = None
 
 
 class CommandRouter:
@@ -521,8 +521,10 @@ class RoutedExecutor:
             Tuple of (exit_code, stdout, stderr).
         """
         result = await self._router.execute(server_id, command, timeout)
-        exit_code = result.exit_code if result.exit_code is not None else (
-            0 if result.success else 1
+        exit_code = (
+            result.exit_code
+            if result.exit_code is not None
+            else (0 if result.success else 1)
         )
         if result.success:
             return exit_code, result.output, ""

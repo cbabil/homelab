@@ -4,9 +4,10 @@ Unit tests for services/csrf_service.py
 Tests CSRF token generation and validation.
 """
 
-import pytest
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from unittest.mock import patch
+
+import pytest
 
 import services.csrf_service as csrf_module
 from services.csrf_service import CSRFService
@@ -232,7 +233,8 @@ class TestCleanupUserTokens:
         csrf_service._cleanup_user_tokens("user1")
 
         user_tokens = [
-            data for data in csrf_module._csrf_tokens.values()
+            data
+            for data in csrf_module._csrf_tokens.values()
             if data["user_id"] == "user1"
         ]
         assert len(user_tokens) <= csrf_module.MAX_TOKENS_PER_USER
@@ -249,7 +251,8 @@ class TestCleanupUserTokens:
         csrf_service._cleanup_user_tokens("user1")
 
         user2_tokens = [
-            data for data in csrf_module._csrf_tokens.values()
+            data
+            for data in csrf_module._csrf_tokens.values()
             if data["user_id"] == "user2"
         ]
         assert len(user2_tokens) == 1
@@ -268,7 +271,8 @@ class TestRevokeUserTokens:
 
         assert count == 3
         user_tokens = [
-            data for data in csrf_module._csrf_tokens.values()
+            data
+            for data in csrf_module._csrf_tokens.values()
             if data["user_id"] == "user1"
         ]
         assert len(user_tokens) == 0
@@ -281,7 +285,8 @@ class TestRevokeUserTokens:
         csrf_service.revoke_user_tokens("user1")
 
         user2_tokens = [
-            data for data in csrf_module._csrf_tokens.values()
+            data
+            for data in csrf_module._csrf_tokens.values()
             if data["user_id"] == "user2"
         ]
         assert len(user2_tokens) == 1
@@ -298,4 +303,5 @@ class TestGlobalInstance:
     def test_csrf_service_exists(self):
         """Module should export csrf_service instance."""
         from services.csrf_service import csrf_service
+
         assert isinstance(csrf_service, CSRFService)

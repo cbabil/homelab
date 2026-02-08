@@ -4,9 +4,10 @@ Unit tests for SSHConnectionPool in services/ssh_service.py
 Tests the connection pooling functionality for SSH connections.
 """
 
-import pytest
-from unittest.mock import MagicMock, patch
 import asyncio
+from unittest.mock import MagicMock, patch
+
+import pytest
 
 from services.ssh_service import SSHConnectionPool
 
@@ -90,9 +91,7 @@ class TestGet:
         assert result is mock_ssh_client
 
     @pytest.mark.asyncio
-    async def test_get_marks_connection_in_use(
-        self, connection_pool, mock_ssh_client
-    ):
+    async def test_get_marks_connection_in_use(self, connection_pool, mock_ssh_client):
         """get should mark connection as in use."""
         key = "host:22:user"
         with patch("services.ssh_service.logger"):
@@ -102,9 +101,7 @@ class TestGet:
         assert connection_pool._in_use[key] is True
 
     @pytest.mark.asyncio
-    async def test_get_returns_none_when_in_use(
-        self, connection_pool, mock_ssh_client
-    ):
+    async def test_get_returns_none_when_in_use(self, connection_pool, mock_ssh_client):
         """get should return None when connection is already in use."""
         key = "host:22:user"
         with patch("services.ssh_service.logger"):
@@ -115,9 +112,7 @@ class TestGet:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_get_removes_dead_connection(
-        self, connection_pool, mock_dead_client
-    ):
+    async def test_get_removes_dead_connection(self, connection_pool, mock_dead_client):
         """get should remove dead connections from pool."""
         key = "host:22:user"
         with patch("services.ssh_service.logger"):
@@ -144,9 +139,7 @@ class TestGet:
         assert key not in connection_pool._connections
 
     @pytest.mark.asyncio
-    async def test_get_handles_close_exception(
-        self, connection_pool, mock_dead_client
-    ):
+    async def test_get_handles_close_exception(self, connection_pool, mock_dead_client):
         """get should handle exceptions when closing dead connection."""
         key = "host:22:user"
         mock_dead_client.close.side_effect = Exception("Close failed")
@@ -194,9 +187,7 @@ class TestRelease:
     """Tests for release method."""
 
     @pytest.mark.asyncio
-    async def test_release_marks_not_in_use(
-        self, connection_pool, mock_ssh_client
-    ):
+    async def test_release_marks_not_in_use(self, connection_pool, mock_ssh_client):
         """release should mark connection as not in use."""
         key = "host:22:user"
         with patch("services.ssh_service.logger"):
@@ -229,9 +220,7 @@ class TestClose:
     """Tests for close method."""
 
     @pytest.mark.asyncio
-    async def test_close_removes_connection(
-        self, connection_pool, mock_ssh_client
-    ):
+    async def test_close_removes_connection(self, connection_pool, mock_ssh_client):
         """close should remove connection from pool."""
         key = "host:22:user"
         with patch("services.ssh_service.logger"):
@@ -242,9 +231,7 @@ class TestClose:
         assert key not in connection_pool._in_use
 
     @pytest.mark.asyncio
-    async def test_close_calls_client_close(
-        self, connection_pool, mock_ssh_client
-    ):
+    async def test_close_calls_client_close(self, connection_pool, mock_ssh_client):
         """close should close the SSH client."""
         key = "host:22:user"
         with patch("services.ssh_service.logger"):
@@ -254,9 +241,7 @@ class TestClose:
         mock_ssh_client.close.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_close_handles_exception(
-        self, connection_pool, mock_ssh_client
-    ):
+    async def test_close_handles_exception(self, connection_pool, mock_ssh_client):
         """close should handle close exceptions."""
         key = "host:22:user"
         mock_ssh_client.close.side_effect = Exception("Close failed")

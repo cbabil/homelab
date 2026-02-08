@@ -5,22 +5,23 @@ Sets up structured logging with JSON output for the MCP server.
 Includes security-conscious filtering of sensitive data.
 """
 
-import os
 import logging
+import os
+
 import structlog
 
 
 def setup_logging():
     """Configure structured logging for the application."""
     log_level = os.getenv("MCP_LOG_LEVEL", "INFO").upper()
-    
+
     # Configure standard library logging
     logging.basicConfig(
         level=getattr(logging, log_level),
         format="%(message)s",
-        handlers=[logging.StreamHandler()]
+        handlers=[logging.StreamHandler()],
     )
-    
+
     # Configure structlog
     structlog.configure(
         processors=[
@@ -32,7 +33,7 @@ def setup_logging():
             structlog.processors.StackInfoRenderer(),
             structlog.processors.format_exc_info,
             _filter_sensitive_data,
-            structlog.processors.JSONRenderer()
+            structlog.processors.JSONRenderer(),
         ],
         wrapper_class=structlog.stdlib.BoundLogger,
         logger_factory=structlog.stdlib.LoggerFactory(),
@@ -43,9 +44,9 @@ def setup_logging():
 def _filter_sensitive_data(logger, method_name, event_dict):
     """Filter sensitive data from log entries."""
     sensitive_keys = ["password", "private_key", "credentials", "token"]
-    
+
     for key in sensitive_keys:
         if key in event_dict:
             event_dict[key] = "[REDACTED]"
-    
+
     return event_dict

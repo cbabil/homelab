@@ -7,12 +7,11 @@ Tests agent packaging functionality for remote deployment.
 import base64
 import io
 import tarfile
-from pathlib import Path
 from unittest.mock import patch
 
 import pytest
 
-from services.agent_packager import AgentPackager, AGENT_SOURCE_DIR
+from services.agent_packager import AGENT_SOURCE_DIR, AgentPackager
 
 
 class TestAgentPackagerInit:

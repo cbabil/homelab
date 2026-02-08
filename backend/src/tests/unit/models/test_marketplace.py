@@ -4,21 +4,22 @@ Unit tests for models/marketplace.py
 Tests marketplace repository and application models.
 """
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
+
 import pytest
 from pydantic import ValidationError
 
 from models.marketplace import (
-    RepoType,
-    RepoStatus,
-    MarketplaceRepo,
-    AppPort,
-    AppVolume,
     AppEnvVar,
-    DockerConfig,
-    AppRequirements,
-    MarketplaceApp,
+    AppPort,
     AppRating,
+    AppRequirements,
+    AppVolume,
+    DockerConfig,
+    MarketplaceApp,
+    MarketplaceRepo,
+    RepoStatus,
+    RepoType,
 )
 
 
@@ -172,7 +173,9 @@ class TestAppVolume:
 
     def test_readonly_true(self):
         """Test readonly true."""
-        vol = AppVolume(host_path="/config", container_path="/app/config", readonly=True)
+        vol = AppVolume(
+            host_path="/config", container_path="/app/config", readonly=True
+        )
         assert vol.readonly is True
 
     def test_camel_case_alias(self):

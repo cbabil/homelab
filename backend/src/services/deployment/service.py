@@ -7,16 +7,16 @@ Main orchestration service for app deployments.
 import asyncio
 import json
 import uuid
-from datetime import datetime, UTC
-from typing import Dict, Any, Optional, List
+from datetime import UTC, datetime
+from typing import Any
+
 import structlog
 
 from models.app_catalog import InstallationStatus, InstalledApp
 from models.metrics import ActivityType
-
 from services.deployment.ssh_executor import SSHExecutor
-from services.deployment.validation import DeploymentValidator
 from services.deployment.status import StatusManager
+from services.deployment.validation import DeploymentValidator
 
 logger = structlog.get_logger("deployment")
 
@@ -32,14 +32,14 @@ class DeploymentService:
 
     def __init__(
         self,
-        ssh_service,
-        server_service,
-        marketplace_service,
-        db_service,
-        activity_service=None,
-        executor=None,
-        agent_manager=None,
-        agent_service=None,
+        ssh_service: Any,
+        server_service: Any,
+        marketplace_service: Any,
+        db_service: Any,
+        activity_service: Any | None = None,
+        executor: SSHExecutor | None = None,
+        agent_manager: Any | None = None,
+        agent_service: Any | None = None,
     ):
         """Initialize deployment service.
 
@@ -86,7 +86,7 @@ class DeploymentService:
             return agent
         return None
 
-    async def _agent_pull_image(self, server_id: str, image: str) -> Dict[str, Any]:
+    async def _agent_pull_image(self, server_id: str, image: str) -> dict[str, Any]:
         """Pull Docker image via agent RPC.
 
         Args:
@@ -124,14 +124,14 @@ class DeploymentService:
         server_id: str,
         image: str,
         name: str,
-        ports: Dict[str, int] = None,
-        env: Dict[str, str] = None,
-        volumes: List[Dict[str, str]] = None,
+        ports: dict[str, int] = None,
+        env: dict[str, str] = None,
+        volumes: list[dict[str, str]] = None,
         restart_policy: str = None,
         network_mode: str = None,
         privileged: bool = False,
-        capabilities: List[str] = None,
-    ) -> Dict[str, Any]:
+        capabilities: list[str] = None,
+    ) -> dict[str, Any]:
         """Run Docker container via agent RPC.
 
         Args:
@@ -180,9 +180,9 @@ class DeploymentService:
         self,
         docker_config,
         container_name: str,
-        user_config: Dict[str, Any],
+        user_config: dict[str, Any],
         restart_policy: str = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Build container parameters from app docker config and user overrides.
 
         Args:
@@ -197,9 +197,7 @@ class DeploymentService:
         # Port mappings: {host_port: "container_port/protocol"}
         ports = {}
         for port in docker_config.ports:
-            host_port = user_config.get("ports", {}).get(
-                str(port.container), port.host
-            )
+            host_port = user_config.get("ports", {}).get(str(port.container), port.host)
             ports[str(host_port)] = f"{port.container}/{port.protocol}"
 
         # Environment variables from user config
@@ -211,14 +209,20 @@ class DeploymentService:
             host_path = user_config.get("volumes", {}).get(
                 volume.container_path, volume.host_path
             )
-            volumes.append({
-                "host": host_path,
-                "container": volume.container_path,
-                "mode": "ro" if volume.readonly else "rw",
-            })
+            volumes.append(
+                {
+                    "host": host_path,
+                    "container": volume.container_path,
+                    "mode": "ro" if volume.readonly else "rw",
+                }
+            )
 
         # Restart policy - use override or default from config
-        policy = restart_policy if restart_policy is not None else docker_config.restart_policy
+        policy = (
+            restart_policy
+            if restart_policy is not None
+            else docker_config.restart_policy
+        )
 
         return {
             "image": docker_config.image,
@@ -232,7 +236,7 @@ class DeploymentService:
             "capabilities": docker_config.capabilities,
         }
 
-    def _parse_agent_inspect_result(self, data: Dict[str, Any]) -> Dict[str, Any]:
+    def _parse_agent_inspect_result(self, data: dict[str, Any]) -> dict[str, Any]:
         """Parse agent container inspect result.
 
         Args:
@@ -261,24 +265,31 @@ class DeploymentService:
             for mount in mounts:
                 mount_type = mount.get("Type", "") or mount.get("type", "")
                 if mount_type == "volume":
-                    result["named_volumes"].append({
-                        "name": mount.get("Name", "") or mount.get("name", ""),
-                        "destination": mount.get("Destination", "") or mount.get("destination", ""),
-                        "mode": mount.get("Mode", "rw") or mount.get("mode", "rw"),
-                    })
+                    result["named_volumes"].append(
+                        {
+                            "name": mount.get("Name", "") or mount.get("name", ""),
+                            "destination": mount.get("Destination", "")
+                            or mount.get("destination", ""),
+                            "mode": mount.get("Mode", "rw") or mount.get("mode", "rw"),
+                        }
+                    )
                 elif mount_type == "bind":
-                    result["bind_mounts"].append({
-                        "source": mount.get("Source", "") or mount.get("source", ""),
-                        "destination": mount.get("Destination", "") or mount.get("destination", ""),
-                        "mode": mount.get("Mode", "rw") or mount.get("mode", "rw"),
-                    })
+                    result["bind_mounts"].append(
+                        {
+                            "source": mount.get("Source", "")
+                            or mount.get("source", ""),
+                            "destination": mount.get("Destination", "")
+                            or mount.get("destination", ""),
+                            "mode": mount.get("Mode", "rw") or mount.get("mode", "rw"),
+                        }
+                    )
 
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.debug("Failed to parse agent inspect result", error=str(exc))
 
         return result
 
-    async def _agent_stop_container(self, server_id: str, name: str) -> Dict[str, Any]:
+    async def _agent_stop_container(self, server_id: str, name: str) -> dict[str, Any]:
         """Stop container via agent RPC."""
         agent = await self._get_agent_for_server(server_id)
         if not agent:
@@ -297,7 +308,7 @@ class DeploymentService:
 
     async def _agent_remove_container(
         self, server_id: str, name: str, force: bool = False
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Remove container via agent RPC."""
         agent = await self._get_agent_for_server(server_id)
         if not agent:
@@ -316,7 +327,7 @@ class DeploymentService:
 
     async def _agent_update_restart_policy(
         self, server_id: str, name: str, policy: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Update container restart policy via agent RPC."""
         agent = await self._get_agent_for_server(server_id)
         if not agent:
@@ -335,7 +346,7 @@ class DeploymentService:
 
     async def _agent_inspect_container(
         self, server_id: str, name: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Inspect container via agent RPC."""
         agent = await self._get_agent_for_server(server_id)
         if not agent:
@@ -354,7 +365,7 @@ class DeploymentService:
 
     async def _agent_get_container_status(
         self, server_id: str, container_id: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get container status via agent RPC.
 
         Returns:
@@ -377,7 +388,7 @@ class DeploymentService:
 
     async def _agent_get_container_logs(
         self, server_id: str, name: str, tail: int = 50
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get container logs via agent RPC."""
         agent = await self._get_agent_for_server(server_id)
         if not agent:
@@ -396,7 +407,7 @@ class DeploymentService:
 
     async def _agent_preflight_check(
         self, server_id: str, min_disk_gb: int = 3, min_memory_mb: int = 256
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Run preflight checks via agent RPC.
 
         Args:
@@ -425,10 +436,10 @@ class DeploymentService:
     async def _agent_prepare_volumes(
         self,
         server_id: str,
-        volumes: List[Dict[str, Any]],
+        volumes: list[dict[str, Any]],
         default_uid: int = 1000,
         default_gid: int = 1000,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Prepare volume directories with correct ownership via agent.
 
         Args:
@@ -449,14 +460,20 @@ class DeploymentService:
         for vol in volumes:
             host_path = vol.get("host", "")
             if host_path and host_path.startswith("/"):
-                agent_volumes.append({
-                    "host": host_path,
-                    "uid": vol.get("uid", default_uid),
-                    "gid": vol.get("gid", default_gid),
-                })
+                agent_volumes.append(
+                    {
+                        "host": host_path,
+                        "uid": vol.get("uid", default_uid),
+                        "gid": vol.get("gid", default_gid),
+                    }
+                )
 
         if not agent_volumes:
-            return {"success": True, "results": [], "message": "No bind mounts to prepare"}
+            return {
+                "success": True,
+                "results": [],
+                "message": "No bind mounts to prepare",
+            }
 
         try:
             result = await self.agent_manager.send_command(
@@ -479,8 +496,8 @@ class DeploymentService:
     # -------------------------------------------------------------------------
 
     async def install_app(
-        self, server_id: str, app_id: str, config: Dict[str, Any] = None
-    ) -> Optional[InstalledApp]:
+        self, server_id: str, app_id: str, config: dict[str, Any] = None
+    ) -> InstalledApp | None:
         """Install an app on a server.
 
         Args:
@@ -569,7 +586,9 @@ class DeploymentService:
             pull_result = await self._agent_pull_image(server_id, app.docker.image)
 
             if not pull_result["success"]:
-                error_msg = f"Failed to pull image: {pull_result.get('error', 'Unknown error')}"
+                error_msg = (
+                    f"Failed to pull image: {pull_result.get('error', 'Unknown error')}"
+                )
                 await self._handle_install_error(
                     install_id, error_msg, 0, app.name, server_id, app_id
                 )
@@ -581,14 +600,19 @@ class DeploymentService:
             # Prepare volume directories with correct ownership
             # Normalize paths to use allowed data directories for security
             if app.docker.volumes:
-                logger.info("Preparing volume directories", volumes=len(app.docker.volumes))
+                logger.info(
+                    "Preparing volume directories", volumes=len(app.docker.volumes)
+                )
                 volume_configs = []
                 for v in app.docker.volumes:
                     host_path = v.host_path
                     # Normalize paths to allowed directories
                     if host_path.startswith("/"):
                         # Check if already in allowed path
-                        if not (host_path.startswith("/DATA") or host_path.startswith("/opt/tomo")):
+                        if not (
+                            host_path.startswith("/DATA")
+                            or host_path.startswith("/opt/tomo")
+                        ):
                             # Map to /DATA/AppData/<app_id>/<original_path>
                             normalized_path = f"/DATA/AppData/{app_id}{host_path}"
                             logger.info(
@@ -597,7 +621,9 @@ class DeploymentService:
                                 normalized=normalized_path,
                             )
                             host_path = normalized_path
-                        volume_configs.append({"host": host_path, "uid": 1000, "gid": 1000})
+                        volume_configs.append(
+                            {"host": host_path, "uid": 1000, "gid": 1000}
+                        )
 
                 if volume_configs:
                     prep_result = await self._agent_prepare_volumes(
@@ -691,7 +717,9 @@ class DeploymentService:
                     server_id, container_name, app.docker.restart_policy
                 )
                 if update_result["success"]:
-                    logger.info("Enabled restart policy", policy=app.docker.restart_policy)
+                    logger.info(
+                        "Enabled restart policy", policy=app.docker.restart_policy
+                    )
                 else:
                     logger.warning(
                         "Failed to update restart policy",
@@ -703,7 +731,9 @@ class DeploymentService:
             starting_duration = int((running_at - starting_started).total_seconds())
 
             details = {"networks": [], "named_volumes": [], "bind_mounts": []}
-            inspect_result = await self._agent_inspect_container(server_id, container_name)
+            inspect_result = await self._agent_inspect_container(
+                server_id, container_name
+            )
             if inspect_result["success"] and inspect_result.get("data"):
                 details = self._parse_agent_inspect_result(inspect_result["data"])
 
@@ -751,7 +781,7 @@ class DeploymentService:
                 app_id,
                 {"error": str(e)},
             )
-            raise DeploymentError(f"Deployment failed: {str(e)}")
+            raise DeploymentError(f"Deployment failed: {str(e)}") from e
 
     async def uninstall_app(
         self, server_id: str, app_id: str, remove_data: bool = True
@@ -886,7 +916,7 @@ class DeploymentService:
 
     async def cleanup_failed_deployment(
         self, server_id: str, installation_id: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Clean up a failed deployment via agent RPC."""
         cleanup_result = {
             "container_removed": False,
@@ -924,8 +954,8 @@ class DeploymentService:
                             timeout=30,
                         )
                         cleanup_result["image_removed"] = True
-                    except Exception:
-                        pass
+                    except Exception as exc:
+                        logger.debug("Failed to remove image during cleanup", error=str(exc))
 
             await self.db_service.delete_installation(server_id, installation.app_id)
             cleanup_result["record_removed"] = True
@@ -943,40 +973,40 @@ class DeploymentService:
     # -------------------------------------------------------------------------
 
     async def validate_deployment_config(
-        self, app_id: str, config: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, app_id: str, config: dict[str, Any]
+    ) -> dict[str, Any]:
         """Validate deployment configuration."""
         return await self.validator.validate_config(app_id, config)
 
     async def run_preflight_checks(
-        self, server_id: str, app_id: str, config: Dict[str, Any] = None
-    ) -> Dict[str, Any]:
+        self, server_id: str, app_id: str, config: dict[str, Any] = None
+    ) -> dict[str, Any]:
         """Run pre-flight validation."""
         return await self.validator.run_preflight_checks(server_id, app_id, config)
 
     async def get_app_status(
         self, server_id: str, app_id: str
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Get current status of an installed app."""
         return await self.status_manager.get_app_status(server_id, app_id)
 
-    async def get_installed_apps(self, server_id: str) -> List[Dict[str, Any]]:
+    async def get_installed_apps(self, server_id: str) -> list[dict[str, Any]]:
         """Get all installed apps for a server."""
         return await self.status_manager.get_installed_apps(server_id)
 
     async def get_installation_status_by_id(
         self, installation_id: str
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Get installation status by ID."""
         return await self.status_manager.get_installation_status_by_id(installation_id)
 
-    async def get_all_installations_with_details(self) -> List[Dict[str, Any]]:
+    async def get_all_installations_with_details(self) -> list[dict[str, Any]]:
         """Get all installations with details."""
         return await self.status_manager.get_all_installations_with_details()
 
     async def refresh_installation_status(
         self, install_id: str
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Refresh installation status from Docker via agent."""
         try:
             installation = await self.db_service.get_installation_by_id(install_id)
@@ -1033,17 +1063,21 @@ class DeploymentService:
             for mount in info.get("Mounts", []):
                 mount_type = mount.get("Type", "")
                 if mount_type == "volume":
-                    named_volumes.append({
-                        "name": mount.get("Name", ""),
-                        "destination": mount.get("Destination", ""),
-                        "mode": mount.get("Mode", "rw"),
-                    })
+                    named_volumes.append(
+                        {
+                            "name": mount.get("Name", ""),
+                            "destination": mount.get("Destination", ""),
+                            "mode": mount.get("Mode", "rw"),
+                        }
+                    )
                 elif mount_type == "bind":
-                    bind_mounts.append({
-                        "source": mount.get("Source", ""),
-                        "destination": mount.get("Destination", ""),
-                        "mode": mount.get("Mode", "rw"),
-                    })
+                    bind_mounts.append(
+                        {
+                            "source": mount.get("Source", ""),
+                            "destination": mount.get("Destination", ""),
+                            "mode": mount.get("Mode", "rw"),
+                        }
+                    )
 
             # Update database
             await self.db_service.update_installation(
@@ -1067,7 +1101,7 @@ class DeploymentService:
 
     async def check_container_health(
         self, server_id: str, container_name: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Check container health via agent."""
         try:
             health = {
@@ -1097,7 +1131,9 @@ class DeploymentService:
                 server_id, container_name
             )
             if inspect_result["success"] and inspect_result.get("data"):
-                ports = inspect_result["data"].get("NetworkSettings", {}).get("Ports", {})
+                ports = (
+                    inspect_result["data"].get("NetworkSettings", {}).get("Ports", {})
+                )
                 health["ports_listening"] = list(ports.keys())
 
             health["healthy"] = (
@@ -1112,7 +1148,7 @@ class DeploymentService:
 
     async def get_container_logs(
         self, server_id: str, container_name: str, tail: int = 100
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get container logs via agent."""
         try:
             agent = await self._get_agent_for_server(server_id)
@@ -1285,7 +1321,7 @@ class DeploymentService:
         message: str,
         server_id: str,
         app_id: str,
-        details: Dict[str, Any],
+        details: dict[str, Any],
     ):
         """Log activity if service is available."""
         if self.activity_service:

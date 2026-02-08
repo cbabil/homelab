@@ -5,6 +5,7 @@ Defines the sessions table for persistent session management.
 """
 
 import structlog
+
 from database.connection import DatabaseManager
 
 logger = structlog.get_logger("schema_sessions")

@@ -5,14 +5,15 @@ Tests preview_records_for_deletion, preview_log_deletion, perform_secure_deletio
 and delete_logs_batch methods.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from services.retention_service import RetentionService
+import pytest
+
 from models.retention import (
-    RetentionType,
     CleanupPreview,
+    RetentionType,
 )
+from services.retention_service import RetentionService
 
 
 @pytest.fixture
@@ -201,9 +202,7 @@ class TestPreviewLogDeletion:
             }
         )
 
-        mock_connection.execute = AsyncMock(
-            side_effect=[count_cursor, date_cursor]
-        )
+        mock_connection.execute = AsyncMock(side_effect=[count_cursor, date_cursor])
 
         with patch("services.retention_service.logger"):
             result = await retention_service._preview_log_deletion(
@@ -263,9 +262,7 @@ class TestPreviewLogDeletion:
         date_cursor = AsyncMock()
         date_cursor.fetchone = AsyncMock(return_value=None)
 
-        mock_connection.execute = AsyncMock(
-            side_effect=[count_cursor, date_cursor]
-        )
+        mock_connection.execute = AsyncMock(side_effect=[count_cursor, date_cursor])
 
         with patch("services.retention_service.logger"):
             result = await retention_service._preview_log_deletion(
@@ -400,11 +397,11 @@ class TestPerformSecureDeletion:
                 new_callable=AsyncMock,
                 side_effect=Exception("Delete error"),
             ),
+            pytest.raises(Exception) as exc_info,
         ):
-            with pytest.raises(Exception) as exc_info:
-                await retention_service._perform_secure_deletion(
-                    RetentionType.AUDIT_LOGS, "2024-01-15T00:00:00+00:00", 1000
-                )
+            await retention_service._perform_secure_deletion(
+                RetentionType.AUDIT_LOGS, "2024-01-15T00:00:00+00:00", 1000
+            )
 
         assert "Delete error" in str(exc_info.value)
         mock_logger.error.assert_called()

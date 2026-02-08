@@ -4,9 +4,10 @@ Unit tests for services/database/export_service.py
 Tests backup import and export operations.
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 from contextlib import asynccontextmanager
+from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from services.database.export_service import ExportDatabaseService
 
@@ -25,9 +26,11 @@ def export_service(mock_connection):
 
 def create_mock_context(mock_conn):
     """Create async context manager for database connection."""
+
     @asynccontextmanager
     async def context():
         yield mock_conn
+
     return context()
 
 
@@ -47,8 +50,22 @@ class TestExportUsers:
     async def test_export_users_success(self, export_service, mock_connection):
         """export_users should return list of user dicts."""
         mock_rows = [
-            {"id": "u1", "username": "admin", "email": "a@b.c", "role": "admin", "is_active": 1, "created_at": "2024-01-01"},
-            {"id": "u2", "username": "user", "email": "d@e.f", "role": "user", "is_active": 1, "created_at": "2024-01-02"},
+            {
+                "id": "u1",
+                "username": "admin",
+                "email": "a@b.c",
+                "role": "admin",
+                "is_active": 1,
+                "created_at": "2024-01-01",
+            },
+            {
+                "id": "u2",
+                "username": "user",
+                "email": "d@e.f",
+                "role": "user",
+                "is_active": 1,
+                "created_at": "2024-01-02",
+            },
         ]
         mock_cursor = AsyncMock()
         mock_cursor.fetchall.return_value = mock_rows
@@ -80,7 +97,9 @@ class TestExportUsers:
         assert result == []
 
     @pytest.mark.asyncio
-    async def test_export_users_error_returns_empty(self, export_service, mock_connection):
+    async def test_export_users_error_returns_empty(
+        self, export_service, mock_connection
+    ):
         """export_users should return empty list on error."""
         mock_conn = AsyncMock()
         mock_conn.execute.side_effect = Exception("DB error")
@@ -117,7 +136,9 @@ class TestExportServers:
         assert result[0]["name"] == "Server 1"
 
     @pytest.mark.asyncio
-    async def test_export_servers_error_returns_empty(self, export_service, mock_connection):
+    async def test_export_servers_error_returns_empty(
+        self, export_service, mock_connection
+    ):
         """export_servers should return empty list on error."""
         mock_conn = AsyncMock()
         mock_conn.execute.side_effect = Exception("DB error")
@@ -168,7 +189,9 @@ class TestExportSettings:
         assert result == {}
 
     @pytest.mark.asyncio
-    async def test_export_settings_error_returns_empty(self, export_service, mock_connection):
+    async def test_export_settings_error_returns_empty(
+        self, export_service, mock_connection
+    ):
         """export_settings should return empty dict on error."""
         mock_conn = AsyncMock()
         mock_conn.execute.side_effect = Exception("DB error")
@@ -334,7 +357,9 @@ class TestImportSettings:
         mock_conn.commit.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_import_settings_with_overwrite(self, export_service, mock_connection):
+    async def test_import_settings_with_overwrite(
+        self, export_service, mock_connection
+    ):
         """import_settings with overwrite should use INSERT OR REPLACE."""
         settings = {"theme": "dark"}
 
@@ -348,7 +373,9 @@ class TestImportSettings:
         assert "INSERT OR REPLACE" in call_args[0]
 
     @pytest.mark.asyncio
-    async def test_import_settings_without_overwrite(self, export_service, mock_connection):
+    async def test_import_settings_without_overwrite(
+        self, export_service, mock_connection
+    ):
         """import_settings without overwrite should use INSERT OR IGNORE."""
         settings = {"theme": "dark"}
 

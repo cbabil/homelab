@@ -4,17 +4,18 @@ Unit tests for services/settings_service.py - Value validation.
 Tests _validate_setting_value method with various scenarios.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from services.settings_service import SettingsService
+import pytest
+
 from models.settings import (
     SettingCategory,
-    SettingScope,
     SettingDataType,
+    SettingScope,
     SettingValue,
     SystemSetting,
 )
+from services.settings_service import SettingsService
 
 
 @pytest.fixture
@@ -51,8 +52,12 @@ def sample_system_setting():
     return SystemSetting(
         id=1,
         setting_key="ui.theme",
-        setting_value=SettingValue(raw_value='"dark"', data_type=SettingDataType.STRING),
-        default_value=SettingValue(raw_value='"light"', data_type=SettingDataType.STRING),
+        setting_value=SettingValue(
+            raw_value='"dark"', data_type=SettingDataType.STRING
+        ),
+        default_value=SettingValue(
+            raw_value='"light"', data_type=SettingDataType.STRING
+        ),
         category=SettingCategory.UI,
         scope=SettingScope.USER_OVERRIDABLE,
         data_type=SettingDataType.STRING,
@@ -86,7 +91,9 @@ class TestValidateSettingValue:
         mock_get_system_setting = AsyncMock(return_value=sample_system_setting)
         with (
             patch("services.settings_service.logger"),
-            patch.object(settings_service, "get_system_setting", mock_get_system_setting),
+            patch.object(
+                settings_service, "get_system_setting", mock_get_system_setting
+            ),
         ):
             result = await settings_service._validate_setting_value("ui.theme", "dark")
         assert result is not None
@@ -98,8 +105,10 @@ class TestValidateSettingValue:
         with (
             patch("services.settings_service.logger"),
             patch.object(
-                settings_service, "get_system_setting",
-                new_callable=AsyncMock, return_value=None,
+                settings_service,
+                "get_system_setting",
+                new_callable=AsyncMock,
+                return_value=None,
             ),
             pytest.raises(ValueError, match="System setting not found"),
         ):
@@ -111,8 +120,12 @@ class TestValidateSettingValue:
         system_setting = SystemSetting(
             id=1,
             setting_key="ui.theme",
-            setting_value=SettingValue(raw_value='"dark"', data_type=SettingDataType.STRING),
-            default_value=SettingValue(raw_value='"light"', data_type=SettingDataType.STRING),
+            setting_value=SettingValue(
+                raw_value='"dark"', data_type=SettingDataType.STRING
+            ),
+            default_value=SettingValue(
+                raw_value='"light"', data_type=SettingDataType.STRING
+            ),
             category=SettingCategory.UI,
             scope=SettingScope.USER_OVERRIDABLE,
             data_type=SettingDataType.STRING,
@@ -132,8 +145,12 @@ class TestValidateSettingValue:
         system_setting = SystemSetting(
             id=1,
             setting_key="ui.theme",
-            setting_value=SettingValue(raw_value='"dark"', data_type=SettingDataType.STRING),
-            default_value=SettingValue(raw_value='"light"', data_type=SettingDataType.STRING),
+            setting_value=SettingValue(
+                raw_value='"dark"', data_type=SettingDataType.STRING
+            ),
+            default_value=SettingValue(
+                raw_value='"light"', data_type=SettingDataType.STRING
+            ),
             category=SettingCategory.UI,
             scope=SettingScope.USER_OVERRIDABLE,
             data_type=SettingDataType.STRING,
@@ -157,8 +174,10 @@ class TestValidateSettingValue:
         with (
             patch("services.settings_service.logger") as mock_logger,
             patch.object(
-                settings_service, "get_system_setting",
-                new_callable=AsyncMock, side_effect=Exception("DB error"),
+                settings_service,
+                "get_system_setting",
+                new_callable=AsyncMock,
+                side_effect=Exception("DB error"),
             ),
             pytest.raises(Exception),
         ):
@@ -166,13 +185,19 @@ class TestValidateSettingValue:
         mock_logger.error.assert_called()
 
     @pytest.mark.asyncio
-    async def test_validate_setting_value_jsonschema_import_error(self, settings_service):
+    async def test_validate_setting_value_jsonschema_import_error(
+        self, settings_service
+    ):
         """_validate_setting_value should handle jsonschema ImportError."""
         system_setting = SystemSetting(
             id=1,
             setting_key="ui.theme",
-            setting_value=SettingValue(raw_value='"dark"', data_type=SettingDataType.STRING),
-            default_value=SettingValue(raw_value='"light"', data_type=SettingDataType.STRING),
+            setting_value=SettingValue(
+                raw_value='"dark"', data_type=SettingDataType.STRING
+            ),
+            default_value=SettingValue(
+                raw_value='"light"', data_type=SettingDataType.STRING
+            ),
             category=SettingCategory.UI,
             scope=SettingScope.USER_OVERRIDABLE,
             data_type=SettingDataType.STRING,
@@ -183,6 +208,7 @@ class TestValidateSettingValue:
 
         # Mock the import to raise ImportError
         import builtins
+
         original_import = builtins.__import__
 
         def mock_import(name, *args, **kwargs):

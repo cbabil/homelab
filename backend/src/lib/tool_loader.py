@@ -19,11 +19,11 @@ from __future__ import annotations
 
 import importlib
 import inspect
+from collections.abc import Mapping
 from pathlib import Path
-from typing import Any, List, Mapping, Tuple, Type
+from typing import Any
 
 import structlog
-
 
 logger = structlog.get_logger("tool_loader")
 SRC_ROOT = Path(__file__).resolve().parents[1]
@@ -37,10 +37,14 @@ def _resolve_tools_path(tools_directory: str | None) -> Path:
         return DEFAULT_TOOLS_DIRECTORY
 
     candidate = Path(tools_directory)
-    return candidate.resolve() if candidate.is_absolute() else (SRC_ROOT / candidate).resolve()
+    return (
+        candidate.resolve()
+        if candidate.is_absolute()
+        else (SRC_ROOT / candidate).resolve()
+    )
 
 
-def _discover_tool_packages(tools_path: Path) -> List[str]:
+def _discover_tool_packages(tools_path: Path) -> list[str]:
     """Discover tool subpackages (directories with __init__.py).
 
     Args:
@@ -49,7 +53,7 @@ def _discover_tool_packages(tools_path: Path) -> List[str]:
     Returns:
         List of subpackage names (e.g., ['auth', 'server', 'docker'])
     """
-    packages: List[str] = []
+    packages: list[str] = []
 
     if not tools_path.exists():
         raise FileNotFoundError(f"Tools directory not found: {tools_path}")
@@ -63,7 +67,7 @@ def _discover_tool_packages(tools_path: Path) -> List[str]:
     return sorted(packages)
 
 
-def _find_tools_class(module: Any) -> Tuple[str, Type] | None:
+def _find_tools_class(module: Any) -> tuple[str, type] | None:
     """Find a *Tools class in the module.
 
     Args:
@@ -79,9 +83,7 @@ def _find_tools_class(module: Any) -> Tuple[str, Type] | None:
 
 
 def _instantiate_tools_class(
-    cls: Type,
-    class_name: str,
-    dependencies: Mapping[str, Any]
+    cls: type, class_name: str, dependencies: Mapping[str, Any]
 ) -> Any:
     """Instantiate a Tools class with dependencies from constructor signature.
 
@@ -112,7 +114,7 @@ def _instantiate_tools_class(
     return cls(**kwargs)
 
 
-def _get_public_methods(instance: Any) -> List[Tuple[str, Any]]:
+def _get_public_methods(instance: Any) -> list[tuple[str, Any]]:
     """Get all public methods from a class instance.
 
     Args:

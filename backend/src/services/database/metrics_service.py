@@ -4,11 +4,12 @@ Database operations for server metrics, container metrics, and activity logs.
 """
 
 import json
-from typing import Any, List, Optional
+from typing import Any
 
 import structlog
 
-from models.metrics import ServerMetrics, ContainerMetrics, ActivityLog, ActivityType
+from models.metrics import ActivityLog, ActivityType, ContainerMetrics, ServerMetrics
+
 from .base import DatabaseConnection
 
 logger = structlog.get_logger("database.metrics")
@@ -64,12 +65,12 @@ class MetricsDatabaseService:
             return False
 
     async def get_server_metrics(
-        self, server_id: str, since: Optional[str] = None, limit: int = 100
-    ) -> List[ServerMetrics]:
+        self, server_id: str, since: str | None = None, limit: int = 100
+    ) -> list[ServerMetrics]:
         """Get server metrics from database."""
         try:
             query = "SELECT * FROM server_metrics WHERE server_id = ?"
-            params: List[Any] = [server_id]
+            params: list[Any] = [server_id]
 
             if since:
                 query += " AND timestamp >= ?"
@@ -142,14 +143,14 @@ class MetricsDatabaseService:
     async def get_container_metrics(
         self,
         server_id: str,
-        container_name: Optional[str] = None,
-        since: Optional[str] = None,
+        container_name: str | None = None,
+        since: str | None = None,
         limit: int = 100,
-    ) -> List[ContainerMetrics]:
+    ) -> list[ContainerMetrics]:
         """Get container metrics from database."""
         try:
             query = "SELECT * FROM container_metrics WHERE server_id = ?"
-            params: List[Any] = [server_id]
+            params: list[Any] = [server_id]
 
             if container_name:
                 query += " AND container_name = ?"
@@ -216,18 +217,18 @@ class MetricsDatabaseService:
 
     async def get_activity_logs(
         self,
-        activity_types: Optional[List[str]] = None,
-        user_id: Optional[str] = None,
-        server_id: Optional[str] = None,
-        since: Optional[str] = None,
-        until: Optional[str] = None,
+        activity_types: list[str] | None = None,
+        user_id: str | None = None,
+        server_id: str | None = None,
+        since: str | None = None,
+        until: str | None = None,
         limit: int = 100,
         offset: int = 0,
-    ) -> List[ActivityLog]:
+    ) -> list[ActivityLog]:
         """Get activity logs from database."""
         try:
             query = "SELECT * FROM activity_logs WHERE 1=1"
-            params: List[Any] = []
+            params: list[Any] = []
 
             if activity_types:
                 placeholders = ",".join("?" * len(activity_types))
@@ -275,12 +276,12 @@ class MetricsDatabaseService:
             return []
 
     async def count_activity_logs(
-        self, activity_types: Optional[List[str]] = None, since: Optional[str] = None
+        self, activity_types: list[str] | None = None, since: str | None = None
     ) -> int:
         """Count activity logs matching filters."""
         try:
             query = "SELECT COUNT(*) as count FROM activity_logs WHERE 1=1"
-            params: List[Any] = []
+            params: list[Any] = []
 
             if activity_types:
                 placeholders = ",".join("?" * len(activity_types))

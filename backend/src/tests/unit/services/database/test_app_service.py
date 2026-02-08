@@ -4,12 +4,13 @@ Unit tests for services/database/app_service.py.
 Tests AppDatabaseService methods.
 """
 
-import pytest
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from services.database.app_service import AppDatabaseService
+import pytest
+
 from models.app_catalog import InstallationStatus
+from services.database.app_service import AppDatabaseService
 
 
 @pytest.fixture
@@ -26,9 +27,11 @@ def service(mock_connection):
 
 def create_mock_context(mock_conn):
     """Create async context manager for database connection."""
+
     @asynccontextmanager
     async def context():
         yield mock_conn
+
     return context()
 
 
@@ -73,6 +76,7 @@ def sample_installation_row_with_extras():
 
 class MockRow(dict):
     """Mock row that supports keys() method."""
+
     def keys(self):
         return super().keys()
 
@@ -138,8 +142,13 @@ class TestCreateInstallation:
 
         with patch("services.database.app_service.logger"):
             result = await service.create_installation(
-                id="install-123", server_id="s", app_id="a",
-                container_name="c", status="s", config={}, installed_at="t"
+                id="install-123",
+                server_id="s",
+                app_id="a",
+                container_name="c",
+                status="s",
+                config={},
+                installed_at="t",
             )
 
         assert result is None
@@ -172,7 +181,9 @@ class TestUpdateInstallation:
     async def test_update_installation_invalid_column(self, service, mock_connection):
         """update_installation should reject invalid column names."""
         with patch("services.database.app_service.logger"):
-            result = await service.update_installation("install-123", invalid_col="value")
+            result = await service.update_installation(
+                "install-123", invalid_col="value"
+            )
 
         assert result is False
 
@@ -206,7 +217,9 @@ class TestGetInstallation:
     """Tests for get_installation method."""
 
     @pytest.mark.asyncio
-    async def test_get_installation_found(self, service, mock_connection, sample_installation_row):
+    async def test_get_installation_found(
+        self, service, mock_connection, sample_installation_row
+    ):
         """get_installation should return InstalledApp when found."""
         mock_cursor = AsyncMock()
         mock_cursor.fetchone = AsyncMock(return_value=sample_installation_row)
@@ -235,7 +248,9 @@ class TestGetInstallation:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_get_installation_casaos_fallback(self, service, mock_connection, sample_installation_row):
+    async def test_get_installation_casaos_fallback(
+        self, service, mock_connection, sample_installation_row
+    ):
         """get_installation should try casaos prefix if not found."""
         mock_cursor = AsyncMock()
         mock_cursor.fetchone = AsyncMock(side_effect=[None, sample_installation_row])
@@ -250,7 +265,9 @@ class TestGetInstallation:
         assert mock_conn.execute.call_count == 2
 
     @pytest.mark.asyncio
-    async def test_get_installation_already_casaos_prefix(self, service, mock_connection):
+    async def test_get_installation_already_casaos_prefix(
+        self, service, mock_connection
+    ):
         """get_installation should not try fallback if already has casaos prefix."""
         mock_cursor = AsyncMock()
         mock_cursor.fetchone = AsyncMock(return_value=None)
@@ -265,7 +282,9 @@ class TestGetInstallation:
         assert mock_conn.execute.call_count == 1
 
     @pytest.mark.asyncio
-    async def test_get_installation_empty_config(self, service, mock_connection, sample_installation_row):
+    async def test_get_installation_empty_config(
+        self, service, mock_connection, sample_installation_row
+    ):
         """get_installation should handle empty config."""
         row = dict(sample_installation_row)
         row["config"] = None
@@ -295,7 +314,9 @@ class TestGetInstallationById:
     """Tests for get_installation_by_id method."""
 
     @pytest.mark.asyncio
-    async def test_get_installation_by_id_found(self, service, mock_connection, sample_installation_row_with_extras):
+    async def test_get_installation_by_id_found(
+        self, service, mock_connection, sample_installation_row_with_extras
+    ):
         """get_installation_by_id should return InstalledApp when found."""
         row = MockRow(sample_installation_row_with_extras)
         mock_cursor = AsyncMock()
@@ -326,7 +347,9 @@ class TestGetInstallationById:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_get_installation_by_id_minimal_row(self, service, mock_connection, sample_installation_row):
+    async def test_get_installation_by_id_minimal_row(
+        self, service, mock_connection, sample_installation_row
+    ):
         """get_installation_by_id should handle row without optional fields."""
         row = MockRow(sample_installation_row)
         mock_cursor = AsyncMock()
@@ -356,7 +379,9 @@ class TestGetInstallations:
     """Tests for get_installations method."""
 
     @pytest.mark.asyncio
-    async def test_get_installations_success(self, service, mock_connection, sample_installation_row):
+    async def test_get_installations_success(
+        self, service, mock_connection, sample_installation_row
+    ):
         """get_installations should return list of installations."""
         mock_cursor = AsyncMock()
         mock_cursor.fetchall = AsyncMock(return_value=[sample_installation_row])
@@ -398,7 +423,9 @@ class TestGetAllInstallations:
     """Tests for get_all_installations method."""
 
     @pytest.mark.asyncio
-    async def test_get_all_installations_success(self, service, mock_connection, sample_installation_row_with_extras):
+    async def test_get_all_installations_success(
+        self, service, mock_connection, sample_installation_row_with_extras
+    ):
         """get_all_installations should return all installations."""
         row = MockRow(sample_installation_row_with_extras)
         mock_cursor = AsyncMock()

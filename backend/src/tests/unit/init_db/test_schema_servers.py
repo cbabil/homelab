@@ -5,10 +5,10 @@ Tests for schema_servers.py - SQL schema and getter functions.
 """
 
 from init_db.schema_servers import (
-    SERVERS_SCHEMA,
     SERVERS_MIGRATION_V2,
-    get_servers_schema,
+    SERVERS_SCHEMA,
     get_servers_migration_v2,
+    get_servers_schema,
 )
 
 

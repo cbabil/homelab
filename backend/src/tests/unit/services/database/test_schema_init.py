@@ -4,9 +4,10 @@ Unit tests for services/database/schema_init.py.
 Tests SchemaInitializer methods.
 """
 
-import pytest
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from services.database.schema_init import SchemaInitializer
 
@@ -25,9 +26,11 @@ def initializer(mock_connection):
 
 def create_mock_context(mock_conn):
     """Create async context manager for database connection."""
+
     @asynccontextmanager
     async def context():
         yield mock_conn
+
     return context()
 
 
@@ -44,13 +47,13 @@ class TestInitializeAllTables:
     """Tests for initialize_all_tables method."""
 
     @pytest.mark.asyncio
-    async def test_initialize_all_tables_success(
-        self, initializer, mock_connection
-    ):
+    async def test_initialize_all_tables_success(self, initializer, mock_connection):
         """initialize_all_tables should return True when all succeed."""
         mock_conn = AsyncMock()
         # Each call should return a fresh context
-        mock_connection.get_connection.side_effect = lambda: create_mock_context(mock_conn)
+        mock_connection.get_connection.side_effect = lambda: create_mock_context(
+            mock_conn
+        )
 
         with patch("services.database.schema_init.logger"):
             result = await initializer.initialize_all_tables()
@@ -459,9 +462,7 @@ class TestRunInstalledAppsMigrations:
         # Should not raise, should log and continue
 
     @pytest.mark.asyncio
-    async def test_run_migrations_outer_exception(
-        self, initializer, mock_connection
-    ):
+    async def test_run_migrations_outer_exception(self, initializer, mock_connection):
         """run_installed_apps_migrations should handle outer exception."""
         mock_connection.get_connection.side_effect = Exception("Connection failed")
 
@@ -540,9 +541,7 @@ class TestRunUsersMigrations:
         # Should not raise
 
     @pytest.mark.asyncio
-    async def test_run_migrations_outer_exception(
-        self, initializer, mock_connection
-    ):
+    async def test_run_migrations_outer_exception(self, initializer, mock_connection):
         """run_users_migrations should handle outer exception."""
         mock_connection.get_connection.side_effect = Exception("Connection failed")
 

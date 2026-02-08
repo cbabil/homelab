@@ -4,16 +4,17 @@ Unit tests for models/session.py
 Tests session models including status, session data, and responses.
 """
 
-from datetime import datetime, UTC, timedelta
+from datetime import UTC, datetime, timedelta
+
 import pytest
 from pydantic import ValidationError
 
 from models.session import (
-    SessionStatus,
     Session,
     SessionCreate,
-    SessionUpdate,
     SessionListResponse,
+    SessionStatus,
+    SessionUpdate,
 )
 
 

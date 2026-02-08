@@ -4,12 +4,13 @@ Unit tests for services/database/server_service.py.
 Tests ServerDatabaseService methods.
 """
 
-import pytest
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from services.database.server_service import ServerDatabaseService
+import pytest
+
 from models.server import ServerStatus
+from services.database.server_service import ServerDatabaseService
 
 
 @pytest.fixture
@@ -26,9 +27,11 @@ def service(mock_connection):
 
 def create_mock_context(mock_conn):
     """Create async context manager for database connection."""
+
     @asynccontextmanager
     async def context():
         yield mock_conn
+
     return context()
 
 
@@ -93,8 +96,13 @@ class TestCreateServer:
 
         with patch("services.database.server_service.logger"):
             result = await service.create_server(
-                id="s", name="n", host="h", port=22,
-                username="u", auth_type="password", encrypted_credentials="e"
+                id="s",
+                name="n",
+                host="h",
+                port=22,
+                username="u",
+                auth_type="password",
+                encrypted_credentials="e",
             )
 
         assert result is None
@@ -104,7 +112,9 @@ class TestGetServerByConnection:
     """Tests for get_server_by_connection method."""
 
     @pytest.mark.asyncio
-    async def test_get_server_by_connection_found(self, service, mock_connection, sample_server_row):
+    async def test_get_server_by_connection_found(
+        self, service, mock_connection, sample_server_row
+    ):
         """get_server_by_connection should return server when found."""
         mock_cursor = AsyncMock()
         mock_cursor.fetchone = AsyncMock(return_value=sample_server_row)
@@ -113,7 +123,9 @@ class TestGetServerByConnection:
         mock_connection.get_connection.return_value = create_mock_context(mock_conn)
 
         with patch("services.database.server_service.logger"):
-            result = await service.get_server_by_connection("192.168.1.100", 22, "admin")
+            result = await service.get_server_by_connection(
+                "192.168.1.100", 22, "admin"
+            )
 
         assert result is not None
         assert result.host == "192.168.1.100"
@@ -134,7 +146,9 @@ class TestGetServerByConnection:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_get_server_by_connection_invalid_system_info(self, service, mock_connection, sample_server_row):
+    async def test_get_server_by_connection_invalid_system_info(
+        self, service, mock_connection, sample_server_row
+    ):
         """get_server_by_connection should handle invalid system_info JSON."""
         row = dict(sample_server_row)
         row["system_info"] = "invalid json"
@@ -145,13 +159,17 @@ class TestGetServerByConnection:
         mock_connection.get_connection.return_value = create_mock_context(mock_conn)
 
         with patch("services.database.server_service.logger"):
-            result = await service.get_server_by_connection("192.168.1.100", 22, "admin")
+            result = await service.get_server_by_connection(
+                "192.168.1.100", 22, "admin"
+            )
 
         assert result is not None
         assert result.system_info is None
 
     @pytest.mark.asyncio
-    async def test_get_server_by_connection_null_system_info(self, service, mock_connection, sample_server_row):
+    async def test_get_server_by_connection_null_system_info(
+        self, service, mock_connection, sample_server_row
+    ):
         """get_server_by_connection should handle null system_info."""
         row = dict(sample_server_row)
         row["system_info"] = None
@@ -163,7 +181,9 @@ class TestGetServerByConnection:
         mock_connection.get_connection.return_value = create_mock_context(mock_conn)
 
         with patch("services.database.server_service.logger"):
-            result = await service.get_server_by_connection("192.168.1.100", 22, "admin")
+            result = await service.get_server_by_connection(
+                "192.168.1.100", 22, "admin"
+            )
 
         assert result is not None
         assert result.system_info is None
@@ -184,7 +204,9 @@ class TestGetServerById:
     """Tests for get_server_by_id method."""
 
     @pytest.mark.asyncio
-    async def test_get_server_by_id_found(self, service, mock_connection, sample_server_row):
+    async def test_get_server_by_id_found(
+        self, service, mock_connection, sample_server_row
+    ):
         """get_server_by_id should return server when found."""
         mock_cursor = AsyncMock()
         mock_cursor.fetchone = AsyncMock(return_value=sample_server_row)
@@ -223,11 +245,13 @@ class TestGetServerById:
         assert result is None
 
     @pytest.mark.asyncio
-    async def test_get_server_by_id_type_error_in_system_info(self, service, mock_connection, sample_server_row):
+    async def test_get_server_by_id_type_error_in_system_info(
+        self, service, mock_connection, sample_server_row
+    ):
         """get_server_by_id should handle TypeError when system_info is non-dict JSON."""
         row = dict(sample_server_row)
         # Valid JSON but not a dict - will cause TypeError when unpacking with **
-        row["system_info"] = '[1, 2, 3]'
+        row["system_info"] = "[1, 2, 3]"
         mock_cursor = AsyncMock()
         mock_cursor.fetchone = AsyncMock(return_value=row)
         mock_conn = AsyncMock()
@@ -245,7 +269,9 @@ class TestGetAllServersFromDb:
     """Tests for get_all_servers_from_db method."""
 
     @pytest.mark.asyncio
-    async def test_get_all_servers_success(self, service, mock_connection, sample_server_row):
+    async def test_get_all_servers_success(
+        self, service, mock_connection, sample_server_row
+    ):
         """get_all_servers_from_db should return list of servers."""
         mock_cursor = AsyncMock()
         mock_cursor.fetchall = AsyncMock(return_value=[sample_server_row])
@@ -274,7 +300,9 @@ class TestGetAllServersFromDb:
         assert result == []
 
     @pytest.mark.asyncio
-    async def test_get_all_servers_invalid_system_info(self, service, mock_connection, sample_server_row):
+    async def test_get_all_servers_invalid_system_info(
+        self, service, mock_connection, sample_server_row
+    ):
         """get_all_servers_from_db should handle invalid system_info."""
         row = dict(sample_server_row)
         row["system_info"] = "not json"

@@ -6,11 +6,12 @@ Database operations for user authentication and management.
 import json
 import uuid
 from datetime import UTC, datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import structlog
 
 from models.auth import User, UserRole
+
 from .base import DatabaseConnection
 
 logger = structlog.get_logger("database.user")
@@ -28,8 +29,8 @@ class UserDatabaseService:
         self._conn = connection
 
     async def get_user(
-        self, user_id: Optional[str] = None, username: Optional[str] = None
-    ) -> Optional[User]:
+        self, user_id: str | None = None, username: str | None = None
+    ) -> User | None:
         """Get user from database by ID or username.
 
         Args:
@@ -108,15 +109,15 @@ class UserDatabaseService:
             )
             return None
 
-    async def get_user_by_username(self, username: str) -> Optional[User]:
+    async def get_user_by_username(self, username: str) -> User | None:
         """Get user by username. Wrapper for get_user()."""
         return await self.get_user(username=username)
 
-    async def get_user_by_id(self, user_id: str) -> Optional[User]:
+    async def get_user_by_id(self, user_id: str) -> User | None:
         """Get user by ID. Wrapper for get_user()."""
         return await self.get_user(user_id=user_id)
 
-    async def get_user_password_hash(self, username: str) -> Optional[str]:
+    async def get_user_password_hash(self, username: str) -> str | None:
         """Get user's password hash from database."""
         try:
             async with self._conn.get_connection() as conn:
@@ -138,7 +139,7 @@ class UserDatabaseService:
             return None
 
     async def update_user_last_login(
-        self, username: str, timestamp: Optional[str] = None
+        self, username: str, timestamp: str | None = None
     ) -> bool:
         """Update user's last login timestamp."""
         if timestamp is None:
@@ -163,7 +164,7 @@ class UserDatabaseService:
             logger.error("Failed to update last login", username=username, error=str(e))
             return False
 
-    async def get_all_users(self) -> List[User]:
+    async def get_all_users(self) -> list[User]:
         """Get all active users from database."""
         try:
             async with self._conn.get_connection() as conn:
@@ -209,8 +210,8 @@ class UserDatabaseService:
         password_hash: str,
         email: str = "",
         role: UserRole = UserRole.USER,
-        preferences: Optional[Dict[str, Any]] = None,
-    ) -> Optional[User]:
+        preferences: dict[str, Any] | None = None,
+    ) -> User | None:
         """Create a new user in the database. Email is optional."""
         try:
             user_id = str(uuid.uuid4())
@@ -306,7 +307,7 @@ class UserDatabaseService:
             return False
 
     async def update_user_preferences(
-        self, user_id: str, preferences: Dict[str, Any]
+        self, user_id: str, preferences: dict[str, Any]
     ) -> bool:
         """Update user preferences in database."""
         try:
@@ -328,7 +329,7 @@ class UserDatabaseService:
             )
             return False
 
-    async def update_user_avatar(self, user_id: str, avatar: Optional[str]) -> bool:
+    async def update_user_avatar(self, user_id: str, avatar: str | None) -> bool:
         """Update user avatar in database.
 
         Args:

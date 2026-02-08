@@ -6,12 +6,13 @@ update_user_preferences, and update_user_avatar.
 """
 
 import json
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
 from contextlib import asynccontextmanager
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from services.database.user_service import UserDatabaseService
+import pytest
+
 from models.auth import UserRole
+from services.database.user_service import UserDatabaseService
 
 
 @pytest.fixture

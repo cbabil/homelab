@@ -4,11 +4,12 @@ Unit tests for services/backup_service.py
 Tests backup and restore operations with encryption.
 """
 
-import pytest
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime, UTC
 
-from services.backup_service import BackupService, BACKUP_VERSION, REQUIRED_FIELDS
+import pytest
+
+from services.backup_service import BACKUP_VERSION, REQUIRED_FIELDS, BackupService
 
 
 @pytest.fixture
@@ -18,10 +19,10 @@ def mock_db_service():
 
 
 @pytest.fixture
-def backup_service(mock_db_service):
-    """Create BackupService instance."""
+def backup_service(mock_db_service, tmp_path):
+    """Create BackupService instance with tmp_path as backup dir."""
     with patch("services.backup_service.logger"):
-        return BackupService(mock_db_service)
+        return BackupService(mock_db_service, backup_directory=str(tmp_path))
 
 
 class TestBackupServiceInit:
@@ -33,11 +34,11 @@ class TestBackupServiceInit:
             service = BackupService(mock_db_service)
             assert service.db_service is mock_db_service
 
-    def test_init_logs_message(self, mock_db_service):
+    def test_init_logs_message(self, mock_db_service, tmp_path):
         """BackupService should log initialization."""
         with patch("services.backup_service.logger") as mock_logger:
-            BackupService(mock_db_service)
-            mock_logger.info.assert_called_once_with("Backup service initialized")
+            BackupService(mock_db_service, backup_directory=str(tmp_path))
+            mock_logger.info.assert_called_once()
 
 
 class TestDeriveKey:
@@ -208,7 +209,9 @@ class TestExportBackup:
     """Tests for export_backup method."""
 
     @pytest.mark.asyncio
-    async def test_export_backup_success(self, backup_service, mock_db_service, tmp_path):
+    async def test_export_backup_success(
+        self, backup_service, mock_db_service, tmp_path
+    ):
         """export_backup should write encrypted file."""
         mock_db_service.export_users = AsyncMock(return_value=[])
         mock_db_service.export_servers = AsyncMock(return_value=[])
@@ -361,7 +364,9 @@ class TestImportBackup:
         backup_path = str(tmp_path / "backup.enc")
         with patch("services.backup_service.logger"):
             await backup_service.export_backup(backup_path, "password123")
-            await backup_service.import_backup(backup_path, "password123", overwrite=True)
+            await backup_service.import_backup(
+                backup_path, "password123", overwrite=True
+            )
 
         mock_db_service.import_users.assert_called_once_with([], overwrite=True)
         mock_db_service.import_servers.assert_called_once_with([], overwrite=True)

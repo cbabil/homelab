@@ -4,10 +4,10 @@ Unit tests for services/database/system_service.py
 Tests system info and component version database operations.
 """
 
-import pytest
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 
 from services.database.system_service import SystemDatabaseService
 

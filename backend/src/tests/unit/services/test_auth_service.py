@@ -4,11 +4,12 @@ Auth Service Unit Tests
 Tests for authentication service.
 """
 
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from services.auth_service import AuthService
+import pytest
+
 from models.auth import User, UserRole
+from services.auth_service import AuthService
 
 
 @pytest.fixture
@@ -50,8 +51,10 @@ class TestAuthServiceInit:
 
     def test_init_from_env(self, mock_db_service, mock_session_service):
         """AuthService should get jwt_secret from environment."""
-        with patch.dict("os.environ", {"JWT_SECRET_KEY": "env-secret"}), \
-             patch("services.auth_service.logger"):
+        with (
+            patch.dict("os.environ", {"JWT_SECRET_KEY": "env-secret"}),
+            patch("services.auth_service.logger"),
+        ):
             service = AuthService(
                 db_service=mock_db_service,
                 session_service=mock_session_service,
@@ -60,8 +63,10 @@ class TestAuthServiceInit:
 
     def test_init_raises_without_secret(self, mock_db_service):
         """AuthService should raise ValueError without jwt_secret."""
-        with patch.dict("os.environ", {}, clear=True), \
-             patch("services.auth_service.logger"):
+        with (
+            patch.dict("os.environ", {}, clear=True),
+            patch("services.auth_service.logger"),
+        ):
             # Clear the JWT_SECRET_KEY env var
             with patch("os.getenv", return_value=None):
                 with pytest.raises(ValueError) as exc_info:
@@ -70,17 +75,21 @@ class TestAuthServiceInit:
 
     def test_init_creates_default_db_service(self):
         """AuthService should create DatabaseService if not provided."""
-        with patch("services.auth_service.DatabaseService") as MockDB, \
-             patch("services.auth_service.SessionService"), \
-             patch("services.auth_service.logger"):
+        with (
+            patch("services.auth_service.DatabaseService") as MockDB,
+            patch("services.auth_service.SessionService"),
+            patch("services.auth_service.logger"),
+        ):
             MockDB.return_value = MagicMock()
             AuthService(jwt_secret="secret")
             MockDB.assert_called_once()
 
     def test_init_creates_session_service(self, mock_db_service):
         """AuthService should create SessionService if not provided."""
-        with patch("services.auth_service.SessionService") as MockSS, \
-             patch("services.auth_service.logger"):
+        with (
+            patch("services.auth_service.SessionService") as MockSS,
+            patch("services.auth_service.logger"),
+        ):
             MockSS.return_value = MagicMock()
             AuthService(jwt_secret="secret", db_service=mock_db_service)
             MockSS.assert_called_once_with(db_service=mock_db_service)
@@ -101,18 +110,14 @@ class TestHasAdminUser:
     """Tests for the has_admin_user method."""
 
     @pytest.mark.asyncio
-    async def test_has_admin_user_returns_false(
-        self, auth_service, mock_db_service
-    ):
+    async def test_has_admin_user_returns_false(self, auth_service, mock_db_service):
         """has_admin_user should return False when no admins."""
         mock_db_service.has_admin_user = AsyncMock(return_value=False)
         result = await auth_service.has_admin_user()
         assert result is False
 
     @pytest.mark.asyncio
-    async def test_has_admin_user_returns_true(
-        self, auth_service, mock_db_service
-    ):
+    async def test_has_admin_user_returns_true(self, auth_service, mock_db_service):
         """has_admin_user should return True when admin exists."""
         mock_db_service.has_admin_user = AsyncMock(return_value=True)
         result = await auth_service.has_admin_user()
@@ -147,8 +152,10 @@ class TestLogSecurityEvent:
     @pytest.mark.asyncio
     async def test_log_security_event_success(self, auth_service):
         """_log_security_event should log event successfully."""
-        with patch("services.auth_service.log_service") as mock_log, \
-             patch("services.auth_service.logger"):
+        with (
+            patch("services.auth_service.log_service") as mock_log,
+            patch("services.auth_service.logger"),
+        ):
             mock_log.create_log_entry = AsyncMock()
             await auth_service._log_security_event(
                 "LOGIN", "testuser", True, "192.168.1.1", "Mozilla/5.0"
@@ -158,23 +165,23 @@ class TestLogSecurityEvent:
     @pytest.mark.asyncio
     async def test_log_security_event_failed_login(self, auth_service):
         """_log_security_event should log failed event with WARNING level."""
-        with patch("services.auth_service.log_service") as mock_log, \
-             patch("services.auth_service.logger"):
+        with (
+            patch("services.auth_service.log_service") as mock_log,
+            patch("services.auth_service.logger"),
+        ):
             mock_log.create_log_entry = AsyncMock()
-            await auth_service._log_security_event(
-                "LOGIN", "testuser", False
-            )
+            await auth_service._log_security_event("LOGIN", "testuser", False)
             call_args = mock_log.create_log_entry.call_args[0][0]
             assert call_args.level == "WARNING"
 
     @pytest.mark.asyncio
     async def test_log_security_event_handles_error(self, auth_service):
         """_log_security_event should handle errors gracefully."""
-        with patch("services.auth_service.log_service") as mock_log, \
-             patch("services.auth_service.logger"):
-            mock_log.create_log_entry = AsyncMock(
-                side_effect=Exception("Log error")
-            )
+        with (
+            patch("services.auth_service.log_service") as mock_log,
+            patch("services.auth_service.logger"),
+        ):
+            mock_log.create_log_entry = AsyncMock(side_effect=Exception("Log error"))
             # Should not raise
             await auth_service._log_security_event("LOGIN", "testuser", True)
 
@@ -183,9 +190,7 @@ class TestGetSecuritySettings:
     """Tests for _get_security_settings method."""
 
     @pytest.mark.asyncio
-    async def test_get_security_settings_from_db(
-        self, auth_service, mock_db_service
-    ):
+    async def test_get_security_settings_from_db(self, auth_service, mock_db_service):
         """_get_security_settings should load settings from database."""
         import json
 
@@ -215,9 +220,7 @@ class TestGetSecuritySettings:
         self, auth_service, mock_db_service
     ):
         """_get_security_settings should use defaults on error."""
-        mock_db_service.get_connection = MagicMock(
-            side_effect=Exception("DB error")
-        )
+        mock_db_service.get_connection = MagicMock(side_effect=Exception("DB error"))
 
         with patch("services.auth_service.logger"):
             max_attempts, lock_duration = await auth_service._get_security_settings()
@@ -326,9 +329,7 @@ class TestGetUserWrappers:
     """Tests for backward compatibility wrappers."""
 
     @pytest.mark.asyncio
-    async def test_get_user_by_username_wrapper(
-        self, auth_service, mock_db_service
-    ):
+    async def test_get_user_by_username_wrapper(self, auth_service, mock_db_service):
         """get_user_by_username should delegate to get_user."""
         mock_user = MagicMock(spec=User)
         mock_db_service.get_user = AsyncMock(return_value=mock_user)
@@ -372,8 +373,10 @@ class TestCreateUser:
         mock_user = MagicMock(spec=User)
         mock_db_service.create_user = AsyncMock(return_value=mock_user)
 
-        with patch("services.auth_service.logger"), \
-             patch("lib.auth_helpers.hash_password", return_value="hashed-pwd"):
+        with (
+            patch("services.auth_service.logger"),
+            patch("lib.auth_helpers.hash_password", return_value="hashed-pwd"),
+        ):
             result = await auth_service.create_user(
                 username="newuser",
                 password="password123",
@@ -394,8 +397,10 @@ class TestCreateUser:
         """create_user should use USER role by default."""
         mock_db_service.create_user = AsyncMock(return_value=MagicMock())
 
-        with patch("services.auth_service.logger"), \
-             patch("lib.auth_helpers.hash_password", return_value="hashed"):
+        with (
+            patch("services.auth_service.logger"),
+            patch("lib.auth_helpers.hash_password", return_value="hashed"),
+        ):
             await auth_service.create_user(
                 username="newuser",
                 password="password123",
@@ -407,12 +412,12 @@ class TestCreateUser:
     @pytest.mark.asyncio
     async def test_create_user_error(self, auth_service, mock_db_service):
         """create_user should return None on error."""
-        mock_db_service.create_user = AsyncMock(
-            side_effect=Exception("DB error")
-        )
+        mock_db_service.create_user = AsyncMock(side_effect=Exception("DB error"))
 
-        with patch("services.auth_service.logger"), \
-             patch("lib.auth_helpers.hash_password", return_value="hashed"):
+        with (
+            patch("services.auth_service.logger"),
+            patch("lib.auth_helpers.hash_password", return_value="hashed"),
+        ):
             result = await auth_service.create_user(
                 username="newuser",
                 password="password123",

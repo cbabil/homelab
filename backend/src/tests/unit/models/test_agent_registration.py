@@ -5,20 +5,21 @@ Tests RegistrationCode, AgentRegistrationRequest, AgentRegistrationResponse,
 AgentInfo, AgentHeartbeat, AgentVersionInfo, AgentShutdownRequest models.
 """
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
+
 import pytest
 from pydantic import ValidationError
 
 from models.agent import (
-    AgentStatus,
     AgentConfig,
-    RegistrationCode,
+    AgentHeartbeat,
+    AgentInfo,
     AgentRegistrationRequest,
     AgentRegistrationResponse,
-    AgentInfo,
-    AgentHeartbeat,
-    AgentVersionInfo,
     AgentShutdownRequest,
+    AgentStatus,
+    AgentVersionInfo,
+    RegistrationCode,
 )
 
 

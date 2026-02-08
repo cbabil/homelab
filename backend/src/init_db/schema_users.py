@@ -5,6 +5,7 @@ Defines the users table for authentication and user management.
 """
 
 import structlog
+
 from database.connection import DatabaseManager
 
 logger = structlog.get_logger("schema_users")
@@ -43,7 +44,7 @@ async def _migrate_add_password_changed_at(conn) -> None:
         columns = await cursor.fetchall()
         column_names = [col[1] for col in columns]
 
-        if 'password_changed_at' not in column_names:
+        if "password_changed_at" not in column_names:
             # Add the column
             await conn.execute(
                 "ALTER TABLE users ADD COLUMN password_changed_at TEXT DEFAULT (datetime('now'))"
@@ -54,7 +55,9 @@ async def _migrate_add_password_changed_at(conn) -> None:
             )
             logger.info("Added password_changed_at column to users table")
     except Exception as e:
-        logger.warning("Migration for password_changed_at failed (may already exist)", error=str(e))
+        logger.warning(
+            "Migration for password_changed_at failed (may already exist)", error=str(e)
+        )
 
 
 async def initialize_users_schema(db_manager: DatabaseManager = None) -> bool:

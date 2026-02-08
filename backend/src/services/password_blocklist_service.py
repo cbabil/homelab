@@ -10,29 +10,83 @@ import gzip
 import hashlib
 import re
 from pathlib import Path
-from typing import Dict, Any, List, Optional, Set
-import structlog
+from typing import Any
+
 import httpx
+import structlog
 
 logger = structlog.get_logger("password_blocklist")
 
 # Pattern definitions
 SEQUENTIAL_PATTERNS = [
-    r'0123', r'1234', r'2345', r'3456', r'4567', r'5678', r'6789',
-    r'abcd', r'bcde', r'cdef', r'defg', r'efgh', r'fghi', r'ghij',
-    r'hijk', r'ijkl', r'jklm', r'klmn', r'lmno', r'mnop', r'nopq',
-    r'opqr', r'pqrs', r'qrst', r'rstu', r'stuv', r'tuvw', r'uvwx',
-    r'vwxy', r'wxyz',
-    r'qwer', r'wert', r'erty', r'rtyu', r'tyui', r'yuio', r'uiop',
-    r'asdf', r'sdfg', r'dfgh', r'fghj', r'ghjk', r'hjkl',
-    r'zxcv', r'xcvb', r'cvbn', r'vbnm',
+    r"0123",
+    r"1234",
+    r"2345",
+    r"3456",
+    r"4567",
+    r"5678",
+    r"6789",
+    r"abcd",
+    r"bcde",
+    r"cdef",
+    r"defg",
+    r"efgh",
+    r"fghi",
+    r"ghij",
+    r"hijk",
+    r"ijkl",
+    r"jklm",
+    r"klmn",
+    r"lmno",
+    r"mnop",
+    r"nopq",
+    r"opqr",
+    r"pqrs",
+    r"qrst",
+    r"rstu",
+    r"stuv",
+    r"tuvw",
+    r"uvwx",
+    r"vwxy",
+    r"wxyz",
+    r"qwer",
+    r"wert",
+    r"erty",
+    r"rtyu",
+    r"tyui",
+    r"yuio",
+    r"uiop",
+    r"asdf",
+    r"sdfg",
+    r"dfgh",
+    r"fghj",
+    r"ghjk",
+    r"hjkl",
+    r"zxcv",
+    r"xcvb",
+    r"cvbn",
+    r"vbnm",
 ]
 
 # Context-specific words to block
 DEFAULT_CONTEXT_WORDS = [
-    'tomo', 'admin', 'administrator', 'password', 'passwd',
-    'root', 'user', 'login', 'welcome', 'letmein', 'master',
-    'docker', 'server', 'linux', 'ubuntu', 'debian', 'centos',
+    "tomo",
+    "admin",
+    "administrator",
+    "password",
+    "passwd",
+    "root",
+    "user",
+    "login",
+    "welcome",
+    "letmein",
+    "master",
+    "docker",
+    "server",
+    "linux",
+    "ubuntu",
+    "debian",
+    "centos",
 ]
 
 
@@ -41,12 +95,12 @@ class PasswordBlocklistService:
 
     def __init__(
         self,
-        blocklist_path: Optional[Path] = None,
-        context_words_path: Optional[Path] = None,
-        enable_hibp: bool = False
+        blocklist_path: Path | None = None,
+        context_words_path: Path | None = None,
+        enable_hibp: bool = False,
     ):
-        self._blocklist: Set[str] = set()
-        self._context_words: Set[str] = set(DEFAULT_CONTEXT_WORDS)
+        self._blocklist: set[str] = set()
+        self._context_words: set[str] = set(DEFAULT_CONTEXT_WORDS)
         self._enable_hibp = enable_hibp
         self._blocklist_loaded = False
 
@@ -63,18 +117,19 @@ class PasswordBlocklistService:
         """Load the common passwords blocklist from gzipped file."""
         try:
             if self._blocklist_path.exists():
-                with gzip.open(self._blocklist_path, 'rt', encoding='utf-8') as f:
-                    self._blocklist = {line.strip().lower() for line in f if line.strip()}
+                with gzip.open(self._blocklist_path, "rt", encoding="utf-8") as f:
+                    self._blocklist = {
+                        line.strip().lower() for line in f if line.strip()
+                    }
                 self._blocklist_loaded = True
                 logger.info(
                     "password_blocklist_loaded",
                     count=len(self._blocklist),
-                    path=str(self._blocklist_path)
+                    path=str(self._blocklist_path),
                 )
             else:
                 logger.warning(
-                    "password_blocklist_not_found",
-                    path=str(self._blocklist_path)
+                    "password_blocklist_not_found", path=str(self._blocklist_path)
                 )
         except Exception as e:
             logger.error("password_blocklist_load_error", error=str(e))
@@ -83,7 +138,7 @@ class PasswordBlocklistService:
         """Load context-specific words from file."""
         try:
             if self._context_words_path.exists():
-                with open(self._context_words_path, 'r', encoding='utf-8') as f:
+                with open(self._context_words_path, encoding="utf-8") as f:
                     additional_words = {
                         line.strip().lower() for line in f if line.strip()
                     }
@@ -91,7 +146,7 @@ class PasswordBlocklistService:
                 logger.info(
                     "context_words_loaded",
                     count=len(self._context_words),
-                    path=str(self._context_words_path)
+                    path=str(self._context_words_path),
                 )
         except Exception as e:
             logger.warning("context_words_load_error", error=str(e))
@@ -100,7 +155,7 @@ class PasswordBlocklistService:
         """Check if password is in the common passwords blocklist."""
         return password.lower() in self._blocklist
 
-    def check_sequential_pattern(self, password: str) -> Optional[str]:
+    def check_sequential_pattern(self, password: str) -> str | None:
         """Check for sequential character patterns."""
         password_lower = password.lower()
         for pattern in SEQUENTIAL_PATTERNS:
@@ -111,16 +166,16 @@ class PasswordBlocklistService:
                 return pattern[::-1]
         return None
 
-    def check_repetitive_pattern(self, password: str) -> Optional[str]:
+    def check_repetitive_pattern(self, password: str) -> str | None:
         """Check for repetitive character patterns (e.g., aaaa, 1111)."""
         # Check for 3+ consecutive identical characters
-        match = re.search(r'(.)\1{2,}', password)
+        match = re.search(r"(.)\1{2,}", password)
         if match:
             return match.group(0)
 
         # Check for repeated patterns like 'abab', '1212'
         for length in range(2, 5):
-            pattern = rf'(.{{{length}}})\1+'
+            pattern = rf"(.{{{length}}})\1+"
             match = re.search(pattern, password)
             if match:
                 return match.group(0)
@@ -131,8 +186,8 @@ class PasswordBlocklistService:
         self,
         password: str,
         username: str = "",
-        additional_context: Optional[List[str]] = None
-    ) -> Optional[str]:
+        additional_context: list[str] | None = None,
+    ) -> str | None:
         """Check if password contains context-specific words."""
         password_lower = password.lower()
 
@@ -154,7 +209,7 @@ class PasswordBlocklistService:
 
         return None
 
-    async def check_hibp(self, password: str) -> Dict[str, Any]:
+    async def check_hibp(self, password: str) -> dict[str, Any]:
         """
         Check password against Have I Been Pwned API using k-Anonymity.
         Only sends first 5 chars of SHA-1 hash to API.
@@ -164,7 +219,7 @@ class PasswordBlocklistService:
 
         try:
             # Create SHA-1 hash
-            sha1_hash = hashlib.sha1(password.encode('utf-8')).hexdigest().upper()
+            sha1_hash = hashlib.sha1(password.encode("utf-8")).hexdigest().upper()
             prefix = sha1_hash[:5]
             suffix = sha1_hash[5:]
 
@@ -173,24 +228,24 @@ class PasswordBlocklistService:
                 response = await client.get(
                     f"https://api.pwnedpasswords.com/range/{prefix}",
                     headers={"Add-Padding": "true"},
-                    timeout=5.0
+                    timeout=5.0,
                 )
 
                 if response.status_code == 200:
                     # Parse response to find matching hash
                     for line in response.text.splitlines():
-                        hash_suffix, count = line.split(':')
+                        hash_suffix, count = line.split(":")
                         if hash_suffix == suffix:
                             return {
                                 "checked": True,
                                 "compromised": True,
-                                "breach_count": int(count)
+                                "breach_count": int(count),
                             }
                     return {"checked": True, "compromised": False}
                 else:
                     return {
                         "checked": False,
-                        "reason": f"API error: {response.status_code}"
+                        "reason": f"API error: {response.status_code}",
                     }
         except Exception as e:
             logger.warning("hibp_check_error", error=str(e))
@@ -202,8 +257,8 @@ class PasswordBlocklistService:
         username: str = "",
         check_blocklist: bool = True,
         check_hibp: bool = False,
-        additional_context: Optional[List[str]] = None
-    ) -> Dict[str, Any]:
+        additional_context: list[str] | None = None,
+    ) -> dict[str, Any]:
         """
         Comprehensive password validation for NIST compliance.
 
@@ -214,9 +269,9 @@ class PasswordBlocklistService:
             - warnings: List of warning messages
             - checks: Dict of individual check results
         """
-        errors: List[str] = []
-        warnings: List[str] = []
-        checks: Dict[str, Any] = {}
+        errors: list[str] = []
+        warnings: list[str] = []
+        checks: dict[str, Any] = {}
 
         # Check blocklist
         if check_blocklist:
@@ -259,15 +314,13 @@ class PasswordBlocklistService:
             checks["hibp"] = hibp_result
             if hibp_result.get("compromised"):
                 count = hibp_result.get("breach_count", 0)
-                errors.append(
-                    f"Password found in {count:,} data breaches"
-                )
+                errors.append(f"Password found in {count:,} data breaches")
 
         return {
             "valid": len(errors) == 0,
             "errors": errors,
             "warnings": warnings,
-            "checks": checks
+            "checks": checks,
         }
 
     @property
@@ -282,12 +335,11 @@ class PasswordBlocklistService:
 
 
 # Singleton instance
-_blocklist_service: Optional[PasswordBlocklistService] = None
+_blocklist_service: PasswordBlocklistService | None = None
 
 
 def get_blocklist_service(
-    enable_hibp: bool = False,
-    reinitialize: bool = False
+    enable_hibp: bool = False, reinitialize: bool = False
 ) -> PasswordBlocklistService:
     """Get or create the blocklist service singleton."""
     global _blocklist_service

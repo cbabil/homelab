@@ -5,7 +5,9 @@ Aggregates data for dashboard display.
 """
 
 import asyncio
+
 import structlog
+
 from models.metrics import DashboardSummary
 from models.server import ServerStatus
 
@@ -15,7 +17,9 @@ logger = structlog.get_logger("dashboard_service")
 class DashboardService:
     """Service for dashboard data aggregation."""
 
-    def __init__(self, server_service, deployment_service, metrics_service, activity_service):
+    def __init__(
+        self, server_service, deployment_service, metrics_service, activity_service
+    ):
         """Initialize dashboard service."""
         self.server_service = server_service
         self.deployment_service = deployment_service
@@ -29,7 +33,12 @@ class DashboardService:
             # Get server counts
             servers = await self.server_service.get_all_servers()
             total_servers = len(servers)
-            online_servers = sum(1 for s in servers if getattr(s, 'status', None) == ServerStatus.CONNECTED or getattr(s, 'status', '') == 'connected')
+            online_servers = sum(
+                1
+                for s in servers
+                if getattr(s, "status", None) == ServerStatus.CONNECTED
+                or getattr(s, "status", "") == "connected"
+            )
             offline_servers = total_servers - online_servers
 
             # Fetch app counts and metrics in parallel for all servers
@@ -41,7 +50,9 @@ class DashboardService:
 
             async def get_server_metrics_safe(server_id: str):
                 try:
-                    return await self.metrics_service.get_server_metrics(server_id, period="1h")
+                    return await self.metrics_service.get_server_metrics(
+                        server_id, period="1h"
+                    )
                 except Exception:
                     return None
 
@@ -51,10 +62,14 @@ class DashboardService:
             metrics_tasks = [get_server_metrics_safe(sid) for sid in server_ids]
 
             # Run all tasks in parallel
-            all_apps_results, all_metrics_results, recent_activities = await asyncio.gather(
+            (
+                all_apps_results,
+                all_metrics_results,
+                recent_activities,
+            ) = await asyncio.gather(
                 asyncio.gather(*apps_tasks),
                 asyncio.gather(*metrics_tasks),
-                self.activity_service.get_recent_activities(limit=10)
+                self.activity_service.get_recent_activities(limit=10),
             )
 
             # Count apps by status
@@ -66,12 +81,16 @@ class DashboardService:
             for apps in all_apps_results:
                 for app in apps:
                     total_apps += 1
-                    status = app.get('status', '') if isinstance(app, dict) else getattr(app, 'status', '')
-                    if status == 'running':
+                    status = (
+                        app.get("status", "")
+                        if isinstance(app, dict)
+                        else getattr(app, "status", "")
+                    )
+                    if status == "running":
                         running_apps += 1
-                    elif status == 'stopped':
+                    elif status == "stopped":
                         stopped_apps += 1
-                    elif status == 'error':
+                    elif status == "error":
                         error_apps += 1
 
             # Calculate average metrics
@@ -87,7 +106,9 @@ class DashboardService:
                     disk_values.append(latest.disk_percent)
 
             avg_cpu = sum(cpu_values) / len(cpu_values) if cpu_values else 0.0
-            avg_memory = sum(memory_values) / len(memory_values) if memory_values else 0.0
+            avg_memory = (
+                sum(memory_values) / len(memory_values) if memory_values else 0.0
+            )
             avg_disk = sum(disk_values) / len(disk_values) if disk_values else 0.0
 
             return DashboardSummary(
@@ -101,7 +122,7 @@ class DashboardService:
                 avg_cpu_percent=avg_cpu,
                 avg_memory_percent=avg_memory,
                 avg_disk_percent=avg_disk,
-                recent_activities=recent_activities
+                recent_activities=recent_activities,
             )
 
         except Exception as e:

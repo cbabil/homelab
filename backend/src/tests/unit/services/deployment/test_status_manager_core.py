@@ -5,8 +5,9 @@ Tests for StatusManager initialization, get_app_status, get_installed_apps,
 and get_installation_status_by_id methods.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 
 @pytest.fixture
@@ -33,11 +34,9 @@ def mock_db_service():
 def mock_server_service():
     """Create mock server service."""
     service = MagicMock()
-    service.get_server = AsyncMock(return_value=MagicMock(
-        id="server-1",
-        name="Test Server",
-        host="192.168.1.100"
-    ))
+    service.get_server = AsyncMock(
+        return_value=MagicMock(id="server-1", name="Test Server", host="192.168.1.100")
+    )
     return service
 
 
@@ -45,19 +44,18 @@ def mock_server_service():
 def mock_marketplace_service():
     """Create mock marketplace service."""
     service = MagicMock()
-    service.get_app = AsyncMock(return_value=MagicMock(
-        id="app-1",
-        name="Test App",
-        version="1.0.0",
-        description="A test app",
-        icon="test-icon",
-        category="Utilities",
-        repo_id="repo-1"
-    ))
-    service.get_repo = AsyncMock(return_value=MagicMock(
-        id="repo-1",
-        name="Test Repo"
-    ))
+    service.get_app = AsyncMock(
+        return_value=MagicMock(
+            id="app-1",
+            name="Test App",
+            version="1.0.0",
+            description="A test app",
+            icon="test-icon",
+            category="Utilities",
+            repo_id="repo-1",
+        )
+    )
+    service.get_repo = AsyncMock(return_value=MagicMock(id="repo-1", name="Test Repo"))
     return service
 
 
@@ -84,18 +82,16 @@ def sample_installation():
 
 @pytest.fixture
 def status_manager(
-    mock_ssh_executor,
-    mock_db_service,
-    mock_server_service,
-    mock_marketplace_service
+    mock_ssh_executor, mock_db_service, mock_server_service, mock_marketplace_service
 ):
     """Create StatusManager instance with mocked dependencies."""
     from services.deployment.status import StatusManager
+
     return StatusManager(
         ssh_executor=mock_ssh_executor,
         db_service=mock_db_service,
         server_service=mock_server_service,
-        marketplace_service=mock_marketplace_service
+        marketplace_service=mock_marketplace_service,
     )
 
 
@@ -107,13 +103,16 @@ class TestStatusManagerInit:
         mock_ssh_executor,
         mock_db_service,
         mock_server_service,
-        mock_marketplace_service
+        mock_marketplace_service,
     ):
         """StatusManager should store ssh executor."""
         from services.deployment.status import StatusManager
+
         manager = StatusManager(
-            mock_ssh_executor, mock_db_service,
-            mock_server_service, mock_marketplace_service
+            mock_ssh_executor,
+            mock_db_service,
+            mock_server_service,
+            mock_marketplace_service,
         )
         assert manager.ssh == mock_ssh_executor
 
@@ -122,13 +121,16 @@ class TestStatusManagerInit:
         mock_ssh_executor,
         mock_db_service,
         mock_server_service,
-        mock_marketplace_service
+        mock_marketplace_service,
     ):
         """StatusManager should store db service."""
         from services.deployment.status import StatusManager
+
         manager = StatusManager(
-            mock_ssh_executor, mock_db_service,
-            mock_server_service, mock_marketplace_service
+            mock_ssh_executor,
+            mock_db_service,
+            mock_server_service,
+            mock_marketplace_service,
         )
         assert manager.db_service == mock_db_service
 
@@ -137,13 +139,16 @@ class TestStatusManagerInit:
         mock_ssh_executor,
         mock_db_service,
         mock_server_service,
-        mock_marketplace_service
+        mock_marketplace_service,
     ):
         """StatusManager should store server service."""
         from services.deployment.status import StatusManager
+
         manager = StatusManager(
-            mock_ssh_executor, mock_db_service,
-            mock_server_service, mock_marketplace_service
+            mock_ssh_executor,
+            mock_db_service,
+            mock_server_service,
+            mock_marketplace_service,
         )
         assert manager.server_service == mock_server_service
 
@@ -152,13 +157,16 @@ class TestStatusManagerInit:
         mock_ssh_executor,
         mock_db_service,
         mock_server_service,
-        mock_marketplace_service
+        mock_marketplace_service,
     ):
         """StatusManager should store marketplace service."""
         from services.deployment.status import StatusManager
+
         manager = StatusManager(
-            mock_ssh_executor, mock_db_service,
-            mock_server_service, mock_marketplace_service
+            mock_ssh_executor,
+            mock_db_service,
+            mock_server_service,
+            mock_marketplace_service,
         )
         assert manager.marketplace_service == mock_marketplace_service
 

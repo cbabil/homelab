@@ -4,19 +4,21 @@ Unit tests for services/dashboard_service.py - Advanced functionality
 Tests metrics calculation, error handling, and activities.
 """
 
-import pytest
-from unittest.mock import AsyncMock, patch
 from dataclasses import dataclass
-from datetime import datetime, UTC
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, patch
 
-from services.dashboard_service import DashboardService
+import pytest
+
 from models.metrics import ActivityLog, ActivityType
 from models.server import ServerStatus
+from services.dashboard_service import DashboardService
 
 
 @dataclass
 class MockServer:
     """Mock server object for testing."""
+
     id: str
     status: ServerStatus = ServerStatus.CONNECTED
 
@@ -24,12 +26,14 @@ class MockServer:
 @dataclass
 class MockApp:
     """Mock app object for testing."""
+
     status: str = "running"
 
 
 @dataclass
 class MockMetric:
     """Mock metric object for testing."""
+
     cpu_percent: float = 50.0
     memory_percent: float = 60.0
     disk_percent: float = 70.0
@@ -64,14 +68,14 @@ def dashboard_service(
     mock_server_service,
     mock_deployment_service,
     mock_metrics_service,
-    mock_activity_service
+    mock_activity_service,
 ):
     """Create DashboardService instance with mocks."""
     return DashboardService(
         mock_server_service,
         mock_deployment_service,
         mock_metrics_service,
-        mock_activity_service
+        mock_activity_service,
     )
 
 
@@ -85,15 +89,19 @@ class TestGetSummaryMetrics:
         mock_server_service,
         mock_deployment_service,
         mock_metrics_service,
-        mock_activity_service
+        mock_activity_service,
     ):
         """get_summary should calculate average metrics."""
         servers = [MockServer(id="s1"), MockServer(id="s2")]
 
         async def get_metrics(server_id, period):
             if server_id == "s1":
-                return [MockMetric(cpu_percent=40.0, memory_percent=50.0, disk_percent=60.0)]
-            return [MockMetric(cpu_percent=60.0, memory_percent=70.0, disk_percent=80.0)]
+                return [
+                    MockMetric(cpu_percent=40.0, memory_percent=50.0, disk_percent=60.0)
+                ]
+            return [
+                MockMetric(cpu_percent=60.0, memory_percent=70.0, disk_percent=80.0)
+            ]
 
         mock_server_service.get_all_servers = AsyncMock(return_value=servers)
         mock_deployment_service.get_installed_apps = AsyncMock(return_value=[])
@@ -113,7 +121,7 @@ class TestGetSummaryMetrics:
         mock_server_service,
         mock_deployment_service,
         mock_metrics_service,
-        mock_activity_service
+        mock_activity_service,
     ):
         """get_summary should return 0.0 when no metrics available."""
         servers = [MockServer(id="s1")]
@@ -136,7 +144,7 @@ class TestGetSummaryMetrics:
         mock_server_service,
         mock_deployment_service,
         mock_metrics_service,
-        mock_activity_service
+        mock_activity_service,
     ):
         """get_summary should return 0.0 when metrics list is empty."""
         servers = [MockServer(id="s1")]
@@ -157,7 +165,7 @@ class TestGetSummaryMetrics:
         mock_server_service,
         mock_deployment_service,
         mock_metrics_service,
-        mock_activity_service
+        mock_activity_service,
     ):
         """get_summary should use first (most recent) metric from list."""
         servers = [MockServer(id="s1")]
@@ -189,7 +197,7 @@ class TestGetSummaryErrorHandling:
         mock_server_service,
         mock_deployment_service,
         mock_metrics_service,
-        mock_activity_service
+        mock_activity_service,
     ):
         """get_summary should handle app fetch errors silently."""
         servers = [MockServer(id="s1"), MockServer(id="s2")]
@@ -217,7 +225,7 @@ class TestGetSummaryErrorHandling:
         mock_server_service,
         mock_deployment_service,
         mock_metrics_service,
-        mock_activity_service
+        mock_activity_service,
     ):
         """get_summary should handle metrics fetch errors silently."""
         servers = [MockServer(id="s1"), MockServer(id="s2")]
@@ -225,7 +233,9 @@ class TestGetSummaryErrorHandling:
         async def get_metrics(server_id, period):
             if server_id == "s1":
                 raise Exception("Timeout")
-            return [MockMetric(cpu_percent=80.0, memory_percent=80.0, disk_percent=80.0)]
+            return [
+                MockMetric(cpu_percent=80.0, memory_percent=80.0, disk_percent=80.0)
+            ]
 
         mock_server_service.get_all_servers = AsyncMock(return_value=servers)
         mock_deployment_service.get_installed_apps = AsyncMock(return_value=[])
@@ -239,9 +249,7 @@ class TestGetSummaryErrorHandling:
 
     @pytest.mark.asyncio
     async def test_get_summary_general_error_returns_empty(
-        self,
-        dashboard_service,
-        mock_server_service
+        self, dashboard_service, mock_server_service
     ):
         """get_summary should return empty DashboardSummary on error."""
         mock_server_service.get_all_servers = AsyncMock(
@@ -256,11 +264,7 @@ class TestGetSummaryErrorHandling:
         assert result.recent_activities == []
 
     @pytest.mark.asyncio
-    async def test_get_summary_logs_error(
-        self,
-        dashboard_service,
-        mock_server_service
-    ):
+    async def test_get_summary_logs_error(self, dashboard_service, mock_server_service):
         """get_summary should log errors."""
         mock_server_service.get_all_servers = AsyncMock(
             side_effect=Exception("Database error")
@@ -283,7 +287,7 @@ class TestGetSummaryActivities:
         mock_server_service,
         mock_deployment_service,
         mock_metrics_service,
-        mock_activity_service
+        mock_activity_service,
     ):
         """get_summary should include recent activities."""
         servers = []
@@ -292,13 +296,13 @@ class TestGetSummaryActivities:
                 id="act-1",
                 activity_type=ActivityType.USER_LOGIN,
                 message="User logged in",
-                timestamp=datetime.now(UTC).isoformat()
+                timestamp=datetime.now(UTC).isoformat(),
             ),
             ActivityLog(
                 id="act-2",
                 activity_type=ActivityType.SERVER_ADDED,
                 message="Server added",
-                timestamp=datetime.now(UTC).isoformat()
+                timestamp=datetime.now(UTC).isoformat(),
             ),
         ]
 
@@ -318,7 +322,7 @@ class TestGetSummaryActivities:
         mock_server_service,
         mock_deployment_service,
         mock_metrics_service,
-        mock_activity_service
+        mock_activity_service,
     ):
         """get_summary should request 10 recent activities."""
         mock_server_service.get_all_servers = AsyncMock(return_value=[])

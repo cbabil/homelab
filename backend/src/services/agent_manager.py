@@ -6,9 +6,10 @@ correlation for JSON-RPC communication with tomo agents.
 
 import asyncio
 import json
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import UTC, datetime
-from typing import TYPE_CHECKING, Any, Callable, Optional, Protocol
+from typing import TYPE_CHECKING, Any, Optional, Protocol
 
 if TYPE_CHECKING:
     from services.agent_lifecycle import AgentLifecycleManager
@@ -230,7 +231,7 @@ class AgentManager:
         """
         return agent_id in self._connections
 
-    def get_connection_by_server(self, server_id: str) -> Optional[AgentConnection]:
+    def get_connection_by_server(self, server_id: str) -> AgentConnection | None:
         """Get agent connection by associated server ID.
 
         Args:
@@ -248,7 +249,7 @@ class AgentManager:
         self,
         agent_id: str,
         method: str,
-        params: Optional[dict] = None,
+        params: dict | None = None,
         timeout: float = 30.0,
     ) -> Any:
         """Send a JSON-RPC command to an agent and wait for response.
@@ -298,7 +299,7 @@ class AgentManager:
             result = await asyncio.wait_for(future, timeout=timeout)
             return result
 
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.error(
                 "Command timeout",
                 agent_id=agent_id,
@@ -664,7 +665,7 @@ class AgentManager:
         """
         return list(self._connections.keys())
 
-    def get_connection_info(self, agent_id: str) -> Optional[dict]:
+    def get_connection_info(self, agent_id: str) -> dict | None:
         """Get connection information for an agent.
 
         Args:

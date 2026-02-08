@@ -5,14 +5,13 @@ Provides system-level information and setup capabilities for the MCP server.
 Handles application metadata, setup status, and component versions.
 """
 
-from typing import Any, Dict
+from typing import Any
 
 import httpx
 import structlog
 from fastmcp import Context
 
 from services.database_service import DatabaseService
-
 
 logger = structlog.get_logger("system_tools")
 
@@ -30,8 +29,8 @@ class SystemTools:
         logger.info("System tools initialized")
 
     async def get_system_setup(
-        self, params: Dict[str, Any] = None, ctx: Context = None
-    ) -> Dict[str, Any]:
+        self, params: dict[str, Any] = None, ctx: Context = None
+    ) -> dict[str, Any]:
         """Get system setup status.
 
         This tool requires NO authentication as it must be callable
@@ -66,8 +65,8 @@ class SystemTools:
             }
 
     async def get_system_info(
-        self, params: Dict[str, Any] = None, ctx: Context = None
-    ) -> Dict[str, Any]:
+        self, params: dict[str, Any] = None, ctx: Context = None
+    ) -> dict[str, Any]:
         """Get system information and metadata.
 
         Returns application metadata including installation ID
@@ -111,8 +110,8 @@ class SystemTools:
             }
 
     async def get_component_versions(
-        self, params: Dict[str, Any] = None, ctx: Context = None
-    ) -> Dict[str, Any]:
+        self, params: dict[str, Any] = None, ctx: Context = None
+    ) -> dict[str, Any]:
         """Get versions of all components (backend, frontend, api).
 
         Returns:
@@ -129,9 +128,11 @@ class SystemTools:
                 "data": {
                     "components": versions_dict,
                     "backend": versions_dict.get("backend", {}).get("version", "1.0.0"),
-                    "frontend": versions_dict.get("frontend", {}).get("version", "1.0.0"),
+                    "frontend": versions_dict.get("frontend", {}).get(
+                        "version", "1.0.0"
+                    ),
                     "api": versions_dict.get("api", {}).get("version", "1.0.0"),
-                }
+                },
             }
         except Exception as e:
             logger.error("Failed to get component versions", error=str(e))
@@ -142,8 +143,8 @@ class SystemTools:
             }
 
     async def check_updates(
-        self, params: Dict[str, Any] = None, ctx: Context = None
-    ) -> Dict[str, Any]:
+        self, params: dict[str, Any] = None, ctx: Context = None
+    ) -> dict[str, Any]:
         """Check for available updates from GitHub releases.
 
         Compares current component versions against the latest
@@ -169,7 +170,7 @@ class SystemTools:
             async with httpx.AsyncClient(timeout=30.0) as client:
                 response = await client.get(
                     GITHUB_API_RELEASES,
-                    headers={"Accept": "application/vnd.github.v3+json"}
+                    headers={"Accept": "application/vnd.github.v3+json"},
                 )
 
             if response.status_code == 404:
@@ -179,8 +180,8 @@ class SystemTools:
                         "components": versions_dict,
                         "latest_version": None,
                         "update_available": False,
-                        "message": "No releases found on GitHub"
-                    }
+                        "message": "No releases found on GitHub",
+                    },
                 }
 
             response.raise_for_status()
@@ -191,13 +192,15 @@ class SystemTools:
             release_notes = release_data.get("body", "")
 
             # Compare versions
-            update_available = self._compare_versions(current_version, latest_version) < 0
+            update_available = (
+                self._compare_versions(current_version, latest_version) < 0
+            )
 
             logger.info(
                 "Update check completed",
                 current=current_version,
                 latest=latest_version,
-                update_available=update_available
+                update_available=update_available,
             )
 
             return {
@@ -207,8 +210,8 @@ class SystemTools:
                     "latest_version": latest_version,
                     "update_available": update_available,
                     "release_url": release_url,
-                    "release_notes": release_notes[:500] if release_notes else None
-                }
+                    "release_notes": release_notes[:500] if release_notes else None,
+                },
             }
 
         except httpx.HTTPError as e:
@@ -236,6 +239,7 @@ class SystemTools:
         Returns:
             -1 if v1 < v2, 0 if v1 == v2, 1 if v1 > v2
         """
+
         def parse_version(v: str) -> tuple:
             v = v.lstrip("v")
             parts = v.split(".")

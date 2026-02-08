@@ -4,17 +4,18 @@ Unit tests for services/agent_service.py - WebSocket API and lifecycle.
 Tests register_agent, authenticate_agent, and reset_stale_agent_statuses.
 """
 
-import pytest
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from services.agent_service import AgentService
+import pytest
+
 from models.agent import (
     Agent,
     AgentConfig,
     AgentStatus,
     RegistrationCode,
 )
+from services.agent_service import AgentService
 
 
 @pytest.fixture
@@ -43,6 +44,7 @@ def mock_agent_db():
     db.get_agent = AsyncMock()
     db.get_agent_by_server = AsyncMock()
     db.get_agent_by_token_hash = AsyncMock()
+    db.get_agent_by_pending_token_hash = AsyncMock(return_value=None)
     db.delete_agent = AsyncMock()
     db.list_all_agents = AsyncMock(return_value=[])
     db.create_registration_code = AsyncMock()
@@ -101,8 +103,10 @@ class TestRegisterAgent:
         )
         mock_agent_db.update_agent = AsyncMock(return_value=sample_agent)
 
-        with patch("services.agent_service.logger"), \
-             patch("services.agent_service.log_event", new_callable=AsyncMock):
+        with (
+            patch("services.agent_service.logger"),
+            patch("services.agent_service.log_event", new_callable=AsyncMock),
+        ):
             result = await agent_service.register_agent("test-code", "1.0.0")
 
         assert result is not None
@@ -122,8 +126,10 @@ class TestRegisterAgent:
         )
         mock_agent_db.update_agent = AsyncMock(return_value=sample_agent)
 
-        with patch("services.agent_service.logger"), \
-             patch("services.agent_service.log_event", new_callable=AsyncMock):
+        with (
+            patch("services.agent_service.logger"),
+            patch("services.agent_service.log_event", new_callable=AsyncMock),
+        ):
             result = await agent_service.register_agent("test-code")
 
         assert result is not None
@@ -327,8 +333,10 @@ class TestResetStaleAgentStatuses:
         agents = [
             Agent(id="agent-1", server_id="srv-1", status=AgentStatus.CONNECTED),
             Agent(
-                id="agent-2", server_id="srv-2", status=AgentStatus.PENDING,
-                registered_at=old_time
+                id="agent-2",
+                server_id="srv-2",
+                status=AgentStatus.PENDING,
+                registered_at=old_time,
             ),
             Agent(id="agent-3", server_id="srv-3", status=AgentStatus.DISCONNECTED),
         ]

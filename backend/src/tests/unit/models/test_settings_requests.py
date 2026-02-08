@@ -12,8 +12,8 @@ from models.settings import (
     ChangeType,
     SettingsAuditEntry,
     SettingsRequest,
-    SettingsUpdateRequest,
     SettingsResponse,
+    SettingsUpdateRequest,
     SettingsValidationResult,
 )
 

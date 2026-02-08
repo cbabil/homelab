@@ -5,16 +5,17 @@ Tests AgentManager initialization, connection management, and basic operations.
 """
 
 import asyncio
-import pytest
 from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from services.agent_manager import (
-    AgentManager,
-    AgentConnection,
-    MAX_MESSAGE_SIZE_BYTES,
-)
+import pytest
+
 from models.agent import AgentStatus
+from services.agent_manager import (
+    MAX_MESSAGE_SIZE_BYTES,
+    AgentConnection,
+    AgentManager,
+)
 
 
 @pytest.fixture
@@ -192,9 +193,7 @@ class TestRegisterConnection:
 
         with patch("services.agent_manager.logger"):
             # Register first connection
-            await agent_manager.register_connection(
-                "agent-123", old_ws, "server-456"
-            )
+            await agent_manager.register_connection("agent-123", old_ws, "server-456")
             # Register second connection for same agent
             await agent_manager.register_connection(
                 "agent-123", mock_websocket, "server-456"

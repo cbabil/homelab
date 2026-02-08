@@ -311,11 +311,9 @@ class TestParseCasaosPort:
     def test_parse_dict_port_with_target_published(self):
         """_parse_casaos_port should parse dict with target/published."""
         sync = GitSync()
-        port = sync._parse_casaos_port({
-            "target": 8080,
-            "published": 9090,
-            "protocol": "udp"
-        })
+        port = sync._parse_casaos_port(
+            {"target": 8080, "published": 9090, "protocol": "udp"}
+        )
 
         assert port is not None
         assert port.container == 8080
@@ -325,10 +323,7 @@ class TestParseCasaosPort:
     def test_parse_dict_port_with_container_host(self):
         """_parse_casaos_port should parse dict with container_port/host_port."""
         sync = GitSync()
-        port = sync._parse_casaos_port({
-            "container_port": 8080,
-            "host_port": 9090
-        })
+        port = sync._parse_casaos_port({"container_port": 8080, "host_port": 9090})
 
         assert port is not None
         assert port.container == 8080
@@ -364,10 +359,7 @@ class TestParseCasaosPort:
         """_parse_casaos_port should handle ValueError from int conversion."""
         sync = GitSync()
         # Dict with non-integer values triggers ValueError
-        port = sync._parse_casaos_port({
-            "target": "not_a_number",
-            "published": 8080
-        })
+        port = sync._parse_casaos_port({"target": "not_a_number", "published": 8080})
         assert port is None
 
     def test_parse_port_string_value_error(self):
@@ -379,10 +371,7 @@ class TestParseCasaosPort:
     def test_parse_port_with_quoted_published(self):
         """_parse_casaos_port should handle quoted published port."""
         sync = GitSync()
-        port = sync._parse_casaos_port({
-            "target": 8080,
-            "published": '"9090"'
-        })
+        port = sync._parse_casaos_port({"target": 8080, "published": '"9090"'})
 
         assert port is not None
         assert port.host == 9090
@@ -394,11 +383,9 @@ class TestParseCasaosVolume:
     def test_parse_dict_volume_source_target(self):
         """_parse_casaos_volume should parse dict with source/target."""
         sync = GitSync()
-        vol = sync._parse_casaos_volume({
-            "source": "/host/data",
-            "target": "/container/data",
-            "read_only": True
-        })
+        vol = sync._parse_casaos_volume(
+            {"source": "/host/data", "target": "/container/data", "read_only": True}
+        )
 
         assert vol is not None
         assert vol.host_path == "/host/data"
@@ -408,10 +395,9 @@ class TestParseCasaosVolume:
     def test_parse_dict_volume_host_container_path(self):
         """_parse_casaos_volume should parse dict with host_path/container_path."""
         sync = GitSync()
-        vol = sync._parse_casaos_volume({
-            "host_path": "/host/data",
-            "container_path": "/container/data"
-        })
+        vol = sync._parse_casaos_volume(
+            {"host_path": "/host/data", "container_path": "/container/data"}
+        )
 
         assert vol is not None
         assert vol.host_path == "/host/data"
@@ -440,7 +426,7 @@ class TestParseCasaosVolume:
         assert sync._parse_casaos_volume({}) is None
         assert sync._parse_casaos_volume(None) is None
 
-    @patch('lib.git_sync.AppVolume')
+    @patch("lib.git_sync.AppVolume")
     def test_parse_volume_exception(self, mock_app_volume):
         """_parse_casaos_volume should handle exceptions from AppVolume."""
         mock_app_volume.side_effect = Exception("Validation error")

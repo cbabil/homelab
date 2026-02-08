@@ -5,8 +5,9 @@ Tests for refresh_installation_status method.
 """
 
 import json
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 
 @pytest.fixture
@@ -56,47 +57,44 @@ def sample_installation():
 
 @pytest.fixture
 def status_manager(
-    mock_ssh_executor,
-    mock_db_service,
-    mock_server_service,
-    mock_marketplace_service
+    mock_ssh_executor, mock_db_service, mock_server_service, mock_marketplace_service
 ):
     """Create StatusManager instance with mocked dependencies."""
     from services.deployment.status import StatusManager
+
     return StatusManager(
         ssh_executor=mock_ssh_executor,
         db_service=mock_db_service,
         server_service=mock_server_service,
-        marketplace_service=mock_marketplace_service
+        marketplace_service=mock_marketplace_service,
     )
 
 
 @pytest.fixture
 def docker_inspect_running():
     """Docker inspect output for running container."""
-    return json.dumps([{
-        "State": {"Status": "running"},
-        "NetworkSettings": {
-            "Networks": {
-                "bridge": {},
-                "custom-net": {}
-            }
-        },
-        "Mounts": [
+    return json.dumps(
+        [
             {
-                "Type": "volume",
-                "Name": "data-vol",
-                "Destination": "/data",
-                "Mode": "rw"
-            },
-            {
-                "Type": "bind",
-                "Source": "/host/path",
-                "Destination": "/container/path",
-                "Mode": "ro"
+                "State": {"Status": "running"},
+                "NetworkSettings": {"Networks": {"bridge": {}, "custom-net": {}}},
+                "Mounts": [
+                    {
+                        "Type": "volume",
+                        "Name": "data-vol",
+                        "Destination": "/data",
+                        "Mode": "rw",
+                    },
+                    {
+                        "Type": "bind",
+                        "Source": "/host/path",
+                        "Destination": "/container/path",
+                        "Mode": "ro",
+                    },
+                ],
             }
         ]
-    }])
+    )
 
 
 class TestRefreshInstallationStatus:
@@ -178,8 +176,12 @@ class TestRefreshInstallationStatus:
 
     @pytest.mark.asyncio
     async def test_parses_running_status(
-        self, status_manager, mock_db_service, mock_ssh_executor,
-        sample_installation, docker_inspect_running
+        self,
+        status_manager,
+        mock_db_service,
+        mock_ssh_executor,
+        sample_installation,
+        docker_inspect_running,
     ):
         """Should correctly parse running status."""
         mock_db_service.get_installation_by_id.return_value = sample_installation
@@ -195,7 +197,15 @@ class TestRefreshInstallationStatus:
     ):
         """Should parse exited status as stopped."""
         mock_db_service.get_installation_by_id.return_value = sample_installation
-        inspect_data = json.dumps([{"State": {"Status": "exited"}, "NetworkSettings": {"Networks": {}}, "Mounts": []}])
+        inspect_data = json.dumps(
+            [
+                {
+                    "State": {"Status": "exited"},
+                    "NetworkSettings": {"Networks": {}},
+                    "Mounts": [],
+                }
+            ]
+        )
         mock_ssh_executor.execute.return_value = (0, inspect_data, "")
 
         result = await status_manager.refresh_installation_status("inst-123")
@@ -208,7 +218,15 @@ class TestRefreshInstallationStatus:
     ):
         """Should parse restarting status as error."""
         mock_db_service.get_installation_by_id.return_value = sample_installation
-        inspect_data = json.dumps([{"State": {"Status": "restarting"}, "NetworkSettings": {"Networks": {}}, "Mounts": []}])
+        inspect_data = json.dumps(
+            [
+                {
+                    "State": {"Status": "restarting"},
+                    "NetworkSettings": {"Networks": {}},
+                    "Mounts": [],
+                }
+            ]
+        )
         mock_ssh_executor.execute.return_value = (0, inspect_data, "")
 
         result = await status_manager.refresh_installation_status("inst-123")
@@ -221,7 +239,15 @@ class TestRefreshInstallationStatus:
     ):
         """Should parse created status as stopped."""
         mock_db_service.get_installation_by_id.return_value = sample_installation
-        inspect_data = json.dumps([{"State": {"Status": "created"}, "NetworkSettings": {"Networks": {}}, "Mounts": []}])
+        inspect_data = json.dumps(
+            [
+                {
+                    "State": {"Status": "created"},
+                    "NetworkSettings": {"Networks": {}},
+                    "Mounts": [],
+                }
+            ]
+        )
         mock_ssh_executor.execute.return_value = (0, inspect_data, "")
 
         result = await status_manager.refresh_installation_status("inst-123")
@@ -234,7 +260,15 @@ class TestRefreshInstallationStatus:
     ):
         """Should parse paused status as stopped."""
         mock_db_service.get_installation_by_id.return_value = sample_installation
-        inspect_data = json.dumps([{"State": {"Status": "paused"}, "NetworkSettings": {"Networks": {}}, "Mounts": []}])
+        inspect_data = json.dumps(
+            [
+                {
+                    "State": {"Status": "paused"},
+                    "NetworkSettings": {"Networks": {}},
+                    "Mounts": [],
+                }
+            ]
+        )
         mock_ssh_executor.execute.return_value = (0, inspect_data, "")
 
         result = await status_manager.refresh_installation_status("inst-123")
@@ -247,7 +281,15 @@ class TestRefreshInstallationStatus:
     ):
         """Should preserve unknown status value."""
         mock_db_service.get_installation_by_id.return_value = sample_installation
-        inspect_data = json.dumps([{"State": {"Status": "custom_status"}, "NetworkSettings": {"Networks": {}}, "Mounts": []}])
+        inspect_data = json.dumps(
+            [
+                {
+                    "State": {"Status": "custom_status"},
+                    "NetworkSettings": {"Networks": {}},
+                    "Mounts": [],
+                }
+            ]
+        )
         mock_ssh_executor.execute.return_value = (0, inspect_data, "")
 
         result = await status_manager.refresh_installation_status("inst-123")
@@ -260,7 +302,15 @@ class TestRefreshInstallationStatus:
     ):
         """Should default to stopped when status is empty."""
         mock_db_service.get_installation_by_id.return_value = sample_installation
-        inspect_data = json.dumps([{"State": {"Status": ""}, "NetworkSettings": {"Networks": {}}, "Mounts": []}])
+        inspect_data = json.dumps(
+            [
+                {
+                    "State": {"Status": ""},
+                    "NetworkSettings": {"Networks": {}},
+                    "Mounts": [],
+                }
+            ]
+        )
         mock_ssh_executor.execute.return_value = (0, inspect_data, "")
 
         result = await status_manager.refresh_installation_status("inst-123")
@@ -269,8 +319,12 @@ class TestRefreshInstallationStatus:
 
     @pytest.mark.asyncio
     async def test_extracts_networks(
-        self, status_manager, mock_db_service, mock_ssh_executor,
-        sample_installation, docker_inspect_running
+        self,
+        status_manager,
+        mock_db_service,
+        mock_ssh_executor,
+        sample_installation,
+        docker_inspect_running,
     ):
         """Should extract network names."""
         mock_db_service.get_installation_by_id.return_value = sample_installation
@@ -283,8 +337,12 @@ class TestRefreshInstallationStatus:
 
     @pytest.mark.asyncio
     async def test_extracts_named_volumes(
-        self, status_manager, mock_db_service, mock_ssh_executor,
-        sample_installation, docker_inspect_running
+        self,
+        status_manager,
+        mock_db_service,
+        mock_ssh_executor,
+        sample_installation,
+        docker_inspect_running,
     ):
         """Should extract named volumes."""
         mock_db_service.get_installation_by_id.return_value = sample_installation
@@ -299,8 +357,12 @@ class TestRefreshInstallationStatus:
 
     @pytest.mark.asyncio
     async def test_extracts_bind_mounts(
-        self, status_manager, mock_db_service, mock_ssh_executor,
-        sample_installation, docker_inspect_running
+        self,
+        status_manager,
+        mock_db_service,
+        mock_ssh_executor,
+        sample_installation,
+        docker_inspect_running,
     ):
         """Should extract bind mounts."""
         mock_db_service.get_installation_by_id.return_value = sample_installation
@@ -315,8 +377,12 @@ class TestRefreshInstallationStatus:
 
     @pytest.mark.asyncio
     async def test_updates_database(
-        self, status_manager, mock_db_service, mock_ssh_executor,
-        sample_installation, docker_inspect_running
+        self,
+        status_manager,
+        mock_db_service,
+        mock_ssh_executor,
+        sample_installation,
+        docker_inspect_running,
     ):
         """Should update database with new status."""
         mock_db_service.get_installation_by_id.return_value = sample_installation
@@ -330,9 +396,7 @@ class TestRefreshInstallationStatus:
         assert call_args[1]["status"] == "running"
 
     @pytest.mark.asyncio
-    async def test_handles_exception(
-        self, status_manager, mock_db_service
-    ):
+    async def test_handles_exception(self, status_manager, mock_db_service):
         """Should return None on exception."""
         mock_db_service.get_installation_by_id.side_effect = Exception("DB error")
 
@@ -388,7 +452,14 @@ class TestRefreshInstallationStatus:
     ):
         """Should handle missing Mounts gracefully."""
         mock_db_service.get_installation_by_id.return_value = sample_installation
-        inspect_data = json.dumps([{"State": {"Status": "running"}, "NetworkSettings": {"Networks": {"bridge": {}}}}])
+        inspect_data = json.dumps(
+            [
+                {
+                    "State": {"Status": "running"},
+                    "NetworkSettings": {"Networks": {"bridge": {}}},
+                }
+            ]
+        )
         mock_ssh_executor.execute.return_value = (0, inspect_data, "")
 
         result = await status_manager.refresh_installation_status("inst-123")

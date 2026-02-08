@@ -4,8 +4,9 @@ Marketplace Tools Unit Tests
 Tests for marketplace repository and app management tools.
 """
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 
 from tools.marketplace.tools import MarketplaceTools
 
@@ -18,7 +19,7 @@ class TestMarketplaceToolsInit:
         mock_marketplace = MagicMock()
         mock_app = MagicMock()
 
-        with patch('tools.marketplace.tools.logger'):
+        with patch("tools.marketplace.tools.logger"):
             tools = MarketplaceTools(mock_marketplace, mock_app)
 
         assert tools.marketplace_service == mock_marketplace
@@ -28,7 +29,7 @@ class TestMarketplaceToolsInit:
         """Test initialization without app service."""
         mock_marketplace = MagicMock()
 
-        with patch('tools.marketplace.tools.logger'):
+        with patch("tools.marketplace.tools.logger"):
             tools = MarketplaceTools(mock_marketplace)
 
         assert tools.app_service is None
@@ -45,14 +46,18 @@ class TestListRepos:
     @pytest.fixture
     def tools(self, mock_service):
         """Create MarketplaceTools instance."""
-        with patch('tools.marketplace.tools.logger'):
+        with patch("tools.marketplace.tools.logger"):
             return MarketplaceTools(mock_service)
 
     @pytest.fixture
     def sample_repos(self):
         """Create sample repos."""
         repo = MagicMock()
-        repo.model_dump.return_value = {"id": "repo-1", "name": "Official", "enabled": True}
+        repo.model_dump.return_value = {
+            "id": "repo-1",
+            "name": "Official",
+            "enabled": True,
+        }
         return [repo]
 
     @pytest.mark.asyncio
@@ -87,7 +92,7 @@ class TestAddRepo:
     @pytest.fixture
     def tools(self, mock_service):
         """Create MarketplaceTools instance."""
-        with patch('tools.marketplace.tools.logger'):
+        with patch("tools.marketplace.tools.logger"):
             return MarketplaceTools(mock_service)
 
     @pytest.mark.asyncio
@@ -98,12 +103,12 @@ class TestAddRepo:
         repo.model_dump.return_value = {"id": "repo-new", "name": "New Repo"}
         mock_service.add_repo = AsyncMock(return_value=repo)
 
-        with patch('tools.marketplace.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.marketplace.tools.log_event", new_callable=AsyncMock):
             result = await tools.add_repo(
                 name="New Repo",
                 url="https://github.com/example/apps",
                 repo_type="community",
-                branch="main"
+                branch="main",
             )
 
         assert result["success"] is True
@@ -114,11 +119,9 @@ class TestAddRepo:
         """Test handling exceptions."""
         mock_service.add_repo = AsyncMock(side_effect=Exception("Invalid URL"))
 
-        with patch('tools.marketplace.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.marketplace.tools.log_event", new_callable=AsyncMock):
             result = await tools.add_repo(
-                name="Bad Repo",
-                url="invalid",
-                repo_type="community"
+                name="Bad Repo", url="invalid", repo_type="community"
             )
 
         assert result["success"] is False
@@ -136,7 +139,7 @@ class TestRemoveRepo:
     @pytest.fixture
     def tools(self, mock_service):
         """Create MarketplaceTools instance."""
-        with patch('tools.marketplace.tools.logger'):
+        with patch("tools.marketplace.tools.logger"):
             return MarketplaceTools(mock_service)
 
     @pytest.mark.asyncio
@@ -144,7 +147,7 @@ class TestRemoveRepo:
         """Test successfully removing a repo."""
         mock_service.remove_repo = AsyncMock(return_value=True)
 
-        with patch('tools.marketplace.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.marketplace.tools.log_event", new_callable=AsyncMock):
             result = await tools.remove_repo("repo-1")
 
         assert result["success"] is True
@@ -155,7 +158,7 @@ class TestRemoveRepo:
         """Test removing non-existent repo."""
         mock_service.remove_repo = AsyncMock(return_value=False)
 
-        with patch('tools.marketplace.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.marketplace.tools.log_event", new_callable=AsyncMock):
             result = await tools.remove_repo("repo-404")
 
         assert result["success"] is False
@@ -166,7 +169,7 @@ class TestRemoveRepo:
         """Test handling exceptions."""
         mock_service.remove_repo = AsyncMock(side_effect=Exception("Database error"))
 
-        with patch('tools.marketplace.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.marketplace.tools.log_event", new_callable=AsyncMock):
             result = await tools.remove_repo("repo-1")
 
         assert result["success"] is False
@@ -183,7 +186,7 @@ class TestSyncRepo:
     @pytest.fixture
     def tools(self, mock_service):
         """Create MarketplaceTools instance."""
-        with patch('tools.marketplace.tools.logger'):
+        with patch("tools.marketplace.tools.logger"):
             return MarketplaceTools(mock_service)
 
     @pytest.mark.asyncio
@@ -192,7 +195,7 @@ class TestSyncRepo:
         apps = [MagicMock(), MagicMock(), MagicMock()]
         mock_service.sync_repo = AsyncMock(return_value=apps)
 
-        with patch('tools.marketplace.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.marketplace.tools.log_event", new_callable=AsyncMock):
             result = await tools.sync_repo("repo-1")
 
         assert result["success"] is True
@@ -203,7 +206,7 @@ class TestSyncRepo:
         """Test handling exceptions."""
         mock_service.sync_repo = AsyncMock(side_effect=Exception("Network error"))
 
-        with patch('tools.marketplace.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.marketplace.tools.log_event", new_callable=AsyncMock):
             result = await tools.sync_repo("repo-1")
 
         assert result["success"] is False
@@ -220,7 +223,7 @@ class TestToggleRepo:
     @pytest.fixture
     def tools(self, mock_service):
         """Create MarketplaceTools instance."""
-        with patch('tools.marketplace.tools.logger'):
+        with patch("tools.marketplace.tools.logger"):
             return MarketplaceTools(mock_service)
 
     @pytest.mark.asyncio
@@ -228,7 +231,7 @@ class TestToggleRepo:
         """Test enabling a repo."""
         mock_service.toggle_repo = AsyncMock(return_value=True)
 
-        with patch('tools.marketplace.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.marketplace.tools.log_event", new_callable=AsyncMock):
             result = await tools.toggle_repo("repo-1", True)
 
         assert result["success"] is True
@@ -240,7 +243,7 @@ class TestToggleRepo:
         """Test disabling a repo."""
         mock_service.toggle_repo = AsyncMock(return_value=True)
 
-        with patch('tools.marketplace.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.marketplace.tools.log_event", new_callable=AsyncMock):
             result = await tools.toggle_repo("repo-1", False)
 
         assert result["success"] is True
@@ -252,7 +255,7 @@ class TestToggleRepo:
         """Test toggling non-existent repo."""
         mock_service.toggle_repo = AsyncMock(return_value=False)
 
-        with patch('tools.marketplace.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.marketplace.tools.log_event", new_callable=AsyncMock):
             result = await tools.toggle_repo("repo-404", True)
 
         assert result["success"] is False
@@ -262,7 +265,7 @@ class TestToggleRepo:
         """Test handling exceptions."""
         mock_service.toggle_repo = AsyncMock(side_effect=Exception("Database error"))
 
-        with patch('tools.marketplace.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.marketplace.tools.log_event", new_callable=AsyncMock):
             result = await tools.toggle_repo("repo-1", True)
 
         assert result["success"] is False
@@ -279,7 +282,7 @@ class TestSearchMarketplace:
     @pytest.fixture
     def tools(self, mock_service):
         """Create MarketplaceTools instance."""
-        with patch('tools.marketplace.tools.logger'):
+        with patch("tools.marketplace.tools.logger"):
             return MarketplaceTools(mock_service)
 
     @pytest.fixture
@@ -312,7 +315,7 @@ class TestSearchMarketplace:
             tags=["proxy"],
             featured=True,
             sort_by="rating",
-            limit=10
+            limit=10,
         )
 
         assert result["success"] is True
@@ -322,7 +325,7 @@ class TestSearchMarketplace:
             tags=["proxy"],
             featured=True,
             sort_by="rating",
-            limit=10
+            limit=10,
         )
 
     @pytest.mark.asyncio
@@ -346,7 +349,7 @@ class TestGetMarketplaceApp:
     @pytest.fixture
     def tools(self, mock_service):
         """Create MarketplaceTools instance."""
-        with patch('tools.marketplace.tools.logger'):
+        with patch("tools.marketplace.tools.logger"):
             return MarketplaceTools(mock_service)
 
     @pytest.mark.asyncio
@@ -392,7 +395,7 @@ class TestGetMarketplaceCategories:
     @pytest.fixture
     def tools(self, mock_service):
         """Create MarketplaceTools instance."""
-        with patch('tools.marketplace.tools.logger'):
+        with patch("tools.marketplace.tools.logger"):
             return MarketplaceTools(mock_service)
 
     @pytest.mark.asyncio
@@ -427,7 +430,7 @@ class TestGetFeaturedApps:
     @pytest.fixture
     def tools(self, mock_service):
         """Create MarketplaceTools instance."""
-        with patch('tools.marketplace.tools.logger'):
+        with patch("tools.marketplace.tools.logger"):
             return MarketplaceTools(mock_service)
 
     @pytest.fixture
@@ -471,7 +474,7 @@ class TestGetTrendingApps:
     @pytest.fixture
     def tools(self, mock_service):
         """Create MarketplaceTools instance."""
-        with patch('tools.marketplace.tools.logger'):
+        with patch("tools.marketplace.tools.logger"):
             return MarketplaceTools(mock_service)
 
     @pytest.fixture
@@ -514,7 +517,7 @@ class TestRateMarketplaceApp:
     @pytest.fixture
     def tools(self, mock_service):
         """Create MarketplaceTools instance."""
-        with patch('tools.marketplace.tools.logger'):
+        with patch("tools.marketplace.tools.logger"):
             return MarketplaceTools(mock_service)
 
     @pytest.mark.asyncio
@@ -524,7 +527,7 @@ class TestRateMarketplaceApp:
         result_obj.model_dump.return_value = {"app_id": "app-1", "avg_rating": 4.5}
         mock_service.rate_app = AsyncMock(return_value=result_obj)
 
-        with patch('tools.marketplace.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.marketplace.tools.log_event", new_callable=AsyncMock):
             result = await tools.rate_marketplace_app("app-1", "user-123", 5)
 
         assert result["success"] is True
@@ -545,7 +548,7 @@ class TestRateMarketplaceApp:
         """Test handling exceptions."""
         mock_service.rate_app = AsyncMock(side_effect=Exception("Database error"))
 
-        with patch('tools.marketplace.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.marketplace.tools.log_event", new_callable=AsyncMock):
             result = await tools.rate_marketplace_app("app-1", "user-123", 5)
 
         assert result["success"] is False
@@ -567,7 +570,7 @@ class TestImportApp:
     @pytest.fixture
     def tools(self, mock_marketplace_service, mock_app_service):
         """Create MarketplaceTools instance."""
-        with patch('tools.marketplace.tools.logger'):
+        with patch("tools.marketplace.tools.logger"):
             return MarketplaceTools(mock_marketplace_service, mock_app_service)
 
     @pytest.fixture
@@ -598,10 +601,12 @@ class TestImportApp:
         self, tools, mock_marketplace_service, mock_app_service, sample_marketplace_app
     ):
         """Test successfully importing an app."""
-        mock_marketplace_service.get_app = AsyncMock(return_value=sample_marketplace_app)
+        mock_marketplace_service.get_app = AsyncMock(
+            return_value=sample_marketplace_app
+        )
         mock_app_service.add_app = AsyncMock()
 
-        with patch('tools.marketplace.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.marketplace.tools.log_event", new_callable=AsyncMock):
             result = await tools.import_app("app-1", "user-123")
 
         assert result["success"] is True
@@ -621,7 +626,7 @@ class TestImportApp:
     @pytest.mark.asyncio
     async def test_import_app_no_app_service(self, mock_marketplace_service):
         """Test import when app service not configured."""
-        with patch('tools.marketplace.tools.logger'):
+        with patch("tools.marketplace.tools.logger"):
             tools = MarketplaceTools(mock_marketplace_service, None)
 
         app = MagicMock()
@@ -637,8 +642,12 @@ class TestImportApp:
         self, tools, mock_marketplace_service, mock_app_service, sample_marketplace_app
     ):
         """Test importing app that already exists."""
-        mock_marketplace_service.get_app = AsyncMock(return_value=sample_marketplace_app)
-        mock_app_service.add_app = AsyncMock(side_effect=ValueError("App already exists"))
+        mock_marketplace_service.get_app = AsyncMock(
+            return_value=sample_marketplace_app
+        )
+        mock_app_service.add_app = AsyncMock(
+            side_effect=ValueError("App already exists")
+        )
 
         result = await tools.import_app("app-1", "user-123")
 
@@ -650,10 +659,12 @@ class TestImportApp:
         self, tools, mock_marketplace_service, mock_app_service, sample_marketplace_app
     ):
         """Test handling exceptions."""
-        mock_marketplace_service.get_app = AsyncMock(return_value=sample_marketplace_app)
+        mock_marketplace_service.get_app = AsyncMock(
+            return_value=sample_marketplace_app
+        )
         mock_app_service.add_app = AsyncMock(side_effect=Exception("Database error"))
 
-        with patch('tools.marketplace.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.marketplace.tools.log_event", new_callable=AsyncMock):
             result = await tools.import_app("app-1", "user-123")
 
         assert result["success"] is False
@@ -683,7 +694,7 @@ class TestImportApp:
         mock_marketplace_service.get_app = AsyncMock(return_value=app)
         mock_app_service.add_app = AsyncMock()
 
-        with patch('tools.marketplace.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.marketplace.tools.log_event", new_callable=AsyncMock):
             result = await tools.import_app("app-1", "user-123")
 
         assert result["success"] is True

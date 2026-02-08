@@ -4,8 +4,9 @@ Agent Tools Unit Tests - Initialization and Validation
 Tests for AgentTools initialization and validation helper methods.
 """
 
-import pytest
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from tools.agent.tools import AgentTools
 
@@ -22,7 +23,7 @@ class TestAgentToolsInit:
         mock_packager = MagicMock()
         mock_lifecycle = MagicMock()
 
-        with patch('tools.agent.tools.logger'):
+        with patch("tools.agent.tools.logger"):
             tools = AgentTools(
                 mock_agent_service,
                 mock_agent_manager,
@@ -46,8 +47,8 @@ class TestAgentToolsInit:
         mock_ssh_service = MagicMock()
         mock_server_service = MagicMock()
 
-        with patch('tools.agent.tools.logger'):
-            with patch('tools.agent.tools.AgentPackager') as MockPackager:
+        with patch("tools.agent.tools.logger"):
+            with patch("tools.agent.tools.AgentPackager") as MockPackager:
                 mock_packager_instance = MagicMock()
                 MockPackager.return_value = mock_packager_instance
 
@@ -68,7 +69,7 @@ class TestGetServerUrl:
     @pytest.fixture
     def agent_tools(self):
         """Create AgentTools with mocked dependencies."""
-        with patch('tools.agent.tools.logger'):
+        with patch("tools.agent.tools.logger"):
             return AgentTools(
                 MagicMock(),
                 MagicMock(),
@@ -78,13 +79,13 @@ class TestGetServerUrl:
 
     def test_get_server_url_default(self, agent_tools):
         """Test default server URL."""
-        with patch.dict('os.environ', {}, clear=True):
+        with patch.dict("os.environ", {}, clear=True):
             url = agent_tools._get_server_url()
         assert url == "http://localhost:8000"
 
     def test_get_server_url_from_env(self, agent_tools):
         """Test server URL from environment variable."""
-        with patch.dict('os.environ', {'SERVER_URL': 'https://example.com:9000'}):
+        with patch.dict("os.environ", {"SERVER_URL": "https://example.com:9000"}):
             url = agent_tools._get_server_url()
         assert url == "https://example.com:9000"
 
@@ -95,7 +96,7 @@ class TestValidateRegistrationCode:
     @pytest.fixture
     def agent_tools(self):
         """Create AgentTools with mocked dependencies."""
-        with patch('tools.agent.tools.logger'):
+        with patch("tools.agent.tools.logger"):
             return AgentTools(
                 MagicMock(),
                 MagicMock(),
@@ -155,7 +156,7 @@ class TestValidateServerUrl:
     @pytest.fixture
     def agent_tools(self):
         """Create AgentTools with mocked dependencies."""
-        with patch('tools.agent.tools.logger'):
+        with patch("tools.agent.tools.logger"):
             return AgentTools(
                 MagicMock(),
                 MagicMock(),
@@ -206,7 +207,10 @@ class TestValidateServerUrl:
 
     def test_invalid_url_shell_injection_pipe(self, agent_tools):
         """Test URL with pipe injection is invalid."""
-        assert agent_tools._validate_server_url("http://example.com|cat /etc/passwd") is False
+        assert (
+            agent_tools._validate_server_url("http://example.com|cat /etc/passwd")
+            is False
+        )
 
     def test_invalid_url_shell_injection_backtick(self, agent_tools):
         """Test URL with backtick injection is invalid."""
@@ -236,7 +240,7 @@ class TestBuildDeployScript:
         mock_packager.package.return_value = "BASE64ENCODED=="
         mock_packager.get_version.return_value = "1.0.0"
 
-        with patch('tools.agent.tools.logger'):
+        with patch("tools.agent.tools.logger"):
             return AgentTools(
                 MagicMock(),
                 MagicMock(),

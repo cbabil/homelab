@@ -4,8 +4,9 @@ Unit tests for services/database_service.py - Session/Account lock method delega
 Tests account lock methods that delegate to SessionDatabaseService.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 
 @pytest.fixture
@@ -17,16 +18,19 @@ def mock_session_service():
 @pytest.fixture
 def db_service_with_session_mock(mock_session_service):
     """Create DatabaseService with mocked session service."""
-    with patch("services.database_service.DatabaseConnection"), \
-         patch("services.database_service.UserDatabaseService"), \
-         patch("services.database_service.ServerDatabaseService"), \
-         patch("services.database_service.SessionDatabaseService") as MockSession, \
-         patch("services.database_service.AppDatabaseService"), \
-         patch("services.database_service.MetricsDatabaseService"), \
-         patch("services.database_service.SystemDatabaseService"), \
-         patch("services.database_service.ExportDatabaseService"), \
-         patch("services.database_service.SchemaInitializer"):
+    with (
+        patch("services.database_service.DatabaseConnection"),
+        patch("services.database_service.UserDatabaseService"),
+        patch("services.database_service.ServerDatabaseService"),
+        patch("services.database_service.SessionDatabaseService") as MockSession,
+        patch("services.database_service.AppDatabaseService"),
+        patch("services.database_service.MetricsDatabaseService"),
+        patch("services.database_service.SystemDatabaseService"),
+        patch("services.database_service.ExportDatabaseService"),
+        patch("services.database_service.SchemaInitializer"),
+    ):
         from services.database_service import DatabaseService
+
         MockSession.return_value = mock_session_service
         return DatabaseService()
 
@@ -223,9 +227,7 @@ class TestGetLockedAccounts:
             return_value=[sample_lock_info]
         )
 
-        await db_service_with_session_mock.get_locked_accounts(
-            include_expired=True
-        )
+        await db_service_with_session_mock.get_locked_accounts(include_expired=True)
 
         mock_session_service.get_locked_accounts.assert_awaited_once_with(True, False)
 
@@ -238,9 +240,7 @@ class TestGetLockedAccounts:
             return_value=[sample_lock_info]
         )
 
-        await db_service_with_session_mock.get_locked_accounts(
-            include_unlocked=True
-        )
+        await db_service_with_session_mock.get_locked_accounts(include_unlocked=True)
 
         mock_session_service.get_locked_accounts.assert_awaited_once_with(False, True)
 
@@ -350,9 +350,7 @@ class TestLockAccount:
         """lock_account should return False on failure."""
         mock_session_service.lock_account = AsyncMock(return_value=False)
 
-        result = await db_service_with_session_mock.lock_account(
-            "nonexistent", "admin"
-        )
+        result = await db_service_with_session_mock.lock_account("nonexistent", "admin")
 
         assert result is False
 

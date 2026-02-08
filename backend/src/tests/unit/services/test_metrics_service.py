@@ -4,10 +4,11 @@ Unit tests for services/metrics_service.py
 Tests metrics collection and management via SSH.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from services.metrics_service import MetricsService, PERIOD_MAP
+import pytest
+
+from services.metrics_service import PERIOD_MAP, MetricsService
 
 
 @pytest.fixture
@@ -326,7 +327,9 @@ class TestCollectContainerMetrics:
     ):
         """collect_container_metrics should collect and save metrics."""
         docker_output = "abc123|nginx|25.5|256MiB / 512MiB|1024|2048|running"
-        mock_ssh_service.execute_command = AsyncMock(return_value=(0, docker_output, ""))
+        mock_ssh_service.execute_command = AsyncMock(
+            return_value=(0, docker_output, "")
+        )
         mock_db_service.save_container_metrics = AsyncMock()
 
         with patch("services.metrics_service.logger"):
@@ -367,9 +370,7 @@ class TestGetServerMetrics:
     """Tests for get_server_metrics method."""
 
     @pytest.mark.asyncio
-    async def test_get_server_metrics_success(
-        self, metrics_service, mock_db_service
-    ):
+    async def test_get_server_metrics_success(self, metrics_service, mock_db_service):
         """get_server_metrics should return historical metrics."""
         mock_metrics = [MagicMock(), MagicMock()]
         mock_db_service.get_server_metrics = AsyncMock(return_value=mock_metrics)
@@ -407,9 +408,7 @@ class TestGetServerMetrics:
         mock_db_service.get_server_metrics.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_get_server_metrics_error(
-        self, metrics_service, mock_db_service
-    ):
+    async def test_get_server_metrics_error(self, metrics_service, mock_db_service):
         """get_server_metrics should return empty list on error."""
         mock_db_service.get_server_metrics = AsyncMock(
             side_effect=Exception("DB error")
@@ -453,9 +452,7 @@ class TestGetContainerMetrics:
         assert call_kwargs["container_name"] == "nginx"
 
     @pytest.mark.asyncio
-    async def test_get_container_metrics_error(
-        self, metrics_service, mock_db_service
-    ):
+    async def test_get_container_metrics_error(self, metrics_service, mock_db_service):
         """get_container_metrics should return empty list on error."""
         mock_db_service.get_container_metrics = AsyncMock(
             side_effect=Exception("DB error")

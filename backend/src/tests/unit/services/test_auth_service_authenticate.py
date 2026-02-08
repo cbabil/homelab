@@ -4,12 +4,13 @@ Auth Service Authentication Tests
 Tests for authenticate_user method.
 """
 
-import pytest
-from datetime import datetime, UTC
-from unittest.mock import MagicMock, AsyncMock, patch
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
+from models.auth import LoginCredentials, TokenType, User, UserRole
 from services.auth_service import AuthService
-from models.auth import User, UserRole, LoginCredentials, TokenType
 
 
 @pytest.fixture
@@ -79,9 +80,11 @@ class TestAuthenticateUserLocking:
             return_value=(True, {"lock_expires_at": "2024-01-15T10:00:00"})
         )
 
-        with patch.object(auth_service, "_get_security_settings", return_value=(5, 900)), \
-             patch.object(auth_service, "_log_security_event", new_callable=AsyncMock), \
-             patch("services.auth_service.logger"):
+        with (
+            patch.object(auth_service, "_get_security_settings", return_value=(5, 900)),
+            patch.object(auth_service, "_log_security_event", new_callable=AsyncMock),
+            patch("services.auth_service.logger"),
+        ):
             result = await auth_service.authenticate_user(
                 login_credentials, client_ip="192.168.1.1"
             )
@@ -100,9 +103,11 @@ class TestAuthenticateUserLocking:
             ]
         )
 
-        with patch.object(auth_service, "_get_security_settings", return_value=(5, 900)), \
-             patch.object(auth_service, "_log_security_event", new_callable=AsyncMock), \
-             patch("services.auth_service.logger"):
+        with (
+            patch.object(auth_service, "_get_security_settings", return_value=(5, 900)),
+            patch.object(auth_service, "_log_security_event", new_callable=AsyncMock),
+            patch("services.auth_service.logger"),
+        ):
             result = await auth_service.authenticate_user(
                 login_credentials, client_ip="192.168.1.1"
             )
@@ -120,9 +125,11 @@ class TestAuthenticateUserNotFound:
         """authenticate_user should return None when user not found."""
         mock_db_service.get_user_by_username = AsyncMock(return_value=None)
 
-        with patch.object(auth_service, "_get_security_settings", return_value=(5, 900)), \
-             patch.object(auth_service, "_log_security_event", new_callable=AsyncMock), \
-             patch("services.auth_service.logger"):
+        with (
+            patch.object(auth_service, "_get_security_settings", return_value=(5, 900)),
+            patch.object(auth_service, "_log_security_event", new_callable=AsyncMock),
+            patch("services.auth_service.logger"),
+        ):
             result = await auth_service.authenticate_user(login_credentials)
 
         assert result is None
@@ -136,9 +143,11 @@ class TestAuthenticateUserNotFound:
         valid_user.is_active = False
         mock_db_service.get_user_by_username = AsyncMock(return_value=valid_user)
 
-        with patch.object(auth_service, "_get_security_settings", return_value=(5, 900)), \
-             patch.object(auth_service, "_log_security_event", new_callable=AsyncMock), \
-             patch("services.auth_service.logger"):
+        with (
+            patch.object(auth_service, "_get_security_settings", return_value=(5, 900)),
+            patch.object(auth_service, "_log_security_event", new_callable=AsyncMock),
+            patch("services.auth_service.logger"),
+        ):
             result = await auth_service.authenticate_user(login_credentials)
 
         assert result is None
@@ -150,9 +159,11 @@ class TestAuthenticateUserNotFound:
         """authenticate_user should record failed attempt for IP."""
         mock_db_service.get_user_by_username = AsyncMock(return_value=None)
 
-        with patch.object(auth_service, "_get_security_settings", return_value=(5, 900)), \
-             patch.object(auth_service, "_log_security_event", new_callable=AsyncMock), \
-             patch("services.auth_service.logger"):
+        with (
+            patch.object(auth_service, "_get_security_settings", return_value=(5, 900)),
+            patch.object(auth_service, "_log_security_event", new_callable=AsyncMock),
+            patch("services.auth_service.logger"),
+        ):
             await auth_service.authenticate_user(
                 login_credentials, client_ip="192.168.1.1"
             )
@@ -170,16 +181,17 @@ class TestAuthenticateUserNotFound:
             return_value=(True, 5, "2024-01-15T10:15:00")  # is_locked=True
         )
 
-        with patch.object(auth_service, "_get_security_settings", return_value=(5, 900)), \
-             patch.object(auth_service, "_log_security_event", new_callable=AsyncMock) as mock_log, \
-             patch("services.auth_service.logger"):
+        with (
+            patch.object(auth_service, "_get_security_settings", return_value=(5, 900)),
+            patch.object(
+                auth_service, "_log_security_event", new_callable=AsyncMock
+            ) as mock_log,
+            patch("services.auth_service.logger"),
+        ):
             await auth_service.authenticate_user(login_credentials)
 
         # Should log ACCOUNT_LOCKED event
-        assert any(
-            call[0][0] == "ACCOUNT_LOCKED"
-            for call in mock_log.call_args_list
-        )
+        assert any(call[0][0] == "ACCOUNT_LOCKED" for call in mock_log.call_args_list)
 
 
 class TestAuthenticateInvalidPassword:
@@ -193,9 +205,11 @@ class TestAuthenticateInvalidPassword:
         mock_db_service.get_user_by_username = AsyncMock(return_value=valid_user)
         mock_db_service.get_user_password_hash = AsyncMock(return_value=None)
 
-        with patch.object(auth_service, "_get_security_settings", return_value=(5, 900)), \
-             patch.object(auth_service, "_log_security_event", new_callable=AsyncMock), \
-             patch("services.auth_service.logger"):
+        with (
+            patch.object(auth_service, "_get_security_settings", return_value=(5, 900)),
+            patch.object(auth_service, "_log_security_event", new_callable=AsyncMock),
+            patch("services.auth_service.logger"),
+        ):
             result = await auth_service.authenticate_user(login_credentials)
 
         assert result is None
@@ -208,10 +222,12 @@ class TestAuthenticateInvalidPassword:
         mock_db_service.get_user_by_username = AsyncMock(return_value=valid_user)
         mock_db_service.get_user_password_hash = AsyncMock(return_value="hashed")
 
-        with patch.object(auth_service, "_get_security_settings", return_value=(5, 900)), \
-             patch.object(auth_service, "_log_security_event", new_callable=AsyncMock), \
-             patch("services.auth_service.verify_password", return_value=False), \
-             patch("services.auth_service.logger"):
+        with (
+            patch.object(auth_service, "_get_security_settings", return_value=(5, 900)),
+            patch.object(auth_service, "_log_security_event", new_callable=AsyncMock),
+            patch("services.auth_service.verify_password", return_value=False),
+            patch("services.auth_service.logger"),
+        ):
             result = await auth_service.authenticate_user(login_credentials)
 
         assert result is None
@@ -223,19 +239,25 @@ class TestAuthenticateSuccess:
 
     @pytest.mark.asyncio
     async def test_authenticate_success(
-        self, auth_service, mock_db_service, mock_session_service,
-        login_credentials, valid_user
+        self,
+        auth_service,
+        mock_db_service,
+        mock_session_service,
+        login_credentials,
+        valid_user,
     ):
         """authenticate_user should return LoginResponse on success."""
         mock_db_service.get_user_by_username = AsyncMock(return_value=valid_user)
         mock_db_service.get_user_password_hash = AsyncMock(return_value="hashed")
 
-        with patch.object(auth_service, "_get_security_settings", return_value=(5, 900)), \
-             patch.object(auth_service, "_log_security_event", new_callable=AsyncMock), \
-             patch("services.auth_service.verify_password", return_value=True), \
-             patch("services.auth_service.generate_jwt_token", return_value="jwt-token"), \
-             patch("services.auth_service.create_session_data", return_value={}), \
-             patch("services.auth_service.logger"):
+        with (
+            patch.object(auth_service, "_get_security_settings", return_value=(5, 900)),
+            patch.object(auth_service, "_log_security_event", new_callable=AsyncMock),
+            patch("services.auth_service.verify_password", return_value=True),
+            patch("services.auth_service.generate_jwt_token", return_value="jwt-token"),
+            patch("services.auth_service.create_session_data", return_value={}),
+            patch("services.auth_service.logger"),
+        ):
             result = await auth_service.authenticate_user(
                 login_credentials, client_ip="192.168.1.1", user_agent="Mozilla"
             )
@@ -248,19 +270,25 @@ class TestAuthenticateSuccess:
 
     @pytest.mark.asyncio
     async def test_authenticate_clears_failed_attempts(
-        self, auth_service, mock_db_service, mock_session_service,
-        login_credentials, valid_user
+        self,
+        auth_service,
+        mock_db_service,
+        mock_session_service,
+        login_credentials,
+        valid_user,
     ):
         """authenticate_user should clear failed attempts on success."""
         mock_db_service.get_user_by_username = AsyncMock(return_value=valid_user)
         mock_db_service.get_user_password_hash = AsyncMock(return_value="hashed")
 
-        with patch.object(auth_service, "_get_security_settings", return_value=(5, 900)), \
-             patch.object(auth_service, "_log_security_event", new_callable=AsyncMock), \
-             patch("services.auth_service.verify_password", return_value=True), \
-             patch("services.auth_service.generate_jwt_token", return_value="jwt"), \
-             patch("services.auth_service.create_session_data", return_value={}), \
-             patch("services.auth_service.logger"):
+        with (
+            patch.object(auth_service, "_get_security_settings", return_value=(5, 900)),
+            patch.object(auth_service, "_log_security_event", new_callable=AsyncMock),
+            patch("services.auth_service.verify_password", return_value=True),
+            patch("services.auth_service.generate_jwt_token", return_value="jwt"),
+            patch("services.auth_service.create_session_data", return_value={}),
+            patch("services.auth_service.logger"),
+        ):
             await auth_service.authenticate_user(
                 login_credentials, client_ip="192.168.1.1"
             )
@@ -270,38 +298,50 @@ class TestAuthenticateSuccess:
 
     @pytest.mark.asyncio
     async def test_authenticate_updates_last_login(
-        self, auth_service, mock_db_service, mock_session_service,
-        login_credentials, valid_user
+        self,
+        auth_service,
+        mock_db_service,
+        mock_session_service,
+        login_credentials,
+        valid_user,
     ):
         """authenticate_user should update last login timestamp."""
         mock_db_service.get_user_by_username = AsyncMock(return_value=valid_user)
         mock_db_service.get_user_password_hash = AsyncMock(return_value="hashed")
 
-        with patch.object(auth_service, "_get_security_settings", return_value=(5, 900)), \
-             patch.object(auth_service, "_log_security_event", new_callable=AsyncMock), \
-             patch("services.auth_service.verify_password", return_value=True), \
-             patch("services.auth_service.generate_jwt_token", return_value="jwt"), \
-             patch("services.auth_service.create_session_data", return_value={}), \
-             patch("services.auth_service.logger"):
+        with (
+            patch.object(auth_service, "_get_security_settings", return_value=(5, 900)),
+            patch.object(auth_service, "_log_security_event", new_callable=AsyncMock),
+            patch("services.auth_service.verify_password", return_value=True),
+            patch("services.auth_service.generate_jwt_token", return_value="jwt"),
+            patch("services.auth_service.create_session_data", return_value={}),
+            patch("services.auth_service.logger"),
+        ):
             await auth_service.authenticate_user(login_credentials)
 
         mock_db_service.update_user_last_login.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_authenticate_creates_session(
-        self, auth_service, mock_db_service, mock_session_service,
-        login_credentials, valid_user
+        self,
+        auth_service,
+        mock_db_service,
+        mock_session_service,
+        login_credentials,
+        valid_user,
     ):
         """authenticate_user should create database session."""
         mock_db_service.get_user_by_username = AsyncMock(return_value=valid_user)
         mock_db_service.get_user_password_hash = AsyncMock(return_value="hashed")
 
-        with patch.object(auth_service, "_get_security_settings", return_value=(5, 900)), \
-             patch.object(auth_service, "_log_security_event", new_callable=AsyncMock), \
-             patch("services.auth_service.verify_password", return_value=True), \
-             patch("services.auth_service.generate_jwt_token", return_value="jwt"), \
-             patch("services.auth_service.create_session_data", return_value={}), \
-             patch("services.auth_service.logger"):
+        with (
+            patch.object(auth_service, "_get_security_settings", return_value=(5, 900)),
+            patch.object(auth_service, "_log_security_event", new_callable=AsyncMock),
+            patch("services.auth_service.verify_password", return_value=True),
+            patch("services.auth_service.generate_jwt_token", return_value="jwt"),
+            patch("services.auth_service.create_session_data", return_value={}),
+            patch("services.auth_service.logger"),
+        ):
             await auth_service.authenticate_user(
                 login_credentials, client_ip="192.168.1.1", user_agent="Mozilla"
             )
@@ -321,13 +361,13 @@ class TestAuthenticateException:
         self, auth_service, mock_db_service, login_credentials
     ):
         """authenticate_user should return None on exception."""
-        mock_db_service.is_account_locked = AsyncMock(
-            side_effect=Exception("DB error")
-        )
+        mock_db_service.is_account_locked = AsyncMock(side_effect=Exception("DB error"))
 
-        with patch.object(auth_service, "_get_security_settings", return_value=(5, 900)), \
-             patch.object(auth_service, "_log_security_event", new_callable=AsyncMock), \
-             patch("services.auth_service.logger"):
+        with (
+            patch.object(auth_service, "_get_security_settings", return_value=(5, 900)),
+            patch.object(auth_service, "_log_security_event", new_callable=AsyncMock),
+            patch("services.auth_service.logger"),
+        ):
             result = await auth_service.authenticate_user(login_credentials)
 
         assert result is None
@@ -337,13 +377,15 @@ class TestAuthenticateException:
         self, auth_service, mock_db_service, login_credentials
     ):
         """authenticate_user should log failed login on exception."""
-        mock_db_service.is_account_locked = AsyncMock(
-            side_effect=Exception("DB error")
-        )
+        mock_db_service.is_account_locked = AsyncMock(side_effect=Exception("DB error"))
 
-        with patch.object(auth_service, "_get_security_settings", return_value=(5, 900)), \
-             patch.object(auth_service, "_log_security_event", new_callable=AsyncMock) as mock_log, \
-             patch("services.auth_service.logger"):
+        with (
+            patch.object(auth_service, "_get_security_settings", return_value=(5, 900)),
+            patch.object(
+                auth_service, "_log_security_event", new_callable=AsyncMock
+            ) as mock_log,
+            patch("services.auth_service.logger"),
+        ):
             await auth_service.authenticate_user(login_credentials)
 
         # Should log LOGIN failure
@@ -365,10 +407,12 @@ class TestAuthenticateWrongPasswordWithIp:
         mock_db_service.get_user_by_username = AsyncMock(return_value=valid_user)
         mock_db_service.get_user_password_hash = AsyncMock(return_value="hashed")
 
-        with patch.object(auth_service, "_get_security_settings", return_value=(5, 900)), \
-             patch.object(auth_service, "_log_security_event", new_callable=AsyncMock), \
-             patch("services.auth_service.verify_password", return_value=False), \
-             patch("services.auth_service.logger"):
+        with (
+            patch.object(auth_service, "_get_security_settings", return_value=(5, 900)),
+            patch.object(auth_service, "_log_security_event", new_callable=AsyncMock),
+            patch("services.auth_service.verify_password", return_value=False),
+            patch("services.auth_service.logger"),
+        ):
             await auth_service.authenticate_user(
                 login_credentials, client_ip="192.168.1.1"
             )
@@ -387,19 +431,20 @@ class TestAuthenticateWrongPasswordWithIp:
             return_value=(True, 5, "2024-01-15T10:15:00")  # is_locked=True
         )
 
-        with patch.object(auth_service, "_get_security_settings", return_value=(5, 900)), \
-             patch.object(auth_service, "_log_security_event", new_callable=AsyncMock) as mock_log, \
-             patch("services.auth_service.verify_password", return_value=False), \
-             patch("services.auth_service.logger"):
+        with (
+            patch.object(auth_service, "_get_security_settings", return_value=(5, 900)),
+            patch.object(
+                auth_service, "_log_security_event", new_callable=AsyncMock
+            ) as mock_log,
+            patch("services.auth_service.verify_password", return_value=False),
+            patch("services.auth_service.logger"),
+        ):
             await auth_service.authenticate_user(
                 login_credentials, client_ip="192.168.1.1"
             )
 
         # Should log ACCOUNT_LOCKED event
-        assert any(
-            call[0][0] == "ACCOUNT_LOCKED"
-            for call in mock_log.call_args_list
-        )
+        assert any(call[0][0] == "ACCOUNT_LOCKED" for call in mock_log.call_args_list)
 
 
 class TestAuthenticateSkipIpLock:
@@ -412,12 +457,12 @@ class TestAuthenticateSkipIpLock:
         """authenticate_user should skip IP lock check for 'unknown' IP."""
         mock_db_service.get_user_by_username = AsyncMock(return_value=None)
 
-        with patch.object(auth_service, "_get_security_settings", return_value=(5, 900)), \
-             patch.object(auth_service, "_log_security_event", new_callable=AsyncMock), \
-             patch("services.auth_service.logger"):
-            await auth_service.authenticate_user(
-                login_credentials, client_ip="unknown"
-            )
+        with (
+            patch.object(auth_service, "_get_security_settings", return_value=(5, 900)),
+            patch.object(auth_service, "_log_security_event", new_callable=AsyncMock),
+            patch("services.auth_service.logger"),
+        ):
+            await auth_service.authenticate_user(login_credentials, client_ip="unknown")
 
         # Should only record for username, not IP
         assert mock_db_service.record_failed_login_attempt.call_count == 1
@@ -429,12 +474,12 @@ class TestAuthenticateSkipIpLock:
         """authenticate_user should skip IP lock check for None IP."""
         mock_db_service.get_user_by_username = AsyncMock(return_value=None)
 
-        with patch.object(auth_service, "_get_security_settings", return_value=(5, 900)), \
-             patch.object(auth_service, "_log_security_event", new_callable=AsyncMock), \
-             patch("services.auth_service.logger"):
-            await auth_service.authenticate_user(
-                login_credentials, client_ip=None
-            )
+        with (
+            patch.object(auth_service, "_get_security_settings", return_value=(5, 900)),
+            patch.object(auth_service, "_log_security_event", new_callable=AsyncMock),
+            patch("services.auth_service.logger"),
+        ):
+            await auth_service.authenticate_user(login_credentials, client_ip=None)
 
         # Should only check username lock, not IP
         mock_db_service.is_account_locked.assert_called_once()

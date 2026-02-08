@@ -4,9 +4,10 @@ Unit tests for services/factory.py
 Tests service factory for creating and wiring application services.
 """
 
-import pytest
 from pathlib import Path
 from unittest.mock import MagicMock, patch
+
+import pytest
 
 from services.factory import create_services
 
@@ -49,9 +50,10 @@ class TestCreateServices:
 
     def test_create_services_returns_dict(self, mock_services, tmp_path):
         """create_services should return a dictionary."""
-        with patch.multiple("services.factory", **{
-            name: mock.start() for name, mock in mock_services.items()
-        }):
+        with patch.multiple(
+            "services.factory",
+            **{name: mock.start() for name, mock in mock_services.items()},
+        ):
             result = create_services(tmp_path, {"key": "value"})
             assert isinstance(result, dict)
 
@@ -85,9 +87,10 @@ class TestCreateServices:
             "command_router",
         }
 
-        with patch.multiple("services.factory", **{
-            name: mock.start() for name, mock in mock_services.items()
-        }):
+        with patch.multiple(
+            "services.factory",
+            **{name: mock.start() for name, mock in mock_services.items()},
+        ):
             result = create_services(tmp_path, {})
             assert set(result.keys()) == expected_keys
 
@@ -98,9 +101,10 @@ class TestCreateServices:
         """create_services should include passed config in result."""
         config = {"debug": True, "port": 8080}
 
-        with patch.multiple("services.factory", **{
-            name: mock.start() for name, mock in mock_services.items()
-        }):
+        with patch.multiple(
+            "services.factory",
+            **{name: mock.start() for name, mock in mock_services.items()},
+        ):
             result = create_services(tmp_path, config)
             assert result["config"] == config
 

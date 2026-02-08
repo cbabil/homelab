@@ -4,18 +4,19 @@ Tests for auth_helpers module.
 Tests password hashing, verification, and JWT operations.
 """
 
-import pytest
-from datetime import datetime, UTC
 import time
+from datetime import UTC, datetime
+
+import pytest
+
 from lib.auth_helpers import (
-    hash_password,
-    verify_password,
-    generate_jwt_token,
-    validate_jwt_token,
-    create_session_data,
-    generate_session_id,
-    create_default_admin,
     BCRYPT_ROUNDS,
+    create_session_data,
+    generate_jwt_token,
+    generate_session_id,
+    hash_password,
+    validate_jwt_token,
+    verify_password,
 )
 from models.auth import User, UserRole
 
@@ -136,7 +137,7 @@ class TestJWTOperations:
             role=UserRole.ADMIN,
             last_login=datetime.now(UTC).isoformat(),
             is_active=True,
-            preferences={}
+            preferences={},
         )
 
     @pytest.fixture
@@ -247,50 +248,11 @@ class TestSessionOperations:
         data_custom = create_session_data("user-123", expiry_hours=48)
 
         # Custom expiry should be later than default
-        expires_default = datetime.fromisoformat(data_default["expires_at"].replace("Z", "+00:00"))
-        expires_custom = datetime.fromisoformat(data_custom["expires_at"].replace("Z", "+00:00"))
+        expires_default = datetime.fromisoformat(
+            data_default["expires_at"].replace("Z", "+00:00")
+        )
+        expires_custom = datetime.fromisoformat(
+            data_custom["expires_at"].replace("Z", "+00:00")
+        )
 
         assert expires_custom > expires_default
-
-
-class TestDefaultAdmin:
-    """Tests for create_default_admin function."""
-
-    def test_create_default_admin_returns_user(self):
-        """create_default_admin should return a User object."""
-        admin = create_default_admin()
-        assert isinstance(admin, User)
-
-    def test_create_default_admin_has_correct_username(self):
-        """create_default_admin should have username 'admin'."""
-        admin = create_default_admin()
-        assert admin.username == "admin"
-
-    def test_create_default_admin_has_admin_role(self):
-        """create_default_admin should have ADMIN role."""
-        admin = create_default_admin()
-        assert admin.role == UserRole.ADMIN
-
-    def test_create_default_admin_is_active(self):
-        """create_default_admin should be active."""
-        admin = create_default_admin()
-        assert admin.is_active is True
-
-    def test_create_default_admin_has_email(self):
-        """create_default_admin should have email."""
-        admin = create_default_admin()
-        assert admin.email == "admin@tomo.dev"
-
-    def test_create_default_admin_has_preferences(self):
-        """create_default_admin should have default preferences."""
-        admin = create_default_admin()
-        assert admin.preferences is not None
-        assert admin.preferences["theme"] == "dark"
-        assert admin.preferences["language"] == "en"
-        assert admin.preferences["notifications"] is True
-
-    def test_create_default_admin_has_unique_id(self):
-        """create_default_admin should generate unique IDs."""
-        admin1 = create_default_admin()
-        admin2 = create_default_admin()
-        assert admin1.id != admin2.id

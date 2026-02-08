@@ -4,15 +4,15 @@ Unit tests for services/database/registration_code_service.py
 Tests RegistrationCodeDatabaseService class methods.
 """
 
-import pytest
 from contextlib import asynccontextmanager
 from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 from services.database.registration_code_service import (
     RegistrationCodeDatabaseService,
 )
-
 
 # =============================================================================
 # Fixtures
@@ -84,19 +84,19 @@ class TestCreate:
         mock_conn = AsyncMock()
         mock_connection.get_connection.return_value = create_mock_context(mock_conn)
 
-        with patch("services.database.registration_code_service.logger"):
+        with (
+            patch("services.database.registration_code_service.logger"),
+            patch("services.database.registration_code_service.uuid4") as mock_uuid,
+        ):
+            mock_uuid.return_value = MagicMock()
+            mock_uuid.return_value.__str__ = lambda self: "test-uuid"
+
             with patch(
-                "services.database.registration_code_service.uuid4"
-            ) as mock_uuid:
-                mock_uuid.return_value = MagicMock()
-                mock_uuid.return_value.__str__ = lambda self: "test-uuid"
+                "services.database.registration_code_service.secrets.token_hex"
+            ) as mock_token:
+                mock_token.return_value = "abcd1234efgh5678"
 
-                with patch(
-                    "services.database.registration_code_service.secrets.token_hex"
-                ) as mock_token:
-                    mock_token.return_value = "abcd1234efgh5678"
-
-                    result = await service.create("agent-123", expiry_minutes=10)
+                result = await service.create("agent-123", expiry_minutes=10)
 
         assert result.id == "test-uuid"
         assert result.agent_id == "agent-123"
@@ -156,9 +156,7 @@ class TestCreate:
         mock_conn = AsyncMock()
         mock_connection.get_connection.return_value = create_mock_context(mock_conn)
 
-        with patch(
-            "services.database.registration_code_service.logger"
-        ) as mock_logger:
+        with patch("services.database.registration_code_service.logger") as mock_logger:
             await service.create("agent-123")
 
         mock_logger.info.assert_called_once()
@@ -338,9 +336,7 @@ class TestMarkUsed:
         mock_conn = AsyncMock()
         mock_connection.get_connection.return_value = create_mock_context(mock_conn)
 
-        with patch(
-            "services.database.registration_code_service.logger"
-        ) as mock_logger:
+        with patch("services.database.registration_code_service.logger") as mock_logger:
             await service.mark_used("code-123")
 
         mock_logger.info.assert_called_once()
@@ -406,9 +402,7 @@ class TestCleanupExpired:
 
         mock_connection.get_connection.return_value = create_mock_context(mock_conn)
 
-        with patch(
-            "services.database.registration_code_service.logger"
-        ) as mock_logger:
+        with patch("services.database.registration_code_service.logger") as mock_logger:
             await service.cleanup_expired()
 
         mock_logger.info.assert_called_once()
@@ -428,9 +422,7 @@ class TestCleanupExpired:
 
         mock_connection.get_connection.return_value = create_mock_context(mock_conn)
 
-        with patch(
-            "services.database.registration_code_service.logger"
-        ) as mock_logger:
+        with patch("services.database.registration_code_service.logger") as mock_logger:
             await service.cleanup_expired()
 
         mock_logger.info.assert_not_called()
