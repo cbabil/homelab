@@ -4,17 +4,19 @@ Unit tests for services/dashboard_service.py - Core functionality
 Tests initialization, server counts, and app counts.
 """
 
-import pytest
-from unittest.mock import AsyncMock, patch
 from dataclasses import dataclass
+from unittest.mock import AsyncMock, patch
 
-from services.dashboard_service import DashboardService
+import pytest
+
 from models.server import ServerStatus
+from services.dashboard_service import DashboardService
 
 
 @dataclass
 class MockServer:
     """Mock server object for testing."""
+
     id: str
     status: ServerStatus = ServerStatus.CONNECTED
 
@@ -22,6 +24,7 @@ class MockServer:
 @dataclass
 class MockServerString:
     """Mock server with string status."""
+
     id: str
     status: str = "connected"
 
@@ -29,6 +32,7 @@ class MockServerString:
 @dataclass
 class MockApp:
     """Mock app object for testing."""
+
     status: str = "running"
 
 
@@ -61,14 +65,14 @@ def dashboard_service(
     mock_server_service,
     mock_deployment_service,
     mock_metrics_service,
-    mock_activity_service
+    mock_activity_service,
 ):
     """Create DashboardService instance with mocks."""
     return DashboardService(
         mock_server_service,
         mock_deployment_service,
         mock_metrics_service,
-        mock_activity_service
+        mock_activity_service,
     )
 
 
@@ -80,14 +84,14 @@ class TestDashboardServiceInit:
         mock_server_service,
         mock_deployment_service,
         mock_metrics_service,
-        mock_activity_service
+        mock_activity_service,
     ):
         """DashboardService should store server_service reference."""
         service = DashboardService(
             mock_server_service,
             mock_deployment_service,
             mock_metrics_service,
-            mock_activity_service
+            mock_activity_service,
         )
         assert service.server_service is mock_server_service
 
@@ -96,14 +100,14 @@ class TestDashboardServiceInit:
         mock_server_service,
         mock_deployment_service,
         mock_metrics_service,
-        mock_activity_service
+        mock_activity_service,
     ):
         """DashboardService should store deployment_service reference."""
         service = DashboardService(
             mock_server_service,
             mock_deployment_service,
             mock_metrics_service,
-            mock_activity_service
+            mock_activity_service,
         )
         assert service.deployment_service is mock_deployment_service
 
@@ -112,14 +116,14 @@ class TestDashboardServiceInit:
         mock_server_service,
         mock_deployment_service,
         mock_metrics_service,
-        mock_activity_service
+        mock_activity_service,
     ):
         """DashboardService should store metrics_service reference."""
         service = DashboardService(
             mock_server_service,
             mock_deployment_service,
             mock_metrics_service,
-            mock_activity_service
+            mock_activity_service,
         )
         assert service.metrics_service is mock_metrics_service
 
@@ -128,14 +132,14 @@ class TestDashboardServiceInit:
         mock_server_service,
         mock_deployment_service,
         mock_metrics_service,
-        mock_activity_service
+        mock_activity_service,
     ):
         """DashboardService should store activity_service reference."""
         service = DashboardService(
             mock_server_service,
             mock_deployment_service,
             mock_metrics_service,
-            mock_activity_service
+            mock_activity_service,
         )
         assert service.activity_service is mock_activity_service
 
@@ -144,7 +148,7 @@ class TestDashboardServiceInit:
         mock_server_service,
         mock_deployment_service,
         mock_metrics_service,
-        mock_activity_service
+        mock_activity_service,
     ):
         """DashboardService should log initialization."""
         with patch("services.dashboard_service.logger") as mock_logger:
@@ -152,7 +156,7 @@ class TestDashboardServiceInit:
                 mock_server_service,
                 mock_deployment_service,
                 mock_metrics_service,
-                mock_activity_service
+                mock_activity_service,
             )
             mock_logger.info.assert_called_once_with("Dashboard service initialized")
 
@@ -181,7 +185,7 @@ class TestGetSummaryServerCounts:
         mock_server_service,
         mock_deployment_service,
         mock_metrics_service,
-        mock_activity_service
+        mock_activity_service,
     ):
         """get_summary should count all servers as online with enum status."""
         servers = [
@@ -206,7 +210,7 @@ class TestGetSummaryServerCounts:
         mock_server_service,
         mock_deployment_service,
         mock_metrics_service,
-        mock_activity_service
+        mock_activity_service,
     ):
         """get_summary should count servers as online with string 'connected'."""
         servers = [
@@ -231,7 +235,7 @@ class TestGetSummaryServerCounts:
         mock_server_service,
         mock_deployment_service,
         mock_metrics_service,
-        mock_activity_service
+        mock_activity_service,
     ):
         """get_summary should count all servers as offline when disconnected."""
         servers = [
@@ -256,7 +260,7 @@ class TestGetSummaryServerCounts:
         mock_server_service,
         mock_deployment_service,
         mock_metrics_service,
-        mock_activity_service
+        mock_activity_service,
     ):
         """get_summary should correctly count mixed online/offline servers."""
         servers = [
@@ -283,9 +287,10 @@ class TestGetSummaryServerCounts:
         mock_server_service,
         mock_deployment_service,
         mock_metrics_service,
-        mock_activity_service
+        mock_activity_service,
     ):
         """get_summary should handle servers without status attribute."""
+
         @dataclass
         class ServerNoStatus:
             id: str
@@ -313,7 +318,7 @@ class TestGetSummaryAppCounts:
         mock_server_service,
         mock_deployment_service,
         mock_metrics_service,
-        mock_activity_service
+        mock_activity_service,
     ):
         """get_summary should count running apps."""
         servers = [MockServer(id="s1")]
@@ -338,7 +343,7 @@ class TestGetSummaryAppCounts:
         mock_server_service,
         mock_deployment_service,
         mock_metrics_service,
-        mock_activity_service
+        mock_activity_service,
     ):
         """get_summary should count stopped apps."""
         servers = [MockServer(id="s1")]
@@ -363,7 +368,7 @@ class TestGetSummaryAppCounts:
         mock_server_service,
         mock_deployment_service,
         mock_metrics_service,
-        mock_activity_service
+        mock_activity_service,
     ):
         """get_summary should count error apps."""
         servers = [MockServer(id="s1")]
@@ -386,7 +391,7 @@ class TestGetSummaryAppCounts:
         mock_server_service,
         mock_deployment_service,
         mock_metrics_service,
-        mock_activity_service
+        mock_activity_service,
     ):
         """get_summary should count mixed app statuses."""
         servers = [MockServer(id="s1")]
@@ -416,7 +421,7 @@ class TestGetSummaryAppCounts:
         mock_server_service,
         mock_deployment_service,
         mock_metrics_service,
-        mock_activity_service
+        mock_activity_service,
     ):
         """get_summary should handle apps as dictionaries."""
         servers = [MockServer(id="s1")]
@@ -440,7 +445,7 @@ class TestGetSummaryAppCounts:
         mock_server_service,
         mock_deployment_service,
         mock_metrics_service,
-        mock_activity_service
+        mock_activity_service,
     ):
         """get_summary should handle dict apps without status key."""
         servers = [MockServer(id="s1")]
@@ -463,7 +468,7 @@ class TestGetSummaryAppCounts:
         mock_server_service,
         mock_deployment_service,
         mock_metrics_service,
-        mock_activity_service
+        mock_activity_service,
     ):
         """get_summary should aggregate apps from all servers."""
         servers = [MockServer(id="s1"), MockServer(id="s2")]

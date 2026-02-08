@@ -4,8 +4,9 @@ Unit tests for services/deployment/status.py - Details functionality
 Tests for get_all_installations_with_details method.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 
 @pytest.fixture
@@ -79,18 +80,16 @@ def sample_installation():
 
 @pytest.fixture
 def status_manager(
-    mock_ssh_executor,
-    mock_db_service,
-    mock_server_service,
-    mock_marketplace_service
+    mock_ssh_executor, mock_db_service, mock_server_service, mock_marketplace_service
 ):
     """Create StatusManager instance with mocked dependencies."""
     from services.deployment.status import StatusManager
+
     return StatusManager(
         ssh_executor=mock_ssh_executor,
         db_service=mock_db_service,
         server_service=mock_server_service,
-        marketplace_service=mock_marketplace_service
+        marketplace_service=mock_marketplace_service,
     )
 
 
@@ -126,7 +125,7 @@ class TestGetAllInstallationsWithDetails:
         mock_db_service,
         mock_server_service,
         mock_marketplace_service,
-        sample_installation
+        sample_installation,
     ):
         """Should return detailed installation info with server and app data."""
         mock_db_service.get_all_installations.return_value = [sample_installation]
@@ -145,7 +144,7 @@ class TestGetAllInstallationsWithDetails:
         status_manager,
         mock_db_service,
         mock_marketplace_service,
-        sample_installation
+        sample_installation,
     ):
         """Should include app metadata in result."""
         mock_db_service.get_all_installations.return_value = [sample_installation]
@@ -159,11 +158,7 @@ class TestGetAllInstallationsWithDetails:
 
     @pytest.mark.asyncio
     async def test_includes_server_metadata(
-        self,
-        status_manager,
-        mock_db_service,
-        mock_server_service,
-        sample_installation
+        self, status_manager, mock_db_service, mock_server_service, sample_installation
     ):
         """Should include server metadata in result."""
         mock_db_service.get_all_installations.return_value = [sample_installation]
@@ -213,7 +208,7 @@ class TestGetAllInstallationsWithDetails:
         status_manager,
         mock_db_service,
         mock_marketplace_service,
-        sample_installation
+        sample_installation,
     ):
         """Should handle missing app gracefully."""
         mock_db_service.get_all_installations.return_value = [sample_installation]
@@ -228,11 +223,7 @@ class TestGetAllInstallationsWithDetails:
 
     @pytest.mark.asyncio
     async def test_handles_missing_server(
-        self,
-        status_manager,
-        mock_db_service,
-        mock_server_service,
-        sample_installation
+        self, status_manager, mock_db_service, mock_server_service, sample_installation
     ):
         """Should handle missing server gracefully."""
         mock_db_service.get_all_installations.return_value = [sample_installation]
@@ -249,7 +240,7 @@ class TestGetAllInstallationsWithDetails:
         status_manager,
         mock_db_service,
         mock_marketplace_service,
-        sample_installation
+        sample_installation,
     ):
         """Should handle missing repo gracefully."""
         mock_db_service.get_all_installations.return_value = [sample_installation]
@@ -265,7 +256,7 @@ class TestGetAllInstallationsWithDetails:
         status_manager,
         mock_db_service,
         mock_marketplace_service,
-        sample_installation
+        sample_installation,
     ):
         """Should handle app without repo_id gracefully."""
         mock_db_service.get_all_installations.return_value = [sample_installation]
@@ -324,7 +315,11 @@ class TestGetAllInstallationsWithDetails:
 
     @pytest.mark.asyncio
     async def test_handles_multiple_installations(
-        self, status_manager, mock_db_service, mock_server_service, mock_marketplace_service
+        self,
+        status_manager,
+        mock_db_service,
+        mock_server_service,
+        mock_marketplace_service,
     ):
         """Should handle multiple installations efficiently."""
         inst1 = MagicMock()
@@ -360,18 +355,30 @@ class TestGetAllInstallationsWithDetails:
         mock_db_service.get_all_installations.return_value = [inst1, inst2]
 
         # Mock different servers and apps
-        mock_server_service.get_server = AsyncMock(side_effect=[
-            MagicMock(id="server-1", name="Server 1", host="192.168.1.1"),
-            MagicMock(id="server-2", name="Server 2", host="192.168.1.2"),
-        ])
+        mock_server_service.get_server = AsyncMock(
+            side_effect=[
+                MagicMock(id="server-1", name="Server 1", host="192.168.1.1"),
+                MagicMock(id="server-2", name="Server 2", host="192.168.1.2"),
+            ]
+        )
 
         app1 = MagicMock(
-            id="app-1", name="App 1", version="1.0", description="Desc 1",
-            icon="icon1", category="Cat1", repo_id="repo-1"
+            id="app-1",
+            name="App 1",
+            version="1.0",
+            description="Desc 1",
+            icon="icon1",
+            category="Cat1",
+            repo_id="repo-1",
         )
         app2 = MagicMock(
-            id="app-2", name="App 2", version="2.0", description="Desc 2",
-            icon="icon2", category="Cat2", repo_id="repo-1"
+            id="app-2",
+            name="App 2",
+            version="2.0",
+            description="Desc 2",
+            icon="icon2",
+            category="Cat2",
+            repo_id="repo-1",
         )
         mock_marketplace_service.get_app = AsyncMock(side_effect=[app1, app2])
 

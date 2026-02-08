@@ -6,6 +6,7 @@ and locking accounts/IPs to prevent brute force attacks.
 """
 
 import structlog
+
 from database.connection import DatabaseManager
 
 logger = structlog.get_logger("schema_account_locks")

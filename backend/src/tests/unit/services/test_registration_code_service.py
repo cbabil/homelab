@@ -4,16 +4,17 @@ Unit tests for services/database/registration_code_service.py.
 Tests RegistrationCodeDatabaseService and helper functions.
 """
 
-import pytest
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
+from models.agent import RegistrationCode
 from services.database.registration_code_service import (
     RegistrationCodeDatabaseService,
     constant_time_compare,
     hash_code,
 )
-from models.agent import RegistrationCode
 
 
 @pytest.fixture
@@ -30,7 +31,9 @@ def mock_db_connection(mock_connection):
     """Create mock DatabaseConnection wrapper."""
     db_conn = MagicMock()
     db_conn.get_connection = MagicMock()
-    db_conn.get_connection.return_value.__aenter__ = AsyncMock(return_value=mock_connection)
+    db_conn.get_connection.return_value.__aenter__ = AsyncMock(
+        return_value=mock_connection
+    )
     db_conn.get_connection.return_value.__aexit__ = AsyncMock()
     return db_conn
 
@@ -302,7 +305,9 @@ class TestCleanupExpired:
             await service.cleanup_expired()
 
         # info should not be called for cleanup with 0 count
-        cleanup_calls = [c for c in mock_logger.info.call_args_list if "cleaned up" in str(c)]
+        cleanup_calls = [
+            c for c in mock_logger.info.call_args_list if "cleaned up" in str(c)
+        ]
         assert len(cleanup_calls) == 0
 
 

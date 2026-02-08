@@ -8,29 +8,31 @@ Handles engine creation, session management, and connection lifecycle.
 import os
 from contextlib import asynccontextmanager
 from pathlib import Path
-from typing import Optional
 
+import structlog
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import declarative_base
-import structlog
 
 logger = structlog.get_logger("database")
 
 Base = declarative_base()
 
+
 class DatabaseManager:
     """Async database connection manager for SQLite."""
-    
+
     def __init__(self, data_directory: str = "data"):
         self._default_directory = data_directory
-        self._override_directory: Optional[str] = None
+        self._override_directory: str | None = None
         self.engine = None
         self.session_factory = None
         self._configure_paths()
 
     def _configure_paths(self):
         backend_root = Path(__file__).resolve().parents[2]
-        raw_directory = self._override_directory or os.getenv("DATA_DIRECTORY", self._default_directory)
+        raw_directory = self._override_directory or os.getenv(
+            "DATA_DIRECTORY", self._default_directory
+        )
         configured_path = Path(raw_directory)
 
         if not configured_path.is_absolute():
@@ -49,32 +51,26 @@ class DatabaseManager:
         self.engine = None
         self.session_factory = None
         self._configure_paths()
-        
+
     async def initialize(self):
         """Initialize database engine and session factory."""
         self._configure_paths()
         os.makedirs(self.data_directory, exist_ok=True)
-        
-        self.engine = create_async_engine(
-            self.database_url,
-            echo=False,
-            future=True
-        )
-        
+
+        self.engine = create_async_engine(self.database_url, echo=False, future=True)
+
         self.session_factory = async_sessionmaker(
-            bind=self.engine,
-            class_=AsyncSession,
-            expire_on_commit=False
+            bind=self.engine, class_=AsyncSession, expire_on_commit=False
         )
-        
+
         logger.info("Database initialized", path=self.database_path)
-        
+
     @asynccontextmanager
     async def get_session(self):
         """Get async database session with automatic cleanup."""
         if not self.session_factory:
             await self.initialize()
-            
+
         async with self.session_factory() as session:
             try:
                 yield session
@@ -84,5 +80,6 @@ class DatabaseManager:
                 raise
             finally:
                 await session.close()
+
 
 db_manager = DatabaseManager()

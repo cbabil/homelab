@@ -5,7 +5,6 @@ Tests in-memory rate limiting with sliding window.
 """
 
 import time
-import pytest
 from unittest.mock import patch
 
 from lib.rate_limiter import RateLimiter

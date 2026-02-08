@@ -4,11 +4,12 @@ Unit tests for services/helpers/ssh_helpers.py
 Tests SSH connection and system info gathering functionality.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-import paramiko
 
-from services.helpers.ssh_helpers import connect_password, connect_key, get_system_info
+import paramiko
+import pytest
+
+from services.helpers.ssh_helpers import connect_key, connect_password, get_system_info
 
 
 class TestConnectPassword:
@@ -21,7 +22,9 @@ class TestConnectPassword:
         credentials = {"password": "testpass"}
         config = {"timeout": 30}
 
-        with patch("services.helpers.ssh_helpers.asyncio.to_thread", new_callable=AsyncMock) as mock_thread:
+        with patch(
+            "services.helpers.ssh_helpers.asyncio.to_thread", new_callable=AsyncMock
+        ) as mock_thread:
             await connect_password(
                 mock_client, "host.example.com", 22, "user", credentials, config
             )
@@ -42,10 +45,10 @@ class TestConnectPassword:
         credentials = {}
         config = {}
 
-        with patch("services.helpers.ssh_helpers.asyncio.to_thread", new_callable=AsyncMock) as mock_thread:
-            await connect_password(
-                mock_client, "host", 22, "user", credentials, config
-            )
+        with patch(
+            "services.helpers.ssh_helpers.asyncio.to_thread", new_callable=AsyncMock
+        ) as mock_thread:
+            await connect_password(mock_client, "host", 22, "user", credentials, config)
 
             call_kwargs = mock_thread.call_args.kwargs
             assert call_kwargs["password"] is None
@@ -57,7 +60,9 @@ class TestConnectPassword:
         credentials = {"password": "pass"}
         config = {"timeout": 60, "compress": True, "allow_agent": False}
 
-        with patch("services.helpers.ssh_helpers.asyncio.to_thread", new_callable=AsyncMock) as mock_thread:
+        with patch(
+            "services.helpers.ssh_helpers.asyncio.to_thread", new_callable=AsyncMock
+        ) as mock_thread:
             await connect_password(
                 mock_client, "host", 2222, "admin", credentials, config
             )
@@ -79,8 +84,14 @@ class TestConnectKey:
         config = {}
         mock_key = MagicMock()
 
-        with patch("services.helpers.ssh_helpers.asyncio.to_thread", new_callable=AsyncMock), \
-             patch("paramiko.Ed25519Key.from_private_key", return_value=mock_key) as mock_ed25519:
+        with (
+            patch(
+                "services.helpers.ssh_helpers.asyncio.to_thread", new_callable=AsyncMock
+            ),
+            patch(
+                "paramiko.Ed25519Key.from_private_key", return_value=mock_key
+            ) as mock_ed25519,
+        ):
             await connect_key(mock_client, "host", 22, "user", credentials, config)
             mock_ed25519.assert_called_once()
 
@@ -92,9 +103,18 @@ class TestConnectKey:
         config = {}
         mock_key = MagicMock()
 
-        with patch("services.helpers.ssh_helpers.asyncio.to_thread", new_callable=AsyncMock), \
-             patch("paramiko.Ed25519Key.from_private_key", side_effect=Exception("Not Ed25519")), \
-             patch("paramiko.RSAKey.from_private_key", return_value=mock_key) as mock_rsa:
+        with (
+            patch(
+                "services.helpers.ssh_helpers.asyncio.to_thread", new_callable=AsyncMock
+            ),
+            patch(
+                "paramiko.Ed25519Key.from_private_key",
+                side_effect=Exception("Not Ed25519"),
+            ),
+            patch(
+                "paramiko.RSAKey.from_private_key", return_value=mock_key
+            ) as mock_rsa,
+        ):
             await connect_key(mock_client, "host", 22, "user", credentials, config)
             mock_rsa.assert_called_once()
 
@@ -106,10 +126,19 @@ class TestConnectKey:
         config = {}
         mock_key = MagicMock()
 
-        with patch("services.helpers.ssh_helpers.asyncio.to_thread", new_callable=AsyncMock), \
-             patch("paramiko.Ed25519Key.from_private_key", side_effect=Exception("Not Ed25519")), \
-             patch("paramiko.RSAKey.from_private_key", side_effect=Exception("Not RSA")), \
-             patch("paramiko.ECDSAKey.from_private_key", return_value=mock_key) as mock_ecdsa:
+        with (
+            patch(
+                "services.helpers.ssh_helpers.asyncio.to_thread", new_callable=AsyncMock
+            ),
+            patch(
+                "paramiko.Ed25519Key.from_private_key",
+                side_effect=Exception("Not Ed25519"),
+            ),
+            patch("paramiko.RSAKey.from_private_key", side_effect=Exception("Not RSA")),
+            patch(
+                "paramiko.ECDSAKey.from_private_key", return_value=mock_key
+            ) as mock_ecdsa,
+        ):
             await connect_key(mock_client, "host", 22, "user", credentials, config)
             mock_ecdsa.assert_called_once()
 
@@ -120,9 +149,16 @@ class TestConnectKey:
         credentials = {"private_key": "invalid_key"}
         config = {}
 
-        with patch("paramiko.Ed25519Key.from_private_key", side_effect=Exception("Not Ed25519")), \
-             patch("paramiko.RSAKey.from_private_key", side_effect=Exception("Not RSA")), \
-             patch("paramiko.ECDSAKey.from_private_key", side_effect=Exception("Not ECDSA")):
+        with (
+            patch(
+                "paramiko.Ed25519Key.from_private_key",
+                side_effect=Exception("Not Ed25519"),
+            ),
+            patch("paramiko.RSAKey.from_private_key", side_effect=Exception("Not RSA")),
+            patch(
+                "paramiko.ECDSAKey.from_private_key", side_effect=Exception("Not ECDSA")
+            ),
+        ):
             with pytest.raises(ValueError) as exc_info:
                 await connect_key(mock_client, "host", 22, "user", credentials, config)
             assert "Could not parse private key" in str(exc_info.value)
@@ -135,8 +171,14 @@ class TestConnectKey:
         config = {}
         mock_key = MagicMock()
 
-        with patch("services.helpers.ssh_helpers.asyncio.to_thread", new_callable=AsyncMock), \
-             patch("paramiko.Ed25519Key.from_private_key", return_value=mock_key) as mock_ed25519:
+        with (
+            patch(
+                "services.helpers.ssh_helpers.asyncio.to_thread", new_callable=AsyncMock
+            ),
+            patch(
+                "paramiko.Ed25519Key.from_private_key", return_value=mock_key
+            ) as mock_ed25519,
+        ):
             await connect_key(mock_client, "host", 22, "user", credentials, config)
 
             call_kwargs = mock_ed25519.call_args.kwargs
@@ -150,9 +192,15 @@ class TestConnectKey:
         config = {"timeout": 30}
         mock_key = MagicMock()
 
-        with patch("services.helpers.ssh_helpers.asyncio.to_thread", new_callable=AsyncMock) as mock_thread, \
-             patch("paramiko.Ed25519Key.from_private_key", return_value=mock_key):
-            await connect_key(mock_client, "host.example.com", 22, "user", credentials, config)
+        with (
+            patch(
+                "services.helpers.ssh_helpers.asyncio.to_thread", new_callable=AsyncMock
+            ) as mock_thread,
+            patch("paramiko.Ed25519Key.from_private_key", return_value=mock_key),
+        ):
+            await connect_key(
+                mock_client, "host.example.com", 22, "user", credentials, config
+            )
 
             mock_thread.assert_called_once_with(
                 mock_client.connect,
@@ -171,9 +219,13 @@ class TestConnectKey:
         config = {}
         mock_key = MagicMock()
 
-        with patch("services.helpers.ssh_helpers.asyncio.to_thread", new_callable=AsyncMock), \
-             patch("paramiko.Ed25519Key.from_private_key", return_value=mock_key), \
-             patch("services.helpers.ssh_helpers.logger") as mock_logger:
+        with (
+            patch(
+                "services.helpers.ssh_helpers.asyncio.to_thread", new_callable=AsyncMock
+            ),
+            patch("paramiko.Ed25519Key.from_private_key", return_value=mock_key),
+            patch("services.helpers.ssh_helpers.logger") as mock_logger,
+        ):
             await connect_key(mock_client, "host", 22, "user", credentials, config)
             mock_logger.info.assert_called()
 
@@ -184,10 +236,12 @@ class TestConnectKey:
         credentials = {"private_key": "invalid_key"}
         config = {}
 
-        with patch("paramiko.Ed25519Key.from_private_key", side_effect=Exception("err")), \
-             patch("paramiko.RSAKey.from_private_key", side_effect=Exception("err")), \
-             patch("paramiko.ECDSAKey.from_private_key", side_effect=Exception("err")), \
-             patch("services.helpers.ssh_helpers.logger") as mock_logger:
+        with (
+            patch("paramiko.Ed25519Key.from_private_key", side_effect=Exception("err")),
+            patch("paramiko.RSAKey.from_private_key", side_effect=Exception("err")),
+            patch("paramiko.ECDSAKey.from_private_key", side_effect=Exception("err")),
+            patch("services.helpers.ssh_helpers.logger") as mock_logger,
+        ):
             with pytest.raises(ValueError):
                 await connect_key(mock_client, "host", 22, "user", credentials, config)
             mock_logger.error.assert_called_once()
@@ -201,7 +255,9 @@ class TestGetSystemInfo:
         """get_system_info should return dict with system info."""
         mock_client = MagicMock(spec=paramiko.SSHClient)
         mock_stdout = MagicMock()
-        mock_stdout.read.return_value.decode.return_value.strip.return_value = "test_value"
+        mock_stdout.read.return_value.decode.return_value.strip.return_value = (
+            "test_value"
+        )
         mock_client.exec_command.return_value = (MagicMock(), mock_stdout, MagicMock())
 
         result = await get_system_info(mock_client)
@@ -235,7 +291,14 @@ class TestGetSystemInfo:
 
         result = await get_system_info(mock_client)
 
-        for key in ["os", "kernel", "architecture", "docker_version", "agent_status", "agent_version"]:
+        for key in [
+            "os",
+            "kernel",
+            "architecture",
+            "docker_version",
+            "agent_status",
+            "agent_version",
+        ]:
             assert result[key] == "Unknown"
 
     @pytest.mark.asyncio
@@ -267,7 +330,9 @@ class TestGetSystemInfo:
 
         def mock_exec_command(cmd):
             mock_stdout = MagicMock()
-            mock_stdout.read.return_value.decode.return_value.strip.return_value = output_list[call_count[0]]
+            mock_stdout.read.return_value.decode.return_value.strip.return_value = (
+                output_list[call_count[0]]
+            )
             call_count[0] += 1
             return (MagicMock(), mock_stdout, MagicMock())
 
@@ -293,7 +358,9 @@ class TestGetSystemInfo:
             if call_count[0] == 2:  # Fail on second command (kernel)
                 raise Exception("Kernel command failed")
             mock_stdout = MagicMock()
-            mock_stdout.read.return_value.decode.return_value.strip.return_value = f"value_{call_count[0]}"
+            mock_stdout.read.return_value.decode.return_value.strip.return_value = (
+                f"value_{call_count[0]}"
+            )
             return (MagicMock(), mock_stdout, MagicMock())
 
         mock_client.exec_command.side_effect = mock_exec_command

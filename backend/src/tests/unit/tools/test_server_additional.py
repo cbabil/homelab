@@ -5,8 +5,9 @@ Tests for update_server, delete_server, test_connection, execute_command,
 get_execution_methods, update_server_status, and exception handlers.
 """
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 
 from tools.server.tools import ServerTools
 

@@ -5,15 +5,16 @@ Tests search_apps method with various filters, sorting, and pagination.
 """
 
 import json
-import pytest
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from services.marketplace_service import MarketplaceService
+import pytest
+
 from models.marketplace import (
     MarketplaceAppTable,
     MarketplaceRepoTable,
 )
+from services.marketplace_service import MarketplaceService
 
 
 @pytest.fixture
@@ -44,19 +45,23 @@ def mock_app_table():
     app.repository = "https://github.com/test/app"
     app.documentation = "https://docs.example.com"
     app.repo_id = "test-repo"
-    app.docker_config = json.dumps({
-        "image": "test/app:latest",
-        "ports": [],
-        "volumes": [],
-        "environment": [],
-        "restartPolicy": "unless-stopped",
-        "networkMode": None,
-        "privileged": False,
-        "capabilities": [],
-    })
-    app.requirements = json.dumps({
-        "architectures": ["amd64", "arm64"],
-    })
+    app.docker_config = json.dumps(
+        {
+            "image": "test/app:latest",
+            "ports": [],
+            "volumes": [],
+            "environment": [],
+            "restartPolicy": "unless-stopped",
+            "networkMode": None,
+            "privileged": False,
+            "capabilities": [],
+        }
+    )
+    app.requirements = json.dumps(
+        {
+            "architectures": ["amd64", "arm64"],
+        }
+    )
     app.install_count = 100
     app.avg_rating = 4.5
     app.rating_count = 10

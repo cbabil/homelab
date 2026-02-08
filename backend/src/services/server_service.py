@@ -4,12 +4,13 @@ Server Management Service
 Handles server connection management with database persistence and encryption.
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Any
+
 import structlog
+
+from lib.encryption import CredentialManager
 from models.server import ServerConnection, ServerStatus
 from services.database_service import DatabaseService
-from lib.encryption import CredentialManager
-
 
 logger = structlog.get_logger("server_service")
 
@@ -22,8 +23,8 @@ class ServerService:
         self.db_service = db_service
         try:
             self.credential_manager = CredentialManager()
-        except ValueError:
-            logger.warning("Credential manager not initialized - encryption disabled")
+        except (ValueError, OSError) as e:
+            logger.warning("Credential manager unavailable", error=str(e))
             self.credential_manager = None
         logger.info("Server service initialized")
 
@@ -35,13 +36,15 @@ class ServerService:
         port: int,
         username: str,
         auth_type: str,
-        credentials: Dict[str, str]
-    ) -> Optional[ServerConnection]:
+        credentials: dict[str, str],
+    ) -> ServerConnection | None:
         """Add new server with encrypted credentials."""
         try:
             encrypted_creds = ""
-            if self.credential_manager and credentials:
-                encrypted_creds = self.credential_manager.encrypt_credentials(credentials)
+            if credentials and self.credential_manager:
+                encrypted_creds = self.credential_manager.encrypt_credentials(
+                    credentials
+                )
 
             server = await self.db_service.create_server(
                 id=server_id,
@@ -50,7 +53,7 @@ class ServerService:
                 port=port,
                 username=username,
                 auth_type=auth_type,
-                encrypted_credentials=encrypted_creds
+                encrypted_credentials=encrypted_creds,
             )
 
             if server:
@@ -60,7 +63,7 @@ class ServerService:
             logger.error("Failed to add server", error=str(e))
             return None
 
-    async def get_server(self, server_id: str) -> Optional[ServerConnection]:
+    async def get_server(self, server_id: str) -> ServerConnection | None:
         """Get server by ID."""
         logger.info("get_server called", server_id=server_id)
         result = await self.db_service.get_server_by_id(server_id)
@@ -69,19 +72,21 @@ class ServerService:
 
     async def get_server_by_connection(
         self, host: str, port: int, username: str
-    ) -> Optional[ServerConnection]:
+    ) -> ServerConnection | None:
         """Get server by connection details (host, port, username)."""
         return await self.db_service.get_server_by_connection(host, port, username)
 
-    async def get_all_servers(self) -> List[ServerConnection]:
+    async def get_all_servers(self) -> list[ServerConnection]:
         """Get all servers."""
         return await self.db_service.get_all_servers_from_db()
 
-    async def get_credentials(self, server_id: str) -> Optional[Dict[str, str]]:
+    async def get_credentials(self, server_id: str) -> dict[str, str] | None:
         """Get decrypted credentials for a server."""
         try:
+            if not self.credential_manager:
+                return None
             encrypted = await self.db_service.get_server_credentials(server_id)
-            if not encrypted or not self.credential_manager:
+            if not encrypted:
                 return None
             return self.credential_manager.decrypt_credentials(encrypted)
         except Exception as e:
@@ -89,11 +94,12 @@ class ServerService:
             return None
 
     async def update_credentials(
-        self, server_id: str, credentials: Dict[str, str]
+        self, server_id: str, credentials: dict[str, str]
     ) -> bool:
         """Update server credentials."""
         try:
             if not self.credential_manager:
+                logger.error("Credential manager unavailable")
                 return False
             encrypted = self.credential_manager.encrypt_credentials(credentials)
             return await self.db_service.update_server_credentials(server_id, encrypted)
@@ -123,8 +129,7 @@ class ServerService:
     async def update_server_status(self, server_id: str, status: ServerStatus) -> bool:
         """Update server connection status."""
         return await self.db_service.update_server(
-            server_id=server_id,
-            status=status.value
+            server_id=server_id, status=status.value
         )
 
     async def delete_server(self, server_id: str) -> bool:
@@ -132,20 +137,18 @@ class ServerService:
         return await self.db_service.delete_server(server_id)
 
     async def update_server_system_info(
-        self,
-        server_id: str,
-        system_info: Dict[str, Any]
+        self, server_id: str, system_info: dict[str, Any]
     ) -> bool:
         """Update server system information and Docker status."""
         import json
-        from datetime import datetime, UTC
+        from datetime import UTC, datetime
 
         try:
             # Determine if Docker is installed
             docker_version = system_info.get("docker_version", "")
             docker_installed = bool(
-                docker_version and
-                docker_version.lower() not in ("not installed", "n/a", "")
+                docker_version
+                and docker_version.lower() not in ("not installed", "n/a", "")
             )
 
             # Store system_info as JSON
@@ -156,7 +159,7 @@ class ServerService:
                 server_id=server_id,
                 system_info=system_info_json,
                 docker_installed=1 if docker_installed else 0,
-                system_info_updated_at=updated_at
+                system_info_updated_at=updated_at,
             )
 
             if success:
@@ -168,7 +171,7 @@ class ServerService:
                     docker_installed=docker_installed,
                     docker_version=docker_version,
                     agent_status=agent_status,
-                    agent_version=agent_version or "n/a"
+                    agent_version=agent_version or "n/a",
                 )
             return success
         except Exception as e:

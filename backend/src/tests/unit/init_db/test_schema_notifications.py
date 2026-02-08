@@ -4,8 +4,9 @@ Notifications Schema Unit Tests
 Tests for schema_notifications.py - SQL schema and initialization.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from init_db.schema_notifications import (
     NOTIFICATIONS_SCHEMA,
@@ -46,7 +47,10 @@ class TestNotificationsSchema:
 
     def test_schema_has_type_check(self):
         """Test that type has CHECK constraint."""
-        assert "CHECK (type IN ('info', 'success', 'warning', 'error'))" in NOTIFICATIONS_SCHEMA
+        assert (
+            "CHECK (type IN ('info', 'success', 'warning', 'error'))"
+            in NOTIFICATIONS_SCHEMA
+        )
 
     def test_schema_has_foreign_key(self):
         """Test that schema has foreign key to users."""
@@ -76,10 +80,12 @@ class TestInitializeNotificationsSchema:
         mock_conn.executescript = AsyncMock()
         mock_conn.commit = AsyncMock()
 
-        manager.get_connection = MagicMock(return_value=AsyncMock(
-            __aenter__=AsyncMock(return_value=mock_conn),
-            __aexit__=AsyncMock(return_value=None),
-        ))
+        manager.get_connection = MagicMock(
+            return_value=AsyncMock(
+                __aenter__=AsyncMock(return_value=mock_conn),
+                __aexit__=AsyncMock(return_value=None),
+            )
+        )
         return manager, mock_conn
 
     @pytest.mark.asyncio
@@ -102,14 +108,18 @@ class TestInitializeNotificationsSchema:
         mock_conn.commit = AsyncMock()
 
         mock_manager = MagicMock()
-        mock_manager.get_connection = MagicMock(return_value=AsyncMock(
-            __aenter__=AsyncMock(return_value=mock_conn),
-            __aexit__=AsyncMock(return_value=None),
-        ))
+        mock_manager.get_connection = MagicMock(
+            return_value=AsyncMock(
+                __aenter__=AsyncMock(return_value=mock_conn),
+                __aexit__=AsyncMock(return_value=None),
+            )
+        )
 
         with (
-            patch("init_db.schema_notifications.DatabaseManager",
-                  return_value=mock_manager),
+            patch(
+                "init_db.schema_notifications.DatabaseManager",
+                return_value=mock_manager,
+            ),
             patch("init_db.schema_notifications.logger"),
         ):
             result = await initialize_notifications_schema(None)

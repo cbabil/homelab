@@ -5,27 +5,27 @@ Provides data access and business logic for the application marketplace."""
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Dict, Any, List, Optional
+from typing import Any
 
 import structlog
 from sqlalchemy import select
 
 from database.connection import db_manager
+from exceptions import ApplicationLogWriteError
 from init_db.schema_apps import initialize_app_database
+from logs import build_empty_search_log
 from models.app import (
     App,
     AppCategory,
+    AppCategoryTable,
     AppFilter,
     AppInstallation,
+    ApplicationTable,
     AppRequirements,
     AppSearchResult,
     AppStatus,
-    ApplicationTable,
-    AppCategoryTable,
 )
 from services.service_log import log_service
-from exceptions import ApplicationLogWriteError
-from logs import build_empty_search_log
 
 logger = structlog.get_logger("app_service")
 
@@ -35,7 +35,7 @@ class AppService:
 
     def __init__(self) -> None:
         self._initialized = False
-        self.installations: Dict[str, AppInstallation] = {}
+        self.installations: dict[str, AppInstallation] = {}
         logger.info("Application service initialized")
 
     async def _ensure_initialized(self) -> None:
@@ -43,27 +43,31 @@ class AppService:
             await initialize_app_database()
             self._initialized = True
 
-    async def _fetch_all_apps(self) -> List[App]:
+    async def _fetch_all_apps(self) -> list[App]:
         """Fetch all applications with their categories from the database."""
 
         await self._ensure_initialized()
 
         async with db_manager.get_session() as session:
             result = await session.execute(
-                select(ApplicationTable, AppCategoryTable)
-                .join(AppCategoryTable, ApplicationTable.category_id == AppCategoryTable.id)
+                select(ApplicationTable, AppCategoryTable).join(
+                    AppCategoryTable,
+                    ApplicationTable.category_id == AppCategoryTable.id,
+                )
             )
             rows = result.all()
 
-        apps: List[App] = [App.from_table(app_row, category_row) for app_row, category_row in rows]
+        apps: list[App] = [
+            App.from_table(app_row, category_row) for app_row, category_row in rows
+        ]
         logger.debug("Fetched applications from database", count=len(apps))
         return apps
 
     @staticmethod
-    def _apply_filters(apps: List[App], filters: AppFilter) -> List[App]:
+    def _apply_filters(apps: list[App], filters: AppFilter) -> list[App]:
         """Apply in-memory filtering to the application list."""
 
-        filtered: List[App] = []
+        filtered: list[App] = []
         search_term = filters.search.lower() if filters.search else None
         required_tags = set(tag.lower() for tag in filters.tags or [])
 
@@ -77,10 +81,16 @@ class AppService:
             if filters.featured is not None and bool(app.featured) != filters.featured:
                 continue
 
-            if required_tags and not required_tags.issubset({tag.lower() for tag in app.tags}):
+            if required_tags and not required_tags.issubset(
+                {tag.lower() for tag in app.tags}
+            ):
                 continue
 
-            if search_term and search_term not in app.name.lower() and search_term not in app.description.lower():
+            if (
+                search_term
+                and search_term not in app.name.lower()
+                and search_term not in app.description.lower()
+            ):
                 continue
 
             filtered.append(app)
@@ -88,7 +98,7 @@ class AppService:
         return filtered
 
     @staticmethod
-    def _apply_sorting(apps: List[App], filters: AppFilter) -> None:
+    def _apply_sorting(apps: list[App], filters: AppFilter) -> None:
         """Sort applications in-place based on filter configuration."""
 
         reverse = (filters.sort_order or "asc").lower() == "desc"
@@ -101,7 +111,10 @@ class AppService:
         elif sort_key in {"popularity", "install_count"}:
             apps.sort(key=lambda app: app.install_count or 0, reverse=reverse)
         elif sort_key == "updated":
-            apps.sort(key=lambda app: AppService._iso_to_datetime(app.updated_at), reverse=reverse)
+            apps.sort(
+                key=lambda app: AppService._iso_to_datetime(app.updated_at),
+                reverse=reverse,
+            )
         else:
             logger.debug("Unknown sort key, defaulting to name", sort_key=sort_key)
             apps.sort(key=lambda app: app.name.lower(), reverse=reverse)
@@ -124,7 +137,7 @@ class AppService:
         total = len(filtered_apps)
 
         if total == 0:
-            metadata_filters = filters.model_dump(exclude_none=True, mode='json')
+            metadata_filters = filters.model_dump(exclude_none=True, mode="json")
             try:
                 await log_service.create_log_entry(
                     build_empty_search_log(metadata_filters)
@@ -143,7 +156,7 @@ class AppService:
         logger.info("Application search completed", total=total)
         return result
 
-    async def get_app_by_id(self, app_id: str) -> Optional[App]:
+    async def get_app_by_id(self, app_id: str) -> App | None:
         """Retrieve a single application by identifier."""
 
         await self._ensure_initialized()
@@ -151,7 +164,10 @@ class AppService:
         async with db_manager.get_session() as session:
             result = await session.execute(
                 select(ApplicationTable, AppCategoryTable)
-                .join(AppCategoryTable, ApplicationTable.category_id == AppCategoryTable.id)
+                .join(
+                    AppCategoryTable,
+                    ApplicationTable.category_id == AppCategoryTable.id,
+                )
                 .where(ApplicationTable.id == app_id)
             )
             row = result.first()
@@ -164,7 +180,7 @@ class AppService:
         logger.debug("Retrieved application", app_id=app_id)
         return app
 
-    async def add_app(self, app_data: Dict[str, Any]) -> App:
+    async def add_app(self, app_data: dict[str, Any]) -> App:
         """Add an application to the catalog from marketplace import.
 
         Args:
@@ -199,7 +215,7 @@ class AppService:
                     name=category_id.title(),
                     description=f"Applications in the {category_id} category",
                     icon="Package",
-                    color="text-primary"
+                    color="text-primary",
                 )
                 session.add(new_cat)
                 await session.flush()
@@ -212,7 +228,7 @@ class AppService:
             requirements = AppRequirements(
                 min_ram=req_data.get("min_ram"),
                 min_storage=req_data.get("min_storage"),
-                supported_architectures=req_data.get("architectures", [])
+                supported_architectures=req_data.get("architectures", []),
             )
 
             now = datetime.now(UTC).isoformat()
@@ -272,8 +288,10 @@ class AppService:
                 return False
 
             app = app_row[0]
-            if app.status == 'installed':
-                raise ValueError(f"Cannot remove installed app '{app_id}'. Uninstall it first.")
+            if app.status == "installed":
+                raise ValueError(
+                    f"Cannot remove installed app '{app_id}'. Uninstall it first."
+                )
 
             await session.execute(
                 ApplicationTable.__table__.delete().where(ApplicationTable.id == app_id)
@@ -282,7 +300,7 @@ class AppService:
 
         return True
 
-    async def remove_apps_bulk(self, app_ids: List[str]) -> Dict[str, Any]:
+    async def remove_apps_bulk(self, app_ids: list[str]) -> dict[str, Any]:
         """Remove multiple applications from the catalog.
 
         Only removes apps that are not installed. Skips installed apps.
@@ -312,10 +330,10 @@ class AppService:
             "removed": removed,
             "removed_count": len(removed),
             "skipped": skipped,
-            "skipped_count": len(skipped)
+            "skipped_count": len(skipped),
         }
 
-    async def get_app_ids(self) -> List[str]:
+    async def get_app_ids(self) -> list[str]:
         """Get all application IDs in the catalog.
 
         Returns:
@@ -348,7 +366,7 @@ class AppService:
                 return False
 
             app = app_row[0]
-            app.status = 'available'
+            app.status = "available"
             app.connected_server_id = None
             logger.info("Application marked as uninstalled", app_id=app_id)
 
@@ -374,7 +392,7 @@ class AppService:
             app_row = result.first()
 
             # If not found and ID has prefix, try without prefix
-            if not app_row and app_id.startswith('casaos-'):
+            if not app_row and app_id.startswith("casaos-"):
                 base_id = app_id[7:]  # Remove 'casaos-' prefix
                 result = await session.execute(
                     select(ApplicationTable).where(ApplicationTable.id == base_id)
@@ -382,17 +400,21 @@ class AppService:
                 app_row = result.first()
 
             if not app_row:
-                logger.warning("Application not found for marking installed", app_id=app_id)
+                logger.warning(
+                    "Application not found for marking installed", app_id=app_id
+                )
                 return False
 
             app = app_row[0]
-            app.status = 'installed'
+            app.status = "installed"
             app.connected_server_id = server_id
-            logger.info("Application marked as installed", app_id=app.id, server_id=server_id)
+            logger.info(
+                "Application marked as installed", app_id=app.id, server_id=server_id
+            )
 
         return True
 
-    async def mark_apps_uninstalled_bulk(self, app_ids: List[str]) -> Dict[str, Any]:
+    async def mark_apps_uninstalled_bulk(self, app_ids: list[str]) -> dict[str, Any]:
         """Mark multiple applications as uninstalled.
 
         Args:
@@ -418,10 +440,12 @@ class AppService:
             "uninstalled": uninstalled,
             "uninstalled_count": len(uninstalled),
             "skipped": skipped,
-            "skipped_count": len(skipped)
+            "skipped_count": len(skipped),
         }
 
-    async def install_app(self, app_id: str, config: Optional[Dict[str, Any]] = None) -> AppInstallation:
+    async def install_app(
+        self, app_id: str, config: dict[str, Any] | None = None
+    ) -> AppInstallation:
         """Simulate application installation and track status in memory."""
 
         app = await self.get_app_by_id(app_id)

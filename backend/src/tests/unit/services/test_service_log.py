@@ -4,8 +4,9 @@ Unit tests for services/service_log.py
 Tests log service CRUD operations.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 from sqlalchemy.exc import SQLAlchemyError
 
 from services.service_log import LogService
@@ -53,7 +54,9 @@ class TestEnsureInitialized:
     @pytest.mark.asyncio
     async def test_ensure_initialized_calls_init_db(self, log_service):
         """_ensure_initialized should call initialize_logs_database once."""
-        with patch("services.service_log.initialize_logs_database", new_callable=AsyncMock) as mock_init:
+        with patch(
+            "services.service_log.initialize_logs_database", new_callable=AsyncMock
+        ) as mock_init:
             await log_service._ensure_initialized()
             mock_init.assert_called_once()
             assert log_service._initialized is True
@@ -61,7 +64,9 @@ class TestEnsureInitialized:
     @pytest.mark.asyncio
     async def test_ensure_initialized_only_once(self, log_service):
         """_ensure_initialized should only initialize once."""
-        with patch("services.service_log.initialize_logs_database", new_callable=AsyncMock) as mock_init:
+        with patch(
+            "services.service_log.initialize_logs_database", new_callable=AsyncMock
+        ) as mock_init:
             await log_service._ensure_initialized()
             await log_service._ensure_initialized()
             mock_init.assert_called_once()
@@ -71,7 +76,9 @@ class TestCreateLogEntry:
     """Tests for create_log_entry method."""
 
     @pytest.mark.asyncio
-    async def test_create_log_entry_success(self, log_service, mock_log_entry, mock_table_entry):
+    async def test_create_log_entry_success(
+        self, log_service, mock_log_entry, mock_table_entry
+    ):
         """create_log_entry should create and return log entry."""
         mock_session = AsyncMock()
         mock_context = AsyncMock()
@@ -80,9 +87,18 @@ class TestCreateLogEntry:
 
         mock_log_entry.to_table_model.return_value = mock_table_entry
 
-        with patch("services.service_log.initialize_logs_database", new_callable=AsyncMock), \
-             patch("services.service_log.db_manager.get_session", return_value=mock_context), \
-             patch("services.service_log.LogEntry.from_table_model", return_value=mock_log_entry):
+        with (
+            patch(
+                "services.service_log.initialize_logs_database", new_callable=AsyncMock
+            ),
+            patch(
+                "services.service_log.db_manager.get_session", return_value=mock_context
+            ),
+            patch(
+                "services.service_log.LogEntry.from_table_model",
+                return_value=mock_log_entry,
+            ),
+        ):
             result = await log_service.create_log_entry(mock_log_entry)
 
             assert result == mock_log_entry
@@ -103,9 +119,15 @@ class TestCreateLogEntry:
         mock_context.__aenter__.return_value = mock_session
         mock_context.__aexit__.return_value = False
 
-        with patch("services.service_log.initialize_logs_database", new_callable=AsyncMock), \
-             patch("services.service_log.db_manager.get_session", return_value=mock_context), \
-             patch("services.service_log.LogEntry.from_table_model") as mock_from:
+        with (
+            patch(
+                "services.service_log.initialize_logs_database", new_callable=AsyncMock
+            ),
+            patch(
+                "services.service_log.db_manager.get_session", return_value=mock_context
+            ),
+            patch("services.service_log.LogEntry.from_table_model") as mock_from,
+        ):
             mock_from.return_value = mock_log_entry
             await log_service.create_log_entry(mock_log_entry)
 
@@ -129,9 +151,13 @@ class TestCreateLogEntry:
             mock_session.flush.side_effect = SQLAlchemyError("DB error")
             yield mock_session
 
-        with patch("services.service_log.initialize_logs_database", new_callable=AsyncMock), \
-             patch("services.service_log.db_manager.get_session", mock_session_context), \
-             patch("services.service_log.logger"):
+        with (
+            patch(
+                "services.service_log.initialize_logs_database", new_callable=AsyncMock
+            ),
+            patch("services.service_log.db_manager.get_session", mock_session_context),
+            patch("services.service_log.logger"),
+        ):
             with pytest.raises(SQLAlchemyError):
                 await log_service.create_log_entry(mock_log_entry)
 
@@ -151,8 +177,14 @@ class TestGetLogs:
         mock_context.__aenter__.return_value = mock_session
         mock_context.__aexit__.return_value = False
 
-        with patch("services.service_log.initialize_logs_database", new_callable=AsyncMock), \
-             patch("services.service_log.db_manager.get_session", return_value=mock_context):
+        with (
+            patch(
+                "services.service_log.initialize_logs_database", new_callable=AsyncMock
+            ),
+            patch(
+                "services.service_log.db_manager.get_session", return_value=mock_context
+            ),
+        ):
             result = await log_service.get_logs()
             assert result == []
 
@@ -174,8 +206,14 @@ class TestGetLogs:
         mock_context.__aenter__.return_value = mock_session
         mock_context.__aexit__.return_value = False
 
-        with patch("services.service_log.initialize_logs_database", new_callable=AsyncMock), \
-             patch("services.service_log.db_manager.get_session", return_value=mock_context):
+        with (
+            patch(
+                "services.service_log.initialize_logs_database", new_callable=AsyncMock
+            ),
+            patch(
+                "services.service_log.db_manager.get_session", return_value=mock_context
+            ),
+        ):
             result = await log_service.get_logs(filters=mock_filter)
             assert result == []
 
@@ -188,8 +226,14 @@ class TestGetLogs:
         mock_context.__aenter__.return_value = mock_session
         mock_context.__aexit__.return_value = False
 
-        with patch("services.service_log.initialize_logs_database", new_callable=AsyncMock), \
-             patch("services.service_log.db_manager.get_session", return_value=mock_context):
+        with (
+            patch(
+                "services.service_log.initialize_logs_database", new_callable=AsyncMock
+            ),
+            patch(
+                "services.service_log.db_manager.get_session", return_value=mock_context
+            ),
+        ):
             with pytest.raises(SQLAlchemyError):
                 await log_service.get_logs()
 
@@ -198,7 +242,9 @@ class TestGetLogById:
     """Tests for get_log_by_id method."""
 
     @pytest.mark.asyncio
-    async def test_get_log_by_id_found(self, log_service, mock_table_entry, mock_log_entry):
+    async def test_get_log_by_id_found(
+        self, log_service, mock_table_entry, mock_log_entry
+    ):
         """get_log_by_id should return log entry when found."""
         mock_result = MagicMock()
         mock_result.scalar_one_or_none.return_value = mock_table_entry
@@ -209,9 +255,18 @@ class TestGetLogById:
         mock_context.__aenter__.return_value = mock_session
         mock_context.__aexit__.return_value = False
 
-        with patch("services.service_log.initialize_logs_database", new_callable=AsyncMock), \
-             patch("services.service_log.db_manager.get_session", return_value=mock_context), \
-             patch("services.service_log.LogEntry.from_table_model", return_value=mock_log_entry):
+        with (
+            patch(
+                "services.service_log.initialize_logs_database", new_callable=AsyncMock
+            ),
+            patch(
+                "services.service_log.db_manager.get_session", return_value=mock_context
+            ),
+            patch(
+                "services.service_log.LogEntry.from_table_model",
+                return_value=mock_log_entry,
+            ),
+        ):
             result = await log_service.get_log_by_id("log-12345678")
             assert result == mock_log_entry
 
@@ -227,8 +282,14 @@ class TestGetLogById:
         mock_context.__aenter__.return_value = mock_session
         mock_context.__aexit__.return_value = False
 
-        with patch("services.service_log.initialize_logs_database", new_callable=AsyncMock), \
-             patch("services.service_log.db_manager.get_session", return_value=mock_context):
+        with (
+            patch(
+                "services.service_log.initialize_logs_database", new_callable=AsyncMock
+            ),
+            patch(
+                "services.service_log.db_manager.get_session", return_value=mock_context
+            ),
+        ):
             result = await log_service.get_log_by_id("nonexistent")
             assert result is None
 
@@ -241,8 +302,14 @@ class TestGetLogById:
         mock_context.__aenter__.return_value = mock_session
         mock_context.__aexit__.return_value = False
 
-        with patch("services.service_log.initialize_logs_database", new_callable=AsyncMock), \
-             patch("services.service_log.db_manager.get_session", return_value=mock_context):
+        with (
+            patch(
+                "services.service_log.initialize_logs_database", new_callable=AsyncMock
+            ),
+            patch(
+                "services.service_log.db_manager.get_session", return_value=mock_context
+            ),
+        ):
             with pytest.raises(SQLAlchemyError):
                 await log_service.get_log_by_id("log-12345678")
 
@@ -262,8 +329,14 @@ class TestCountLogs:
         mock_context.__aenter__.return_value = mock_session
         mock_context.__aexit__.return_value = False
 
-        with patch("services.service_log.initialize_logs_database", new_callable=AsyncMock), \
-             patch("services.service_log.db_manager.get_session", return_value=mock_context):
+        with (
+            patch(
+                "services.service_log.initialize_logs_database", new_callable=AsyncMock
+            ),
+            patch(
+                "services.service_log.db_manager.get_session", return_value=mock_context
+            ),
+        ):
             result = await log_service.count_logs()
             assert result == 42
 
@@ -283,8 +356,14 @@ class TestCountLogs:
         mock_context.__aenter__.return_value = mock_session
         mock_context.__aexit__.return_value = False
 
-        with patch("services.service_log.initialize_logs_database", new_callable=AsyncMock), \
-             patch("services.service_log.db_manager.get_session", return_value=mock_context):
+        with (
+            patch(
+                "services.service_log.initialize_logs_database", new_callable=AsyncMock
+            ),
+            patch(
+                "services.service_log.db_manager.get_session", return_value=mock_context
+            ),
+        ):
             result = await log_service.count_logs(filters=mock_filter)
             assert result == 10
 
@@ -297,8 +376,14 @@ class TestCountLogs:
         mock_context.__aenter__.return_value = mock_session
         mock_context.__aexit__.return_value = False
 
-        with patch("services.service_log.initialize_logs_database", new_callable=AsyncMock), \
-             patch("services.service_log.db_manager.get_session", return_value=mock_context):
+        with (
+            patch(
+                "services.service_log.initialize_logs_database", new_callable=AsyncMock
+            ),
+            patch(
+                "services.service_log.db_manager.get_session", return_value=mock_context
+            ),
+        ):
             with pytest.raises(SQLAlchemyError):
                 await log_service.count_logs()
 
@@ -318,8 +403,14 @@ class TestPurgeLogs:
         mock_context.__aenter__.return_value = mock_session
         mock_context.__aexit__.return_value = False
 
-        with patch("services.service_log.initialize_logs_database", new_callable=AsyncMock), \
-             patch("services.service_log.db_manager.get_session", return_value=mock_context):
+        with (
+            patch(
+                "services.service_log.initialize_logs_database", new_callable=AsyncMock
+            ),
+            patch(
+                "services.service_log.db_manager.get_session", return_value=mock_context
+            ),
+        ):
             result = await log_service.purge_logs()
 
             assert result == 100
@@ -336,8 +427,14 @@ class TestPurgeLogs:
         mock_context.__aenter__.return_value = mock_session
         mock_context.__aexit__.return_value = False
 
-        with patch("services.service_log.initialize_logs_database", new_callable=AsyncMock), \
-             patch("services.service_log.db_manager.get_session", return_value=mock_context):
+        with (
+            patch(
+                "services.service_log.initialize_logs_database", new_callable=AsyncMock
+            ),
+            patch(
+                "services.service_log.db_manager.get_session", return_value=mock_context
+            ),
+        ):
             with pytest.raises(SQLAlchemyError):
                 await log_service.purge_logs()
 
@@ -348,4 +445,5 @@ class TestGlobalInstance:
     def test_log_service_exists(self):
         """Module should export log_service instance."""
         from services.service_log import log_service
+
         assert isinstance(log_service, LogService)

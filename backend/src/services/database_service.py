@@ -6,26 +6,25 @@ without changes.
 """
 
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any
 
-from models.auth import User, UserRole
-from models.server import ServerConnection
 from models.app_catalog import InstalledApp
-from models.metrics import ServerMetrics, ContainerMetrics, ActivityLog
-
+from models.auth import User, UserRole
+from models.metrics import ActivityLog, ContainerMetrics, ServerMetrics
+from models.server import ServerConnection
 from services.database import (
+    ALLOWED_INSTALLATION_COLUMNS,
+    ALLOWED_SERVER_COLUMNS,
+    ALLOWED_SYSTEM_INFO_COLUMNS,
+    AppDatabaseService,
     DatabaseConnection,
-    UserDatabaseService,
+    ExportDatabaseService,
+    MetricsDatabaseService,
+    SchemaInitializer,
     ServerDatabaseService,
     SessionDatabaseService,
-    AppDatabaseService,
-    MetricsDatabaseService,
     SystemDatabaseService,
-    ExportDatabaseService,
-    SchemaInitializer,
-    ALLOWED_SERVER_COLUMNS,
-    ALLOWED_INSTALLATION_COLUMNS,
-    ALLOWED_SYSTEM_INFO_COLUMNS,
+    UserDatabaseService,
 )
 
 # Re-export column whitelists for backward compatibility
@@ -73,25 +72,25 @@ class DatabaseService:
     # ========== User Methods ==========
 
     async def get_user(
-        self, user_id: Optional[str] = None, username: Optional[str] = None
-    ) -> Optional[User]:
+        self, user_id: str | None = None, username: str | None = None
+    ) -> User | None:
         return await self._user.get_user(user_id, username)
 
-    async def get_user_by_username(self, username: str) -> Optional[User]:
+    async def get_user_by_username(self, username: str) -> User | None:
         return await self._user.get_user_by_username(username)
 
-    async def get_user_by_id(self, user_id: str) -> Optional[User]:
+    async def get_user_by_id(self, user_id: str) -> User | None:
         return await self._user.get_user_by_id(user_id)
 
-    async def get_user_password_hash(self, username: str) -> Optional[str]:
+    async def get_user_password_hash(self, username: str) -> str | None:
         return await self._user.get_user_password_hash(username)
 
     async def update_user_last_login(
-        self, username: str, timestamp: Optional[str] = None
+        self, username: str, timestamp: str | None = None
     ) -> bool:
         return await self._user.update_user_last_login(username, timestamp)
 
-    async def get_all_users(self) -> List[User]:
+    async def get_all_users(self) -> list[User]:
         return await self._user.get_all_users()
 
     async def create_user(
@@ -100,8 +99,8 @@ class DatabaseService:
         password_hash: str,
         email: str = "",
         role: UserRole = UserRole.USER,
-        preferences: Optional[Dict[str, Any]] = None,
-    ) -> Optional[User]:
+        preferences: dict[str, Any] | None = None,
+    ) -> User | None:
         return await self._user.create_user(
             username, password_hash, email, role, preferences
         )
@@ -113,16 +112,16 @@ class DatabaseService:
         return await self._user.has_admin_user()
 
     async def update_user_preferences(
-        self, user_id: str, preferences: Dict[str, Any]
+        self, user_id: str, preferences: dict[str, Any]
     ) -> bool:
         return await self._user.update_user_preferences(user_id, preferences)
 
-    async def update_user_avatar(self, user_id: str, avatar: Optional[str]) -> bool:
+    async def update_user_avatar(self, user_id: str, avatar: str | None) -> bool:
         return await self._user.update_user_avatar(user_id, avatar)
 
     # ========== System Info Methods ==========
 
-    async def get_system_info(self) -> Optional[Dict[str, Any]]:
+    async def get_system_info(self) -> dict[str, Any] | None:
         return await self._system.get_system_info()
 
     async def is_system_setup(self) -> bool:
@@ -142,10 +141,10 @@ class DatabaseService:
     async def initialize_component_versions_table(self) -> bool:
         return await self._schema.initialize_component_versions_table()
 
-    async def get_component_versions(self) -> List[Dict[str, Any]]:
+    async def get_component_versions(self) -> list[dict[str, Any]]:
         return await self._system.get_component_versions()
 
-    async def get_component_version(self, component: str) -> Optional[Dict[str, Any]]:
+    async def get_component_version(self, component: str) -> dict[str, Any] | None:
         return await self._system.get_component_version(component)
 
     async def update_component_version(self, component: str, version: str) -> bool:
@@ -174,23 +173,23 @@ class DatabaseService:
         username: str,
         auth_type: str,
         encrypted_credentials: str,
-    ) -> Optional[ServerConnection]:
+    ) -> ServerConnection | None:
         return await self._server.create_server(
             id, name, host, port, username, auth_type, encrypted_credentials
         )
 
-    async def get_server_by_id(self, server_id: str) -> Optional[ServerConnection]:
+    async def get_server_by_id(self, server_id: str) -> ServerConnection | None:
         return await self._server.get_server_by_id(server_id)
 
     async def get_server_by_connection(
         self, host: str, port: int, username: str
-    ) -> Optional[ServerConnection]:
+    ) -> ServerConnection | None:
         return await self._server.get_server_by_connection(host, port, username)
 
-    async def get_all_servers_from_db(self) -> List[ServerConnection]:
+    async def get_all_servers_from_db(self) -> list[ServerConnection]:
         return await self._server.get_all_servers_from_db()
 
-    async def get_server_credentials(self, server_id: str) -> Optional[str]:
+    async def get_server_credentials(self, server_id: str) -> str | None:
         return await self._server.get_server_credentials(server_id)
 
     async def update_server_credentials(
@@ -217,7 +216,7 @@ class DatabaseService:
         status: str,
         config: dict,
         installed_at: str,
-    ) -> Optional[InstalledApp]:
+    ) -> InstalledApp | None:
         return await self._app.create_installation(
             id, server_id, app_id, container_name, status, config, installed_at
         )
@@ -227,16 +226,16 @@ class DatabaseService:
 
     async def get_installation(
         self, server_id: str, app_id: str
-    ) -> Optional[InstalledApp]:
+    ) -> InstalledApp | None:
         return await self._app.get_installation(server_id, app_id)
 
-    async def get_installation_by_id(self, install_id: str) -> Optional[InstalledApp]:
+    async def get_installation_by_id(self, install_id: str) -> InstalledApp | None:
         return await self._app.get_installation_by_id(install_id)
 
-    async def get_installations(self, server_id: str) -> List[InstalledApp]:
+    async def get_installations(self, server_id: str) -> list[InstalledApp]:
         return await self._app.get_installations(server_id)
 
-    async def get_all_installations(self) -> List[InstalledApp]:
+    async def get_all_installations(self) -> list[InstalledApp]:
         return await self._app.get_all_installations()
 
     async def delete_installation(self, server_id: str, app_id: str) -> bool:
@@ -255,7 +254,7 @@ class DatabaseService:
 
     async def get_server_metrics(
         self, server_id: str, since: str = None, limit: int = 100
-    ) -> List[ServerMetrics]:
+    ) -> list[ServerMetrics]:
         return await self._metrics.get_server_metrics(server_id, since, limit)
 
     async def get_container_metrics(
@@ -264,7 +263,7 @@ class DatabaseService:
         container_name: str = None,
         since: str = None,
         limit: int = 100,
-    ) -> List[ContainerMetrics]:
+    ) -> list[ContainerMetrics]:
         return await self._metrics.get_container_metrics(
             server_id, container_name, since, limit
         )
@@ -278,7 +277,7 @@ class DatabaseService:
         until: str = None,
         limit: int = 100,
         offset: int = 0,
-    ) -> List[ActivityLog]:
+    ) -> list[ActivityLog]:
         return await self._metrics.get_activity_logs(
             activity_types, user_id, server_id, since, until, limit, offset
         )
@@ -290,13 +289,13 @@ class DatabaseService:
 
     # ========== Export/Import Methods ==========
 
-    async def export_users(self) -> List[Dict[str, Any]]:
+    async def export_users(self) -> list[dict[str, Any]]:
         return await self._export.export_users()
 
-    async def export_servers(self) -> List[Dict[str, Any]]:
+    async def export_servers(self) -> list[dict[str, Any]]:
         return await self._export.export_servers()
 
-    async def export_settings(self) -> Dict[str, Any]:
+    async def export_settings(self) -> dict[str, Any]:
         return await self._export.export_settings()
 
     async def import_users(self, users: list, overwrite: bool = False) -> None:
@@ -352,18 +351,18 @@ class DatabaseService:
 
     async def is_account_locked(
         self, identifier: str, identifier_type: str = "username"
-    ) -> tuple[bool, Optional[Dict[str, Any]]]:
+    ) -> tuple[bool, dict[str, Any] | None]:
         return await self._session.is_account_locked(identifier, identifier_type)
 
     async def record_failed_login_attempt(
         self,
         identifier: str,
         identifier_type: str = "username",
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None,
+        ip_address: str | None = None,
+        user_agent: str | None = None,
         max_attempts: int = 5,
         lock_duration_minutes: int = 15,
-    ) -> tuple[bool, int, Optional[str]]:
+    ) -> tuple[bool, int, str | None]:
         return await self._session.record_failed_login_attempt(
             identifier,
             identifier_type,
@@ -380,13 +379,13 @@ class DatabaseService:
 
     async def get_locked_accounts(
         self, include_expired: bool = False, include_unlocked: bool = False
-    ) -> List[Dict[str, Any]]:
+    ) -> list[dict[str, Any]]:
         return await self._session.get_locked_accounts(
             include_expired, include_unlocked
         )
 
     async def unlock_account(
-        self, lock_id: str, unlocked_by: str, notes: Optional[str] = None
+        self, lock_id: str, unlocked_by: str, notes: str | None = None
     ) -> bool:
         return await self._session.unlock_account(lock_id, unlocked_by, notes)
 
@@ -394,12 +393,12 @@ class DatabaseService:
         self,
         lock_id: str,
         locked_by: str,
-        notes: Optional[str] = None,
+        notes: str | None = None,
         lock_duration_minutes: int = 15,
     ) -> bool:
         return await self._session.lock_account(
             lock_id, locked_by, notes, lock_duration_minutes
         )
 
-    async def get_lock_by_id(self, lock_id: str) -> Optional[Dict[str, Any]]:
+    async def get_lock_by_id(self, lock_id: str) -> dict[str, Any] | None:
         return await self._session.get_lock_by_id(lock_id)

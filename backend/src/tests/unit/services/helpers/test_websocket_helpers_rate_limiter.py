@@ -5,7 +5,6 @@ Tests rate limiting functionality for WebSocket agent connections.
 """
 
 import time
-import pytest
 from unittest.mock import patch
 
 from services.helpers.websocket_helpers import (

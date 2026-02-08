@@ -5,12 +5,12 @@ Contains helper methods for SSH operations to maintain 100-line file limit.
 Separated from main SSH service for better organization.
 """
 
-import paramiko
 import asyncio
 import io
-from typing import Dict, Any
-import structlog
+from typing import Any
 
+import paramiko
+import structlog
 
 logger = structlog.get_logger("ssh_helpers")
 
@@ -21,7 +21,7 @@ async def connect_password(
     port: int,
     username: str,
     credentials: dict,
-    config: dict
+    config: dict,
 ) -> None:
     """Connect using password authentication."""
     await asyncio.to_thread(
@@ -29,8 +29,8 @@ async def connect_password(
         hostname=host,
         port=port,
         username=username,
-        password=credentials.get('password'),
-        **config
+        password=credentials.get("password"),
+        **config,
     )
 
 
@@ -40,11 +40,11 @@ async def connect_key(
     port: int,
     username: str,
     credentials: dict,
-    config: dict
+    config: dict,
 ) -> None:
     """Connect using SSH key authentication."""
-    private_key_data = credentials.get('private_key', '')
-    passphrase = credentials.get('passphrase')
+    private_key_data = credentials.get("private_key", "")
+    passphrase = credentials.get("passphrase")
 
     # Try different key types (Ed25519, RSA, ECDSA)
     key_classes = [
@@ -60,10 +60,7 @@ async def connect_key(
         try:
             # Create fresh StringIO for each attempt (StringIO gets consumed after read)
             key_file = io.StringIO(private_key_data)
-            private_key = key_class.from_private_key(
-                key_file,
-                password=passphrase
-            )
+            private_key = key_class.from_private_key(key_file, password=passphrase)
             logger.info(f"Loaded SSH key as {key_class.__name__}")
             break
         except Exception as e:
@@ -73,7 +70,9 @@ async def connect_key(
 
     if private_key is None:
         logger.error("Could not parse private key", last_error=str(last_error))
-        raise ValueError(f"Could not parse private key with any supported format: {last_error}")
+        raise ValueError(
+            f"Could not parse private key with any supported format: {last_error}"
+        )
 
     await asyncio.to_thread(
         client.connect,
@@ -81,11 +80,11 @@ async def connect_key(
         port=port,
         username=username,
         pkey=private_key,
-        **config
+        **config,
     )
 
 
-async def get_system_info(client: paramiko.SSHClient) -> Dict[str, Any]:
+async def get_system_info(client: paramiko.SSHClient) -> dict[str, Any]:
     """Gather basic system information from connected client."""
     # Check docker version - simple and reliable
     docker_cmd = 'command -v docker >/dev/null 2>&1 && docker --version | cut -d" " -f3 | tr -d "," || echo "Not installed"'
@@ -94,16 +93,16 @@ async def get_system_info(client: paramiko.SSHClient) -> Dict[str, Any]:
     # Get agent version from container label
     agent_version_cmd = 'docker inspect tomo-agent --format "{{index .Config.Labels \\"version\\"}}" 2>/dev/null || echo ""'
     commands = {
-        'os': 'cat /etc/os-release 2>/dev/null | grep PRETTY_NAME | cut -d= -f2 | tr -d \'\"\'',
-        'kernel': 'uname -r',
-        'architecture': 'uname -m',
-        'docker_version': docker_cmd,
-        'agent_status': agent_cmd,
-        'agent_version': agent_version_cmd
+        "os": "cat /etc/os-release 2>/dev/null | grep PRETTY_NAME | cut -d= -f2 | tr -d '\"'",
+        "kernel": "uname -r",
+        "architecture": "uname -m",
+        "docker_version": docker_cmd,
+        "agent_status": agent_cmd,
+        "agent_version": agent_version_cmd,
     }
-    
+
     system_info = {}
-    
+
     for key, command in commands.items():
         try:
             stdin, stdout, stderr = client.exec_command(command)
@@ -112,5 +111,5 @@ async def get_system_info(client: paramiko.SSHClient) -> Dict[str, Any]:
         except Exception as e:
             logger.warning(f"Failed to get {key}", error=str(e))
             system_info[key] = "Unknown"
-    
+
     return system_info

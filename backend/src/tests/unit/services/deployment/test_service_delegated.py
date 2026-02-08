@@ -5,8 +5,9 @@ Tests for delegated methods, refresh_installation_status, check_container_health
 get_container_logs, and _wait_for_container.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 
 @pytest.fixture

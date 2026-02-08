@@ -5,17 +5,18 @@ Tests create_agent, registration code validation, complete_registration,
 token validation, revocation, and deletion.
 """
 
-import pytest
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from services.agent_service import AgentService
+import pytest
+
 from models.agent import (
     Agent,
     AgentRegistrationResponse,
     AgentStatus,
     RegistrationCode,
 )
+from services.agent_service import AgentService
 
 
 @pytest.fixture
@@ -44,6 +45,7 @@ def mock_agent_db():
     db.get_agent = AsyncMock()
     db.get_agent_by_server = AsyncMock()
     db.get_agent_by_token_hash = AsyncMock()
+    db.get_agent_by_pending_token_hash = AsyncMock(return_value=None)
     db.delete_agent = AsyncMock()
     db.list_all_agents = AsyncMock(return_value=[])
     db.create_registration_code = AsyncMock()
@@ -103,8 +105,10 @@ class TestCreateAgent:
             return_value=sample_registration_code
         )
 
-        with patch("services.agent_service.logger"), \
-             patch("services.agent_service.log_event", new_callable=AsyncMock):
+        with (
+            patch("services.agent_service.logger"),
+            patch("services.agent_service.log_event", new_callable=AsyncMock),
+        ):
             agent, code = await agent_service.create_agent("server-456")
 
         assert agent is sample_agent
@@ -129,8 +133,10 @@ class TestCreateAgent:
             return_value=sample_registration_code
         )
 
-        with patch("services.agent_service.logger"), \
-             patch("services.agent_service.log_event", new_callable=AsyncMock):
+        with (
+            patch("services.agent_service.logger"),
+            patch("services.agent_service.log_event", new_callable=AsyncMock),
+        ):
             await agent_service.create_agent("server-456")
 
         mock_agent_db.delete_agent.assert_called_once_with("old-agent-id")
@@ -146,8 +152,12 @@ class TestCreateAgent:
             return_value=sample_registration_code
         )
 
-        with patch("services.agent_service.logger"), \
-             patch("services.agent_service.log_event", new_callable=AsyncMock) as mock_log:
+        with (
+            patch("services.agent_service.logger"),
+            patch(
+                "services.agent_service.log_event", new_callable=AsyncMock
+            ) as mock_log,
+        ):
             await agent_service.create_agent("server-456")
 
         mock_log.assert_called()
@@ -226,8 +236,10 @@ class TestCompleteRegistration:
         )
         mock_agent_db.update_agent = AsyncMock(return_value=sample_agent)
 
-        with patch("services.agent_service.logger"), \
-             patch("services.agent_service.log_event", new_callable=AsyncMock):
+        with (
+            patch("services.agent_service.logger"),
+            patch("services.agent_service.log_event", new_callable=AsyncMock),
+        ):
             result = await agent_service.complete_registration(
                 "test-code-abc123", "1.0.0"
             )
@@ -246,9 +258,7 @@ class TestCompleteRegistration:
         mock_agent_db.get_registration_code = AsyncMock(return_value=None)
 
         with patch("services.agent_service.logger"):
-            result = await agent_service.complete_registration(
-                "invalid-code", "1.0.0"
-            )
+            result = await agent_service.complete_registration("invalid-code", "1.0.0")
 
         assert result is None
 
@@ -279,8 +289,12 @@ class TestCompleteRegistration:
         )
         mock_agent_db.update_agent = AsyncMock(return_value=sample_agent)
 
-        with patch("services.agent_service.logger"), \
-             patch("services.agent_service.log_event", new_callable=AsyncMock) as mock_log:
+        with (
+            patch("services.agent_service.logger"),
+            patch(
+                "services.agent_service.log_event", new_callable=AsyncMock
+            ) as mock_log,
+        ):
             await agent_service.complete_registration("test-code-abc123", "1.0.0")
 
         mock_log.assert_called()
@@ -343,8 +357,10 @@ class TestRevokeAgentToken:
         """revoke_agent_token should return True on success."""
         mock_agent_db.update_agent = AsyncMock(return_value=sample_agent)
 
-        with patch("services.agent_service.logger"), \
-             patch("services.agent_service.log_event", new_callable=AsyncMock):
+        with (
+            patch("services.agent_service.logger"),
+            patch("services.agent_service.log_event", new_callable=AsyncMock),
+        ):
             result = await agent_service.revoke_agent_token("agent-123")
 
         assert result is True
@@ -371,8 +387,12 @@ class TestRevokeAgentToken:
         """revoke_agent_token should log AGENT_REVOKED event."""
         mock_agent_db.update_agent = AsyncMock(return_value=sample_agent)
 
-        with patch("services.agent_service.logger"), \
-             patch("services.agent_service.log_event", new_callable=AsyncMock) as mock_log:
+        with (
+            patch("services.agent_service.logger"),
+            patch(
+                "services.agent_service.log_event", new_callable=AsyncMock
+            ) as mock_log,
+        ):
             await agent_service.revoke_agent_token("agent-123")
 
         mock_log.assert_called()
@@ -391,8 +411,10 @@ class TestDeleteAgent:
         mock_agent_db.get_agent = AsyncMock(return_value=sample_agent)
         mock_agent_db.delete_agent = AsyncMock(return_value=True)
 
-        with patch("services.agent_service.logger"), \
-             patch("services.agent_service.log_event", new_callable=AsyncMock):
+        with (
+            patch("services.agent_service.logger"),
+            patch("services.agent_service.log_event", new_callable=AsyncMock),
+        ):
             result = await agent_service.delete_agent("agent-123")
 
         assert result is True
@@ -417,8 +439,12 @@ class TestDeleteAgent:
         mock_agent_db.get_agent = AsyncMock(return_value=sample_agent)
         mock_agent_db.delete_agent = AsyncMock(return_value=True)
 
-        with patch("services.agent_service.logger"), \
-             patch("services.agent_service.log_event", new_callable=AsyncMock) as mock_log:
+        with (
+            patch("services.agent_service.logger"),
+            patch(
+                "services.agent_service.log_event", new_callable=AsyncMock
+            ) as mock_log,
+        ):
             await agent_service.delete_agent("agent-123")
 
         mock_log.assert_called()
@@ -431,8 +457,12 @@ class TestDeleteAgent:
         mock_agent_db.get_agent = AsyncMock(return_value=None)
         mock_agent_db.delete_agent = AsyncMock(return_value=False)
 
-        with patch("services.agent_service.logger"), \
-             patch("services.agent_service.log_event", new_callable=AsyncMock) as mock_log:
+        with (
+            patch("services.agent_service.logger"),
+            patch(
+                "services.agent_service.log_event", new_callable=AsyncMock
+            ) as mock_log,
+        ):
             await agent_service.delete_agent("nonexistent")
 
         mock_log.assert_not_called()

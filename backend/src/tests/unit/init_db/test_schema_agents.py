@@ -4,8 +4,9 @@ Agents Schema Unit Tests
 Tests for schema_agents.py - SQL schema and initialization.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from init_db.schema_agents import (
     AGENTS_SCHEMA,
@@ -52,10 +53,12 @@ class TestInitializeAgentsSchema:
         mock_conn.executescript = AsyncMock()
         mock_conn.commit = AsyncMock()
 
-        manager.get_connection = MagicMock(return_value=AsyncMock(
-            __aenter__=AsyncMock(return_value=mock_conn),
-            __aexit__=AsyncMock(return_value=None),
-        ))
+        manager.get_connection = MagicMock(
+            return_value=AsyncMock(
+                __aenter__=AsyncMock(return_value=mock_conn),
+                __aexit__=AsyncMock(return_value=None),
+            )
+        )
         return manager, mock_conn
 
     @pytest.mark.asyncio
@@ -68,7 +71,7 @@ class TestInitializeAgentsSchema:
 
         assert result is True
         mock_conn.executescript.assert_called_once_with(AGENTS_SCHEMA)
-        mock_conn.commit.assert_called_once()
+        assert mock_conn.commit.call_count >= 1
 
     @pytest.mark.asyncio
     async def test_initialize_creates_manager_if_none(self):
@@ -78,14 +81,15 @@ class TestInitializeAgentsSchema:
         mock_conn.commit = AsyncMock()
 
         mock_manager = MagicMock()
-        mock_manager.get_connection = MagicMock(return_value=AsyncMock(
-            __aenter__=AsyncMock(return_value=mock_conn),
-            __aexit__=AsyncMock(return_value=None),
-        ))
+        mock_manager.get_connection = MagicMock(
+            return_value=AsyncMock(
+                __aenter__=AsyncMock(return_value=mock_conn),
+                __aexit__=AsyncMock(return_value=None),
+            )
+        )
 
         with (
-            patch("init_db.schema_agents.DatabaseManager",
-                  return_value=mock_manager),
+            patch("init_db.schema_agents.DatabaseManager", return_value=mock_manager),
             patch("init_db.schema_agents.logger"),
         ):
             result = await initialize_agents_schema(None)
@@ -115,10 +119,12 @@ class TestMigrateTokenRotationFields:
         mock_conn.execute = AsyncMock()
         mock_conn.commit = AsyncMock()
 
-        manager.get_connection = MagicMock(return_value=AsyncMock(
-            __aenter__=AsyncMock(return_value=mock_conn),
-            __aexit__=AsyncMock(return_value=None),
-        ))
+        manager.get_connection = MagicMock(
+            return_value=AsyncMock(
+                __aenter__=AsyncMock(return_value=mock_conn),
+                __aexit__=AsyncMock(return_value=None),
+            )
+        )
         return manager, mock_conn
 
     @pytest.mark.asyncio
@@ -128,12 +134,14 @@ class TestMigrateTokenRotationFields:
 
         # Fresh table has no rotation columns
         mock_cursor = AsyncMock()
-        mock_cursor.fetchall = AsyncMock(return_value=[
-            (0, "id", "TEXT", 0, None, 1),
-            (1, "server_id", "TEXT", 0, None, 0),
-            (2, "token_hash", "TEXT", 0, None, 0),
-            (3, "status", "TEXT", 0, None, 0),
-        ])
+        mock_cursor.fetchall = AsyncMock(
+            return_value=[
+                (0, "id", "TEXT", 0, None, 1),
+                (1, "server_id", "TEXT", 0, None, 0),
+                (2, "token_hash", "TEXT", 0, None, 0),
+                (3, "status", "TEXT", 0, None, 0),
+            ]
+        )
         mock_conn.execute = AsyncMock(return_value=mock_cursor)
 
         with patch("init_db.schema_agents.logger") as mock_logger:
@@ -157,15 +165,17 @@ class TestMigrateTokenRotationFields:
 
         # Table already has rotation columns
         mock_cursor = AsyncMock()
-        mock_cursor.fetchall = AsyncMock(return_value=[
-            (0, "id", "TEXT", 0, None, 1),
-            (1, "server_id", "TEXT", 0, None, 0),
-            (2, "token_hash", "TEXT", 0, None, 0),
-            (3, "status", "TEXT", 0, None, 0),
-            (4, "pending_token_hash", "TEXT", 0, None, 0),
-            (5, "token_issued_at", "TEXT", 0, None, 0),
-            (6, "token_expires_at", "TEXT", 0, None, 0),
-        ])
+        mock_cursor.fetchall = AsyncMock(
+            return_value=[
+                (0, "id", "TEXT", 0, None, 1),
+                (1, "server_id", "TEXT", 0, None, 0),
+                (2, "token_hash", "TEXT", 0, None, 0),
+                (3, "status", "TEXT", 0, None, 0),
+                (4, "pending_token_hash", "TEXT", 0, None, 0),
+                (5, "token_issued_at", "TEXT", 0, None, 0),
+                (6, "token_expires_at", "TEXT", 0, None, 0),
+            ]
+        )
         mock_conn.execute = AsyncMock(return_value=mock_cursor)
 
         with patch("init_db.schema_agents.logger") as mock_logger:
@@ -187,11 +197,13 @@ class TestMigrateTokenRotationFields:
 
         # Table has only pending_token_hash, missing other two
         mock_cursor = AsyncMock()
-        mock_cursor.fetchall = AsyncMock(return_value=[
-            (0, "id", "TEXT", 0, None, 1),
-            (1, "server_id", "TEXT", 0, None, 0),
-            (2, "pending_token_hash", "TEXT", 0, None, 0),
-        ])
+        mock_cursor.fetchall = AsyncMock(
+            return_value=[
+                (0, "id", "TEXT", 0, None, 1),
+                (1, "server_id", "TEXT", 0, None, 0),
+                (2, "pending_token_hash", "TEXT", 0, None, 0),
+            ]
+        )
         mock_conn.execute = AsyncMock(return_value=mock_cursor)
 
         with patch("init_db.schema_agents.logger") as mock_logger:

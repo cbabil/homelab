@@ -16,7 +16,9 @@ async def create_marketplace_schema() -> None:
     await db_manager.initialize()
     async with db_manager.engine.begin() as conn:  # type: ignore[union-attr]
         # Use checkfirst=True to avoid errors if tables already exist
-        await conn.run_sync(lambda sync_conn: Base.metadata.create_all(sync_conn, checkfirst=True))
+        await conn.run_sync(
+            lambda sync_conn: Base.metadata.create_all(sync_conn, checkfirst=True)
+        )
     logger.info("Marketplace schema created")
 
 
@@ -27,7 +29,9 @@ async def check_marketplace_schema_exists() -> bool:
     async with db_manager.engine.begin() as conn:  # type: ignore[union-attr]
         result = await conn.run_sync(
             lambda sync_conn: sync_conn.execute(
-                text("SELECT name FROM sqlite_master WHERE type='table' AND name='marketplace_repos'")
+                text(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name='marketplace_repos'"
+                )
             ).fetchone()
         )
     exists = result is not None

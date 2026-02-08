@@ -5,9 +5,11 @@ Tracks user actions and system events.
 """
 
 import uuid
-from datetime import datetime, UTC
-from typing import Dict, Any, List
+from datetime import UTC, datetime
+from typing import Any
+
 import structlog
+
 from models.metrics import ActivityLog, ActivityType
 
 logger = structlog.get_logger("activity_service")
@@ -28,7 +30,7 @@ class ActivityService:
         user_id: str = None,
         server_id: str = None,
         app_id: str = None,
-        details: Dict[str, Any] = None
+        details: dict[str, Any] = None,
     ) -> ActivityLog:
         """Log an activity event."""
         try:
@@ -40,22 +42,18 @@ class ActivityService:
                 app_id=app_id,
                 message=message,
                 details=details or {},
-                timestamp=datetime.now(UTC).isoformat()
+                timestamp=datetime.now(UTC).isoformat(),
             )
 
             await self.db_service.save_activity_log(log_entry)
-            logger.info(
-                "Activity logged",
-                type=activity_type.value,
-                message=message
-            )
+            logger.info("Activity logged", type=activity_type.value, message=message)
             return log_entry
 
         except Exception as e:
             logger.error("Failed to log activity", error=str(e))
             raise
 
-    async def get_recent_activities(self, limit: int = 20) -> List[ActivityLog]:
+    async def get_recent_activities(self, limit: int = 20) -> list[ActivityLog]:
         """Get most recent activities."""
         try:
             return await self.db_service.get_activity_logs(limit=limit)
@@ -65,14 +63,14 @@ class ActivityService:
 
     async def get_activities(
         self,
-        activity_types: List[ActivityType] = None,
+        activity_types: list[ActivityType] = None,
         user_id: str = None,
         server_id: str = None,
         since: str = None,
         until: str = None,
         limit: int = 100,
-        offset: int = 0
-    ) -> List[ActivityLog]:
+        offset: int = 0,
+    ) -> list[ActivityLog]:
         """Get activities with filters."""
         try:
             type_values = [t.value for t in activity_types] if activity_types else None
@@ -84,23 +82,20 @@ class ActivityService:
                 since=since,
                 until=until,
                 limit=limit,
-                offset=offset
+                offset=offset,
             )
         except Exception as e:
             logger.error("Failed to get activities", error=str(e))
             return []
 
     async def get_activity_count(
-        self,
-        activity_types: List[ActivityType] = None,
-        since: str = None
+        self, activity_types: list[ActivityType] = None, since: str = None
     ) -> int:
         """Get count of activities matching filters."""
         try:
             type_values = [t.value for t in activity_types] if activity_types else None
             return await self.db_service.count_activity_logs(
-                activity_types=type_values,
-                since=since
+                activity_types=type_values, since=since
             )
         except Exception as e:
             logger.error("Failed to count activities", error=str(e))

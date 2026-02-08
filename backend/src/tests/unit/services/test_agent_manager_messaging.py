@@ -6,11 +6,12 @@ Tests send_command, handle_message, broadcast, and notification handling.
 
 import asyncio
 import json
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from services.agent_manager import AgentManager, MAX_MESSAGE_SIZE_BYTES
+import pytest
+
 from models.agent import AgentConfig, AgentStatus
+from services.agent_manager import MAX_MESSAGE_SIZE_BYTES, AgentManager
 
 
 @pytest.fixture
@@ -97,17 +98,23 @@ class TestSendCommand:
 
         with pytest.raises(TimeoutError, match="did not respond"):
             with patch("services.agent_manager.logger"):
-                await agent_manager.send_command("agent-123", "test.method", timeout=0.01)
+                await agent_manager.send_command(
+                    "agent-123", "test.method", timeout=0.01
+                )
 
     @pytest.mark.asyncio
-    async def test_send_command_cleans_up_on_timeout(self, agent_manager, mock_websocket):
+    async def test_send_command_cleans_up_on_timeout(
+        self, agent_manager, mock_websocket
+    ):
         """send_command should cleanup pending request on timeout."""
         with patch("services.agent_manager.logger"):
             await agent_manager.register_connection("agent-123", mock_websocket, "srv")
 
         try:
             with patch("services.agent_manager.logger"):
-                await agent_manager.send_command("agent-123", "test.method", timeout=0.01)
+                await agent_manager.send_command(
+                    "agent-123", "test.method", timeout=0.01
+                )
         except TimeoutError:
             pass
 
@@ -172,10 +179,13 @@ class TestHandleResponse:
 
         future = asyncio.get_running_loop().create_future()
         agent_manager._connections["agent-123"].pending_requests["req-1"] = future
-        response = json.dumps({
-            "jsonrpc": "2.0", "id": "req-1",
-            "error": {"code": -32600, "message": "Invalid Request"},
-        })
+        response = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "id": "req-1",
+                "error": {"code": -32600, "message": "Invalid Request"},
+            }
+        )
 
         with patch("services.agent_manager.logger"):
             await agent_manager.handle_message("agent-123", response)
@@ -200,16 +210,22 @@ class TestHandleNotification:
     """Tests for _handle_notification method."""
 
     @pytest.mark.asyncio
-    async def test_handle_notification_calls_handler(self, agent_manager, mock_websocket):
+    async def test_handle_notification_calls_handler(
+        self, agent_manager, mock_websocket
+    ):
         """_handle_notification should call registered handler."""
         handler = AsyncMock()
         with patch("services.agent_manager.logger"):
             await agent_manager.register_connection("agent-123", mock_websocket, "srv")
             agent_manager.register_notification_handler("test.notify", handler)
 
-        notification = json.dumps({
-            "jsonrpc": "2.0", "method": "test.notify", "params": {"key": "value"},
-        })
+        notification = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "method": "test.notify",
+                "params": {"key": "value"},
+            }
+        )
 
         with patch("services.agent_manager.logger"):
             await agent_manager.handle_message("agent-123", notification)
@@ -233,13 +249,17 @@ class TestHandleNotification:
         with patch("services.agent_manager.logger"):
             await agent_manager.register_connection("agent-123", mock_websocket, "srv")
 
-        notification = json.dumps({"jsonrpc": "2.0", "method": "unhandled.notification"})
+        notification = json.dumps(
+            {"jsonrpc": "2.0", "method": "unhandled.notification"}
+        )
         with patch("services.agent_manager.logger") as mock_logger:
             await agent_manager.handle_message("agent-123", notification)
             mock_logger.debug.assert_called()
 
     @pytest.mark.asyncio
-    async def test_handle_notification_handler_error(self, agent_manager, mock_websocket):
+    async def test_handle_notification_handler_error(
+        self, agent_manager, mock_websocket
+    ):
         """_handle_notification should log error if handler raises."""
         handler = AsyncMock(side_effect=Exception("Handler error"))
         with patch("services.agent_manager.logger"):
@@ -339,7 +359,9 @@ class TestUpdateAgentStatus:
         assert call_args[0][1].status == AgentStatus.CONNECTED
 
     @pytest.mark.asyncio
-    async def test_update_agent_status_handles_error(self, agent_manager, mock_agent_db):
+    async def test_update_agent_status_handles_error(
+        self, agent_manager, mock_agent_db
+    ):
         """_update_agent_status should log error on database failure."""
         mock_agent_db.update_agent.side_effect = Exception("Database error")
 

@@ -4,8 +4,9 @@ Unit tests for services/command_router.py - Internal execution methods
 Tests for _execute_via_agent, _execute_via_ssh, and _execute_via_ssh_with_progress.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from services.command_router import (
     CommandRouter,

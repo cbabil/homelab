@@ -3,18 +3,18 @@
 from __future__ import annotations
 
 import structlog
-from sqlalchemy import select, func, text
+from sqlalchemy import func, select, text
 
+from data.application_seed_data import APPLICATIONS, CATEGORIES
 from database.connection import Base, db_manager
 from models.app import (
     App,
     AppCategory,
     AppCategoryTable,
+    ApplicationTable,
     AppRequirements,
     AppStatus,
-    ApplicationTable,
 )
-from data.application_seed_data import APPLICATIONS, CATEGORIES
 
 logger = structlog.get_logger("schema_apps")
 
@@ -35,7 +35,9 @@ async def check_app_schema_exists() -> bool:
     async with db_manager.engine.begin() as conn:  # type: ignore[union-attr]
         result = await conn.run_sync(
             lambda sync_conn: sync_conn.execute(
-                text("SELECT name FROM sqlite_master WHERE type='table' AND name='applications'")
+                text(
+                    "SELECT name FROM sqlite_master WHERE type='table' AND name='applications'"
+                )
             ).fetchone()
         )
     exists = result is not None
@@ -48,15 +50,16 @@ async def seed_application_data() -> None:
 
     await db_manager.initialize()
     async with db_manager.get_session() as session:
-        count_result = await session.execute(select(func.count()).select_from(ApplicationTable))
+        count_result = await session.execute(
+            select(func.count()).select_from(ApplicationTable)
+        )
         if count_result.scalar_one() > 0:
             logger.info("Application catalog already seeded")
             return
 
         # Seed categories (skip existing ones)
         category_models = {
-            category["id"]: AppCategory(**category)
-            for category in CATEGORIES
+            category["id"]: AppCategory(**category) for category in CATEGORIES
         }
 
         existing_categories = await session.execute(select(AppCategoryTable.id))
@@ -90,7 +93,9 @@ async def seed_application_data() -> None:
                 repository=app_payload.get("repository"),
                 documentation=app_payload.get("documentation"),
                 license=app_payload["license"],
-                requirements=AppRequirements(**requirements) if requirements else AppRequirements(),
+                requirements=AppRequirements(**requirements)
+                if requirements
+                else AppRequirements(),
                 status=AppStatus(app_payload["status"]),
                 install_count=app_payload.get("install_count"),
                 rating=app_payload.get("rating"),

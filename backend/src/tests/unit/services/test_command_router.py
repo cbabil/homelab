@@ -4,12 +4,13 @@ Unit tests for services/command_router.py
 Tests command routing between agent and SSH execution methods.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
 from services.command_router import (
-    CommandRouter,
     CommandResult,
+    CommandRouter,
     ExecutionMethod,
 )
 

@@ -5,18 +5,20 @@ Tests input validation, constant-time operations, log sanitization,
 and NIST SP 800-63B-4 compliant password validation.
 """
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import patch, AsyncMock, MagicMock
+
 from lib.security import (
     DANGEROUS_PATTERNS,
     SENSITIVE_PATTERNS,
-    validate_server_input,
-    validate_app_config,
     constant_time_compare,
     sanitize_log_message,
-    validate_username,
-    validate_password_strength,
+    validate_app_config,
     validate_password_length_policy,
+    validate_password_strength,
+    validate_server_input,
+    validate_username,
 )
 
 
@@ -141,7 +143,7 @@ class TestValidateAppConfig:
         """Should accept valid app config."""
         config = {
             "env": {"DB_HOST": "localhost", "DB_PORT": "5432"},
-            "ports": {"80": 8080, "443": 8443}
+            "ports": {"80": 8080, "443": 8443},
         }
         result = validate_app_config(config)
         assert result["valid"] is True
@@ -156,18 +158,24 @@ class TestValidateAppConfig:
         result = validate_app_config({"name": "myapp"})
         assert result["valid"] is True
 
-    def test_dangerous_env_value(self):
-        """Should reject dangerous env value."""
+    def test_env_value_allows_shell_chars(self):
+        """Should accept shell metacharacters in env values (Docker needs them)."""
         config = {"env": {"CMD": "$(rm -rf /)"}}
         result = validate_app_config(config)
-        assert result["valid"] is False
-        assert "dangerous" in result["error"].lower()
+        assert result["valid"] is True
 
-    def test_env_with_semicolon(self):
-        """Should reject env value with semicolon."""
-        config = {"env": {"CMD": "ls; rm -rf /"}}
+    def test_env_value_allows_semicolons(self):
+        """Should accept semicolons in env values (Docker needs them)."""
+        config = {"env": {"CMD": "ls; echo done"}}
+        result = validate_app_config(config)
+        assert result["valid"] is True
+
+    def test_env_value_rejects_control_chars(self):
+        """Should reject control characters in env values."""
+        config = {"env": {"CMD": "hello\x01world"}}
         result = validate_app_config(config)
         assert result["valid"] is False
+        assert "control" in result["error"].lower()
 
     def test_invalid_env_type(self):
         """Should reject non-string env value."""
@@ -276,6 +284,31 @@ class TestSanitizeLogMessage:
         assert "pass1" not in result
         assert "tok1" not in result
 
+    def test_sanitize_json_password(self):
+        """Should mask JSON-style password field."""
+        msg = '{"username": "admin", "password": "s3cret!"}'
+        result = sanitize_log_message(msg)
+        assert "s3cret!" not in result
+        assert '"password": "***"' in result
+
+    def test_sanitize_json_token(self):
+        """Should mask JSON-style token field."""
+        msg = '{"token": "abc123xyz"}'
+        result = sanitize_log_message(msg)
+        assert "abc123xyz" not in result
+
+    def test_sanitize_json_api_key(self):
+        """Should mask JSON-style api_key field."""
+        msg = '{"api_key": "sk-12345"}'
+        result = sanitize_log_message(msg)
+        assert "sk-12345" not in result
+
+    def test_sanitize_authorization_header(self):
+        """Should mask Authorization header values."""
+        msg = "Authorization: Bearer eyJ0eXAi.payload.sig"
+        result = sanitize_log_message(msg)
+        assert "eyJ0eXAi" not in result
+
 
 class TestValidateUsername:
     """Tests for validate_username function."""
@@ -376,22 +409,27 @@ class TestValidatePasswordLengthPolicy:
     def mock_blocklist_service(self):
         """Mock the blocklist service."""
         mock_service = MagicMock()
-        mock_service.validate_password = AsyncMock(return_value={
-            "valid": True,
-            "errors": [],
-            "warnings": [],
-            "checks": {"not_common": True, "not_sequential": True}
-        })
+        mock_service.validate_password = AsyncMock(
+            return_value={
+                "valid": True,
+                "errors": [],
+                "warnings": [],
+                "checks": {"not_common": True, "not_sequential": True},
+            }
+        )
         return mock_service
 
     @pytest.mark.asyncio
     async def test_valid_password_length_policy_mode(self, mock_blocklist_service):
         """Should accept valid password in length_policy mode."""
-        with patch("services.password_blocklist_service.get_blocklist_service", return_value=mock_blocklist_service):
+        with patch(
+            "services.password_blocklist_service.get_blocklist_service",
+            return_value=mock_blocklist_service,
+        ):
             result = await validate_password_length_policy(
                 password="this_is_a_very_long_secure_password",
                 length_policy_mode=True,
-                min_length=15
+                min_length=15,
             )
             assert result["valid"] is True
             assert result["mode"] == "length_policy"
@@ -399,11 +437,12 @@ class TestValidatePasswordLengthPolicy:
     @pytest.mark.asyncio
     async def test_password_too_short_length_policy(self, mock_blocklist_service):
         """Should reject password shorter than min_length."""
-        with patch("services.password_blocklist_service.get_blocklist_service", return_value=mock_blocklist_service):
+        with patch(
+            "services.password_blocklist_service.get_blocklist_service",
+            return_value=mock_blocklist_service,
+        ):
             result = await validate_password_length_policy(
-                password="short",
-                length_policy_mode=True,
-                min_length=15
+                password="short", length_policy_mode=True, min_length=15
             )
             assert result["valid"] is False
             assert any("15 characters" in e for e in result["errors"])
@@ -412,10 +451,12 @@ class TestValidatePasswordLengthPolicy:
     @pytest.mark.asyncio
     async def test_password_too_long(self, mock_blocklist_service):
         """Should reject password longer than max_length."""
-        with patch("services.password_blocklist_service.get_blocklist_service", return_value=mock_blocklist_service):
+        with patch(
+            "services.password_blocklist_service.get_blocklist_service",
+            return_value=mock_blocklist_service,
+        ):
             result = await validate_password_length_policy(
-                password="a" * 150,
-                max_length=128
+                password="a" * 150, max_length=128
             )
             assert result["valid"] is False
             assert any("128 characters" in e for e in result["errors"])
@@ -424,12 +465,15 @@ class TestValidatePasswordLengthPolicy:
     @pytest.mark.asyncio
     async def test_legacy_mode_requires_uppercase(self, mock_blocklist_service):
         """Should require uppercase in legacy mode."""
-        with patch("services.password_blocklist_service.get_blocklist_service", return_value=mock_blocklist_service):
+        with patch(
+            "services.password_blocklist_service.get_blocklist_service",
+            return_value=mock_blocklist_service,
+        ):
             result = await validate_password_length_policy(
                 password="password123!@#abc",
                 length_policy_mode=False,
                 min_length=8,
-                require_uppercase=True
+                require_uppercase=True,
             )
             assert result["valid"] is False
             assert result["mode"] == "legacy"
@@ -438,12 +482,15 @@ class TestValidatePasswordLengthPolicy:
     @pytest.mark.asyncio
     async def test_legacy_mode_requires_lowercase(self, mock_blocklist_service):
         """Should require lowercase in legacy mode."""
-        with patch("services.password_blocklist_service.get_blocklist_service", return_value=mock_blocklist_service):
+        with patch(
+            "services.password_blocklist_service.get_blocklist_service",
+            return_value=mock_blocklist_service,
+        ):
             result = await validate_password_length_policy(
                 password="PASSWORD123!@#",
                 length_policy_mode=False,
                 min_length=8,
-                require_lowercase=True
+                require_lowercase=True,
             )
             assert result["valid"] is False
             assert result["checks"]["has_lowercase"] is False
@@ -451,12 +498,15 @@ class TestValidatePasswordLengthPolicy:
     @pytest.mark.asyncio
     async def test_legacy_mode_requires_number(self, mock_blocklist_service):
         """Should require number in legacy mode."""
-        with patch("services.password_blocklist_service.get_blocklist_service", return_value=mock_blocklist_service):
+        with patch(
+            "services.password_blocklist_service.get_blocklist_service",
+            return_value=mock_blocklist_service,
+        ):
             result = await validate_password_length_policy(
                 password="PasswordABC!@#",
                 length_policy_mode=False,
                 min_length=8,
-                require_numbers=True
+                require_numbers=True,
             )
             assert result["valid"] is False
             assert result["checks"]["has_number"] is False
@@ -464,12 +514,15 @@ class TestValidatePasswordLengthPolicy:
     @pytest.mark.asyncio
     async def test_legacy_mode_requires_special(self, mock_blocklist_service):
         """Should require special char in legacy mode."""
-        with patch("services.password_blocklist_service.get_blocklist_service", return_value=mock_blocklist_service):
+        with patch(
+            "services.password_blocklist_service.get_blocklist_service",
+            return_value=mock_blocklist_service,
+        ):
             result = await validate_password_length_policy(
                 password="PasswordABC123",
                 length_policy_mode=False,
                 min_length=8,
-                require_special=True
+                require_special=True,
             )
             assert result["valid"] is False
             assert result["checks"]["has_special"] is False
@@ -477,11 +530,12 @@ class TestValidatePasswordLengthPolicy:
     @pytest.mark.asyncio
     async def test_legacy_mode_valid_password(self, mock_blocklist_service):
         """Should accept valid password in legacy mode."""
-        with patch("services.password_blocklist_service.get_blocklist_service", return_value=mock_blocklist_service):
+        with patch(
+            "services.password_blocklist_service.get_blocklist_service",
+            return_value=mock_blocklist_service,
+        ):
             result = await validate_password_length_policy(
-                password="Password123!@#",
-                length_policy_mode=False,
-                min_length=8
+                password="Password123!@#", length_policy_mode=False, min_length=8
             )
             assert result["valid"] is True
             assert result["mode"] == "legacy"
@@ -490,17 +544,22 @@ class TestValidatePasswordLengthPolicy:
     async def test_blocklist_check_in_length_policy_mode(self):
         """Should check blocklist in length_policy mode."""
         mock_service = MagicMock()
-        mock_service.validate_password = AsyncMock(return_value={
-            "valid": False,
-            "errors": ["Password is too common"],
-            "warnings": [],
-            "checks": {"not_common": False}
-        })
-        with patch("services.password_blocklist_service.get_blocklist_service", return_value=mock_service):
+        mock_service.validate_password = AsyncMock(
+            return_value={
+                "valid": False,
+                "errors": ["Password is too common"],
+                "warnings": [],
+                "checks": {"not_common": False},
+            }
+        )
+        with patch(
+            "services.password_blocklist_service.get_blocklist_service",
+            return_value=mock_service,
+        ):
             result = await validate_password_length_policy(
                 password="a_very_long_password_here",
                 length_policy_mode=True,
-                check_blocklist=True
+                check_blocklist=True,
             )
             assert result["valid"] is False
             assert "too common" in str(result["errors"]).lower()
@@ -508,22 +567,27 @@ class TestValidatePasswordLengthPolicy:
     @pytest.mark.asyncio
     async def test_unicode_support(self, mock_blocklist_service):
         """Should support unicode passwords."""
-        with patch("services.password_blocklist_service.get_blocklist_service", return_value=mock_blocklist_service):
+        with patch(
+            "services.password_blocklist_service.get_blocklist_service",
+            return_value=mock_blocklist_service,
+        ):
             result = await validate_password_length_policy(
                 password="пароль_is_очень_secure_123",
                 length_policy_mode=True,
-                min_length=15
+                min_length=15,
             )
             assert result["checks"]["unicode_support"] is True
 
     @pytest.mark.asyncio
     async def test_no_blocklist_check(self, mock_blocklist_service):
         """Should skip blocklist when check_blocklist=False."""
-        with patch("services.password_blocklist_service.get_blocklist_service") as mock_get:
+        with patch(
+            "services.password_blocklist_service.get_blocklist_service"
+        ) as mock_get:
             result = await validate_password_length_policy(
                 password="a_very_long_password_here",
                 length_policy_mode=True,
-                check_blocklist=False
+                check_blocklist=False,
             )
             # Blocklist service should not be called
             mock_get.assert_not_called()

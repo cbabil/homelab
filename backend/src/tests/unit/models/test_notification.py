@@ -4,17 +4,18 @@ Unit tests for models/notification.py
 Tests notification models including types, notifications, and responses.
 """
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
+
 import pytest
 from pydantic import ValidationError
 
 from models.notification import (
-    NotificationType,
     Notification,
+    NotificationCountResponse,
     NotificationCreate,
     NotificationListResponse,
     NotificationListResult,
-    NotificationCountResponse,
+    NotificationType,
 )
 
 

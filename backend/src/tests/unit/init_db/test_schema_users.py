@@ -4,8 +4,9 @@ Users Schema Unit Tests
 Tests for schema_users.py - SQL schema, migrations, and initialization.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from init_db.schema_users import (
     USERS_SCHEMA,
@@ -73,10 +74,12 @@ class TestMigrateAddPasswordChangedAt:
         """Test migration adds column when it doesn't exist."""
         mock_conn = AsyncMock()
         mock_cursor = AsyncMock()
-        mock_cursor.fetchall = AsyncMock(return_value=[
-            (0, "id", "TEXT", 0, None, 1),
-            (1, "username", "TEXT", 1, None, 0),
-        ])
+        mock_cursor.fetchall = AsyncMock(
+            return_value=[
+                (0, "id", "TEXT", 0, None, 1),
+                (1, "username", "TEXT", 1, None, 0),
+            ]
+        )
         mock_conn.execute = AsyncMock(return_value=mock_cursor)
 
         with patch("init_db.schema_users.logger"):
@@ -90,11 +93,13 @@ class TestMigrateAddPasswordChangedAt:
         """Test migration skips when column already exists."""
         mock_conn = AsyncMock()
         mock_cursor = AsyncMock()
-        mock_cursor.fetchall = AsyncMock(return_value=[
-            (0, "id", "TEXT", 0, None, 1),
-            (1, "username", "TEXT", 1, None, 0),
-            (2, "password_changed_at", "TEXT", 0, None, 0),
-        ])
+        mock_cursor.fetchall = AsyncMock(
+            return_value=[
+                (0, "id", "TEXT", 0, None, 1),
+                (1, "username", "TEXT", 1, None, 0),
+                (2, "password_changed_at", "TEXT", 0, None, 0),
+            ]
+        )
         mock_conn.execute = AsyncMock(return_value=mock_cursor)
 
         with patch("init_db.schema_users.logger"):
@@ -125,15 +130,19 @@ class TestInitializeUsersSchema:
         mock_conn.executescript = AsyncMock()
         mock_conn.commit = AsyncMock()
         mock_cursor = AsyncMock()
-        mock_cursor.fetchall = AsyncMock(return_value=[
-            (0, "password_changed_at", "TEXT", 0, None, 0),
-        ])
+        mock_cursor.fetchall = AsyncMock(
+            return_value=[
+                (0, "password_changed_at", "TEXT", 0, None, 0),
+            ]
+        )
         mock_conn.execute = AsyncMock(return_value=mock_cursor)
 
-        manager.get_connection = MagicMock(return_value=AsyncMock(
-            __aenter__=AsyncMock(return_value=mock_conn),
-            __aexit__=AsyncMock(return_value=None),
-        ))
+        manager.get_connection = MagicMock(
+            return_value=AsyncMock(
+                __aenter__=AsyncMock(return_value=mock_conn),
+                __aexit__=AsyncMock(return_value=None),
+            )
+        )
         return manager, mock_conn
 
     @pytest.mark.asyncio
@@ -154,20 +163,23 @@ class TestInitializeUsersSchema:
         mock_conn.executescript = AsyncMock()
         mock_conn.commit = AsyncMock()
         mock_cursor = AsyncMock()
-        mock_cursor.fetchall = AsyncMock(return_value=[
-            (0, "password_changed_at", "TEXT", 0, None, 0),
-        ])
+        mock_cursor.fetchall = AsyncMock(
+            return_value=[
+                (0, "password_changed_at", "TEXT", 0, None, 0),
+            ]
+        )
         mock_conn.execute = AsyncMock(return_value=mock_cursor)
 
         mock_manager = MagicMock()
-        mock_manager.get_connection = MagicMock(return_value=AsyncMock(
-            __aenter__=AsyncMock(return_value=mock_conn),
-            __aexit__=AsyncMock(return_value=None),
-        ))
+        mock_manager.get_connection = MagicMock(
+            return_value=AsyncMock(
+                __aenter__=AsyncMock(return_value=mock_conn),
+                __aexit__=AsyncMock(return_value=None),
+            )
+        )
 
         with (
-            patch("init_db.schema_users.DatabaseManager",
-                  return_value=mock_manager),
+            patch("init_db.schema_users.DatabaseManager", return_value=mock_manager),
             patch("init_db.schema_users.logger"),
         ):
             result = await initialize_users_schema(None)

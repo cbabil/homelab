@@ -5,10 +5,11 @@ Handles session CRUD operations for persistent session management.
 """
 
 import uuid
-from datetime import datetime, timedelta, UTC
-from typing import Optional, List
+from datetime import UTC, datetime, timedelta
+
 import structlog
-from models.session import Session, SessionStatus, SessionListResponse
+
+from models.session import Session, SessionListResponse, SessionStatus
 from services.database_service import DatabaseService
 
 logger = structlog.get_logger("session_service")
@@ -20,7 +21,7 @@ DEFAULT_IDLE_TIMEOUT_SECONDS = 900
 class SessionService:
     """Service for managing user sessions."""
 
-    def __init__(self, db_service: Optional[DatabaseService] = None):
+    def __init__(self, db_service: DatabaseService | None = None):
         """Initialize session service.
 
         Args:
@@ -40,7 +41,7 @@ class SessionService:
                 conn.row_factory = self._dict_factory
                 cursor = await conn.execute(
                     "SELECT setting_value FROM system_settings WHERE setting_key = ?",
-                    ("security.session_idle_timeout",)
+                    ("security.session_idle_timeout",),
                 )
                 row = await cursor.fetchone()
 
@@ -70,14 +71,18 @@ class SessionService:
                 (
                     SessionStatus.IDLE.value,
                     SessionStatus.ACTIVE.value,
-                    idle_threshold.isoformat()
-                )
+                    idle_threshold.isoformat(),
+                ),
             )
             await conn.commit()
             count = cursor.rowcount
 
         if count > 0:
-            logger.info("Sessions marked as idle", count=count, idle_timeout_seconds=idle_timeout)
+            logger.info(
+                "Sessions marked as idle",
+                count=count,
+                idle_timeout_seconds=idle_timeout,
+            )
 
         return count
 
@@ -85,8 +90,8 @@ class SessionService:
         self,
         user_id: str,
         expires_at: datetime,
-        ip_address: Optional[str] = None,
-        user_agent: Optional[str] = None
+        ip_address: str | None = None,
+        user_agent: str | None = None,
     ) -> Session:
         """Create a new session.
 
@@ -116,8 +121,8 @@ class SessionService:
                     now.isoformat(),
                     expires_at.isoformat(),
                     now.isoformat(),
-                    SessionStatus.ACTIVE.value
-                )
+                    SessionStatus.ACTIVE.value,
+                ),
             )
             await conn.commit()
 
@@ -131,10 +136,10 @@ class SessionService:
             created_at=now,
             expires_at=expires_at,
             last_activity=now,
-            status=SessionStatus.ACTIVE
+            status=SessionStatus.ACTIVE,
         )
 
-    async def get_session(self, session_id: str) -> Optional[Session]:
+    async def get_session(self, session_id: str) -> Session | None:
         """Get a session by ID.
 
         Args:
@@ -146,8 +151,7 @@ class SessionService:
         async with self.db_service.get_connection() as conn:
             conn.row_factory = self._dict_factory
             cursor = await conn.execute(
-                "SELECT * FROM sessions WHERE id = ?",
-                (session_id,)
+                "SELECT * FROM sessions WHERE id = ?", (session_id,)
             )
             row = await cursor.fetchone()
 
@@ -157,10 +161,8 @@ class SessionService:
         return self._row_to_session(row)
 
     async def list_sessions(
-        self,
-        user_id: Optional[str] = None,
-        status: Optional[SessionStatus] = None
-    ) -> List[SessionListResponse]:
+        self, user_id: str | None = None, status: SessionStatus | None = None
+    ) -> list[SessionListResponse]:
         """List sessions with optional filters.
 
         Automatically marks inactive sessions as idle before returning.
@@ -210,7 +212,7 @@ class SessionService:
                 created_at=row["created_at"],
                 expires_at=row["expires_at"],
                 last_activity=row["last_activity"],
-                status=row["status"]
+                status=row["status"],
             )
             for row in rows
         ]
@@ -238,8 +240,8 @@ class SessionService:
                     SessionStatus.ACTIVE.value,
                     session_id,
                     SessionStatus.ACTIVE.value,
-                    SessionStatus.IDLE.value
-                )
+                    SessionStatus.IDLE.value,
+                ),
             )
             await conn.commit()
             updated = cursor.rowcount > 0
@@ -250,10 +252,10 @@ class SessionService:
 
     async def delete_session(
         self,
-        session_id: Optional[str] = None,
-        user_id: Optional[str] = None,
+        session_id: str | None = None,
+        user_id: str | None = None,
         terminated_by: str = "system",
-        exclude_session_id: Optional[str] = None
+        exclude_session_id: str | None = None,
     ) -> int:
         """Soft-delete (terminate) sessions.
 
@@ -281,7 +283,7 @@ class SessionService:
                 terminated_by,
                 session_id,
                 SessionStatus.ACTIVE.value,
-                SessionStatus.IDLE.value
+                SessionStatus.IDLE.value,
             )
         elif user_id:
             # Delete all sessions for user
@@ -298,7 +300,7 @@ class SessionService:
                     user_id,
                     exclude_session_id,
                     SessionStatus.ACTIVE.value,
-                    SessionStatus.IDLE.value
+                    SessionStatus.IDLE.value,
                 )
             else:
                 query = """
@@ -312,7 +314,7 @@ class SessionService:
                     terminated_by,
                     user_id,
                     SessionStatus.ACTIVE.value,
-                    SessionStatus.IDLE.value
+                    SessionStatus.IDLE.value,
                 )
         else:
             logger.warning("delete_session called without session_id or user_id")
@@ -347,8 +349,8 @@ class SessionService:
                     "system",
                     now.isoformat(),
                     SessionStatus.ACTIVE.value,
-                    SessionStatus.IDLE.value
-                )
+                    SessionStatus.IDLE.value,
+                ),
             )
             await conn.commit()
             count = cursor.rowcount
@@ -356,7 +358,7 @@ class SessionService:
         logger.info("Expired sessions cleaned up", count=count)
         return count
 
-    async def validate_session(self, session_id: str) -> Optional[Session]:
+    async def validate_session(self, session_id: str) -> Session | None:
         """Validate a session is active and not expired.
 
         Args:
@@ -397,6 +399,8 @@ class SessionService:
             expires_at=datetime.fromisoformat(row["expires_at"]),
             last_activity=datetime.fromisoformat(row["last_activity"]),
             status=SessionStatus(row["status"]),
-            terminated_at=datetime.fromisoformat(row["terminated_at"]) if row["terminated_at"] else None,
-            terminated_by=row["terminated_by"]
+            terminated_at=datetime.fromisoformat(row["terminated_at"])
+            if row["terminated_at"]
+            else None,
+            terminated_by=row["terminated_by"],
         )

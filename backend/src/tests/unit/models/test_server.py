@@ -9,10 +9,10 @@ from pydantic import ValidationError
 
 from models.server import (
     AuthType,
-    ServerStatus,
-    SystemInfo,
     ServerConnection,
     ServerCredentials,
+    ServerStatus,
+    SystemInfo,
 )
 
 

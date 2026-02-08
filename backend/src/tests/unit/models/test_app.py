@@ -5,21 +5,22 @@ Tests Pydantic models, SQLAlchemy tables, and conversion methods.
 """
 
 import json
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
+
 import pytest
 from pydantic import ValidationError
 
 from models.app import (
-    AppStatus,
-    AppRequirements,
+    App,
     AppCategory,
     AppCategoryTable,
-    App,
-    ApplicationTable,
-    AppInstallation,
     AppFilter,
+    AppInstallation,
+    ApplicationTable,
+    AppRequirements,
     AppSearchResult,
+    AppStatus,
 )
 
 

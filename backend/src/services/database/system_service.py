@@ -4,11 +4,11 @@ Database operations for system info and component versions.
 """
 
 from datetime import UTC, datetime
-from typing import Any, Dict, List, Optional
+from typing import Any
 
 import structlog
 
-from .base import DatabaseConnection, ALLOWED_SYSTEM_INFO_COLUMNS
+from .base import ALLOWED_SYSTEM_INFO_COLUMNS, DatabaseConnection
 
 logger = structlog.get_logger("database.system")
 
@@ -26,7 +26,7 @@ class SystemDatabaseService:
 
     # ========== System Info Methods ==========
 
-    async def get_system_info(self) -> Optional[Dict[str, Any]]:
+    async def get_system_info(self) -> dict[str, Any] | None:
         """Get system info (single row table).
 
         Returns:
@@ -201,7 +201,7 @@ class SystemDatabaseService:
 
     # ========== Component Versions Methods ==========
 
-    async def get_component_versions(self) -> List[Dict[str, Any]]:
+    async def get_component_versions(self) -> list[dict[str, Any]]:
         """Get all component versions.
 
         Returns:
@@ -228,7 +228,7 @@ class SystemDatabaseService:
             logger.error("Failed to get component versions", error=str(e))
             return []
 
-    async def get_component_version(self, component: str) -> Optional[Dict[str, Any]]:
+    async def get_component_version(self, component: str) -> dict[str, Any] | None:
         """Get version for a specific component.
 
         Args:

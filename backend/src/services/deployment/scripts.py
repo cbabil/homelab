@@ -5,6 +5,8 @@ Shell scripts for Docker operations, designed to run in a single SSH connection.
 This prevents overwhelming sshd with many rapid connections.
 """
 
+import shlex
+
 
 def cleanup_container_script(container_name: str, image: str = None) -> str:
     """Build script to clean up a failed container.
@@ -16,12 +18,14 @@ def cleanup_container_script(container_name: str, image: str = None) -> str:
     Returns:
         Shell script string
     """
-    script = f'''
-docker stop {container_name} 2>/dev/null || true
-docker rm -v {container_name} 2>/dev/null || true
-'''
+    safe_name = shlex.quote(container_name)
+    script = f"""
+docker stop {safe_name} 2>/dev/null || true
+docker rm -v {safe_name} 2>/dev/null || true
+"""
     if image:
-        script += f'docker rmi {image} 2>/dev/null || true\n'
+        safe_image = shlex.quote(image)
+        script += f"docker rmi {safe_image} 2>/dev/null || true\n"
 
     script += 'echo "CLEANUP_DONE"'
     return script
@@ -36,7 +40,7 @@ def create_container_script(run_cmd: str) -> str:
     Returns:
         Shell script string
     """
-    return f'''
+    return f"""
 # Prune dangling images (cleanup from pull)
 docker image prune -f > /dev/null 2>&1 || true
 
@@ -49,7 +53,7 @@ if [ $EXIT_CODE -eq 0 ]; then
 else
     echo "FAILED:$EXIT_CODE"
 fi
-'''
+"""
 
 
 def status_check_script(container_id: str) -> str:
@@ -61,17 +65,18 @@ def status_check_script(container_id: str) -> str:
     Returns:
         Shell script string
     """
-    return f'''
-STATUS=$(docker inspect --format='{{{{.State.Status}}}}' {container_id} 2>/dev/null || echo "unknown")
-HEALTH=$(docker inspect --format='{{{{.State.Health.Status}}}}' {container_id} 2>/dev/null || echo "none")
-RESTARTS=$(docker inspect --format='{{{{.RestartCount}}}}' {container_id} 2>/dev/null || echo "0")
+    safe_id = shlex.quote(container_id)
+    return f"""
+STATUS=$(docker inspect --format='{{{{.State.Status}}}}' {safe_id} 2>/dev/null || echo "unknown")
+HEALTH=$(docker inspect --format='{{{{.State.Health.Status}}}}' {safe_id} 2>/dev/null || echo "none")
+RESTARTS=$(docker inspect --format='{{{{.RestartCount}}}}' {safe_id} 2>/dev/null || echo "0")
 echo "STATUS:$STATUS"
 echo "HEALTH:$HEALTH"
 echo "RESTARTS:$RESTARTS"
 if [ "$STATUS" = "exited" ] || [ "$STATUS" = "dead" ] || [ "$STATUS" = "restarting" ] || [ "$HEALTH" = "unhealthy" ] || [ "$RESTARTS" -gt "0" ]; then
-    echo "LOGS:$(docker logs --tail 10 {container_id} 2>&1 | head -c 500)"
+    echo "LOGS:$(docker logs --tail 10 {safe_id} 2>&1 | head -c 500)"
 fi
-'''
+"""
 
 
 def uninstall_script(container_name: str, remove_data: bool = True) -> str:
@@ -87,29 +92,30 @@ def uninstall_script(container_name: str, remove_data: bool = True) -> str:
     Returns:
         Shell script string
     """
-    script = f'''#!/bin/bash
+    safe_name = shlex.quote(container_name)
+    script = f"""#!/bin/bash
 set -e
 
 # Get container info using docker inspect with specific format options
-IMAGE_NAME=$(docker inspect --format '{{{{.Config.Image}}}}' {container_name} 2>/dev/null || echo "")
-VOLUMES=$(docker inspect --format '{{{{range .Mounts}}}}{{{{if eq .Type "volume"}}}}{{{{.Name}}}} {{{{end}}}}{{{{end}}}}' {container_name} 2>/dev/null || echo "")
-NETWORKS=$(docker inspect --format '{{{{range $k, $v := .NetworkSettings.Networks}}}}{{{{$k}}}} {{{{end}}}}' {container_name} 2>/dev/null || echo "")
+IMAGE_NAME=$(docker inspect --format '{{{{.Config.Image}}}}' {safe_name} 2>/dev/null || echo "")
+VOLUMES=$(docker inspect --format '{{{{range .Mounts}}}}{{{{if eq .Type "volume"}}}}{{{{.Name}}}} {{{{end}}}}{{{{end}}}}' {safe_name} 2>/dev/null || echo "")
+NETWORKS=$(docker inspect --format '{{{{range $k, $v := .NetworkSettings.Networks}}}}{{{{$k}}}} {{{{end}}}}' {safe_name} 2>/dev/null || echo "")
 
 echo "IMAGE:$IMAGE_NAME"
 echo "VOLUMES:$VOLUMES"
 echo "NETWORKS:$NETWORKS"
 
 # Stop and remove container
-docker stop {container_name} 2>/dev/null || true
-docker rm {container_name} 2>/dev/null || true
-echo "REMOVED:container:{container_name}"
+docker stop {safe_name} 2>/dev/null || true
+docker rm {safe_name} 2>/dev/null || true
+echo "REMOVED:container:{safe_name}"
 
 # Small delay to let Docker release resources
 sleep 1
-'''
+"""
 
     if remove_data:
-        script += '''
+        script += """
 # Remove unused volumes
 for VOL in $VOLUMES; do
     if [ -n "$VOL" ]; then
@@ -121,9 +127,9 @@ for VOL in $VOLUMES; do
         fi
     fi
 done
-'''
+"""
 
-    script += '''
+    script += """
 # Remove unused custom networks
 for NET in $NETWORKS; do
     if [ -n "$NET" ] && [ "$NET" != "bridge" ] && [ "$NET" != "host" ] && [ "$NET" != "none" ]; then
@@ -147,12 +153,14 @@ if [ -n "$IMAGE_NAME" ]; then
 fi
 
 echo "CLEANUP_COMPLETE"
-'''
+"""
 
     return script
 
 
-def cleanup_failed_deployment_script(container_name: str, image_name: str = None) -> str:
+def cleanup_failed_deployment_script(
+    container_name: str, image_name: str = None
+) -> str:
     """Build script to clean up a failed deployment.
 
     Args:
@@ -165,21 +173,23 @@ def cleanup_failed_deployment_script(container_name: str, image_name: str = None
     script = "#!/bin/bash\n"
 
     if container_name:
-        script += f'''
+        safe_name = shlex.quote(container_name)
+        script += f"""
 # Stop and remove container
-docker stop {container_name} 2>/dev/null || true
-docker rm -f {container_name} 2>/dev/null && echo "CONTAINER_REMOVED" || true
+docker stop {safe_name} 2>/dev/null || true
+docker rm -f {safe_name} 2>/dev/null && echo "CONTAINER_REMOVED" || true
 sleep 1
-'''
+"""
 
     if image_name:
-        script += f'''
+        safe_image = shlex.quote(image_name)
+        script += f"""
 # Remove image if unused
-USERS=$(docker ps -a --filter ancestor={image_name} -q 2>/dev/null | wc -l)
+USERS=$(docker ps -a --filter ancestor={safe_image} -q 2>/dev/null | wc -l)
 if [ "$USERS" = "0" ]; then
-    docker rmi {image_name} 2>/dev/null && echo "IMAGE_REMOVED" || true
+    docker rmi {safe_image} 2>/dev/null && echo "IMAGE_REMOVED" || true
 fi
-'''
+"""
 
     script += '\necho "CLEANUP_DONE"'
     return script
@@ -198,21 +208,23 @@ def background_pull_script(image: str, job_id: str) -> str:
     Returns:
         Shell script string
     """
-    return f'''#!/bin/bash
+    safe_image = shlex.quote(image)
+    safe_job_id = shlex.quote(job_id)
+    return f"""#!/bin/bash
 WORK_DIR="/tmp/tomo"
 mkdir -p "$WORK_DIR"
 
 # Check if image already exists locally - skip pull entirely
-if docker image inspect {image} > /dev/null 2>&1; then
-    echo "0" > "$WORK_DIR/{job_id}.status"
-    echo "Image already exists" > "$WORK_DIR/{job_id}.log"
+if docker image inspect {safe_image} > /dev/null 2>&1; then
+    echo "0" > "$WORK_DIR/{safe_job_id}.status"
+    echo "Image already exists" > "$WORK_DIR/{safe_job_id}.log"
     echo "IMAGE_EXISTS"
     exit 0
 fi
 
 # Check if already running
-if [ -f "$WORK_DIR/{job_id}.pid" ]; then
-    PID=$(cat "$WORK_DIR/{job_id}.pid")
+if [ -f "$WORK_DIR/{safe_job_id}.pid" ]; then
+    PID=$(cat "$WORK_DIR/{safe_job_id}.pid")
     if kill -0 "$PID" 2>/dev/null; then
         echo "ALREADY_RUNNING:$PID"
         exit 0
@@ -223,13 +235,13 @@ fi
 nohup /bin/bash -c '
     # Limit memory usage of this shell
     ulimit -v 1048576 2>/dev/null || true
-    ionice -c 3 nice -n 19 docker pull {image} > /tmp/tomo/{job_id}.log 2>&1
-    echo $? > /tmp/tomo/{job_id}.status
+    ionice -c 3 nice -n 19 docker pull {safe_image} > /tmp/tomo/{safe_job_id}.log 2>&1
+    echo $? > /tmp/tomo/{safe_job_id}.status
 ' > /dev/null 2>&1 &
 
-echo $! > "$WORK_DIR/{job_id}.pid"
-echo "STARTED:$(cat $WORK_DIR/{job_id}.pid)"
-'''
+echo $! > "$WORK_DIR/{safe_job_id}.pid"
+echo "STARTED:$(cat $WORK_DIR/{safe_job_id}.pid)"
+"""
 
 
 def poll_pull_status_script(job_id: str) -> str:
@@ -241,11 +253,12 @@ def poll_pull_status_script(job_id: str) -> str:
     Returns:
         Shell script string
     """
-    return f'''#!/bin/bash
+    safe_job_id = shlex.quote(job_id)
+    return f"""#!/bin/bash
 WORK_DIR="/tmp/tomo"
-PID_FILE="$WORK_DIR/{job_id}.pid"
-STATUS_FILE="$WORK_DIR/{job_id}.status"
-LOG_FILE="$WORK_DIR/{job_id}.log"
+PID_FILE="$WORK_DIR/{safe_job_id}.pid"
+STATUS_FILE="$WORK_DIR/{safe_job_id}.status"
+LOG_FILE="$WORK_DIR/{safe_job_id}.log"
 
 if [ ! -f "$PID_FILE" ]; then
     echo "STATUS:not_found"
@@ -276,7 +289,7 @@ if [ -f "$LOG_FILE" ]; then
     tail -n 30 "$LOG_FILE" 2>/dev/null
     echo "LOG_END"
 fi
-'''
+"""
 
 
 def cleanup_pull_job_script(job_id: str) -> str:
@@ -288,11 +301,12 @@ def cleanup_pull_job_script(job_id: str) -> str:
     Returns:
         Shell script string
     """
-    return f'''#!/bin/bash
+    safe_job_id = shlex.quote(job_id)
+    return f"""#!/bin/bash
 WORK_DIR="/tmp/tomo"
-rm -f "$WORK_DIR/{job_id}.pid" "$WORK_DIR/{job_id}.status" "$WORK_DIR/{job_id}.log"
+rm -f "$WORK_DIR/{safe_job_id}.pid" "$WORK_DIR/{safe_job_id}.status" "$WORK_DIR/{safe_job_id}.log"
 echo "CLEANED"
-'''
+"""
 
 
 def preflight_check_script(min_disk_gb: int = 5, min_memory_mb: int = 256) -> str:
@@ -305,7 +319,7 @@ def preflight_check_script(min_disk_gb: int = 5, min_memory_mb: int = 256) -> st
     Returns:
         Shell script string
     """
-    return f'''#!/bin/bash
+    return f"""#!/bin/bash
 # Check Docker is running
 if ! docker info > /dev/null 2>&1; then
     echo "ERROR:DOCKER:Docker daemon not responding"
@@ -331,7 +345,7 @@ if [ "$AVAIL_MB" -lt {min_memory_mb} ]; then
 fi
 
 echo "OK:disk=${{AVAIL_GB}}GB,memory=${{AVAIL_MB}}MB"
-'''
+"""
 
 
 def health_check_script(container_name: str) -> str:
@@ -343,22 +357,23 @@ def health_check_script(container_name: str) -> str:
     Returns:
         Shell script string
     """
-    return f'''#!/bin/bash
+    safe_name = shlex.quote(container_name)
+    return f"""#!/bin/bash
 # Get container status
-STATUS=$(docker inspect --format '{{{{.State.Status}}}}' {container_name} 2>/dev/null || echo "not_found")
+STATUS=$(docker inspect --format '{{{{.State.Status}}}}' {safe_name} 2>/dev/null || echo "not_found")
 echo "STATUS:$STATUS"
 
 # Get restart count
-RESTARTS=$(docker inspect --format '{{{{.RestartCount}}}}' {container_name} 2>/dev/null || echo "0")
+RESTARTS=$(docker inspect --format '{{{{.RestartCount}}}}' {safe_name} 2>/dev/null || echo "0")
 echo "RESTARTS:$RESTARTS"
 
 # Get port mappings
-PORTS=$(docker port {container_name} 2>/dev/null || echo "")
+PORTS=$(docker port {safe_name} 2>/dev/null || echo "")
 echo "PORTS:$PORTS"
 
 # Get recent logs
-LOGS=$(docker logs --tail 20 {container_name} 2>&1 | head -c 2000)
+LOGS=$(docker logs --tail 20 {safe_name} 2>&1 | head -c 2000)
 echo "LOGS_START"
 echo "$LOGS"
 echo "LOGS_END"
-'''
+"""

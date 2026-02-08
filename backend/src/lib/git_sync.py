@@ -3,30 +3,34 @@
 import os
 import re
 import shutil
-import tempfile
 import subprocess
-from datetime import datetime, UTC
+import tempfile
+from datetime import UTC, datetime
 from pathlib import Path
-from typing import List, Optional, Any
+from typing import Any
 
-import yaml
 import structlog
+import yaml
 
 from models.marketplace import (
-    MarketplaceApp, DockerConfig, AppRequirements,
-    AppPort, AppVolume, AppEnvVar
+    AppEnvVar,
+    AppPort,
+    AppRequirements,
+    AppVolume,
+    DockerConfig,
+    MarketplaceApp,
 )
 
 logger = structlog.get_logger("git_sync")
 
 # Valid git URL patterns (HTTPS and SSH)
 VALID_GIT_URL_PATTERN = re.compile(
-    r'^https?://[\w\-\.]+(/[\w\-\.]+)+(/[\w\-\.]+)*(\.git)?$|'  # HTTPS URLs
-    r'^git@[\w\-\.]+:[\w\-\.]+(/[\w\-\.]+)*(\.git)?$'  # SSH URLs
+    r"^https?://[\w\-\.]+(/[\w\-\.]+)+(/[\w\-\.]+)*(\.git)?$|"  # HTTPS URLs
+    r"^git@[\w\-\.]+:[\w\-\.]+(/[\w\-\.]+)*(\.git)?$"  # SSH URLs
 )
 
 # Valid branch name pattern (alphanumeric, hyphens, underscores, slashes, dots)
-VALID_BRANCH_PATTERN = re.compile(r'^[\w\-\./]+$')
+VALID_BRANCH_PATTERN = re.compile(r"^[\w\-\./]+$")
 
 
 def validate_git_url(url: str) -> None:
@@ -40,7 +44,7 @@ def validate_branch_name(branch: str) -> None:
     if not branch or not VALID_BRANCH_PATTERN.match(branch):
         raise ValueError(f"Invalid branch name: {branch}")
     # Prevent path traversal
-    if '..' in branch:
+    if ".." in branch:
         raise ValueError(f"Invalid branch name (path traversal): {branch}")
 
 
@@ -71,18 +75,37 @@ class GitSync:
                 # Pull latest
                 subprocess.run(
                     ["git", "-C", str(repo_path), "fetch", "origin", branch],
-                    check=True, capture_output=True
+                    check=True,
+                    capture_output=True,
                 )
                 subprocess.run(
-                    ["git", "-C", str(repo_path), "reset", "--hard", f"origin/{branch}"],
-                    check=True, capture_output=True
+                    [
+                        "git",
+                        "-C",
+                        str(repo_path),
+                        "reset",
+                        "--hard",
+                        f"origin/{branch}",
+                    ],
+                    check=True,
+                    capture_output=True,
                 )
                 logger.debug("Pulled latest", repo=repo_name, branch=branch)
             else:
                 # Clone
                 subprocess.run(
-                    ["git", "clone", "--branch", branch, "--depth", "1", repo_url, str(repo_path)],
-                    check=True, capture_output=True
+                    [
+                        "git",
+                        "clone",
+                        "--branch",
+                        branch,
+                        "--depth",
+                        "1",
+                        repo_url,
+                        str(repo_path),
+                    ],
+                    check=True,
+                    capture_output=True,
                 )
                 logger.debug("Cloned repo", repo=repo_name, branch=branch)
 
@@ -91,9 +114,9 @@ class GitSync:
         except subprocess.CalledProcessError as e:
             stderr = e.stderr.decode() if e.stderr else "No error message"
             logger.error("Git operation failed", repo=repo_url, error=stderr)
-            raise RuntimeError(f"Git operation failed: {stderr}")
+            raise RuntimeError(f"Git operation failed: {stderr}") from e
 
-    def find_app_files(self, repo_path: Path) -> List[Path]:
+    def find_app_files(self, repo_path: Path) -> list[Path]:
         """Find all app.yaml files in repository.
 
         Supports multiple directory structures:
@@ -128,7 +151,7 @@ class GitSync:
             AppPort(
                 container=p.get("container", p) if isinstance(p, dict) else p,
                 host=p.get("host", p) if isinstance(p, dict) else p,
-                protocol=p.get("protocol", "tcp") if isinstance(p, dict) else "tcp"
+                protocol=p.get("protocol", "tcp") if isinstance(p, dict) else "tcp",
             )
             for p in docker_data.get("ports", [])
         ]
@@ -137,33 +160,41 @@ class GitSync:
         for v in docker_data.get("volumes", []):
             if isinstance(v, str):
                 parts = v.split(":")
-                volumes.append(AppVolume(
-                    host_path=parts[0],
-                    container_path=parts[1] if len(parts) > 1 else parts[0],
-                    readonly=len(parts) > 2 and parts[2] == "ro"
-                ))
+                volumes.append(
+                    AppVolume(
+                        host_path=parts[0],
+                        container_path=parts[1] if len(parts) > 1 else parts[0],
+                        readonly=len(parts) > 2 and parts[2] == "ro",
+                    )
+                )
             else:
-                volumes.append(AppVolume(
-                    host_path=v.get("host_path", v.get("host", "")),
-                    container_path=v.get("container_path", v.get("container", "")),
-                    readonly=v.get("readonly", False)
-                ))
+                volumes.append(
+                    AppVolume(
+                        host_path=v.get("host_path", v.get("host", "")),
+                        container_path=v.get("container_path", v.get("container", "")),
+                        readonly=v.get("readonly", False),
+                    )
+                )
 
         env_vars = []
         for e in docker_data.get("environment", docker_data.get("env", [])):
             if isinstance(e, str):
                 if "=" in e:
                     name, default = e.split("=", 1)
-                    env_vars.append(AppEnvVar(name=name, default=default, required=False))
+                    env_vars.append(
+                        AppEnvVar(name=name, default=default, required=False)
+                    )
                 else:
                     env_vars.append(AppEnvVar(name=e, required=True))
             else:
-                env_vars.append(AppEnvVar(
-                    name=e.get("name"),
-                    description=e.get("description"),
-                    required=e.get("required", False),
-                    default=e.get("default")
-                ))
+                env_vars.append(
+                    AppEnvVar(
+                        name=e.get("name"),
+                        description=e.get("description"),
+                        required=e.get("required", False),
+                        default=e.get("default"),
+                    )
+                )
 
         # Validate docker image is non-empty
         docker_image = docker_data.get("image", "")
@@ -178,7 +209,7 @@ class GitSync:
             restart_policy=docker_data.get("restart_policy", "unless-stopped"),
             network_mode=docker_data.get("network_mode"),
             privileged=docker_data.get("privileged", False),
-            capabilities=docker_data.get("capabilities", [])
+            capabilities=docker_data.get("capabilities", []),
         )
 
         # Parse requirements
@@ -186,7 +217,7 @@ class GitSync:
         requirements = AppRequirements(
             min_ram=req_data.get("min_ram"),
             min_storage=req_data.get("min_storage"),
-            architectures=req_data.get("architectures", ["amd64", "arm64"])
+            architectures=req_data.get("architectures", ["amd64", "arm64"]),
         )
 
         now = datetime.now(UTC)
@@ -213,10 +244,12 @@ class GitSync:
             rating_count=0,
             featured=False,
             created_at=now,
-            updated_at=now
+            updated_at=now,
         )
 
-    def load_app_from_file(self, file_path: Path, repo_id: str) -> Optional[MarketplaceApp]:
+    def load_app_from_file(
+        self, file_path: Path, repo_id: str
+    ) -> MarketplaceApp | None:
         """Load and parse an app.yaml file."""
         try:
             content = file_path.read_text()
@@ -234,7 +267,7 @@ class GitSync:
     # CasaOS App Store Support
     # ─────────────────────────────────────────────────────────────
 
-    def find_casaos_app_files(self, repo_path: Path) -> List[Path]:
+    def find_casaos_app_files(self, repo_path: Path) -> list[Path]:
         """Find all docker-compose.yml files in CasaOS Apps directory."""
         app_files = []
         apps_dir = repo_path / "Apps"
@@ -246,7 +279,9 @@ class GitSync:
         logger.debug("Found CasaOS app files", count=len(app_files))
         return app_files
 
-    def parse_casaos_docker_compose(self, content: str, repo_id: str, app_dir_name: str) -> Optional[MarketplaceApp]:
+    def parse_casaos_docker_compose(
+        self, content: str, repo_id: str, app_dir_name: str
+    ) -> MarketplaceApp | None:
         """Parse CasaOS docker-compose.yml into MarketplaceApp.
 
         CasaOS uses standard docker-compose format with x-casaos extension.
@@ -269,7 +304,9 @@ class GitSync:
             main_service = services.get(main_service_name, {})
 
             if not main_service:
-                logger.warning("Main service not found", app=app_dir_name, main=main_service_name)
+                logger.warning(
+                    "Main service not found", app=app_dir_name, main=main_service_name
+                )
                 return None
 
             # Extract image
@@ -293,20 +330,7 @@ class GitSync:
                     volumes.append(vol_info)
 
             # Parse environment variables
-            env_vars = []
-            env_data = main_service.get("environment", {})
-            if isinstance(env_data, dict):
-                for name, value in env_data.items():
-                    env_vars.append(AppEnvVar(
-                        name=name,
-                        default=str(value) if value else None,
-                        required=False
-                    ))
-            elif isinstance(env_data, list):
-                for env_item in env_data:
-                    if isinstance(env_item, str) and "=" in env_item:
-                        name, value = env_item.split("=", 1)
-                        env_vars.append(AppEnvVar(name=name, default=value, required=False))
+            env_vars = self._parse_casaos_env_vars(main_service)
 
             # Build DockerConfig
             docker_config = DockerConfig(
@@ -317,32 +341,18 @@ class GitSync:
                 restart_policy=main_service.get("restart", "unless-stopped"),
                 network_mode=main_service.get("network_mode"),
                 privileged=main_service.get("privileged", False),
-                capabilities=main_service.get("cap_add", [])
+                capabilities=main_service.get("cap_add", []),
             )
 
             # Extract metadata from x-casaos
-            title = casaos_meta.get("title", {})
-            description = casaos_meta.get("description", {})
-            tagline = casaos_meta.get("tagline", {})
-
-            # Get English versions (fallback to first available)
-            app_name = title.get("en_US", title.get("en_GB", app_dir_name)) if isinstance(title, dict) else app_dir_name
-            app_description = ""
-            if isinstance(description, dict):
-                app_description = description.get("en_US", description.get("en_GB", ""))
-            app_tagline = ""
-            if isinstance(tagline, dict):
-                app_tagline = tagline.get("en_US", tagline.get("en_GB", ""))
-
-            # Use tagline as short description if available
-            short_desc = app_tagline if app_tagline else (app_description[:200] if app_description else "")
+            app_name, app_description, short_desc = self._extract_casaos_metadata(
+                casaos_meta, app_dir_name
+            )
 
             # Parse requirements
             architectures = casaos_meta.get("architectures", ["amd64", "arm64"])
             requirements = AppRequirements(
-                min_ram=None,
-                min_storage=None,
-                architectures=architectures
+                min_ram=None, min_storage=None, architectures=architectures
             )
 
             # Extract version from image tag
@@ -357,12 +367,16 @@ class GitSync:
                 id=f"casaos-{app_id}",
                 name=app_name,
                 description=short_desc,
-                long_description=app_description if len(app_description) > 200 else None,
+                long_description=app_description
+                if len(app_description) > 200
+                else None,
                 version=version,
                 category=casaos_meta.get("category", "Utilities"),
                 tags=[],
                 icon=casaos_meta.get("icon"),
-                author=casaos_meta.get("author", casaos_meta.get("developer", "CasaOS Community")),
+                author=casaos_meta.get(
+                    "author", casaos_meta.get("developer", "CasaOS Community")
+                ),
                 license="Open Source",
                 maintainers=[],
                 repository=None,
@@ -375,14 +389,68 @@ class GitSync:
                 rating_count=0,
                 featured=False,
                 created_at=now,
-                updated_at=now
+                updated_at=now,
             )
 
         except Exception as e:
-            logger.error("Failed to parse CasaOS docker-compose", app=app_dir_name, error=str(e))
+            logger.error(
+                "Failed to parse CasaOS docker-compose", app=app_dir_name, error=str(e)
+            )
             return None
 
-    def _parse_casaos_port(self, port_spec: Any) -> Optional[AppPort]:
+    def _parse_casaos_env_vars(self, main_service: dict) -> list[AppEnvVar]:
+        """Parse environment variables from CasaOS service (dict or list format)."""
+        env_vars: list[AppEnvVar] = []
+        env_data = main_service.get("environment", {})
+        if isinstance(env_data, dict):
+            for name, value in env_data.items():
+                env_vars.append(
+                    AppEnvVar(
+                        name=name,
+                        default=str(value) if value else None,
+                        required=False,
+                    )
+                )
+        elif isinstance(env_data, list):
+            for env_item in env_data:
+                if isinstance(env_item, str) and "=" in env_item:
+                    name, value = env_item.split("=", 1)
+                    env_vars.append(
+                        AppEnvVar(name=name, default=value, required=False)
+                    )
+        return env_vars
+
+    def _extract_casaos_metadata(
+        self, casaos_meta: dict, app_dir_name: str
+    ) -> tuple[str, str, str]:
+        """Extract i18n metadata from x-casaos extension.
+
+        Returns (app_name, app_description, short_description).
+        """
+        title = casaos_meta.get("title", {})
+        description = casaos_meta.get("description", {})
+        tagline = casaos_meta.get("tagline", {})
+
+        app_name = (
+            title.get("en_US", title.get("en_GB", app_dir_name))
+            if isinstance(title, dict)
+            else app_dir_name
+        )
+        app_description = ""
+        if isinstance(description, dict):
+            app_description = description.get("en_US", description.get("en_GB", ""))
+        app_tagline = ""
+        if isinstance(tagline, dict):
+            app_tagline = tagline.get("en_US", tagline.get("en_GB", ""))
+
+        short_desc = (
+            app_tagline
+            if app_tagline
+            else (app_description[:200] if app_description else "")
+        )
+        return app_name, app_description, short_desc
+
+    def _parse_casaos_port(self, port_spec: Any) -> AppPort | None:
         """Parse CasaOS port specification."""
         try:
             if isinstance(port_spec, dict):
@@ -393,7 +461,7 @@ class GitSync:
                     return AppPort(
                         container=int(target),
                         host=int(str(published).strip('"')),
-                        protocol=protocol
+                        protocol=protocol,
                     )
             elif isinstance(port_spec, str):
                 # Handle "8080:80" or "8080:80/tcp" format
@@ -406,13 +474,13 @@ class GitSync:
                     return AppPort(
                         container=int(container_port),
                         host=int(host_port),
-                        protocol=protocol
+                        protocol=protocol,
                     )
         except (ValueError, TypeError) as e:
             logger.debug("Failed to parse port", spec=port_spec, error=str(e))
         return None
 
-    def _parse_casaos_volume(self, vol_spec: Any) -> Optional[AppVolume]:
+    def _parse_casaos_volume(self, vol_spec: Any) -> AppVolume | None:
         """Parse CasaOS volume specification."""
         try:
             if isinstance(vol_spec, dict):
@@ -421,9 +489,7 @@ class GitSync:
                 readonly = vol_spec.get("read_only", False)
                 if source and target:
                     return AppVolume(
-                        host_path=source,
-                        container_path=target,
-                        readonly=readonly
+                        host_path=source, container_path=target, readonly=readonly
                     )
             elif isinstance(vol_spec, str):
                 # Handle "/host/path:/container/path" or "/host/path:/container/path:ro"
@@ -432,13 +498,13 @@ class GitSync:
                     return AppVolume(
                         host_path=parts[0],
                         container_path=parts[1],
-                        readonly=len(parts) > 2 and parts[2] == "ro"
+                        readonly=len(parts) > 2 and parts[2] == "ro",
                     )
         except Exception as e:
             logger.debug("Failed to parse volume", spec=vol_spec, error=str(e))
         return None
 
-    def load_casaos_app(self, file_path: Path, repo_id: str) -> Optional[MarketplaceApp]:
+    def load_casaos_app(self, file_path: Path, repo_id: str) -> MarketplaceApp | None:
         """Load and parse a CasaOS docker-compose.yml file."""
         try:
             content = file_path.read_text()

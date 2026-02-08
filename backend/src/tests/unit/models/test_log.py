@@ -5,14 +5,15 @@ Tests log entry models including validation, serialization, and conversions.
 """
 
 import json
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from unittest.mock import MagicMock
+
 import pytest
 from pydantic import ValidationError
 
 from models.log import (
-    LogEntryTable,
     LogEntry,
+    LogEntryTable,
     LogFilter,
 )
 

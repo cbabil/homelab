@@ -4,8 +4,9 @@ Docker Tools Unit Tests
 Tests for Docker installation tool.
 """
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 
 
 class TestDockerTools:
@@ -15,11 +16,13 @@ class TestDockerTools:
     def mock_ssh_service(self):
         """Create mock SSH service."""
         service = MagicMock()
-        service.test_connection = AsyncMock(return_value=(
-            True,
-            "Connected",
-            {"os": "Ubuntu 22.04", "docker_version": "Not installed"}
-        ))
+        service.test_connection = AsyncMock(
+            return_value=(
+                True,
+                "Connected",
+                {"os": "Ubuntu 22.04", "docker_version": "Not installed"},
+            )
+        )
         service.execute_command = AsyncMock(return_value=(True, "Docker installed"))
         return service
 
@@ -53,9 +56,13 @@ class TestInstallDockerWithServerId:
     @pytest.fixture
     def mock_ssh_service(self):
         service = MagicMock()
-        service.test_connection = AsyncMock(return_value=(
-            True, "Connected", {"os": "Ubuntu 22.04", "docker_version": "24.0.0"}
-        ))
+        service.test_connection = AsyncMock(
+            return_value=(
+                True,
+                "Connected",
+                {"os": "Ubuntu 22.04", "docker_version": "24.0.0"},
+            )
+        )
         service.execute_command = AsyncMock(return_value=(True, "Docker installed"))
         return service
 
@@ -88,13 +95,17 @@ class TestInstallDockerWithServerId:
         from tools.docker.tools import DockerTools
 
         mock_server_service.get_server = AsyncMock(return_value=mock_server)
-        mock_server_service.get_credentials = AsyncMock(return_value={"password": "secret"})
+        mock_server_service.get_credentials = AsyncMock(
+            return_value={"password": "secret"}
+        )
         mock_server_service.update_server_status = AsyncMock()
         mock_server_service.update_server_system_info = AsyncMock()
 
-        tools = DockerTools(mock_ssh_service, mock_server_service, mock_database_service)
+        tools = DockerTools(
+            mock_ssh_service, mock_server_service, mock_database_service
+        )
 
-        with patch('tools.docker.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.docker.tools.log_event", new_callable=AsyncMock):
             result = await tools.install_docker(server_id="server-123")
 
         assert result["success"] is True
@@ -108,7 +119,9 @@ class TestInstallDockerWithServerId:
         from tools.docker.tools import DockerTools
 
         mock_server_service.get_server = AsyncMock(return_value=None)
-        tools = DockerTools(mock_ssh_service, mock_server_service, mock_database_service)
+        tools = DockerTools(
+            mock_ssh_service, mock_server_service, mock_database_service
+        )
 
         result = await tools.install_docker(server_id="nonexistent")
 
@@ -125,7 +138,9 @@ class TestInstallDockerWithServerId:
         mock_server_service.get_server = AsyncMock(return_value=mock_server)
         mock_server_service.get_credentials = AsyncMock(return_value=None)
 
-        tools = DockerTools(mock_ssh_service, mock_server_service, mock_database_service)
+        tools = DockerTools(
+            mock_ssh_service, mock_server_service, mock_database_service
+        )
 
         result = await tools.install_docker(server_id="server-123")
 
@@ -147,10 +162,14 @@ class TestInstallDockerWithServerId:
         server.system_info = MagicMock(os="Windows Server 2019")  # Unsupported
 
         mock_server_service.get_server = AsyncMock(return_value=server)
-        mock_server_service.get_credentials = AsyncMock(return_value={"password": "secret"})
+        mock_server_service.get_credentials = AsyncMock(
+            return_value={"password": "secret"}
+        )
         mock_server_service.update_server_status = AsyncMock()
 
-        tools = DockerTools(mock_ssh_service, mock_server_service, mock_database_service)
+        tools = DockerTools(
+            mock_ssh_service, mock_server_service, mock_database_service
+        )
 
         result = await tools.install_docker(server_id="server-123")
 
@@ -164,9 +183,13 @@ class TestInstallDockerDirect:
     @pytest.fixture
     def mock_ssh_service(self):
         service = MagicMock()
-        service.test_connection = AsyncMock(return_value=(
-            True, "Connected", {"os": "Ubuntu 22.04", "docker_version": "24.0.0"}
-        ))
+        service.test_connection = AsyncMock(
+            return_value=(
+                True,
+                "Connected",
+                {"os": "Ubuntu 22.04", "docker_version": "24.0.0"},
+            )
+        )
         service.execute_command = AsyncMock(return_value=(True, "Docker installed"))
         return service
 
@@ -185,16 +208,20 @@ class TestInstallDockerDirect:
         """Test successful Docker installation with direct credentials."""
         from tools.docker.tools import DockerTools
 
-        tools = DockerTools(mock_ssh_service, mock_server_service, mock_database_service)
+        tools = DockerTools(
+            mock_ssh_service, mock_server_service, mock_database_service
+        )
 
-        with patch('tools.docker.tools.log_event', new_callable=AsyncMock):
-            with patch('lib.security.validate_server_input', return_value={"valid": True}):
+        with patch("tools.docker.tools.log_event", new_callable=AsyncMock):
+            with patch(
+                "lib.security.validate_server_input", return_value={"valid": True}
+            ):
                 result = await tools.install_docker(
                     host="192.168.1.100",
                     port=22,
                     username="admin",
                     auth_type="password",
-                    password="secret123"
+                    password="secret123",
                 )
 
         assert result["success"] is True
@@ -206,14 +233,13 @@ class TestInstallDockerDirect:
         """Test Docker installation with missing parameters."""
         from tools.docker.tools import DockerTools
 
-        tools = DockerTools(mock_ssh_service, mock_server_service, mock_database_service)
+        tools = DockerTools(
+            mock_ssh_service, mock_server_service, mock_database_service
+        )
 
         # Missing host
         result = await tools.install_docker(
-            port=22,
-            username="admin",
-            auth_type="password",
-            password="secret"
+            port=22, username="admin", auth_type="password", password="secret"
         )
 
         assert result["success"] is False
@@ -226,14 +252,16 @@ class TestInstallDockerDirect:
         """Test Docker installation with password auth but no password."""
         from tools.docker.tools import DockerTools
 
-        tools = DockerTools(mock_ssh_service, mock_server_service, mock_database_service)
+        tools = DockerTools(
+            mock_ssh_service, mock_server_service, mock_database_service
+        )
 
-        with patch('lib.security.validate_server_input', return_value={"valid": True}):
+        with patch("lib.security.validate_server_input", return_value={"valid": True}):
             result = await tools.install_docker(
                 host="192.168.1.100",
                 port=22,
                 username="admin",
-                auth_type="password"
+                auth_type="password",
                 # No password provided
             )
 
@@ -247,14 +275,16 @@ class TestInstallDockerDirect:
         """Test Docker installation with key auth but no key."""
         from tools.docker.tools import DockerTools
 
-        tools = DockerTools(mock_ssh_service, mock_server_service, mock_database_service)
+        tools = DockerTools(
+            mock_ssh_service, mock_server_service, mock_database_service
+        )
 
-        with patch('lib.security.validate_server_input', return_value={"valid": True}):
+        with patch("lib.security.validate_server_input", return_value={"valid": True}):
             result = await tools.install_docker(
                 host="192.168.1.100",
                 port=22,
                 username="admin",
-                auth_type="key"
+                auth_type="key",
                 # No private_key provided
             )
 
@@ -268,19 +298,21 @@ class TestInstallDockerDirect:
         """Test Docker installation when connection fails."""
         from tools.docker.tools import DockerTools
 
-        mock_ssh_service.test_connection = AsyncMock(return_value=(
-            False, "Connection refused", None
-        ))
+        mock_ssh_service.test_connection = AsyncMock(
+            return_value=(False, "Connection refused", None)
+        )
 
-        tools = DockerTools(mock_ssh_service, mock_server_service, mock_database_service)
+        tools = DockerTools(
+            mock_ssh_service, mock_server_service, mock_database_service
+        )
 
-        with patch('lib.security.validate_server_input', return_value={"valid": True}):
+        with patch("lib.security.validate_server_input", return_value={"valid": True}):
             result = await tools.install_docker(
                 host="192.168.1.100",
                 port=22,
                 username="admin",
                 auth_type="password",
-                password="secret"
+                password="secret",
             )
 
         assert result["success"] is False
@@ -293,15 +325,17 @@ class TestInstallDockerDirect:
         """Test Docker installation with invalid auth type."""
         from tools.docker.tools import DockerTools
 
-        tools = DockerTools(mock_ssh_service, mock_server_service, mock_database_service)
+        tools = DockerTools(
+            mock_ssh_service, mock_server_service, mock_database_service
+        )
 
-        with patch('lib.security.validate_server_input', return_value={"valid": True}):
+        with patch("lib.security.validate_server_input", return_value={"valid": True}):
             result = await tools.install_docker(
                 host="192.168.1.100",
                 port=22,
                 username="admin",
                 auth_type="invalid_auth",
-                password="secret"
+                password="secret",
             )
 
         assert result["success"] is False

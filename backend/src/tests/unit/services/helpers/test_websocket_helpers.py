@@ -5,12 +5,13 @@ Tests WebSocket helper functions and rate limiting for agent connections.
 """
 
 import time
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 from starlette.websockets import WebSocketDisconnect, WebSocketState
 
 from services.helpers.websocket_helpers import (
+    MAX_CONSECUTIVE_ERRORS,
     ConnectionRateLimiter,
     RateLimitEntry,
     close_websocket,
@@ -20,7 +21,6 @@ from services.helpers.websocket_helpers import (
     send_error,
     send_registered,
     ws_rate_limiter,
-    MAX_CONSECUTIVE_ERRORS,
 )
 
 

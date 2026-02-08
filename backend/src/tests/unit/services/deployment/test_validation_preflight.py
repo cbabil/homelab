@@ -4,8 +4,9 @@ Unit tests for DeploymentValidator.run_preflight_checks method.
 Tests pre-flight validation before deployment.
 """
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 
 from services.deployment.validation import DeploymentValidator
 
@@ -51,13 +52,13 @@ def mock_app_with_requirements():
     app = MagicMock()
     app.docker = MagicMock()
     app.docker.environment = []
-    
+
     port1 = MagicMock()
     port1.container = 80
     port1.host = 8080
-    
+
     app.docker.ports = [port1]
-    
+
     requirements = MagicMock()
     requirements.min_storage = 2048
     requirements.architectures = ["amd64", "arm64"]
@@ -105,7 +106,11 @@ class TestRunPreflightChecksBasic:
 
     @pytest.mark.asyncio
     async def test_preflight_server_not_found(
-        self, validator, mock_marketplace_service, mock_server_service, mock_app_no_requirements
+        self,
+        validator,
+        mock_marketplace_service,
+        mock_server_service,
+        mock_app_no_requirements,
     ):
         """run_preflight_checks should fail when server not found."""
         mock_marketplace_service.get_app.return_value = mock_app_no_requirements
@@ -163,13 +168,13 @@ class TestRunPreflightChecksBasic:
         """run_preflight_checks should pass when all checks succeed."""
         mock_marketplace_service.get_app.return_value = mock_app_with_requirements
         mock_server_service.get_server.return_value = mock_server
-        
+
         # Docker running
         mock_ssh_executor.execute.side_effect = [
-            (0, "running", ""),       # Docker check
-            (0, "5000", ""),           # Disk space (5GB)
-            (0, "available", ""),      # Port check
-            (0, "x86_64", ""),         # Architecture
+            (0, "running", ""),  # Docker check
+            (0, "5000", ""),  # Disk space (5GB)
+            (0, "available", ""),  # Port check
+            (0, "x86_64", ""),  # Architecture
         ]
 
         result = await validator.run_preflight_checks("server-1", "app-1")
@@ -203,7 +208,9 @@ class TestPreflightDockerCheck:
 
         result = await validator.run_preflight_checks("server-1", "app-1")
 
-        docker_check = next(c for c in result["checks"] if c["name"] == "docker_running")
+        docker_check = next(
+            c for c in result["checks"] if c["name"] == "docker_running"
+        )
         assert docker_check["passed"] is True
         assert "running" in docker_check["message"].lower()
 
@@ -228,7 +235,9 @@ class TestPreflightDockerCheck:
 
         result = await validator.run_preflight_checks("server-1", "app-1")
 
-        docker_check = next(c for c in result["checks"] if c["name"] == "docker_running")
+        docker_check = next(
+            c for c in result["checks"] if c["name"] == "docker_running"
+        )
         assert docker_check["passed"] is False
         assert result["passed"] is False
 
@@ -253,7 +262,9 @@ class TestPreflightDockerCheck:
 
         result = await validator.run_preflight_checks("server-1", "app-1")
 
-        docker_check = next(c for c in result["checks"] if c["name"] == "docker_running")
+        docker_check = next(
+            c for c in result["checks"] if c["name"] == "docker_running"
+        )
         assert docker_check["passed"] is False
 
 
@@ -275,7 +286,7 @@ class TestPreflightDiskSpaceCheck:
         mock_server_service.get_server.return_value = mock_server
         mock_ssh_executor.execute.side_effect = [
             (0, "running", ""),
-            (0, "5000", ""),       # 5GB > 2GB required
+            (0, "5000", ""),  # 5GB > 2GB required
             (0, "available", ""),
             (0, "x86_64", ""),
         ]
@@ -301,7 +312,7 @@ class TestPreflightDiskSpaceCheck:
         mock_server_service.get_server.return_value = mock_server
         mock_ssh_executor.execute.side_effect = [
             (0, "running", ""),
-            (0, "1000", ""),       # 1GB < 2GB required
+            (0, "1000", ""),  # 1GB < 2GB required
             (0, "available", ""),
             (0, "x86_64", ""),
         ]
@@ -327,7 +338,7 @@ class TestPreflightDiskSpaceCheck:
         mock_server_service.get_server.return_value = mock_server
         mock_ssh_executor.execute.side_effect = [
             (0, "running", ""),
-            (0, "500", ""),        # 500MB < 1024MB default
+            (0, "500", ""),  # 500MB < 1024MB default
             (0, "x86_64", ""),
         ]
 
@@ -352,7 +363,7 @@ class TestPreflightDiskSpaceCheck:
         mock_server_service.get_server.return_value = mock_server
         mock_ssh_executor.execute.side_effect = [
             (0, "running", ""),
-            (1, "", "Error"),      # Command failed
+            (1, "", "Error"),  # Command failed
             (0, "x86_64", ""),
         ]
 
@@ -413,7 +424,9 @@ class TestPreflightPortCheck:
 
         result = await validator.run_preflight_checks("server-1", "app-1")
 
-        port_check = next(c for c in result["checks"] if c["name"] == "port_availability")
+        port_check = next(
+            c for c in result["checks"] if c["name"] == "port_availability"
+        )
         assert port_check["passed"] is False
         assert result["passed"] is False
         assert 8080 in port_check["unavailable_ports"]
@@ -454,7 +467,9 @@ class TestPreflightPortCheck:
 
         result = await validator.run_preflight_checks("server-1", "app-1")
 
-        port_check = next(c for c in result["checks"] if c["name"] == "port_availability")
+        port_check = next(
+            c for c in result["checks"] if c["name"] == "port_availability"
+        )
         assert port_check["passed"] is True
 
 

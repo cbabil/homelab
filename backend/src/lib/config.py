@@ -5,14 +5,13 @@ from __future__ import annotations
 import os
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict
+from typing import Any
 
 import structlog
 
-
 logger = structlog.get_logger("config")
 
-DEFAULT_ENV_VALUES: Dict[str, str] = {
+DEFAULT_ENV_VALUES: dict[str, str] = {
     "DATA_DIRECTORY": "data",
     "APP_ENV": "production",
     "VERSION": "0.1.0",
@@ -26,7 +25,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[3]
 BACKEND_ROOT = Path(__file__).resolve().parents[2]
 
 
-def _load_env_file(filename: str = ".env") -> Dict[str, str]:
+def _load_env_file(filename: str = ".env") -> dict[str, str]:
     """Load environment variables from the provided `.env` file."""
 
     env_path = PROJECT_ROOT / filename
@@ -35,7 +34,7 @@ def _load_env_file(filename: str = ".env") -> Dict[str, str]:
         if backend_env.exists():
             env_path = backend_env
 
-    loaded: Dict[str, str] = {}
+    loaded: dict[str, str] = {}
 
     if not env_path.exists():
         logger.info("No .env file detected", path=str(env_path))
@@ -78,12 +77,12 @@ def _resolve_data_directory(value: str) -> Path:
 
 
 @lru_cache(maxsize=1)
-def _cached_config() -> Dict[str, Any]:
+def _cached_config() -> dict[str, Any]:
     """Load configuration once and cache the result."""
 
     _load_env_file()
 
-    config: Dict[str, Any] = {}
+    config: dict[str, Any] = {}
     for key, default in DEFAULT_ENV_VALUES.items():
         config[key] = os.getenv(key, default)
 
@@ -94,30 +93,34 @@ def _cached_config() -> Dict[str, Any]:
     config["ssh_timeout"] = int(config["SSH_TIMEOUT"])
     config["max_concurrent_connections"] = int(config["MAX_CONCURRENT_CONNECTIONS"])
 
-    tools_directory_value = config.get("TOOLS_DIRECTORY", DEFAULT_ENV_VALUES["TOOLS_DIRECTORY"])
+    tools_directory_value = config.get(
+        "TOOLS_DIRECTORY", DEFAULT_ENV_VALUES["TOOLS_DIRECTORY"]
+    )
     tools_path = Path(tools_directory_value)
     if not tools_path.is_absolute():
         tools_path = (BACKEND_ROOT / tools_directory_value).resolve()
     config["tools_directory"] = str(tools_path)
-    config["tools_package"] = config.get("TOOLS_PACKAGE", DEFAULT_ENV_VALUES["TOOLS_PACKAGE"])
+    config["tools_package"] = config.get(
+        "TOOLS_PACKAGE", DEFAULT_ENV_VALUES["TOOLS_PACKAGE"]
+    )
 
     return config
 
 
-def load_config() -> Dict[str, Any]:
+def load_config() -> dict[str, Any]:
     """Return a copy of the cached configuration dictionary."""
 
     return dict(_cached_config())
 
 
-def reload_config() -> Dict[str, Any]:
+def reload_config() -> dict[str, Any]:
     """Clear cached configuration and reload it."""
 
     _cached_config.cache_clear()
     return load_config()
 
 
-def resolve_data_directory(config: Dict[str, Any]) -> Path:
+def resolve_data_directory(config: dict[str, Any]) -> Path:
     """Resolve the data directory from a configuration dictionary."""
 
     directory = config.get("data_directory") or DEFAULT_ENV_VALUES["DATA_DIRECTORY"]
@@ -128,8 +131,9 @@ def resolve_data_directory(config: Dict[str, Any]) -> Path:
 # Feature Flag Utilities
 # =============================================================================
 
-def is_feature_enabled(feature_name: str, default: bool = True) -> bool:
-    """Check if a feature flag is enabled.
+
+def is_feature_enabled(feature_name: str, default: bool = False) -> bool:
+    """Check if a feature flag is enabled (fail-closed by default).
 
     Feature flags are read from environment variables with the FEATURE_ prefix.
     For example, is_feature_enabled("MARKETPLACE") checks FEATURE_MARKETPLACE.
@@ -143,16 +147,16 @@ def is_feature_enabled(feature_name: str, default: bool = True) -> bool:
 
     Example:
         >>> is_feature_enabled("MARKETPLACE")  # Checks FEATURE_MARKETPLACE
-        True
-        >>> is_feature_enabled("CUSTOM_FEATURE", default=False)
         False
+        >>> is_feature_enabled("CUSTOM_FEATURE", default=True)
+        True
     """
     env_key = f"FEATURE_{feature_name.upper()}"
     value = os.getenv(env_key, str(default)).lower()
-    return value in ('true', '1', 'yes', 'on')
+    return value in ("true", "1", "yes", "on")
 
 
-def get_feature_flags() -> Dict[str, bool]:
+def get_feature_flags() -> dict[str, bool]:
     """Get all feature flags from environment variables.
 
     Scans environment variables for FEATURE_* prefixed keys and returns
@@ -165,11 +169,11 @@ def get_feature_flags() -> Dict[str, bool]:
         >>> get_feature_flags()
         {'MARKETPLACE': True, 'BACKUP': True, 'STRICT_SSH': False}
     """
-    flags: Dict[str, bool] = {}
+    flags: dict[str, bool] = {}
     for key, value in os.environ.items():
         if key.startswith("FEATURE_"):
             feature_name = key[8:]  # Remove "FEATURE_" prefix
-            flags[feature_name] = value.lower() in ('true', '1', 'yes', 'on')
+            flags[feature_name] = value.lower() in ("true", "1", "yes", "on")
     return flags
 
 

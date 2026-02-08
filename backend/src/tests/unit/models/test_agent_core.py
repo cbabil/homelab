@@ -4,15 +4,16 @@ Unit tests for models/agent.py - Core models
 Tests AgentStatus, AgentConfig, Agent, AgentCreate, AgentUpdate models.
 """
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
+
 import pytest
 from pydantic import ValidationError
 
 from models.agent import (
-    AgentStatus,
-    AgentConfig,
     Agent,
+    AgentConfig,
     AgentCreate,
+    AgentStatus,
     AgentUpdate,
 )
 

@@ -4,8 +4,9 @@ Apps Schema Unit Tests
 Tests for schema_apps.py - SQLAlchemy ORM schema initialization and seeding.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 
 class TestCreateAppSchema:
@@ -16,10 +17,12 @@ class TestCreateAppSchema:
         """Test successful schema creation."""
         mock_engine = MagicMock()
         mock_conn = MagicMock()
-        mock_engine.begin = MagicMock(return_value=AsyncMock(
-            __aenter__=AsyncMock(return_value=mock_conn),
-            __aexit__=AsyncMock(return_value=None),
-        ))
+        mock_engine.begin = MagicMock(
+            return_value=AsyncMock(
+                __aenter__=AsyncMock(return_value=mock_conn),
+                __aexit__=AsyncMock(return_value=None),
+            )
+        )
         mock_conn.run_sync = AsyncMock()
 
         with (
@@ -32,6 +35,7 @@ class TestCreateAppSchema:
             mock_base.metadata.create_all = MagicMock()
 
             from init_db.schema_apps import create_app_schema
+
             await create_app_schema()
 
             mock_db_manager.initialize.assert_called_once()
@@ -46,10 +50,12 @@ class TestCheckAppSchemaExists:
         """Test that check returns True when table exists."""
         mock_engine = MagicMock()
         mock_conn = MagicMock()
-        mock_engine.begin = MagicMock(return_value=AsyncMock(
-            __aenter__=AsyncMock(return_value=mock_conn),
-            __aexit__=AsyncMock(return_value=None),
-        ))
+        mock_engine.begin = MagicMock(
+            return_value=AsyncMock(
+                __aenter__=AsyncMock(return_value=mock_conn),
+                __aexit__=AsyncMock(return_value=None),
+            )
+        )
         # Simulate table exists
         mock_conn.run_sync = AsyncMock(return_value=("applications",))
 
@@ -61,6 +67,7 @@ class TestCheckAppSchemaExists:
             mock_db_manager.engine = mock_engine
 
             from init_db.schema_apps import check_app_schema_exists
+
             result = await check_app_schema_exists()
 
             assert result is True
@@ -70,10 +77,12 @@ class TestCheckAppSchemaExists:
         """Test that check returns False when table doesn't exist."""
         mock_engine = MagicMock()
         mock_conn = MagicMock()
-        mock_engine.begin = MagicMock(return_value=AsyncMock(
-            __aenter__=AsyncMock(return_value=mock_conn),
-            __aexit__=AsyncMock(return_value=None),
-        ))
+        mock_engine.begin = MagicMock(
+            return_value=AsyncMock(
+                __aenter__=AsyncMock(return_value=mock_conn),
+                __aexit__=AsyncMock(return_value=None),
+            )
+        )
         # Simulate table doesn't exist
         mock_conn.run_sync = AsyncMock(return_value=None)
 
@@ -85,6 +94,7 @@ class TestCheckAppSchemaExists:
             mock_db_manager.engine = mock_engine
 
             from init_db.schema_apps import check_app_schema_exists
+
             result = await check_app_schema_exists()
 
             assert result is False
@@ -106,12 +116,15 @@ class TestSeedApplicationData:
             patch("init_db.schema_apps.logger"),
         ):
             mock_db_manager.initialize = AsyncMock()
-            mock_db_manager.get_session = MagicMock(return_value=AsyncMock(
-                __aenter__=AsyncMock(return_value=mock_session),
-                __aexit__=AsyncMock(return_value=None),
-            ))
+            mock_db_manager.get_session = MagicMock(
+                return_value=AsyncMock(
+                    __aenter__=AsyncMock(return_value=mock_session),
+                    __aexit__=AsyncMock(return_value=None),
+                )
+            )
 
             from init_db.schema_apps import seed_application_data
+
             await seed_application_data()
 
             # Should not add any data since count > 0
@@ -138,23 +151,27 @@ class TestSeedApplicationData:
 
         with (
             patch("init_db.schema_apps.db_manager") as mock_db_manager,
-            patch("init_db.schema_apps.CATEGORIES", [
-                {"id": "cat1", "name": "Category 1", "description": "Test category"}
-            ]),
-            patch("init_db.schema_apps.APPLICATIONS", [
-                {
-                    "id": "app1",
-                    "name": "App 1",
-                    "description": "Test app",
-                    "version": "1.0.0",
-                    "category_id": "cat1",
-                    "author": "Test",
-                    "license": "MIT",
-                    "status": "available",
-                    "created_at": "2024-01-01",
-                    "updated_at": "2024-01-01",
-                }
-            ]),
+            patch(
+                "init_db.schema_apps.CATEGORIES",
+                [{"id": "cat1", "name": "Category 1", "description": "Test category"}],
+            ),
+            patch(
+                "init_db.schema_apps.APPLICATIONS",
+                [
+                    {
+                        "id": "app1",
+                        "name": "App 1",
+                        "description": "Test app",
+                        "version": "1.0.0",
+                        "category_id": "cat1",
+                        "author": "Test",
+                        "license": "MIT",
+                        "status": "available",
+                        "created_at": "2024-01-01",
+                        "updated_at": "2024-01-01",
+                    }
+                ],
+            ),
             patch("init_db.schema_apps.AppCategory") as mock_app_category,
             patch("init_db.schema_apps.App") as mock_app,
             patch("init_db.schema_apps.AppRequirements") as mock_requirements,
@@ -162,10 +179,12 @@ class TestSeedApplicationData:
             patch("init_db.schema_apps.logger"),
         ):
             mock_db_manager.initialize = AsyncMock()
-            mock_db_manager.get_session = MagicMock(return_value=AsyncMock(
-                __aenter__=AsyncMock(return_value=mock_session),
-                __aexit__=AsyncMock(return_value=None),
-            ))
+            mock_db_manager.get_session = MagicMock(
+                return_value=AsyncMock(
+                    __aenter__=AsyncMock(return_value=mock_session),
+                    __aexit__=AsyncMock(return_value=None),
+                )
+            )
 
             # Mock category model
             mock_category_instance = MagicMock()
@@ -185,6 +204,7 @@ class TestSeedApplicationData:
             mock_status.return_value = MagicMock()
 
             from init_db.schema_apps import seed_application_data
+
             await seed_application_data()
 
             # Should add categories and apps
@@ -199,17 +219,21 @@ class TestInitializeAppDatabase:
     async def test_initialize_creates_schema_when_not_exists(self):
         """Test that initialize creates schema when it doesn't exist."""
         with (
-            patch("init_db.schema_apps.check_app_schema_exists",
-                  new_callable=AsyncMock) as mock_check,
-            patch("init_db.schema_apps.create_app_schema",
-                  new_callable=AsyncMock) as mock_create,
-            patch("init_db.schema_apps.seed_application_data",
-                  new_callable=AsyncMock) as mock_seed,
+            patch(
+                "init_db.schema_apps.check_app_schema_exists", new_callable=AsyncMock
+            ) as mock_check,
+            patch(
+                "init_db.schema_apps.create_app_schema", new_callable=AsyncMock
+            ) as mock_create,
+            patch(
+                "init_db.schema_apps.seed_application_data", new_callable=AsyncMock
+            ) as mock_seed,
             patch("init_db.schema_apps.logger"),
         ):
             mock_check.return_value = False
 
             from init_db.schema_apps import initialize_app_database
+
             await initialize_app_database()
 
             mock_check.assert_called_once()
@@ -220,17 +244,21 @@ class TestInitializeAppDatabase:
     async def test_initialize_skips_creation_when_exists(self):
         """Test that initialize skips creation when schema exists."""
         with (
-            patch("init_db.schema_apps.check_app_schema_exists",
-                  new_callable=AsyncMock) as mock_check,
-            patch("init_db.schema_apps.create_app_schema",
-                  new_callable=AsyncMock) as mock_create,
-            patch("init_db.schema_apps.seed_application_data",
-                  new_callable=AsyncMock) as mock_seed,
+            patch(
+                "init_db.schema_apps.check_app_schema_exists", new_callable=AsyncMock
+            ) as mock_check,
+            patch(
+                "init_db.schema_apps.create_app_schema", new_callable=AsyncMock
+            ) as mock_create,
+            patch(
+                "init_db.schema_apps.seed_application_data", new_callable=AsyncMock
+            ) as mock_seed,
             patch("init_db.schema_apps.logger"),
         ):
             mock_check.return_value = True
 
             from init_db.schema_apps import initialize_app_database
+
             await initialize_app_database()
 
             mock_check.assert_called_once()

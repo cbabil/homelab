@@ -4,10 +4,12 @@ Deployment Status
 Status queries, health checks, and installation status management.
 """
 
-import json
 import asyncio
-from typing import Dict, Any, Optional, List
+import json
+from typing import Any
+
 import structlog
+
 from services.deployment.scripts import health_check_script
 
 logger = structlog.get_logger("deployment.status")
@@ -32,7 +34,7 @@ class StatusManager:
 
     async def get_app_status(
         self, server_id: str, app_id: str
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Get current status of an installed app.
 
         Args:
@@ -60,14 +62,14 @@ class StatusManager:
                 "container_id": installation.container_id,
                 "status": container_status,
                 "installed_at": installation.installed_at,
-                "started_at": installation.started_at
+                "started_at": installation.started_at,
             }
 
         except Exception as e:
             logger.error("Get status failed", error=str(e))
             return None
 
-    async def get_installed_apps(self, server_id: str) -> List[Dict[str, Any]]:
+    async def get_installed_apps(self, server_id: str) -> list[dict[str, Any]]:
         """Get all installed apps for a server.
 
         Args:
@@ -84,7 +86,7 @@ class StatusManager:
                     "app_id": inst.app_id,
                     "container_name": inst.container_name,
                     "status": inst.status,
-                    "installed_at": inst.installed_at
+                    "installed_at": inst.installed_at,
                 }
                 for inst in installations
             ]
@@ -94,7 +96,7 @@ class StatusManager:
 
     async def get_installation_status_by_id(
         self, installation_id: str
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Get installation status by ID (for polling during deployment).
 
         Args:
@@ -109,7 +111,7 @@ class StatusManager:
                 return None
 
             status = installation.status
-            if hasattr(status, 'value'):
+            if hasattr(status, "value"):
                 status = status.value
             else:
                 status = str(status)
@@ -124,14 +126,14 @@ class StatusManager:
                 "error_message": installation.error_message,
                 "installed_at": installation.installed_at,
                 "started_at": installation.started_at,
-                "progress": getattr(installation, 'progress', 0) or 0,
-                "step_durations": installation.step_durations
+                "progress": getattr(installation, "progress", 0) or 0,
+                "step_durations": installation.step_durations,
             }
         except Exception as e:
             logger.error("Get installation status failed", error=str(e))
             return None
 
-    async def get_all_installations_with_details(self) -> List[Dict[str, Any]]:
+    async def get_all_installations_with_details(self) -> list[dict[str, Any]]:
         """Get all installations with server and app details.
 
         Reads from database only - no Docker calls.
@@ -152,22 +154,26 @@ class StatusManager:
             app_tasks = [self.marketplace_service.get_app(aid) for aid in app_ids]
 
             servers_list, apps_list = await asyncio.gather(
-                asyncio.gather(*server_tasks),
-                asyncio.gather(*app_tasks)
+                asyncio.gather(*server_tasks), asyncio.gather(*app_tasks)
             )
 
-            servers_map = {sid: server for sid, server in zip(server_ids, servers_list)}
-            apps_map = {aid: app for aid, app in zip(app_ids, apps_list)}
+            servers_map = {sid: server for sid, server in zip(server_ids, servers_list, strict=True)}
+            apps_map = {aid: app for aid, app in zip(app_ids, apps_list, strict=True)}
 
             # Pre-fetch repo info
-            repo_ids = list(set(
-                app.repo_id for app in apps_map.values()
-                if app and hasattr(app, 'repo_id') and app.repo_id
-            ))
+            repo_ids = list(
+                set(
+                    app.repo_id
+                    for app in apps_map.values()
+                    if app and hasattr(app, "repo_id") and app.repo_id
+                )
+            )
             if repo_ids:
-                repo_tasks = [self.marketplace_service.get_repo(rid) for rid in repo_ids]
+                repo_tasks = [
+                    self.marketplace_service.get_repo(rid) for rid in repo_ids
+                ]
                 repos_list = await asyncio.gather(*repo_tasks)
-                repos_map = {rid: repo for rid, repo in zip(repo_ids, repos_list)}
+                repos_map = {rid: repo for rid, repo in zip(repo_ids, repos_list, strict=True)}
             else:
                 repos_map = {}
 
@@ -178,42 +184,44 @@ class StatusManager:
                 app = apps_map.get(inst.app_id)
 
                 app_source = "Unknown"
-                if app and hasattr(app, 'repo_id') and app.repo_id:
+                if app and hasattr(app, "repo_id") and app.repo_id:
                     repo = repos_map.get(app.repo_id)
                     app_source = repo.name if repo else "Unknown"
 
                 config = inst.config or {}
                 status = inst.status
-                if hasattr(status, 'value'):
+                if hasattr(status, "value"):
                     status = status.value
                 else:
                     status = str(status)
 
-                result.append({
-                    "id": inst.id,
-                    "app_id": inst.app_id,
-                    "app_name": app.name if app else inst.app_id,
-                    "app_icon": app.icon if app else None,
-                    "app_version": app.version if app else "Unknown",
-                    "app_description": app.description if app else "",
-                    "app_category": app.category if app else "Unknown",
-                    "app_source": app_source,
-                    "server_id": inst.server_id,
-                    "server_name": server.name if server else "Unknown",
-                    "server_host": server.host if server else "",
-                    "container_id": inst.container_id,
-                    "container_name": inst.container_name,
-                    "status": status,
-                    "ports": config.get("ports", {}),
-                    "env": config.get("env", {}),
-                    "volumes": config.get("volumes", {}),
-                    "networks": inst.networks or [],
-                    "named_volumes": inst.named_volumes or [],
-                    "bind_mounts": inst.bind_mounts or [],
-                    "installed_at": inst.installed_at,
-                    "started_at": inst.started_at,
-                    "error_message": inst.error_message
-                })
+                result.append(
+                    {
+                        "id": inst.id,
+                        "app_id": inst.app_id,
+                        "app_name": app.name if app else inst.app_id,
+                        "app_icon": app.icon if app else None,
+                        "app_version": app.version if app else "Unknown",
+                        "app_description": app.description if app else "",
+                        "app_category": app.category if app else "Unknown",
+                        "app_source": app_source,
+                        "server_id": inst.server_id,
+                        "server_name": server.name if server else "Unknown",
+                        "server_host": server.host if server else "",
+                        "container_id": inst.container_id,
+                        "container_name": inst.container_name,
+                        "status": status,
+                        "ports": config.get("ports", {}),
+                        "env": config.get("env", {}),
+                        "volumes": config.get("volumes", {}),
+                        "networks": inst.networks or [],
+                        "named_volumes": inst.named_volumes or [],
+                        "bind_mounts": inst.bind_mounts or [],
+                        "installed_at": inst.installed_at,
+                        "started_at": inst.started_at,
+                        "error_message": inst.error_message,
+                    }
+                )
 
             return result
 
@@ -223,7 +231,7 @@ class StatusManager:
 
     async def refresh_installation_status(
         self, install_id: str
-    ) -> Optional[Dict[str, Any]]:
+    ) -> dict[str, Any] | None:
         """Refresh installation status from Docker and update database.
 
         Args:
@@ -239,7 +247,7 @@ class StatusManager:
 
             if not installation.container_name:
                 status = installation.status
-                if hasattr(status, 'value'):
+                if hasattr(status, "value"):
                     status = status.value
                 return {"status": str(status)}
 
@@ -278,17 +286,21 @@ class StatusManager:
             for mount in info.get("Mounts", []):
                 mount_type = mount.get("Type", "")
                 if mount_type == "volume":
-                    named_volumes.append({
-                        "name": mount.get("Name", ""),
-                        "destination": mount.get("Destination", ""),
-                        "mode": mount.get("Mode", "rw")
-                    })
+                    named_volumes.append(
+                        {
+                            "name": mount.get("Name", ""),
+                            "destination": mount.get("Destination", ""),
+                            "mode": mount.get("Mode", "rw"),
+                        }
+                    )
                 elif mount_type == "bind":
-                    bind_mounts.append({
-                        "source": mount.get("Source", ""),
-                        "destination": mount.get("Destination", ""),
-                        "mode": mount.get("Mode", "rw")
-                    })
+                    bind_mounts.append(
+                        {
+                            "source": mount.get("Source", ""),
+                            "destination": mount.get("Destination", ""),
+                            "mode": mount.get("Mode", "rw"),
+                        }
+                    )
 
             # Update database
             await self.db_service.update_installation(
@@ -296,14 +308,14 @@ class StatusManager:
                 status=new_status,
                 networks=json.dumps(networks),
                 named_volumes=json.dumps(named_volumes),
-                bind_mounts=json.dumps(bind_mounts)
+                bind_mounts=json.dumps(bind_mounts),
             )
 
             return {
                 "status": new_status,
                 "networks": networks,
                 "named_volumes": named_volumes,
-                "bind_mounts": bind_mounts
+                "bind_mounts": bind_mounts,
             }
 
         except Exception as e:
@@ -312,7 +324,7 @@ class StatusManager:
 
     async def check_container_health(
         self, server_id: str, container_name: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Check container health comprehensively.
 
         Args:
@@ -328,7 +340,7 @@ class StatusManager:
                 "ports_listening": [],
                 "restart_count": 0,
                 "recent_logs": [],
-                "healthy": False
+                "healthy": False,
             }
 
             # Use batched script for efficiency
@@ -336,7 +348,7 @@ class StatusManager:
             exit_code, stdout, _ = await self.ssh.execute(server_id, script, timeout=30)
 
             # Parse output
-            lines = stdout.split('\n')
+            lines = stdout.split("\n")
             in_logs = False
             logs = []
 
@@ -354,7 +366,7 @@ class StatusManager:
                     ports = line[6:].strip()
                     if ports:
                         health["ports_listening"] = [
-                            p.strip() for p in ports.split('\n') if p.strip()
+                            p.strip() for p in ports.split("\n") if p.strip()
                         ]
                 elif line == "LOGS_START":
                     in_logs = True
@@ -367,8 +379,7 @@ class StatusManager:
 
             # Determine overall health
             health["healthy"] = (
-                health["container_running"] and
-                health["restart_count"] < 3
+                health["container_running"] and health["restart_count"] < 3
             )
 
             return health
@@ -379,7 +390,7 @@ class StatusManager:
 
     async def get_container_logs(
         self, server_id: str, container_name: str, tail: int = 100
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get recent logs from a container.
 
         Args:
@@ -406,35 +417,28 @@ class StatusManager:
                 if not check_out.strip():
                     return {
                         "logs": [],
-                        "error": f"Container '{container_name}' not found"
+                        "error": f"Container '{container_name}' not found",
                     }
-                return {
-                    "logs": [],
-                    "error": stderr or "Failed to get logs"
-                }
+                return {"logs": [], "error": stderr or "Failed to get logs"}
 
             # Parse log lines
             logs = []
-            for line in stdout.strip().split('\n'):
+            for line in stdout.strip().split("\n"):
                 if line:
-                    parts = line.split(' ', 1)
-                    if len(parts) == 2 and 'T' in parts[0] and 'Z' in parts[0]:
-                        logs.append({
-                            "timestamp": parts[0],
-                            "message": parts[1]
-                        })
+                    parts = line.split(" ", 1)
+                    if len(parts) == 2 and "T" in parts[0] and "Z" in parts[0]:
+                        logs.append({"timestamp": parts[0], "message": parts[1]})
                     else:
-                        logs.append({
-                            "timestamp": None,
-                            "message": line
-                        })
+                        logs.append({"timestamp": None, "message": line})
 
             return {
                 "logs": logs,
                 "container_name": container_name,
-                "line_count": len(logs)
+                "line_count": len(logs),
             }
 
         except Exception as e:
-            logger.error("Get container logs failed", error=str(e), container=container_name)
+            logger.error(
+                "Get container logs failed", error=str(e), container=container_name
+            )
             return {"logs": [], "error": str(e)}

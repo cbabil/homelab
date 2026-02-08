@@ -5,8 +5,9 @@ Tests for system monitoring tools: get_system_metrics, get_server_metrics,
 get_app_metrics, get_dashboard_metrics, get_marketplace_metrics.
 """
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 
 from tools.monitoring.tools import MonitoringTools
 
@@ -21,7 +22,7 @@ class TestMonitoringToolsInit:
         mock_dashboard = MagicMock()
         mock_marketplace = MagicMock()
 
-        with patch('tools.monitoring.tools.logger'):
+        with patch("tools.monitoring.tools.logger"):
             tools = MonitoringTools(
                 mock_monitoring, mock_metrics, mock_dashboard, mock_marketplace
             )
@@ -42,18 +43,18 @@ class TestGetSystemMetrics:
             "monitoring": MagicMock(),
             "metrics": MagicMock(),
             "dashboard": MagicMock(),
-            "marketplace": MagicMock()
+            "marketplace": MagicMock(),
         }
 
     @pytest.fixture
     def monitoring_tools(self, mock_services):
         """Create MonitoringTools instance."""
-        with patch('tools.monitoring.tools.logger'):
+        with patch("tools.monitoring.tools.logger"):
             return MonitoringTools(
                 mock_services["monitoring"],
                 mock_services["metrics"],
                 mock_services["dashboard"],
-                mock_services["marketplace"]
+                mock_services["marketplace"],
             )
 
     @pytest.mark.asyncio
@@ -64,7 +65,7 @@ class TestGetSystemMetrics:
             "memory_percent": 62.8,
             "disk_percent": 35.0,
             "network_in": 1024000,
-            "network_out": 512000
+            "network_out": 512000,
         }
 
         result = await monitoring_tools.get_system_metrics()
@@ -98,18 +99,18 @@ class TestGetServerMetrics:
             "monitoring": MagicMock(),
             "metrics": MagicMock(),
             "dashboard": MagicMock(),
-            "marketplace": MagicMock()
+            "marketplace": MagicMock(),
         }
 
     @pytest.fixture
     def monitoring_tools(self, mock_services):
         """Create MonitoringTools instance."""
-        with patch('tools.monitoring.tools.logger'):
+        with patch("tools.monitoring.tools.logger"):
             return MonitoringTools(
                 mock_services["monitoring"],
                 mock_services["metrics"],
                 mock_services["dashboard"],
-                mock_services["marketplace"]
+                mock_services["marketplace"],
             )
 
     @pytest.fixture
@@ -119,13 +120,13 @@ class TestGetServerMetrics:
         metric1.model_dump.return_value = {
             "timestamp": "2024-01-15T10:00:00Z",
             "cpu_percent": 40.0,
-            "memory_percent": 55.0
+            "memory_percent": 55.0,
         }
         metric2 = MagicMock()
         metric2.model_dump.return_value = {
             "timestamp": "2024-01-15T11:00:00Z",
             "cpu_percent": 42.0,
-            "memory_percent": 58.0
+            "memory_percent": 58.0,
         }
         return [metric1, metric2]
 
@@ -164,9 +165,7 @@ class TestGetServerMetrics:
         )
 
     @pytest.mark.asyncio
-    async def test_get_server_metrics_empty(
-        self, monitoring_tools, mock_services
-    ):
+    async def test_get_server_metrics_empty(self, monitoring_tools, mock_services):
         """Test getting server metrics when no metrics exist."""
         mock_services["metrics"].get_server_metrics = AsyncMock(return_value=[])
 
@@ -177,9 +176,7 @@ class TestGetServerMetrics:
         assert result["data"]["metrics"] == []
 
     @pytest.mark.asyncio
-    async def test_get_server_metrics_exception(
-        self, monitoring_tools, mock_services
-    ):
+    async def test_get_server_metrics_exception(self, monitoring_tools, mock_services):
         """Test get_server_metrics handles exceptions."""
         mock_services["metrics"].get_server_metrics = AsyncMock(
             side_effect=Exception("Database error")
@@ -202,18 +199,18 @@ class TestGetAppMetrics:
             "monitoring": MagicMock(),
             "metrics": MagicMock(),
             "dashboard": MagicMock(),
-            "marketplace": MagicMock()
+            "marketplace": MagicMock(),
         }
 
     @pytest.fixture
     def monitoring_tools(self, mock_services):
         """Create MonitoringTools instance."""
-        with patch('tools.monitoring.tools.logger'):
+        with patch("tools.monitoring.tools.logger"):
             return MonitoringTools(
                 mock_services["monitoring"],
                 mock_services["metrics"],
                 mock_services["dashboard"],
-                mock_services["marketplace"]
+                mock_services["marketplace"],
             )
 
     @pytest.fixture
@@ -224,7 +221,7 @@ class TestGetAppMetrics:
             "timestamp": "2024-01-15T10:00:00Z",
             "container_name": "nginx",
             "cpu_percent": 5.0,
-            "memory_mb": 128
+            "memory_mb": 128,
         }
         return [metric]
 
@@ -259,9 +256,7 @@ class TestGetAppMetrics:
         assert result["success"] is True
         assert result["data"]["app_id"] is None
         mock_services["metrics"].get_container_metrics.assert_called_once_with(
-            server_id="server-123",
-            container_name=None,
-            period="24h"
+            server_id="server-123", container_name=None, period="24h"
         )
 
     @pytest.mark.asyncio
@@ -281,9 +276,7 @@ class TestGetAppMetrics:
         assert result["data"]["period"] == "1h"
 
     @pytest.mark.asyncio
-    async def test_get_app_metrics_exception(
-        self, monitoring_tools, mock_services
-    ):
+    async def test_get_app_metrics_exception(self, monitoring_tools, mock_services):
         """Test get_app_metrics handles exceptions."""
         mock_services["metrics"].get_container_metrics = AsyncMock(
             side_effect=Exception("Container not found")
@@ -306,18 +299,18 @@ class TestGetDashboardMetrics:
             "monitoring": MagicMock(),
             "metrics": MagicMock(),
             "dashboard": MagicMock(),
-            "marketplace": MagicMock()
+            "marketplace": MagicMock(),
         }
 
     @pytest.fixture
     def monitoring_tools(self, mock_services):
         """Create MonitoringTools instance."""
-        with patch('tools.monitoring.tools.logger'):
+        with patch("tools.monitoring.tools.logger"):
             return MonitoringTools(
                 mock_services["monitoring"],
                 mock_services["metrics"],
                 mock_services["dashboard"],
-                mock_services["marketplace"]
+                mock_services["marketplace"],
             )
 
     @pytest.fixture
@@ -327,7 +320,7 @@ class TestGetDashboardMetrics:
         activity.model_dump.return_value = {
             "type": "server_connected",
             "server_id": "server-123",
-            "timestamp": "2024-01-15T10:00:00Z"
+            "timestamp": "2024-01-15T10:00:00Z",
         }
 
         summary = MagicMock()
@@ -394,18 +387,18 @@ class TestGetMarketplaceMetrics:
             "monitoring": MagicMock(),
             "metrics": MagicMock(),
             "dashboard": MagicMock(),
-            "marketplace": MagicMock()
+            "marketplace": MagicMock(),
         }
 
     @pytest.fixture
     def monitoring_tools(self, mock_services):
         """Create MonitoringTools instance."""
-        with patch('tools.monitoring.tools.logger'):
+        with patch("tools.monitoring.tools.logger"):
             return MonitoringTools(
                 mock_services["monitoring"],
                 mock_services["metrics"],
                 mock_services["dashboard"],
-                mock_services["marketplace"]
+                mock_services["marketplace"],
             )
 
     @pytest.fixture

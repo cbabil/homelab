@@ -5,15 +5,16 @@ Provides Docker installation and management capabilities for remote servers.
 """
 
 import uuid
-from datetime import datetime, UTC
-from typing import Dict, Any, Optional
-import structlog
-from models.server import ServerStatus
-from services.ssh_service import SSHService
-from services.server_service import ServerService
-from services.database_service import DatabaseService
-from tools.common import log_event
+from datetime import UTC, datetime
+from typing import Any
 
+import structlog
+
+from models.server import ServerStatus
+from services.database_service import DatabaseService
+from services.server_service import ServerService
+from services.ssh_service import SSHService
+from tools.common import log_event
 
 logger = structlog.get_logger("docker_tools")
 
@@ -36,7 +37,7 @@ DOCKER_COMMANDS = {
         """,
         "start_docker": "sudo systemctl enable docker && sudo systemctl start docker",
         "configure_user": "sudo usermod -aG docker $USER",
-        "verify_docker": "docker --version && docker compose version"
+        "verify_docker": "docker --version && docker compose version",
     },
     "debian": {
         "update_packages": "sudo apt-get update -y",
@@ -51,7 +52,7 @@ DOCKER_COMMANDS = {
         """,
         "start_docker": "sudo systemctl enable docker && sudo systemctl start docker",
         "configure_user": "sudo usermod -aG docker $USER",
-        "verify_docker": "docker --version && docker compose version"
+        "verify_docker": "docker --version && docker compose version",
     },
     "rhel": {
         "update_packages": "sudo dnf update -y",
@@ -62,7 +63,7 @@ DOCKER_COMMANDS = {
         """,
         "start_docker": "sudo systemctl enable docker && sudo systemctl start docker",
         "configure_user": "sudo usermod -aG docker $USER",
-        "verify_docker": "docker --version && docker compose version"
+        "verify_docker": "docker --version && docker compose version",
     },
     "fedora": {
         "update_packages": "sudo dnf update -y",
@@ -73,7 +74,7 @@ DOCKER_COMMANDS = {
         """,
         "start_docker": "sudo systemctl enable docker && sudo systemctl start docker",
         "configure_user": "sudo usermod -aG docker $USER",
-        "verify_docker": "docker --version && docker compose version"
+        "verify_docker": "docker --version && docker compose version",
     },
     "alpine": {
         "update_packages": "sudo apk update",
@@ -81,7 +82,7 @@ DOCKER_COMMANDS = {
         "install_docker": "sudo apk add --no-cache docker docker-cli docker-compose",
         "start_docker": "sudo rc-update add docker boot && sudo service docker start",
         "configure_user": "sudo addgroup $USER docker",
-        "verify_docker": "docker --version && docker compose version"
+        "verify_docker": "docker --version && docker compose version",
     },
     "arch": {
         "update_packages": "sudo pacman -Syu --noconfirm",
@@ -89,8 +90,8 @@ DOCKER_COMMANDS = {
         "install_docker": "sudo pacman -S --noconfirm docker docker-compose",
         "start_docker": "sudo systemctl enable docker && sudo systemctl start docker",
         "configure_user": "sudo usermod -aG docker $USER",
-        "verify_docker": "docker --version && docker compose version"
-    }
+        "verify_docker": "docker --version && docker compose version",
+    },
 }
 
 # List of supported OS types
@@ -104,7 +105,12 @@ def _detect_os_type(os_info: str) -> str:
         return "ubuntu"
     elif "debian" in os_lower:
         return "debian"
-    elif "rocky" in os_lower or "centos" in os_lower or "rhel" in os_lower or "red hat" in os_lower:
+    elif (
+        "rocky" in os_lower
+        or "centos" in os_lower
+        or "rhel" in os_lower
+        or "red hat" in os_lower
+    ):
         return "rhel"
     elif "fedora" in os_lower:
         return "fedora"
@@ -115,7 +121,7 @@ def _detect_os_type(os_info: str) -> str:
     return "unknown"
 
 
-def _build_docker_install_script(os_type: str) -> Optional[str]:
+def _build_docker_install_script(os_type: str) -> str | None:
     """Build Docker installation script for the given OS type."""
     if os_type not in DOCKER_COMMANDS:
         return None
@@ -135,7 +141,7 @@ def _build_docker_install_script(os_type: str) -> Optional[str]:
         "# Configure user",
         commands["configure_user"],
         "# Verify installation",
-        commands["verify_docker"]
+        commands["verify_docker"],
     ]
 
     return "\n".join(script_parts)
@@ -175,7 +181,7 @@ DOCKER_UPDATE_COMMANDS = {
         sudo pacman -Syu --noconfirm docker docker-compose
         sudo systemctl restart docker
         docker --version && docker compose version
-    """
+    """,
 }
 
 # OS-specific Docker removal commands
@@ -213,7 +219,7 @@ DOCKER_REMOVE_COMMANDS = {
         sudo systemctl stop docker || true
         sudo pacman -Rns --noconfirm docker docker-compose || true
         sudo rm -rf /var/lib/docker
-    """
+    """,
 }
 
 
@@ -227,7 +233,7 @@ class DockerTools:
         self,
         ssh_service: SSHService,
         server_service: ServerService,
-        database_service: DatabaseService
+        database_service: DatabaseService,
     ):
         """Initialize Docker tools."""
         self.ssh_service = ssh_service
@@ -244,8 +250,8 @@ class DockerTools:
         auth_type: str = None,
         password: str = None,
         private_key: str = None,
-        tracked: bool = False
-    ) -> Dict[str, Any]:
+        tracked: bool = False,
+    ) -> dict[str, Any]:
         """
         Install Docker on a remote server.
 
@@ -276,7 +282,7 @@ class DockerTools:
                     return {
                         "success": False,
                         "message": "server_id is required for tracked installation",
-                        "error": "MISSING_SERVER_ID"
+                        "error": "MISSING_SERVER_ID",
                     }
 
                 install_id = f"docker-{uuid.uuid4().hex[:8]}"
@@ -287,28 +293,42 @@ class DockerTools:
                     container_name="system-docker",
                     status="pending",
                     config={"install_type": "docker", "detected_os": None},
-                    installed_at=datetime.now(UTC).isoformat()
+                    installed_at=datetime.now(UTC).isoformat(),
                 )
 
                 if not installation:
-                    await log_event("docker", "ERROR", f"Docker installation failed to start: {server_id}", DOCKER_TAGS, {
-                        "server_id": server_id
-                    })
+                    await log_event(
+                        "docker",
+                        "ERROR",
+                        f"Docker installation failed to start: {server_id}",
+                        DOCKER_TAGS,
+                        {"server_id": server_id},
+                    )
                     return {
                         "success": False,
                         "message": "Failed to start Docker installation",
-                        "error": "INSTALL_START_FAILED"
+                        "error": "INSTALL_START_FAILED",
                     }
 
-                await log_event("docker", "INFO", f"Docker installation started: {server_id}", DOCKER_TAGS, {
-                    "server_id": server_id,
-                    "installation_id": installation.id
-                })
-                logger.info("Docker installation started", server_id=server_id, install_id=installation.id)
+                await log_event(
+                    "docker",
+                    "INFO",
+                    f"Docker installation started: {server_id}",
+                    DOCKER_TAGS,
+                    {"server_id": server_id, "installation_id": installation.id},
+                )
+                logger.info(
+                    "Docker installation started",
+                    server_id=server_id,
+                    install_id=installation.id,
+                )
                 return {
                     "success": True,
-                    "data": {"installation_id": installation.id, "server_id": server_id},
-                    "message": "Docker installation started (use get_docker_install_status to monitor)"
+                    "data": {
+                        "installation_id": installation.id,
+                        "server_id": server_id,
+                    },
+                    "message": "Docker installation started (use get_docker_install_status to monitor)",
                 }
 
             # Synchronous installation (one-shot)
@@ -321,7 +341,7 @@ class DockerTools:
                     return {
                         "success": False,
                         "message": "Server not found",
-                        "error": "SERVER_NOT_FOUND"
+                        "error": "SERVER_NOT_FOUND",
                     }
 
                 server_name = server.name
@@ -330,7 +350,7 @@ class DockerTools:
                     return {
                         "success": False,
                         "message": "Credentials not found",
-                        "error": "CREDENTIALS_NOT_FOUND"
+                        "error": "CREDENTIALS_NOT_FOUND",
                     }
 
                 host = server.host
@@ -340,14 +360,16 @@ class DockerTools:
                 os_info = server.system_info.os if server.system_info else ""
 
                 # Set status to preparing
-                await self.server_service.update_server_status(server_id, ServerStatus.PREPARING)
+                await self.server_service.update_server_status(
+                    server_id, ServerStatus.PREPARING
+                )
             else:
                 # Use direct credentials
                 if not all([host, port, username, auth_type]):
                     return {
                         "success": False,
                         "message": "Missing required parameters: host, port, username, auth_type",
-                        "error": "MISSING_PARAMETERS"
+                        "error": "MISSING_PARAMETERS",
                     }
 
                 # Validate inputs
@@ -356,7 +378,7 @@ class DockerTools:
                     return {
                         "success": False,
                         "message": validation.get("error", "Invalid input"),
-                        "error": "VALIDATION_ERROR"
+                        "error": "VALIDATION_ERROR",
                     }
 
                 # Build credentials dict
@@ -366,7 +388,7 @@ class DockerTools:
                         return {
                             "success": False,
                             "message": "Password is required",
-                            "error": "MISSING_CREDENTIALS"
+                            "error": "MISSING_CREDENTIALS",
                         }
                     credentials["password"] = password
                 elif auth_type == "key":
@@ -374,14 +396,14 @@ class DockerTools:
                         return {
                             "success": False,
                             "message": "Private key is required",
-                            "error": "MISSING_CREDENTIALS"
+                            "error": "MISSING_CREDENTIALS",
                         }
                     credentials["private_key"] = private_key
                 else:
                     return {
                         "success": False,
                         "message": f"Invalid auth type: {auth_type}",
-                        "error": "INVALID_AUTH_TYPE"
+                        "error": "INVALID_AUTH_TYPE",
                     }
 
                 # Test connection to get OS info
@@ -390,14 +412,14 @@ class DockerTools:
                     port=port,
                     username=username,
                     auth_type=auth_type,
-                    credentials=credentials
+                    credentials=credentials,
                 )
 
                 if not test_success:
                     return {
                         "success": False,
                         "message": "Failed to connect to server",
-                        "error": "CONNECTION_FAILED"
+                        "error": "CONNECTION_FAILED",
                     }
 
                 os_info = system_info.get("os", "") if system_info else ""
@@ -409,22 +431,26 @@ class DockerTools:
 
             if os_type == "unknown":
                 if server_id:
-                    await self.server_service.update_server_status(server_id, ServerStatus.ERROR)
+                    await self.server_service.update_server_status(
+                        server_id, ServerStatus.ERROR
+                    )
                 return {
                     "success": False,
                     "message": f"Unsupported OS: {os_info or 'unknown'}. Supported: {', '.join(SUPPORTED_OS_TYPES)}",
-                    "error": "UNSUPPORTED_OS"
+                    "error": "UNSUPPORTED_OS",
                 }
 
             # Build OS-specific install script
             install_script = _build_docker_install_script(os_type)
             if not install_script:
                 if server_id:
-                    await self.server_service.update_server_status(server_id, ServerStatus.ERROR)
+                    await self.server_service.update_server_status(
+                        server_id, ServerStatus.ERROR
+                    )
                 return {
                     "success": False,
                     "message": f"No Docker commands available for OS: {os_type}",
-                    "error": "UNSUPPORTED_OS"
+                    "error": "UNSUPPORTED_OS",
                 }
 
             logger.info("Using OS-specific Docker install", os_type=os_type, host=host)
@@ -437,7 +463,7 @@ class DockerTools:
                 auth_type=auth_type,
                 credentials=credentials,
                 command=install_script,
-                timeout=300  # 5 minutes for Docker installation
+                timeout=300,  # 5 minutes for Docker installation
             )
 
             if success:
@@ -447,56 +473,76 @@ class DockerTools:
                     port=port,
                     username=username,
                     auth_type=auth_type,
-                    credentials=credentials
+                    credentials=credentials,
                 )
 
                 if server_id:
                     if test_success and system_info:
-                        await self.server_service.update_server_system_info(server_id, system_info)
-                    await self.server_service.update_server_status(server_id, ServerStatus.CONNECTED)
+                        await self.server_service.update_server_system_info(
+                            server_id, system_info
+                        )
+                    await self.server_service.update_server_status(
+                        server_id, ServerStatus.CONNECTED
+                    )
 
                 display_name = server_name or host
-                await log_event("docker", "INFO", f"Docker installed on server: {display_name}", DOCKER_TAGS, {
-                    "host": host,
-                    "port": port,
-                    "server_id": server_id,
-                    "server_name": server_name
-                })
+                await log_event(
+                    "docker",
+                    "INFO",
+                    f"Docker installed on server: {display_name}",
+                    DOCKER_TAGS,
+                    {
+                        "host": host,
+                        "port": port,
+                        "server_id": server_id,
+                        "server_name": server_name,
+                    },
+                )
 
                 return {
                     "success": True,
                     "data": {"output": output, "system_info": system_info},
-                    "message": "Docker installed successfully"
+                    "message": "Docker installed successfully",
                 }
             else:
                 if server_id:
-                    await self.server_service.update_server_status(server_id, ServerStatus.ERROR)
+                    await self.server_service.update_server_status(
+                        server_id, ServerStatus.ERROR
+                    )
 
                 display_name = server_name or host
-                await log_event("docker", "ERROR", f"Docker installation failed on server: {display_name}", DOCKER_TAGS, {
-                    "host": host,
-                    "error": output,
-                    "server_id": server_id,
-                    "server_name": server_name
-                })
+                await log_event(
+                    "docker",
+                    "ERROR",
+                    f"Docker installation failed on server: {display_name}",
+                    DOCKER_TAGS,
+                    {
+                        "host": host,
+                        "error": output,
+                        "server_id": server_id,
+                        "server_name": server_name,
+                    },
+                )
 
                 return {
                     "success": False,
                     "message": f"Docker installation failed: {output}",
-                    "error": "DOCKER_INSTALL_FAILED"
+                    "error": "DOCKER_INSTALL_FAILED",
                 }
 
         except Exception as e:
             logger.error("Docker installation error", error=str(e))
             if server_id:
-                await self.server_service.update_server_status(server_id, ServerStatus.ERROR)
+                await self.server_service.update_server_status(
+                    server_id, ServerStatus.ERROR
+                )
             return {
                 "success": False,
                 "message": f"Docker installation failed: {str(e)}",
-                "error": "DOCKER_INSTALL_ERROR"
+                "error": "DOCKER_INSTALL_ERROR",
             }
 
-    async def get_docker_install_status(self, server_id: str) -> Dict[str, Any]:
+    async def get_docker_install_status(self, server_id: str) -> dict[str, Any]:
         """Get current Docker installation status for a server.
 
         Args:
@@ -506,13 +552,15 @@ class DockerTools:
             Dict with installation status and config
         """
         try:
-            installation = await self.db_service.get_installation(server_id, SYSTEM_DOCKER_APP_ID)
+            installation = await self.db_service.get_installation(
+                server_id, SYSTEM_DOCKER_APP_ID
+            )
 
             if not installation:
                 return {
                     "success": False,
                     "message": "No Docker installation found for server",
-                    "error": "INSTALL_NOT_FOUND"
+                    "error": "INSTALL_NOT_FOUND",
                 }
 
             return {
@@ -524,19 +572,19 @@ class DockerTools:
                     "config": installation.config,
                     "installed_at": installation.installed_at,
                     "started_at": installation.started_at,
-                    "error_message": installation.error_message
+                    "error_message": installation.error_message,
                 },
-                "message": "Installation status retrieved"
+                "message": "Installation status retrieved",
             }
         except Exception as e:
             logger.error("Get Docker install status error", error=str(e))
             return {
                 "success": False,
                 "message": f"Failed to get status: {str(e)}",
-                "error": "GET_STATUS_ERROR"
+                "error": "GET_STATUS_ERROR",
             }
 
-    async def remove_docker(self, server_id: str) -> Dict[str, Any]:
+    async def remove_docker(self, server_id: str) -> dict[str, Any]:
         """Remove Docker from a server.
 
         Stops Docker service, removes packages, and cleans up data directories.
@@ -553,7 +601,7 @@ class DockerTools:
                 return {
                     "success": False,
                     "message": "Server not found",
-                    "error": "SERVER_NOT_FOUND"
+                    "error": "SERVER_NOT_FOUND",
                 }
 
             credentials = await self.server_service.get_credentials(server_id)
@@ -561,7 +609,7 @@ class DockerTools:
                 return {
                     "success": False,
                     "message": "Credentials not found",
-                    "error": "CREDENTIALS_NOT_FOUND"
+                    "error": "CREDENTIALS_NOT_FOUND",
                 }
 
             os_info = server.system_info.os if server.system_info else ""
@@ -571,7 +619,7 @@ class DockerTools:
                 return {
                     "success": False,
                     "message": f"Unsupported OS for Docker removal: {os_info or 'unknown'}",
-                    "error": "UNSUPPORTED_OS"
+                    "error": "UNSUPPORTED_OS",
                 }
 
             remove_script = DOCKER_REMOVE_COMMANDS[os_type]
@@ -584,7 +632,7 @@ class DockerTools:
                 auth_type=server.auth_type.value,
                 credentials=credentials,
                 command=remove_script,
-                timeout=120
+                timeout=120,
             )
 
             if success:
@@ -594,32 +642,40 @@ class DockerTools:
                     port=server.port,
                     username=server.username,
                     auth_type=server.auth_type.value,
-                    credentials=credentials
+                    credentials=credentials,
                 )
 
                 if test_success and system_info:
-                    await self.server_service.update_server_system_info(server_id, system_info)
+                    await self.server_service.update_server_system_info(
+                        server_id, system_info
+                    )
 
-                await log_event("docker", "INFO", f"Docker removed from server: {server.name}", DOCKER_TAGS, {
-                    "server_id": server_id,
-                    "host": server.host
-                })
+                await log_event(
+                    "docker",
+                    "INFO",
+                    f"Docker removed from server: {server.name}",
+                    DOCKER_TAGS,
+                    {"server_id": server_id, "host": server.host},
+                )
 
                 return {
                     "success": True,
                     "data": {"output": output},
-                    "message": "Docker removed successfully"
+                    "message": "Docker removed successfully",
                 }
             else:
-                await log_event("docker", "ERROR", f"Docker removal failed on server: {server.name}", DOCKER_TAGS, {
-                    "server_id": server_id,
-                    "error": output
-                })
+                await log_event(
+                    "docker",
+                    "ERROR",
+                    f"Docker removal failed on server: {server.name}",
+                    DOCKER_TAGS,
+                    {"server_id": server_id, "error": output},
+                )
 
                 return {
                     "success": False,
                     "message": f"Docker removal failed: {output}",
-                    "error": "DOCKER_REMOVE_FAILED"
+                    "error": "DOCKER_REMOVE_FAILED",
                 }
 
         except Exception as e:
@@ -627,10 +683,10 @@ class DockerTools:
             return {
                 "success": False,
                 "message": f"Docker removal failed: {str(e)}",
-                "error": "DOCKER_REMOVE_ERROR"
+                "error": "DOCKER_REMOVE_ERROR",
             }
 
-    async def update_docker(self, server_id: str) -> Dict[str, Any]:
+    async def update_docker(self, server_id: str) -> dict[str, Any]:
         """Update Docker to the latest version on a server.
 
         Updates Docker packages and restarts the Docker service.
@@ -647,7 +703,7 @@ class DockerTools:
                 return {
                     "success": False,
                     "message": "Server not found",
-                    "error": "SERVER_NOT_FOUND"
+                    "error": "SERVER_NOT_FOUND",
                 }
 
             credentials = await self.server_service.get_credentials(server_id)
@@ -655,7 +711,7 @@ class DockerTools:
                 return {
                     "success": False,
                     "message": "Credentials not found",
-                    "error": "CREDENTIALS_NOT_FOUND"
+                    "error": "CREDENTIALS_NOT_FOUND",
                 }
 
             os_info = server.system_info.os if server.system_info else ""
@@ -665,7 +721,7 @@ class DockerTools:
                 return {
                     "success": False,
                     "message": f"Unsupported OS for Docker update: {os_info or 'unknown'}",
-                    "error": "UNSUPPORTED_OS"
+                    "error": "UNSUPPORTED_OS",
                 }
 
             update_script = DOCKER_UPDATE_COMMANDS[os_type]
@@ -678,7 +734,7 @@ class DockerTools:
                 auth_type=server.auth_type.value,
                 credentials=credentials,
                 command=update_script,
-                timeout=300
+                timeout=300,
             )
 
             if success:
@@ -688,33 +744,46 @@ class DockerTools:
                     port=server.port,
                     username=server.username,
                     auth_type=server.auth_type.value,
-                    credentials=credentials
+                    credentials=credentials,
                 )
 
                 if test_success and system_info:
-                    await self.server_service.update_server_system_info(server_id, system_info)
+                    await self.server_service.update_server_system_info(
+                        server_id, system_info
+                    )
 
-                await log_event("docker", "INFO", f"Docker updated on: {server.name}", DOCKER_TAGS, {
-                    "server_id": server_id,
-                    "host": server.host,
-                    "docker_version": system_info.get("docker_version") if system_info else None
-                })
+                await log_event(
+                    "docker",
+                    "INFO",
+                    f"Docker updated on: {server.name}",
+                    DOCKER_TAGS,
+                    {
+                        "server_id": server_id,
+                        "host": server.host,
+                        "docker_version": system_info.get("docker_version")
+                        if system_info
+                        else None,
+                    },
+                )
 
                 return {
                     "success": True,
                     "data": {"output": output, "system_info": system_info},
-                    "message": "Docker updated successfully"
+                    "message": "Docker updated successfully",
                 }
             else:
-                await log_event("docker", "ERROR", f"Docker update failed: {server.name}", DOCKER_TAGS, {
-                    "server_id": server_id,
-                    "error": output
-                })
+                await log_event(
+                    "docker",
+                    "ERROR",
+                    f"Docker update failed: {server.name}",
+                    DOCKER_TAGS,
+                    {"server_id": server_id, "error": output},
+                )
 
                 return {
                     "success": False,
                     "message": f"Docker update failed: {output}",
-                    "error": "DOCKER_UPDATE_FAILED"
+                    "error": "DOCKER_UPDATE_FAILED",
                 }
 
         except Exception as e:
@@ -722,5 +791,5 @@ class DockerTools:
             return {
                 "success": False,
                 "message": f"Docker update failed: {str(e)}",
-                "error": "DOCKER_UPDATE_ERROR"
+                "error": "DOCKER_UPDATE_ERROR",
             }

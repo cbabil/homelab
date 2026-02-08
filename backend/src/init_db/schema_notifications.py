@@ -5,6 +5,7 @@ Defines the notifications table for persistent notification storage.
 """
 
 import structlog
+
 from database.connection import DatabaseManager
 
 logger = structlog.get_logger("schema_notifications")

@@ -4,8 +4,9 @@ Unit tests for services/database_service.py - User method delegation.
 Tests user-related methods that delegate to UserDatabaseService.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from models.auth import User, UserRole
 
@@ -20,16 +21,19 @@ def mock_user_service():
 @pytest.fixture
 def db_service_with_mocks(mock_user_service):
     """Create DatabaseService with mocked user service."""
-    with patch("services.database_service.DatabaseConnection"), \
-         patch("services.database_service.UserDatabaseService") as MockUser, \
-         patch("services.database_service.ServerDatabaseService"), \
-         patch("services.database_service.SessionDatabaseService"), \
-         patch("services.database_service.AppDatabaseService"), \
-         patch("services.database_service.MetricsDatabaseService"), \
-         patch("services.database_service.SystemDatabaseService"), \
-         patch("services.database_service.ExportDatabaseService"), \
-         patch("services.database_service.SchemaInitializer"):
+    with (
+        patch("services.database_service.DatabaseConnection"),
+        patch("services.database_service.UserDatabaseService") as MockUser,
+        patch("services.database_service.ServerDatabaseService"),
+        patch("services.database_service.SessionDatabaseService"),
+        patch("services.database_service.AppDatabaseService"),
+        patch("services.database_service.MetricsDatabaseService"),
+        patch("services.database_service.SystemDatabaseService"),
+        patch("services.database_service.ExportDatabaseService"),
+        patch("services.database_service.SchemaInitializer"),
+    ):
         from services.database_service import DatabaseService
+
         MockUser.return_value = mock_user_service
         return DatabaseService()
 
@@ -51,7 +55,9 @@ class TestGetUser:
     """Tests for get_user method."""
 
     @pytest.mark.asyncio
-    async def test_get_user_by_id(self, db_service_with_mocks, mock_user_service, sample_user):
+    async def test_get_user_by_id(
+        self, db_service_with_mocks, mock_user_service, sample_user
+    ):
         """get_user should delegate to user service with user_id."""
         mock_user_service.get_user = AsyncMock(return_value=sample_user)
 
@@ -190,7 +196,9 @@ class TestUpdateUserLastLogin:
         mock_user_service.update_user_last_login = AsyncMock(return_value=True)
         timestamp = "2024-01-15T10:00:00Z"
 
-        result = await db_service_with_mocks.update_user_last_login("testuser", timestamp)
+        result = await db_service_with_mocks.update_user_last_login(
+            "testuser", timestamp
+        )
 
         mock_user_service.update_user_last_login.assert_awaited_once_with(
             "testuser", timestamp
@@ -274,9 +282,7 @@ class TestCreateUser:
         )
 
     @pytest.mark.asyncio
-    async def test_create_user_failure(
-        self, db_service_with_mocks, mock_user_service
-    ):
+    async def test_create_user_failure(self, db_service_with_mocks, mock_user_service):
         """create_user should return None on failure."""
         mock_user_service.create_user = AsyncMock(return_value=None)
 
@@ -323,9 +329,7 @@ class TestHasAdminUser:
     """Tests for has_admin_user method."""
 
     @pytest.mark.asyncio
-    async def test_has_admin_user_true(
-        self, db_service_with_mocks, mock_user_service
-    ):
+    async def test_has_admin_user_true(self, db_service_with_mocks, mock_user_service):
         """has_admin_user should return True when admin exists."""
         mock_user_service.has_admin_user = AsyncMock(return_value=True)
 
@@ -335,9 +339,7 @@ class TestHasAdminUser:
         assert result is True
 
     @pytest.mark.asyncio
-    async def test_has_admin_user_false(
-        self, db_service_with_mocks, mock_user_service
-    ):
+    async def test_has_admin_user_false(self, db_service_with_mocks, mock_user_service):
         """has_admin_user should return False when no admin."""
         mock_user_service.has_admin_user = AsyncMock(return_value=False)
 

@@ -4,8 +4,9 @@ Unit tests for services/database_service.py - System and schema method delegatio
 Tests system info, component versions, and schema initialization methods.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 
 @pytest.fixture
@@ -23,16 +24,19 @@ def mock_schema_service():
 @pytest.fixture
 def db_service_with_system_mock(mock_system_service, mock_schema_service):
     """Create DatabaseService with mocked system and schema services."""
-    with patch("services.database_service.DatabaseConnection"), \
-         patch("services.database_service.UserDatabaseService"), \
-         patch("services.database_service.ServerDatabaseService"), \
-         patch("services.database_service.SessionDatabaseService"), \
-         patch("services.database_service.AppDatabaseService"), \
-         patch("services.database_service.MetricsDatabaseService"), \
-         patch("services.database_service.SystemDatabaseService") as MockSystem, \
-         patch("services.database_service.ExportDatabaseService"), \
-         patch("services.database_service.SchemaInitializer") as MockSchema:
+    with (
+        patch("services.database_service.DatabaseConnection"),
+        patch("services.database_service.UserDatabaseService"),
+        patch("services.database_service.ServerDatabaseService"),
+        patch("services.database_service.SessionDatabaseService"),
+        patch("services.database_service.AppDatabaseService"),
+        patch("services.database_service.MetricsDatabaseService"),
+        patch("services.database_service.SystemDatabaseService") as MockSystem,
+        patch("services.database_service.ExportDatabaseService"),
+        patch("services.database_service.SchemaInitializer") as MockSchema,
+    ):
         from services.database_service import DatabaseService
+
         MockSystem.return_value = mock_system_service
         MockSchema.return_value = mock_schema_service
         return DatabaseService()

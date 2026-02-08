@@ -5,14 +5,13 @@ Provides secure SSH connection management using paramiko.
 Implements connection pooling to prevent SSH flooding.
 """
 
-import os
-import paramiko
 import asyncio
-from pathlib import Path
-from typing import Dict, Optional, Tuple
+import os
 from contextlib import asynccontextmanager
-import structlog
+from pathlib import Path
 
+import paramiko
+import structlog
 
 logger = structlog.get_logger("ssh_service")
 
@@ -21,15 +20,15 @@ class SSHConnectionPool:
     """Thread-safe SSH connection pool."""
 
     def __init__(self):
-        self._connections: Dict[str, paramiko.SSHClient] = {}
+        self._connections: dict[str, paramiko.SSHClient] = {}
         self._lock = asyncio.Lock()
-        self._in_use: Dict[str, bool] = {}
+        self._in_use: dict[str, bool] = {}
 
     def _make_key(self, host: str, port: int, username: str) -> str:
         """Create unique key for connection."""
         return f"{host}:{port}:{username}"
 
-    async def get(self, key: str) -> Optional[paramiko.SSHClient]:
+    async def get(self, key: str) -> paramiko.SSHClient | None:
         """Get an available connection from pool."""
         async with self._lock:
             if key in self._connections and not self._in_use.get(key, False):
@@ -107,8 +106,7 @@ class SSHService:
         }
 
         if strict_host_key_checking is None:
-            env = os.getenv("APP_ENV", "production").lower()
-            self.strict_host_key_checking = env == "production"
+            self.strict_host_key_checking = True
         else:
             self.strict_host_key_checking = strict_host_key_checking
 
@@ -140,7 +138,7 @@ class SSHService:
         self, host: str, port: int, username: str, auth_type: str, credentials: dict
     ):
         """Context manager for getting a pooled SSH connection."""
-        from services.helpers.ssh_helpers import connect_password, connect_key
+        from services.helpers.ssh_helpers import connect_key, connect_password
 
         key = self._pool._make_key(host, port, username)
         client = await self._pool.get(key)
@@ -185,7 +183,7 @@ class SSHService:
 
     async def test_connection(
         self, host: str, port: int, username: str, auth_type: str, credentials: dict
-    ) -> Tuple[bool, str, Optional[dict]]:
+    ) -> tuple[bool, str, dict | None]:
         """Test SSH connection and return system info if successful."""
         from services.helpers.ssh_helpers import get_system_info
 
@@ -214,7 +212,7 @@ class SSHService:
         credentials: dict,
         command: str,
         timeout: int = 120,
-    ) -> Tuple[bool, str]:
+    ) -> tuple[bool, str]:
         """Execute a command on remote server via SSH."""
         try:
             logger.info(
@@ -234,7 +232,7 @@ class SSHService:
                     error = stderr.read().decode("utf-8")
                     return exit_status, output, error
 
-                loop = asyncio.get_event_loop()
+                loop = asyncio.get_running_loop()
                 exit_status, output, error = await loop.run_in_executor(
                     None, run_command
                 )
@@ -262,7 +260,7 @@ class SSHService:
         command: str,
         progress_callback=None,
         timeout: int = 600,
-    ) -> Tuple[bool, str]:
+    ) -> tuple[bool, str]:
         """Execute a command with real-time progress callback."""
         try:
             logger.info("Executing SSH command with progress", host=host, port=port)

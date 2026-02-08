@@ -4,18 +4,20 @@ Unit tests for lib/encryption.py
 Tests credential encryption/decryption with AES-256-GCM and Argon2id.
 """
 
-import os
 import base64
-import pytest
+import os
 from unittest.mock import patch
+
+import pytest
+
 from lib.encryption import (
-    CredentialManager,
-    ARGON2_TIME_COST,
+    ARGON2_HASH_LEN,
     ARGON2_MEMORY_COST,
     ARGON2_PARALLELISM,
-    ARGON2_HASH_LEN,
-    SALT_LENGTH,
+    ARGON2_TIME_COST,
     NONCE_LENGTH,
+    SALT_LENGTH,
+    CredentialManager,
 )
 
 
@@ -150,7 +152,7 @@ class TestEncryptCredentials:
         return {
             "username": "testuser",
             "password": "secretpassword",
-            "api_key": "abc123xyz"
+            "api_key": "abc123xyz",
         }
 
     def test_encrypt_returns_string(self, manager, sample_credentials):
@@ -185,23 +187,14 @@ class TestEncryptCredentials:
 
     def test_encrypt_nested_dict(self, manager):
         """encrypt_credentials should handle nested dictionaries."""
-        nested = {
-            "level1": {
-                "level2": {
-                    "value": "deep"
-                }
-            }
-        }
+        nested = {"level1": {"level2": {"value": "deep"}}}
         result = manager.encrypt_credentials(nested)
         decrypted = manager.decrypt_credentials(result)
         assert decrypted == nested
 
     def test_encrypt_special_characters(self, manager):
         """encrypt_credentials should handle special characters."""
-        special = {
-            "password": "p@$$w0rd!#%^&*()",
-            "unicode": "пароль123"
-        }
+        special = {"password": "p@$$w0rd!#%^&*()", "unicode": "пароль123"}
         result = manager.encrypt_credentials(special)
         decrypted = manager.decrypt_credentials(result)
         assert decrypted == special
@@ -233,10 +226,7 @@ class TestDecryptCredentials:
     @pytest.fixture
     def sample_credentials(self):
         """Sample credentials for testing."""
-        return {
-            "username": "testuser",
-            "password": "secretpassword"
-        }
+        return {"username": "testuser", "password": "secretpassword"}
 
     def test_decrypt_returns_dict(self, manager, sample_credentials):
         """decrypt_credentials should return a dictionary."""
@@ -318,41 +308,28 @@ MIIEpAIBAAKCAQEA0Z3VS5JJcds3xfn/ygWyf8Gfj1kx9+nBYfL/C5wZoWcGZcM
 
     def test_credentials_with_numbers(self, manager):
         """encrypt/decrypt should handle numeric values."""
-        creds = {
-            "port": 22,
-            "timeout": 30.5,
-            "count": 0
-        }
+        creds = {"port": 22, "timeout": 30.5, "count": 0}
         encrypted = manager.encrypt_credentials(creds)
         decrypted = manager.decrypt_credentials(encrypted)
         assert decrypted == creds
 
     def test_credentials_with_booleans(self, manager):
         """encrypt/decrypt should handle boolean values."""
-        creds = {
-            "enabled": True,
-            "disabled": False
-        }
+        creds = {"enabled": True, "disabled": False}
         encrypted = manager.encrypt_credentials(creds)
         decrypted = manager.decrypt_credentials(encrypted)
         assert decrypted == creds
 
     def test_credentials_with_null(self, manager):
         """encrypt/decrypt should handle null values."""
-        creds = {
-            "value": None,
-            "empty": ""
-        }
+        creds = {"value": None, "empty": ""}
         encrypted = manager.encrypt_credentials(creds)
         decrypted = manager.decrypt_credentials(encrypted)
         assert decrypted == creds
 
     def test_credentials_with_list(self, manager):
         """encrypt/decrypt should handle list values."""
-        creds = {
-            "hosts": ["host1", "host2", "host3"],
-            "ports": [22, 80, 443]
-        }
+        creds = {"hosts": ["host1", "host2", "host3"], "ports": [22, 80, 443]}
         encrypted = manager.encrypt_credentials(creds)
         decrypted = manager.decrypt_credentials(encrypted)
         assert decrypted == creds

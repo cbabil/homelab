@@ -65,7 +65,7 @@ describe('Security Module', () => {
       const result = await getLockedAccounts();
 
       expect(result).toHaveLength(1);
-      expect(result[0].identifier).toBe('user1');
+      expect(result[0]!.identifier).toBe('user1');
     });
 
     it('should pass includeExpired flag', async () => {

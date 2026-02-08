@@ -5,11 +5,13 @@ Provides session management capabilities for the MCP server.
 Implements CRUD operations with role-based access control.
 """
 
-from typing import Dict, Any
+from typing import Any
+
 import structlog
 from fastmcp import Context
-from services.session_service import SessionService
+
 from models.session import SessionStatus
+from services.session_service import SessionService
 
 logger = structlog.get_logger("session_tools")
 
@@ -34,17 +36,19 @@ class SessionTools:
         Returns:
             Tuple of (user_id, current_session_id, role)
         """
-        meta = getattr(ctx, 'meta', {}) or {}
-        user_id = meta.get('user_id', '')
-        session_id = meta.get('session_id', '')
-        role = meta.get('role', 'user')
+        meta = getattr(ctx, "meta", {}) or {}
+        user_id = meta.get("user_id", "")
+        session_id = meta.get("session_id", "")
+        role = meta.get("role", "user")
         return user_id, session_id, role
 
     def _is_admin(self, role: str) -> bool:
         """Check if user has admin role."""
-        return role == 'admin'
+        return role == "admin"
 
-    async def list_sessions(self, params: Dict[str, Any], ctx: Context) -> Dict[str, Any]:
+    async def list_sessions(
+        self, params: dict[str, Any], ctx: Context
+    ) -> dict[str, Any]:
         """List sessions for a user.
 
         Users can only list their own sessions.
@@ -67,26 +71,25 @@ class SessionTools:
                 return {
                     "success": False,
                     "message": "Permission denied: cannot list other users' sessions",
-                    "error": "PERMISSION_DENIED"
+                    "error": "PERMISSION_DENIED",
                 }
 
             status = SessionStatus(status_filter) if status_filter else None
             sessions = await self.session_service.list_sessions(
-                user_id=target_user_id,
-                status=status
+                user_id=target_user_id, status=status
             )
 
             # Mark the current session
             session_data = []
             for s in sessions:
                 data = s.model_dump()
-                data["is_current"] = (s.id == current_session_id)
+                data["is_current"] = s.id == current_session_id
                 session_data.append(data)
 
             return {
                 "success": True,
                 "data": session_data,
-                "message": f"Found {len(sessions)} sessions"
+                "message": f"Found {len(sessions)} sessions",
             }
 
         except Exception as e:
@@ -94,10 +97,10 @@ class SessionTools:
             return {
                 "success": False,
                 "message": f"Failed to list sessions: {str(e)}",
-                "error": "LIST_ERROR"
+                "error": "LIST_ERROR",
             }
 
-    async def get_session(self, params: Dict[str, Any], ctx: Context) -> Dict[str, Any]:
+    async def get_session(self, params: dict[str, Any], ctx: Context) -> dict[str, Any]:
         """Get a single session by ID.
 
         Users can only get their own sessions.
@@ -117,7 +120,7 @@ class SessionTools:
                 return {
                     "success": False,
                     "message": "session_id is required",
-                    "error": "MISSING_PARAM"
+                    "error": "MISSING_PARAM",
                 }
 
             session = await self.session_service.get_session(session_id)
@@ -126,7 +129,7 @@ class SessionTools:
                 return {
                     "success": False,
                     "message": "Session not found",
-                    "error": "NOT_FOUND"
+                    "error": "NOT_FOUND",
                 }
 
             # Permission check
@@ -134,13 +137,13 @@ class SessionTools:
                 return {
                     "success": False,
                     "message": "Permission denied: cannot access other users' sessions",
-                    "error": "PERMISSION_DENIED"
+                    "error": "PERMISSION_DENIED",
                 }
 
             return {
                 "success": True,
                 "data": session.model_dump(),
-                "message": "Session retrieved"
+                "message": "Session retrieved",
             }
 
         except Exception as e:
@@ -148,10 +151,12 @@ class SessionTools:
             return {
                 "success": False,
                 "message": f"Failed to get session: {str(e)}",
-                "error": "GET_ERROR"
+                "error": "GET_ERROR",
             }
 
-    async def update_session(self, params: Dict[str, Any], ctx: Context) -> Dict[str, Any]:
+    async def update_session(
+        self, params: dict[str, Any], ctx: Context
+    ) -> dict[str, Any]:
         """Update session last_activity.
 
         Users can only update their own current session.
@@ -171,7 +176,7 @@ class SessionTools:
                 return {
                     "success": False,
                     "message": "session_id is required",
-                    "error": "MISSING_PARAM"
+                    "error": "MISSING_PARAM",
                 }
 
             # For non-admins, verify they own this session
@@ -181,7 +186,7 @@ class SessionTools:
                     return {
                         "success": False,
                         "message": "Permission denied: cannot update other users' sessions",
-                        "error": "PERMISSION_DENIED"
+                        "error": "PERMISSION_DENIED",
                     }
 
             updated = await self.session_service.update_session(session_id)
@@ -189,7 +194,9 @@ class SessionTools:
             return {
                 "success": True,
                 "data": {"updated": updated},
-                "message": "Session updated" if updated else "Session not found or already expired"
+                "message": "Session updated"
+                if updated
+                else "Session not found or already expired",
             }
 
         except Exception as e:
@@ -197,10 +204,12 @@ class SessionTools:
             return {
                 "success": False,
                 "message": f"Failed to update session: {str(e)}",
-                "error": "UPDATE_ERROR"
+                "error": "UPDATE_ERROR",
             }
 
-    async def delete_session(self, params: Dict[str, Any], ctx: Context) -> Dict[str, Any]:
+    async def delete_session(
+        self, params: dict[str, Any], ctx: Context
+    ) -> dict[str, Any]:
         """Terminate one or more sessions.
 
         Users can only delete their own sessions.
@@ -233,7 +242,7 @@ class SessionTools:
                     return {
                         "success": False,
                         "message": "Session not found",
-                        "error": "NOT_FOUND"
+                        "error": "NOT_FOUND",
                     }
 
                 # Permission check
@@ -241,12 +250,11 @@ class SessionTools:
                     return {
                         "success": False,
                         "message": "Permission denied: cannot delete other users' sessions",
-                        "error": "PERMISSION_DENIED"
+                        "error": "PERMISSION_DENIED",
                     }
 
                 count = await self.session_service.delete_session(
-                    session_id=target_session_id,
-                    terminated_by=current_user_id
+                    session_id=target_session_id, terminated_by=current_user_id
                 )
 
             elif delete_all or target_user_id:
@@ -258,26 +266,26 @@ class SessionTools:
                     return {
                         "success": False,
                         "message": "Permission denied: cannot delete other users' sessions",
-                        "error": "PERMISSION_DENIED"
+                        "error": "PERMISSION_DENIED",
                     }
 
                 count = await self.session_service.delete_session(
                     user_id=user_to_delete,
                     terminated_by=current_user_id,
-                    exclude_session_id=exclude_session_id
+                    exclude_session_id=exclude_session_id,
                 )
 
             else:
                 return {
                     "success": False,
                     "message": "Must specify session_id, user_id, or all=true",
-                    "error": "MISSING_PARAM"
+                    "error": "MISSING_PARAM",
                 }
 
             return {
                 "success": True,
                 "data": {"count": count},
-                "message": f"Terminated {count} session(s)"
+                "message": f"Terminated {count} session(s)",
             }
 
         except Exception as e:
@@ -285,10 +293,12 @@ class SessionTools:
             return {
                 "success": False,
                 "message": f"Failed to delete session: {str(e)}",
-                "error": "DELETE_ERROR"
+                "error": "DELETE_ERROR",
             }
 
-    async def cleanup_expired_sessions(self, params: Dict[str, Any], ctx: Context) -> Dict[str, Any]:
+    async def cleanup_expired_sessions(
+        self, params: dict[str, Any], ctx: Context
+    ) -> dict[str, Any]:
         """Mark expired sessions. Admin only.
 
         Returns:
@@ -301,7 +311,7 @@ class SessionTools:
                 return {
                     "success": False,
                     "message": "Permission denied: admin only",
-                    "error": "PERMISSION_DENIED"
+                    "error": "PERMISSION_DENIED",
                 }
 
             count = await self.session_service.cleanup_expired_sessions()
@@ -309,7 +319,7 @@ class SessionTools:
             return {
                 "success": True,
                 "data": {"count": count},
-                "message": f"Cleaned up {count} expired session(s)"
+                "message": f"Cleaned up {count} expired session(s)",
             }
 
         except Exception as e:
@@ -317,5 +327,5 @@ class SessionTools:
             return {
                 "success": False,
                 "message": f"Failed to cleanup sessions: {str(e)}",
-                "error": "CLEANUP_ERROR"
+                "error": "CLEANUP_ERROR",
             }

@@ -4,18 +4,19 @@ Unit tests for services/settings_service.py - Core operations.
 Tests initialization, admin verification, and database connection handling.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from services.settings_service import SettingsService
+import pytest
+
+from models.auth import User, UserRole
 from models.settings import (
     SettingCategory,
-    SettingScope,
     SettingDataType,
+    SettingScope,
     SettingValue,
     SystemSetting,
 )
-from models.auth import User, UserRole
+from services.settings_service import SettingsService
 
 
 @pytest.fixture
@@ -79,8 +80,12 @@ def sample_system_setting():
     return SystemSetting(
         id=1,
         setting_key="ui.theme",
-        setting_value=SettingValue(raw_value='"dark"', data_type=SettingDataType.STRING),
-        default_value=SettingValue(raw_value='"light"', data_type=SettingDataType.STRING),
+        setting_value=SettingValue(
+            raw_value='"dark"', data_type=SettingDataType.STRING
+        ),
+        default_value=SettingValue(
+            raw_value='"light"', data_type=SettingDataType.STRING
+        ),
         category=SettingCategory.UI,
         scope=SettingScope.USER_OVERRIDABLE,
         data_type=SettingDataType.STRING,
@@ -191,9 +196,7 @@ class TestVerifyAdminAccess:
         self, settings_service, mock_db_service
     ):
         """verify_admin_access should return False on exception."""
-        mock_db_service.get_user_by_id = AsyncMock(
-            side_effect=Exception("DB error")
-        )
+        mock_db_service.get_user_by_id = AsyncMock(side_effect=Exception("DB error"))
 
         with patch("services.settings_service.logger") as mock_logger:
             result = await settings_service.verify_admin_access("admin-123")
@@ -206,9 +209,7 @@ class TestGetSystemSetting:
     """Tests for get_system_setting method."""
 
     @pytest.mark.asyncio
-    async def test_get_system_setting_found(
-        self, settings_service, mock_connection
-    ):
+    async def test_get_system_setting_found(self, settings_service, mock_connection):
         """get_system_setting should return setting from database."""
         mock_cursor = AsyncMock()
         mock_cursor.fetchone = AsyncMock(
@@ -307,9 +308,7 @@ class TestGetUserSetting:
         assert result.setting_key == "ui.theme"
 
     @pytest.mark.asyncio
-    async def test_get_user_setting_not_found(
-        self, settings_service, mock_connection
-    ):
+    async def test_get_user_setting_not_found(self, settings_service, mock_connection):
         """get_user_setting should return None when not found."""
         mock_cursor = AsyncMock()
         mock_cursor.fetchone = AsyncMock(return_value=None)

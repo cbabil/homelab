@@ -4,8 +4,9 @@ Unit tests for services/database_service.py - Server method delegation.
 Tests server-related methods that delegate to ServerDatabaseService.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from models.server import ServerConnection
 
@@ -19,16 +20,19 @@ def mock_server_service():
 @pytest.fixture
 def db_service_with_server_mock(mock_server_service):
     """Create DatabaseService with mocked server service."""
-    with patch("services.database_service.DatabaseConnection"), \
-         patch("services.database_service.UserDatabaseService"), \
-         patch("services.database_service.ServerDatabaseService") as MockServer, \
-         patch("services.database_service.SessionDatabaseService"), \
-         patch("services.database_service.AppDatabaseService"), \
-         patch("services.database_service.MetricsDatabaseService"), \
-         patch("services.database_service.SystemDatabaseService"), \
-         patch("services.database_service.ExportDatabaseService"), \
-         patch("services.database_service.SchemaInitializer"):
+    with (
+        patch("services.database_service.DatabaseConnection"),
+        patch("services.database_service.UserDatabaseService"),
+        patch("services.database_service.ServerDatabaseService") as MockServer,
+        patch("services.database_service.SessionDatabaseService"),
+        patch("services.database_service.AppDatabaseService"),
+        patch("services.database_service.MetricsDatabaseService"),
+        patch("services.database_service.SystemDatabaseService"),
+        patch("services.database_service.ExportDatabaseService"),
+        patch("services.database_service.SchemaInitializer"),
+    ):
         from services.database_service import DatabaseService
+
         MockServer.return_value = mock_server_service
         return DatabaseService()
 
@@ -37,6 +41,7 @@ def db_service_with_server_mock(mock_server_service):
 def sample_server():
     """Create sample ServerConnection."""
     from models.server import AuthType, ServerStatus
+
     return ServerConnection(
         id="srv-123",
         name="Test Server",

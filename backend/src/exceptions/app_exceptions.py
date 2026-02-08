@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Dict, Any
+from typing import Any
 
 
 class ApplicationLogWriteError(Exception):
     """Raised when writing an application catalog log entry fails."""
 
-    def __init__(self, filters: Dict[str, Any], original_exception: Exception) -> None:
+    def __init__(self, filters: dict[str, Any], original_exception: Exception) -> None:
         message = (
             "Failed to write application catalog log entry "
             f"for filters={filters!r}: {original_exception}"

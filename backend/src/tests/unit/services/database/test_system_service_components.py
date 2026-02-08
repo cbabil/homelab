@@ -4,10 +4,10 @@ Unit tests for services/database/system_service.py - Component Versions
 Tests component version database operations.
 """
 
-import pytest
 from contextlib import asynccontextmanager
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 
 from services.database.system_service import SystemDatabaseService
 
@@ -167,16 +167,19 @@ class TestGetComponentVersions:
         result = await system_service.get_component_versions()
 
         assert len(result) == 1
-        assert set(result[0].keys()) == {"component", "version", "updated_at", "created_at"}
+        assert set(result[0].keys()) == {
+            "component",
+            "version",
+            "updated_at",
+            "created_at",
+        }
 
 
 class TestGetComponentVersion:
     """Tests for get_component_version method."""
 
     @pytest.mark.asyncio
-    async def test_get_component_version_success(
-        self, system_service, mock_connection
-    ):
+    async def test_get_component_version_success(self, system_service, mock_connection):
         """get_component_version should return component dict when found."""
         mock_row = {
             "component": "backend",
@@ -288,7 +291,12 @@ class TestGetComponentVersion:
 
         result = await system_service.get_component_version("frontend")
 
-        assert set(result.keys()) == {"component", "version", "updated_at", "created_at"}
+        assert set(result.keys()) == {
+            "component",
+            "version",
+            "updated_at",
+            "created_at",
+        }
 
 
 class TestUpdateComponentVersion:

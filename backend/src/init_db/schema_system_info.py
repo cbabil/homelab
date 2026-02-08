@@ -6,6 +6,7 @@ setup status, and installation information.
 """
 
 import structlog
+
 from database.connection import DatabaseManager
 
 logger = structlog.get_logger("schema_system_info")

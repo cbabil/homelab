@@ -8,10 +8,10 @@ import pytest
 from pydantic import ValidationError
 
 from models.settings import (
-    SettingCategory,
-    SettingScope,
-    SettingDataType,
     ChangeType,
+    SettingCategory,
+    SettingDataType,
+    SettingScope,
     SettingValue,
     SystemSetting,
     UserSetting,
@@ -77,47 +77,46 @@ class TestSettingValue:
 
     def test_number_value_int(self):
         """Test integer value."""
-        value = SettingValue(raw_value='42', data_type=SettingDataType.NUMBER)
+        value = SettingValue(raw_value="42", data_type=SettingDataType.NUMBER)
         assert value.get_parsed_value() == 42
 
     def test_number_value_float(self):
         """Test float value."""
-        value = SettingValue(raw_value='3.14', data_type=SettingDataType.NUMBER)
+        value = SettingValue(raw_value="3.14", data_type=SettingDataType.NUMBER)
         assert value.get_parsed_value() == 3.14
 
     def test_boolean_value_true(self):
         """Test boolean true value."""
-        value = SettingValue(raw_value='true', data_type=SettingDataType.BOOLEAN)
+        value = SettingValue(raw_value="true", data_type=SettingDataType.BOOLEAN)
         assert value.get_parsed_value() is True
 
     def test_boolean_value_false(self):
         """Test boolean false value."""
-        value = SettingValue(raw_value='false', data_type=SettingDataType.BOOLEAN)
+        value = SettingValue(raw_value="false", data_type=SettingDataType.BOOLEAN)
         assert value.get_parsed_value() is False
 
     def test_object_value(self):
         """Test object value."""
         value = SettingValue(
-            raw_value='{"key": "value", "count": 5}',
-            data_type=SettingDataType.OBJECT
+            raw_value='{"key": "value", "count": 5}', data_type=SettingDataType.OBJECT
         )
         assert value.get_parsed_value() == {"key": "value", "count": 5}
 
     def test_array_value(self):
         """Test array value."""
-        value = SettingValue(raw_value='[1, 2, 3]', data_type=SettingDataType.ARRAY)
+        value = SettingValue(raw_value="[1, 2, 3]", data_type=SettingDataType.ARRAY)
         assert value.get_parsed_value() == [1, 2, 3]
 
     def test_invalid_json(self):
         """Test invalid JSON raises error."""
         with pytest.raises(ValidationError) as exc_info:
-            SettingValue(raw_value='not json', data_type=SettingDataType.STRING)
+            SettingValue(raw_value="not json", data_type=SettingDataType.STRING)
         assert "valid JSON" in str(exc_info.value)
 
     def test_type_mismatch_string(self):
         """Test type mismatch for string."""
         with pytest.raises(ValidationError) as exc_info:
-            SettingValue(raw_value='123', data_type=SettingDataType.STRING)
+            SettingValue(raw_value="123", data_type=SettingDataType.STRING)
         assert "must be a string" in str(exc_info.value)
 
     def test_type_mismatch_number(self):
@@ -135,7 +134,7 @@ class TestSettingValue:
     def test_type_mismatch_object(self):
         """Test type mismatch for object."""
         with pytest.raises(ValidationError) as exc_info:
-            SettingValue(raw_value='[1, 2]', data_type=SettingDataType.OBJECT)
+            SettingValue(raw_value="[1, 2]", data_type=SettingDataType.OBJECT)
         assert "must be an object" in str(exc_info.value)
 
     def test_type_mismatch_array(self):
@@ -160,8 +159,12 @@ class TestSystemSetting:
         with pytest.raises(ValidationError) as exc_info:
             SystemSetting(
                 setting_key="",
-                setting_value=SettingValue(raw_value='true', data_type=SettingDataType.BOOLEAN),
-                default_value=SettingValue(raw_value='true', data_type=SettingDataType.BOOLEAN),
+                setting_value=SettingValue(
+                    raw_value="true", data_type=SettingDataType.BOOLEAN
+                ),
+                default_value=SettingValue(
+                    raw_value="true", data_type=SettingDataType.BOOLEAN
+                ),
                 category=SettingCategory.SYSTEM,
                 scope=SettingScope.SYSTEM,
                 data_type=SettingDataType.BOOLEAN,
@@ -173,8 +176,12 @@ class TestSystemSetting:
         with pytest.raises(ValidationError) as exc_info:
             SystemSetting(
                 setting_key="   ",
-                setting_value=SettingValue(raw_value='true', data_type=SettingDataType.BOOLEAN),
-                default_value=SettingValue(raw_value='true', data_type=SettingDataType.BOOLEAN),
+                setting_value=SettingValue(
+                    raw_value="true", data_type=SettingDataType.BOOLEAN
+                ),
+                default_value=SettingValue(
+                    raw_value="true", data_type=SettingDataType.BOOLEAN
+                ),
                 category=SettingCategory.SYSTEM,
                 scope=SettingScope.SYSTEM,
                 data_type=SettingDataType.BOOLEAN,
@@ -186,8 +193,12 @@ class TestSystemSetting:
         with pytest.raises(ValidationError) as exc_info:
             SystemSetting(
                 setting_key="test.setting.",
-                setting_value=SettingValue(raw_value='true', data_type=SettingDataType.BOOLEAN),
-                default_value=SettingValue(raw_value='true', data_type=SettingDataType.BOOLEAN),
+                setting_value=SettingValue(
+                    raw_value="true", data_type=SettingDataType.BOOLEAN
+                ),
+                default_value=SettingValue(
+                    raw_value="true", data_type=SettingDataType.BOOLEAN
+                ),
                 category=SettingCategory.SYSTEM,
                 scope=SettingScope.SYSTEM,
                 data_type=SettingDataType.BOOLEAN,
@@ -198,8 +209,12 @@ class TestSystemSetting:
         """Test required fields."""
         setting = SystemSetting(
             setting_key="ui.theme",
-            setting_value=SettingValue(raw_value='"dark"', data_type=SettingDataType.STRING),
-            default_value=SettingValue(raw_value='"light"', data_type=SettingDataType.STRING),
+            setting_value=SettingValue(
+                raw_value='"dark"', data_type=SettingDataType.STRING
+            ),
+            default_value=SettingValue(
+                raw_value='"light"', data_type=SettingDataType.STRING
+            ),
             category=SettingCategory.UI,
             scope=SettingScope.USER_OVERRIDABLE,
             data_type=SettingDataType.STRING,
@@ -211,8 +226,12 @@ class TestSystemSetting:
         """Test default values."""
         setting = SystemSetting(
             setting_key="test.setting",
-            setting_value=SettingValue(raw_value='true', data_type=SettingDataType.BOOLEAN),
-            default_value=SettingValue(raw_value='false', data_type=SettingDataType.BOOLEAN),
+            setting_value=SettingValue(
+                raw_value="true", data_type=SettingDataType.BOOLEAN
+            ),
+            default_value=SettingValue(
+                raw_value="false", data_type=SettingDataType.BOOLEAN
+            ),
             category=SettingCategory.SYSTEM,
             scope=SettingScope.SYSTEM,
             data_type=SettingDataType.BOOLEAN,
@@ -227,8 +246,12 @@ class TestSystemSetting:
         """Test valid setting key with dots."""
         setting = SystemSetting(
             setting_key="security.session.timeout",
-            setting_value=SettingValue(raw_value='30', data_type=SettingDataType.NUMBER),
-            default_value=SettingValue(raw_value='30', data_type=SettingDataType.NUMBER),
+            setting_value=SettingValue(
+                raw_value="30", data_type=SettingDataType.NUMBER
+            ),
+            default_value=SettingValue(
+                raw_value="30", data_type=SettingDataType.NUMBER
+            ),
             category=SettingCategory.SECURITY,
             scope=SettingScope.SYSTEM,
             data_type=SettingDataType.NUMBER,
@@ -239,8 +262,12 @@ class TestSystemSetting:
         """Test valid setting key with underscores."""
         setting = SystemSetting(
             setting_key="system_debug_mode",
-            setting_value=SettingValue(raw_value='false', data_type=SettingDataType.BOOLEAN),
-            default_value=SettingValue(raw_value='false', data_type=SettingDataType.BOOLEAN),
+            setting_value=SettingValue(
+                raw_value="false", data_type=SettingDataType.BOOLEAN
+            ),
+            default_value=SettingValue(
+                raw_value="false", data_type=SettingDataType.BOOLEAN
+            ),
             category=SettingCategory.SYSTEM,
             scope=SettingScope.SYSTEM,
             data_type=SettingDataType.BOOLEAN,
@@ -252,8 +279,12 @@ class TestSystemSetting:
         with pytest.raises(ValidationError) as exc_info:
             SystemSetting(
                 setting_key="test@setting",
-                setting_value=SettingValue(raw_value='true', data_type=SettingDataType.BOOLEAN),
-                default_value=SettingValue(raw_value='true', data_type=SettingDataType.BOOLEAN),
+                setting_value=SettingValue(
+                    raw_value="true", data_type=SettingDataType.BOOLEAN
+                ),
+                default_value=SettingValue(
+                    raw_value="true", data_type=SettingDataType.BOOLEAN
+                ),
                 category=SettingCategory.SYSTEM,
                 scope=SettingScope.SYSTEM,
                 data_type=SettingDataType.BOOLEAN,
@@ -265,8 +296,12 @@ class TestSystemSetting:
         with pytest.raises(ValidationError) as exc_info:
             SystemSetting(
                 setting_key="test..setting",
-                setting_value=SettingValue(raw_value='true', data_type=SettingDataType.BOOLEAN),
-                default_value=SettingValue(raw_value='true', data_type=SettingDataType.BOOLEAN),
+                setting_value=SettingValue(
+                    raw_value="true", data_type=SettingDataType.BOOLEAN
+                ),
+                default_value=SettingValue(
+                    raw_value="true", data_type=SettingDataType.BOOLEAN
+                ),
                 category=SettingCategory.SYSTEM,
                 scope=SettingScope.SYSTEM,
                 data_type=SettingDataType.BOOLEAN,
@@ -278,8 +313,12 @@ class TestSystemSetting:
         with pytest.raises(ValidationError) as exc_info:
             SystemSetting(
                 setting_key=".hidden",
-                setting_value=SettingValue(raw_value='true', data_type=SettingDataType.BOOLEAN),
-                default_value=SettingValue(raw_value='true', data_type=SettingDataType.BOOLEAN),
+                setting_value=SettingValue(
+                    raw_value="true", data_type=SettingDataType.BOOLEAN
+                ),
+                default_value=SettingValue(
+                    raw_value="true", data_type=SettingDataType.BOOLEAN
+                ),
                 category=SettingCategory.SYSTEM,
                 scope=SettingScope.SYSTEM,
                 data_type=SettingDataType.BOOLEAN,
@@ -291,8 +330,12 @@ class TestSystemSetting:
         with pytest.raises(ValidationError) as exc_info:
             SystemSetting(
                 setting_key="test.setting",
-                setting_value=SettingValue(raw_value='true', data_type=SettingDataType.BOOLEAN),
-                default_value=SettingValue(raw_value='true', data_type=SettingDataType.BOOLEAN),
+                setting_value=SettingValue(
+                    raw_value="true", data_type=SettingDataType.BOOLEAN
+                ),
+                default_value=SettingValue(
+                    raw_value="true", data_type=SettingDataType.BOOLEAN
+                ),
                 category=SettingCategory.SYSTEM,
                 scope=SettingScope.SYSTEM,
                 data_type=SettingDataType.STRING,
@@ -303,8 +346,12 @@ class TestSystemSetting:
         """Test None validation rules are accepted."""
         setting = SystemSetting(
             setting_key="test.setting",
-            setting_value=SettingValue(raw_value='50', data_type=SettingDataType.NUMBER),
-            default_value=SettingValue(raw_value='30', data_type=SettingDataType.NUMBER),
+            setting_value=SettingValue(
+                raw_value="50", data_type=SettingDataType.NUMBER
+            ),
+            default_value=SettingValue(
+                raw_value="30", data_type=SettingDataType.NUMBER
+            ),
             category=SettingCategory.SYSTEM,
             scope=SettingScope.SYSTEM,
             data_type=SettingDataType.NUMBER,
@@ -316,8 +363,12 @@ class TestSystemSetting:
         """Test valid JSON validation rules."""
         setting = SystemSetting(
             setting_key="test.setting",
-            setting_value=SettingValue(raw_value='50', data_type=SettingDataType.NUMBER),
-            default_value=SettingValue(raw_value='30', data_type=SettingDataType.NUMBER),
+            setting_value=SettingValue(
+                raw_value="50", data_type=SettingDataType.NUMBER
+            ),
+            default_value=SettingValue(
+                raw_value="30", data_type=SettingDataType.NUMBER
+            ),
             category=SettingCategory.SYSTEM,
             scope=SettingScope.SYSTEM,
             data_type=SettingDataType.NUMBER,
@@ -330,12 +381,16 @@ class TestSystemSetting:
         with pytest.raises(ValidationError) as exc_info:
             SystemSetting(
                 setting_key="test.setting",
-                setting_value=SettingValue(raw_value='50', data_type=SettingDataType.NUMBER),
-                default_value=SettingValue(raw_value='30', data_type=SettingDataType.NUMBER),
+                setting_value=SettingValue(
+                    raw_value="50", data_type=SettingDataType.NUMBER
+                ),
+                default_value=SettingValue(
+                    raw_value="30", data_type=SettingDataType.NUMBER
+                ),
                 category=SettingCategory.SYSTEM,
                 scope=SettingScope.SYSTEM,
                 data_type=SettingDataType.NUMBER,
-                validation_rules='not json',
+                validation_rules="not json",
             )
         assert "Validation rules must be valid JSON" in str(exc_info.value)
 
@@ -348,7 +403,9 @@ class TestUserSetting:
         setting = UserSetting(
             user_id="user-123",
             setting_key="ui.theme",
-            setting_value=SettingValue(raw_value='"dark"', data_type=SettingDataType.STRING),
+            setting_value=SettingValue(
+                raw_value='"dark"', data_type=SettingDataType.STRING
+            ),
             category=SettingCategory.UI,
         )
         assert setting.user_id == "user-123"
@@ -360,7 +417,9 @@ class TestUserSetting:
             UserSetting(
                 user_id="user@invalid",
                 setting_key="ui.theme",
-                setting_value=SettingValue(raw_value='"dark"', data_type=SettingDataType.STRING),
+                setting_value=SettingValue(
+                    raw_value='"dark"', data_type=SettingDataType.STRING
+                ),
                 category=SettingCategory.UI,
             )
         assert "Invalid user ID" in str(exc_info.value)
@@ -371,7 +430,9 @@ class TestUserSetting:
             UserSetting(
                 user_id="   ",
                 setting_key="ui.theme",
-                setting_value=SettingValue(raw_value='"dark"', data_type=SettingDataType.STRING),
+                setting_value=SettingValue(
+                    raw_value='"dark"', data_type=SettingDataType.STRING
+                ),
                 category=SettingCategory.UI,
             )
         assert "User ID cannot be empty" in str(exc_info.value)
@@ -382,7 +443,9 @@ class TestUserSetting:
             UserSetting(
                 user_id="user-123",
                 setting_key="",
-                setting_value=SettingValue(raw_value='"dark"', data_type=SettingDataType.STRING),
+                setting_value=SettingValue(
+                    raw_value='"dark"', data_type=SettingDataType.STRING
+                ),
                 category=SettingCategory.UI,
             )
         assert "setting_key" in str(exc_info.value)
@@ -393,7 +456,9 @@ class TestUserSetting:
             UserSetting(
                 user_id="user-123",
                 setting_key="   ",
-                setting_value=SettingValue(raw_value='"dark"', data_type=SettingDataType.STRING),
+                setting_value=SettingValue(
+                    raw_value='"dark"', data_type=SettingDataType.STRING
+                ),
                 category=SettingCategory.UI,
             )
         assert "Setting key cannot be empty" in str(exc_info.value)
@@ -404,7 +469,9 @@ class TestUserSetting:
             UserSetting(
                 user_id="user-123",
                 setting_key="ui@theme",
-                setting_value=SettingValue(raw_value='"dark"', data_type=SettingDataType.STRING),
+                setting_value=SettingValue(
+                    raw_value='"dark"', data_type=SettingDataType.STRING
+                ),
                 category=SettingCategory.UI,
             )
         assert "alphanumeric" in str(exc_info.value)
@@ -415,7 +482,9 @@ class TestUserSetting:
             UserSetting(
                 user_id="user-123",
                 setting_key="ui..theme",
-                setting_value=SettingValue(raw_value='"dark"', data_type=SettingDataType.STRING),
+                setting_value=SettingValue(
+                    raw_value='"dark"', data_type=SettingDataType.STRING
+                ),
                 category=SettingCategory.UI,
             )
         assert "Invalid setting key" in str(exc_info.value)

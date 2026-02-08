@@ -4,25 +4,26 @@ Unit tests for services/password_blocklist_service.py
 Tests NIST SP 800-63B-4 compliant password screening service.
 """
 
-import pytest
+import gzip
 from pathlib import Path
 from unittest.mock import AsyncMock, MagicMock, patch
-import gzip
 
+import pytest
+
+import services.password_blocklist_service as blocklist_module
 from services.password_blocklist_service import (
+    DEFAULT_CONTEXT_WORDS,
+    SEQUENTIAL_PATTERNS,
     PasswordBlocklistService,
     get_blocklist_service,
-    SEQUENTIAL_PATTERNS,
-    DEFAULT_CONTEXT_WORDS,
 )
-import services.password_blocklist_service as blocklist_module
 
 
 @pytest.fixture
 def mock_blocklist_path(tmp_path):
     """Create a temporary gzipped blocklist file."""
     blocklist_file = tmp_path / "passwords.txt.gz"
-    with gzip.open(blocklist_file, 'wt', encoding='utf-8') as f:
+    with gzip.open(blocklist_file, "wt", encoding="utf-8") as f:
         f.write("password123\n")
         f.write("qwerty\n")
         f.write("letmein\n")
@@ -44,7 +45,7 @@ def blocklist_service(mock_blocklist_path, mock_context_path):
         return PasswordBlocklistService(
             blocklist_path=mock_blocklist_path,
             context_words_path=mock_context_path,
-            enable_hibp=False
+            enable_hibp=False,
         )
 
 
@@ -83,17 +84,14 @@ class TestPasswordBlocklistServiceInit:
     def test_init_hibp_disabled_by_default(self):
         """Init should have HIBP disabled by default."""
         with patch("services.password_blocklist_service.logger"):
-            service = PasswordBlocklistService(
-                blocklist_path=Path("/nonexistent")
-            )
+            service = PasswordBlocklistService(blocklist_path=Path("/nonexistent"))
             assert service._enable_hibp is False
 
     def test_init_hibp_enabled(self):
         """Init should enable HIBP when specified."""
         with patch("services.password_blocklist_service.logger"):
             service = PasswordBlocklistService(
-                blocklist_path=Path("/nonexistent"),
-                enable_hibp=True
+                blocklist_path=Path("/nonexistent"), enable_hibp=True
             )
             assert service._enable_hibp is True
 
@@ -111,7 +109,7 @@ class TestLoadBlocklist:
     def test_load_blocklist_lowercases_passwords(self, tmp_path):
         """_load_blocklist should lowercase all passwords."""
         blocklist_file = tmp_path / "passwords.txt.gz"
-        with gzip.open(blocklist_file, 'wt', encoding='utf-8') as f:
+        with gzip.open(blocklist_file, "wt", encoding="utf-8") as f:
             f.write("PASSWORD\nQWERTY\n")
 
         with patch("services.password_blocklist_service.logger"):
@@ -152,7 +150,7 @@ class TestLoadContextWords:
         with patch("services.password_blocklist_service.logger"):
             service = PasswordBlocklistService(
                 blocklist_path=Path("/nonexistent"),
-                context_words_path=Path("/nonexistent/context.txt")
+                context_words_path=Path("/nonexistent/context.txt"),
             )
             # Should still have default context words
             assert len(service._context_words) > 0
@@ -165,8 +163,7 @@ class TestLoadContextWords:
 
         with patch("services.password_blocklist_service.logger") as mock_logger:
             service = PasswordBlocklistService(
-                blocklist_path=Path("/nonexistent"),
-                context_words_path=bad_context_file
+                blocklist_path=Path("/nonexistent"), context_words_path=bad_context_file
             )
             # Should log warning
             mock_logger.warning.assert_called()
@@ -262,8 +259,7 @@ class TestCheckContextWords:
     def test_check_context_additional(self, blocklist_service):
         """check_context_words should detect additional context words."""
         result = blocklist_service.check_context_words(
-            "mycompanypass",
-            additional_context=["company", "project"]
+            "mycompanypass", additional_context=["company", "project"]
         )
         assert result == "company"
 
@@ -288,8 +284,7 @@ class TestCheckHibp:
         """check_hibp should detect compromised passwords."""
         with patch("services.password_blocklist_service.logger"):
             service = PasswordBlocklistService(
-                blocklist_path=mock_blocklist_path,
-                enable_hibp=True
+                blocklist_path=mock_blocklist_path, enable_hibp=True
             )
 
         # Mock the HIBP API response
@@ -317,8 +312,7 @@ class TestCheckHibp:
         """check_hibp should return not compromised for safe passwords."""
         with patch("services.password_blocklist_service.logger"):
             service = PasswordBlocklistService(
-                blocklist_path=mock_blocklist_path,
-                enable_hibp=True
+                blocklist_path=mock_blocklist_path, enable_hibp=True
             )
 
         mock_response = MagicMock()
@@ -342,8 +336,7 @@ class TestCheckHibp:
         """check_hibp should handle API errors."""
         with patch("services.password_blocklist_service.logger"):
             service = PasswordBlocklistService(
-                blocklist_path=mock_blocklist_path,
-                enable_hibp=True
+                blocklist_path=mock_blocklist_path, enable_hibp=True
             )
 
         mock_response = MagicMock()
@@ -366,8 +359,7 @@ class TestCheckHibp:
         """check_hibp should handle exceptions."""
         with patch("services.password_blocklist_service.logger"):
             service = PasswordBlocklistService(
-                blocklist_path=mock_blocklist_path,
-                enable_hibp=True
+                blocklist_path=mock_blocklist_path, enable_hibp=True
             )
 
         with patch("httpx.AsyncClient") as MockClient:
@@ -448,23 +440,21 @@ class TestValidatePassword:
         assert "checks" in result
 
     @pytest.mark.asyncio
-    async def test_validate_password_hibp_enabled_compromised(self, mock_blocklist_path):
+    async def test_validate_password_hibp_enabled_compromised(
+        self, mock_blocklist_path
+    ):
         """validate_password should fail for HIBP compromised passwords."""
         with patch("services.password_blocklist_service.logger"):
             service = PasswordBlocklistService(
-                blocklist_path=mock_blocklist_path,
-                enable_hibp=True
+                blocklist_path=mock_blocklist_path, enable_hibp=True
             )
 
         # Mock the check_hibp method to return compromised
         with patch.object(
-            service, "check_hibp",
+            service,
+            "check_hibp",
             new_callable=AsyncMock,
-            return_value={
-                "checked": True,
-                "compromised": True,
-                "breach_count": 50000
-            }
+            return_value={"checked": True, "compromised": True, "breach_count": 50000},
         ):
             result = await service.validate_password(
                 "uniqueStrongP@ss!", check_hibp=True
@@ -488,9 +478,7 @@ class TestProperties:
     def test_blocklist_loaded_false(self):
         """blocklist_loaded should return False when not loaded."""
         with patch("services.password_blocklist_service.logger"):
-            service = PasswordBlocklistService(
-                blocklist_path=Path("/nonexistent")
-            )
+            service = PasswordBlocklistService(blocklist_path=Path("/nonexistent"))
             assert service.blocklist_loaded is False
 
     def test_blocklist_size(self, blocklist_service):

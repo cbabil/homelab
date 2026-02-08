@@ -4,12 +4,13 @@ Agent Tools Unit Tests - Lifecycle and Management
 Tests for trigger_agent_update, list_stale_agents, list_agents, reset_agent_status.
 """
 
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from tools.agent.tools import AgentTools
+import pytest
+
 from models.agent import AgentStatus
+from tools.agent.tools import AgentTools
 
 
 class TestTriggerAgentUpdate:
@@ -29,7 +30,7 @@ class TestTriggerAgentUpdate:
     @pytest.fixture
     def agent_tools(self, mock_services):
         """Create AgentTools instance."""
-        with patch('tools.agent.tools.logger'):
+        with patch("tools.agent.tools.logger"):
             return AgentTools(
                 mock_services["agent_service"],
                 mock_services["agent_manager"],
@@ -41,7 +42,7 @@ class TestTriggerAgentUpdate:
     @pytest.mark.asyncio
     async def test_trigger_update_no_lifecycle(self, mock_services):
         """Test trigger_agent_update when lifecycle unavailable."""
-        with patch('tools.agent.tools.logger'):
+        with patch("tools.agent.tools.logger"):
             tools = AgentTools(
                 mock_services["agent_service"],
                 mock_services["agent_manager"],
@@ -57,7 +58,9 @@ class TestTriggerAgentUpdate:
     @pytest.mark.asyncio
     async def test_trigger_update_no_agent(self, agent_tools, mock_services):
         """Test trigger_agent_update when no agent exists."""
-        mock_services["agent_service"].get_agent_by_server = AsyncMock(return_value=None)
+        mock_services["agent_service"].get_agent_by_server = AsyncMock(
+            return_value=None
+        )
 
         result = await agent_tools.trigger_agent_update("server-123")
 
@@ -69,7 +72,9 @@ class TestTriggerAgentUpdate:
         """Test trigger_agent_update when agent not connected."""
         agent = MagicMock()
         agent.id = "agent-123"
-        mock_services["agent_service"].get_agent_by_server = AsyncMock(return_value=agent)
+        mock_services["agent_service"].get_agent_by_server = AsyncMock(
+            return_value=agent
+        )
         mock_services["agent_manager"].is_connected.return_value = False
 
         result = await agent_tools.trigger_agent_update("server-123")
@@ -83,7 +88,9 @@ class TestTriggerAgentUpdate:
         agent = MagicMock()
         agent.id = "agent-123"
         agent.version = "1.1.0"
-        mock_services["agent_service"].get_agent_by_server = AsyncMock(return_value=agent)
+        mock_services["agent_service"].get_agent_by_server = AsyncMock(
+            return_value=agent
+        )
         mock_services["agent_manager"].is_connected.return_value = True
 
         version_info = MagicMock()
@@ -101,7 +108,9 @@ class TestTriggerAgentUpdate:
         agent = MagicMock()
         agent.id = "agent-123"
         agent.version = "1.0.0"
-        mock_services["agent_service"].get_agent_by_server = AsyncMock(return_value=agent)
+        mock_services["agent_service"].get_agent_by_server = AsyncMock(
+            return_value=agent
+        )
         mock_services["agent_manager"].is_connected.return_value = True
 
         version_info = MagicMock()
@@ -120,7 +129,9 @@ class TestTriggerAgentUpdate:
         agent = MagicMock()
         agent.id = "agent-123"
         agent.version = "1.0.0"
-        mock_services["agent_service"].get_agent_by_server = AsyncMock(return_value=agent)
+        mock_services["agent_service"].get_agent_by_server = AsyncMock(
+            return_value=agent
+        )
         mock_services["agent_manager"].is_connected.return_value = True
         mock_services["agent_manager"].send_command = AsyncMock()
 
@@ -130,7 +141,7 @@ class TestTriggerAgentUpdate:
         mock_services["lifecycle"].check_version.return_value = version_info
         mock_services["lifecycle"].trigger_update = AsyncMock(return_value=True)
 
-        with patch('tools.agent.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
             result = await agent_tools.trigger_agent_update("server-123")
 
         assert result["success"] is True
@@ -142,7 +153,9 @@ class TestTriggerAgentUpdate:
         agent = MagicMock()
         agent.id = "agent-123"
         agent.version = "1.0.0"
-        mock_services["agent_service"].get_agent_by_server = AsyncMock(return_value=agent)
+        mock_services["agent_service"].get_agent_by_server = AsyncMock(
+            return_value=agent
+        )
         mock_services["agent_manager"].is_connected.return_value = True
         mock_services["agent_manager"].send_command = AsyncMock(
             side_effect=Exception("Command failed")
@@ -154,7 +167,7 @@ class TestTriggerAgentUpdate:
         mock_services["lifecycle"].check_version.return_value = version_info
         mock_services["lifecycle"].trigger_update = AsyncMock(return_value=True)
 
-        with patch('tools.agent.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
             result = await agent_tools.trigger_agent_update("server-123")
 
         assert result["success"] is True
@@ -165,7 +178,9 @@ class TestTriggerAgentUpdate:
         agent = MagicMock()
         agent.id = "agent-123"
         agent.version = None
-        mock_services["agent_service"].get_agent_by_server = AsyncMock(return_value=agent)
+        mock_services["agent_service"].get_agent_by_server = AsyncMock(
+            return_value=agent
+        )
         mock_services["agent_manager"].is_connected.return_value = True
         mock_services["agent_manager"].send_command = AsyncMock()
 
@@ -174,7 +189,7 @@ class TestTriggerAgentUpdate:
         mock_services["lifecycle"].check_version.return_value = version_info
         mock_services["lifecycle"].trigger_update = AsyncMock(return_value=True)
 
-        with patch('tools.agent.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
             result = await agent_tools.trigger_agent_update("server-123")
 
         assert result["success"] is True
@@ -209,7 +224,7 @@ class TestListStaleAgents:
     @pytest.fixture
     def agent_tools(self, mock_services):
         """Create AgentTools instance."""
-        with patch('tools.agent.tools.logger'):
+        with patch("tools.agent.tools.logger"):
             return AgentTools(
                 mock_services["agent_service"],
                 mock_services["agent_manager"],
@@ -221,7 +236,7 @@ class TestListStaleAgents:
     @pytest.mark.asyncio
     async def test_list_stale_no_lifecycle(self, mock_services):
         """Test list_stale_agents when lifecycle unavailable."""
-        with patch('tools.agent.tools.logger'):
+        with patch("tools.agent.tools.logger"):
             tools = AgentTools(
                 mock_services["agent_service"],
                 mock_services["agent_manager"],
@@ -307,7 +322,7 @@ class TestListAgents:
     @pytest.fixture
     def agent_tools(self, mock_services):
         """Create AgentTools instance."""
-        with patch('tools.agent.tools.logger'):
+        with patch("tools.agent.tools.logger"):
             return AgentTools(
                 mock_services["agent_service"],
                 mock_services["agent_manager"],
@@ -334,8 +349,8 @@ class TestListAgents:
         agent1.server_id = "server-1"
         agent1.status = AgentStatus.CONNECTED
         agent1.version = "1.0.0"
-        agent1.last_seen = datetime.now(timezone.utc)
-        agent1.registered_at = datetime.now(timezone.utc)
+        agent1.last_seen = datetime.now(UTC)
+        agent1.registered_at = datetime.now(UTC)
 
         agent2 = MagicMock()
         agent2.id = "agent-2"
@@ -343,7 +358,7 @@ class TestListAgents:
         agent2.status = AgentStatus.DISCONNECTED
         agent2.version = "1.0.0"
         agent2.last_seen = None
-        agent2.registered_at = datetime.now(timezone.utc)
+        agent2.registered_at = datetime.now(UTC)
 
         mock_services["agent_service"].list_all_agents = AsyncMock(
             return_value=[agent1, agent2]
@@ -386,7 +401,7 @@ class TestResetAgentStatus:
     @pytest.fixture
     def agent_tools(self, mock_services):
         """Create AgentTools instance."""
-        with patch('tools.agent.tools.logger'):
+        with patch("tools.agent.tools.logger"):
             return AgentTools(
                 mock_services["agent_service"],
                 mock_services["agent_manager"],
@@ -395,9 +410,13 @@ class TestResetAgentStatus:
             )
 
     @pytest.mark.asyncio
-    async def test_reset_status_specific_agent_not_found(self, agent_tools, mock_services):
+    async def test_reset_status_specific_agent_not_found(
+        self, agent_tools, mock_services
+    ):
         """Test reset_agent_status when specific agent not found."""
-        mock_services["agent_service"].get_agent_by_server = AsyncMock(return_value=None)
+        mock_services["agent_service"].get_agent_by_server = AsyncMock(
+            return_value=None
+        )
 
         result = await agent_tools.reset_agent_status("server-123")
 
@@ -409,7 +428,9 @@ class TestResetAgentStatus:
         """Test reset_agent_status when agent is connected."""
         agent = MagicMock()
         agent.id = "agent-123"
-        mock_services["agent_service"].get_agent_by_server = AsyncMock(return_value=agent)
+        mock_services["agent_service"].get_agent_by_server = AsyncMock(
+            return_value=agent
+        )
         mock_services["agent_manager"].is_connected.return_value = True
 
         result = await agent_tools.reset_agent_status("server-123")
@@ -418,18 +439,22 @@ class TestResetAgentStatus:
         assert result["error"] == "AGENT_CONNECTED"
 
     @pytest.mark.asyncio
-    async def test_reset_status_specific_agent_success(self, agent_tools, mock_services):
+    async def test_reset_status_specific_agent_success(
+        self, agent_tools, mock_services
+    ):
         """Test successful status reset for specific agent."""
         agent = MagicMock()
         agent.id = "agent-123"
-        mock_services["agent_service"].get_agent_by_server = AsyncMock(return_value=agent)
+        mock_services["agent_service"].get_agent_by_server = AsyncMock(
+            return_value=agent
+        )
         mock_services["agent_manager"].is_connected.return_value = False
 
         mock_agent_db = MagicMock()
         mock_agent_db.update_agent = AsyncMock()
         mock_services["agent_service"]._get_agent_db.return_value = mock_agent_db
 
-        with patch('tools.agent.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
             result = await agent_tools.reset_agent_status("server-123")
 
         assert result["success"] is True
@@ -443,7 +468,7 @@ class TestResetAgentStatus:
             return_value=5
         )
 
-        with patch('tools.agent.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
             result = await agent_tools.reset_agent_status()
 
         assert result["success"] is True
@@ -456,7 +481,7 @@ class TestResetAgentStatus:
             return_value=0
         )
 
-        with patch('tools.agent.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
             result = await agent_tools.reset_agent_status()
 
         assert result["success"] is True

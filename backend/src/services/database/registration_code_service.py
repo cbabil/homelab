@@ -7,7 +7,6 @@ import hashlib
 import hmac
 import secrets
 from datetime import UTC, datetime, timedelta
-from typing import Optional
 from uuid import uuid4
 
 import structlog
@@ -107,7 +106,7 @@ class RegistrationCodeDatabaseService:
             created_at=now,
         )
 
-    async def get_by_code(self, code: str) -> Optional[RegistrationCode]:
+    async def get_by_code(self, code: str) -> RegistrationCode | None:
         """Get a registration code by its value.
 
         Args:

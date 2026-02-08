@@ -5,11 +5,12 @@ Tests heartbeat and shutdown notification handlers.
 """
 
 import json
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from services.agent_manager import AgentManager
+import pytest
+
 from models.agent import AgentHeartbeat, AgentShutdownRequest
+from services.agent_manager import AgentManager
 
 
 @pytest.fixture
@@ -67,15 +68,17 @@ class TestHandleHeartbeat:
                 "agent-123", mock_websocket, "server-456"
             )
 
-        notification = json.dumps({
-            "jsonrpc": "2.0",
-            "method": "agent.heartbeat",
-            "params": {
-                "cpu_percent": 50.0,
-                "memory_percent": 60.0,
-                "uptime_seconds": 3600,
-            },
-        })
+        notification = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "method": "agent.heartbeat",
+                "params": {
+                    "cpu_percent": 50.0,
+                    "memory_percent": 60.0,
+                    "uptime_seconds": 3600,
+                },
+            }
+        )
 
         with patch("services.agent_manager.logger") as mock_logger:
             await agent_manager.handle_message("agent-123", notification)
@@ -95,15 +98,17 @@ class TestHandleHeartbeat:
                 "agent-123", mock_websocket, "server-456"
             )
 
-        notification = json.dumps({
-            "jsonrpc": "2.0",
-            "method": "agent.heartbeat",
-            "params": {
-                "cpu_percent": 50.0,
-                "memory_percent": 60.0,
-                "uptime_seconds": 3600,
-            },
-        })
+        notification = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "method": "agent.heartbeat",
+                "params": {
+                    "cpu_percent": 50.0,
+                    "memory_percent": 60.0,
+                    "uptime_seconds": 3600,
+                },
+            }
+        )
 
         with patch("services.agent_manager.logger"):
             await agent_manager_with_lifecycle.handle_message("agent-123", notification)
@@ -132,11 +137,13 @@ class TestHandleHeartbeat:
             )
 
         # Only cpu_percent provided
-        notification = json.dumps({
-            "jsonrpc": "2.0",
-            "method": "agent.heartbeat",
-            "params": {"cpu_percent": 75.0},
-        })
+        notification = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "method": "agent.heartbeat",
+                "params": {"cpu_percent": 75.0},
+            }
+        )
 
         with patch("services.agent_manager.logger"):
             await agent_manager_with_lifecycle.handle_message("agent-123", notification)
@@ -162,10 +169,12 @@ class TestHandleHeartbeat:
                 "agent-123", mock_websocket, "server-456"
             )
 
-        notification = json.dumps({
-            "jsonrpc": "2.0",
-            "method": "agent.heartbeat",
-        })
+        notification = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "method": "agent.heartbeat",
+            }
+        )
 
         with patch("services.agent_manager.logger"):
             await agent_manager_with_lifecycle.handle_message("agent-123", notification)
@@ -186,11 +195,13 @@ class TestHandleShutdown:
                 "agent-123", mock_websocket, "server-456"
             )
 
-        notification = json.dumps({
-            "jsonrpc": "2.0",
-            "method": "agent.shutdown",
-            "params": {"reason": "maintenance", "restart": False},
-        })
+        notification = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "method": "agent.shutdown",
+                "params": {"reason": "maintenance", "restart": False},
+            }
+        )
 
         with patch("services.agent_manager.logger") as mock_logger:
             await agent_manager.handle_message("agent-123", notification)
@@ -210,11 +221,13 @@ class TestHandleShutdown:
                 "agent-123", mock_websocket, "server-456"
             )
 
-        notification = json.dumps({
-            "jsonrpc": "2.0",
-            "method": "agent.shutdown",
-            "params": {"reason": "maintenance", "restart": False},
-        })
+        notification = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "method": "agent.shutdown",
+                "params": {"reason": "maintenance", "restart": False},
+            }
+        )
 
         with patch("services.agent_manager.logger"):
             await agent_manager_with_lifecycle.handle_message("agent-123", notification)
@@ -245,11 +258,13 @@ class TestHandleShutdown:
                 "agent-123", mock_websocket, "server-456"
             )
 
-        notification = json.dumps({
-            "jsonrpc": "2.0",
-            "method": "agent.shutdown",
-            "params": {"reason": "update", "restart": True},
-        })
+        notification = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "method": "agent.shutdown",
+                "params": {"reason": "update", "restart": True},
+            }
+        )
 
         with patch("services.agent_manager.logger"):
             await agent_manager_with_lifecycle.handle_message("agent-123", notification)
@@ -272,11 +287,13 @@ class TestHandleShutdown:
                 "agent-123", mock_websocket, "server-456"
             )
 
-        notification = json.dumps({
-            "jsonrpc": "2.0",
-            "method": "agent.shutdown",
-            "params": {},
-        })
+        notification = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "method": "agent.shutdown",
+                "params": {},
+            }
+        )
 
         with patch("services.agent_manager.logger"):
             await agent_manager_with_lifecycle.handle_message("agent-123", notification)
@@ -300,10 +317,12 @@ class TestHandleShutdown:
                 "agent-123", mock_websocket, "server-456"
             )
 
-        notification = json.dumps({
-            "jsonrpc": "2.0",
-            "method": "agent.shutdown",
-        })
+        notification = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "method": "agent.shutdown",
+            }
+        )
 
         with patch("services.agent_manager.logger"):
             await agent_manager_with_lifecycle.handle_message("agent-123", notification)
@@ -346,23 +365,29 @@ class TestNotificationHandlerIntegration:
             )
 
         # Send heartbeat
-        heartbeat_msg = json.dumps({
-            "jsonrpc": "2.0",
-            "method": "agent.heartbeat",
-            "params": {"cpu_percent": 25.0},
-        })
+        heartbeat_msg = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "method": "agent.heartbeat",
+                "params": {"cpu_percent": 25.0},
+            }
+        )
 
         with patch("services.agent_manager.logger"):
-            await agent_manager_with_lifecycle.handle_message("agent-123", heartbeat_msg)
+            await agent_manager_with_lifecycle.handle_message(
+                "agent-123", heartbeat_msg
+            )
 
         assert mock_lifecycle_manager.record_heartbeat.call_count == 1
 
         # Send shutdown
-        shutdown_msg = json.dumps({
-            "jsonrpc": "2.0",
-            "method": "agent.shutdown",
-            "params": {"reason": "test"},
-        })
+        shutdown_msg = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "method": "agent.shutdown",
+                "params": {"reason": "test"},
+            }
+        )
 
         with patch("services.agent_manager.logger"):
             await agent_manager_with_lifecycle.handle_message("agent-123", shutdown_msg)
@@ -386,11 +411,13 @@ class TestNotificationHandlerIntegration:
             )
 
         # Custom notification
-        custom_msg = json.dumps({
-            "jsonrpc": "2.0",
-            "method": "custom.event",
-            "params": {"data": "test"},
-        })
+        custom_msg = json.dumps(
+            {
+                "jsonrpc": "2.0",
+                "method": "custom.event",
+                "params": {"data": "test"},
+            }
+        )
 
         with patch("services.agent_manager.logger"):
             await agent_manager_with_lifecycle.handle_message("agent-123", custom_msg)

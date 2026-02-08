@@ -1,11 +1,12 @@
 """Agent WebSocket handler for registration and authentication."""
 
 import asyncio
-from typing import TYPE_CHECKING, Optional, Tuple
+from typing import TYPE_CHECKING
 
 import structlog
 from starlette.websockets import WebSocket, WebSocketDisconnect
 
+from lib.log_event import log_event
 from services.helpers.websocket_helpers import (
     close_websocket,
     get_client_info,
@@ -15,11 +16,10 @@ from services.helpers.websocket_helpers import (
     send_registered,
     ws_rate_limiter,
 )
-from tools.common import log_event
 
 if TYPE_CHECKING:
-    from services.agent_service import AgentService
     from services.agent_manager import AgentManager
+    from services.agent_service import AgentService
 
 logger = structlog.get_logger("agent_websocket")
 
@@ -46,12 +46,14 @@ class AgentWebSocketHandler:
         # Check rate limiting before processing
         if not ws_rate_limiter.is_allowed(client_ip):
             logger.warning("Connection rejected due to rate limiting", **client_info)
-            await send_error(websocket, "Too many connection attempts. Try again later.")
+            await send_error(
+                websocket, "Too many connection attempts. Try again later."
+            )
             await close_websocket(websocket, WS_CLOSE_AUTH_FAILED)
             return
 
-        agent_id: Optional[str] = None
-        server_id: Optional[str] = None
+        agent_id: str | None = None
+        server_id: str | None = None
 
         try:
             result = await self._authenticate_connection(websocket, client_ip)
@@ -96,7 +98,7 @@ class AgentWebSocketHandler:
 
     async def _authenticate_connection(
         self, websocket: WebSocket, client_ip: str = "unknown"
-    ) -> Optional[Tuple[str, str]]:
+    ) -> tuple[str, str] | None:
         """Authenticate the agent connection.
 
         Waits for an authentication message with a timeout to prevent
@@ -111,7 +113,7 @@ class AgentWebSocketHandler:
             message = await asyncio.wait_for(
                 websocket.receive_json(), timeout=WS_AUTH_TIMEOUT_SECONDS
             )
-        except asyncio.TimeoutError:
+        except TimeoutError:
             logger.warning(
                 "Authentication timeout - client did not send auth message",
                 timeout_seconds=WS_AUTH_TIMEOUT_SECONDS,
@@ -136,7 +138,7 @@ class AgentWebSocketHandler:
 
     async def _handle_registration(
         self, ws: WebSocket, msg: dict
-    ) -> Optional[Tuple[str, str]]:
+    ) -> tuple[str, str] | None:
         """Handle registration with a registration code."""
         code, version = msg.get("code"), msg.get("version")
         if not code:
@@ -158,7 +160,7 @@ class AgentWebSocketHandler:
 
     async def _handle_authentication(
         self, ws: WebSocket, msg: dict
-    ) -> Optional[Tuple[str, str]]:
+    ) -> tuple[str, str] | None:
         """Handle authentication with an existing token."""
         token, version = msg.get("token"), msg.get("version")
         if not token:

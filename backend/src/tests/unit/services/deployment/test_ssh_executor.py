@@ -4,8 +4,9 @@ Unit tests for services/deployment/ssh_executor.py
 Tests for SSHExecutor and AgentExecutor command execution classes.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock
+
+import pytest
 
 
 class TestSSHExecutorInit:

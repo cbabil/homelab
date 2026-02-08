@@ -5,11 +5,12 @@ shutdown coordination. Works with AgentManager for active connection tracking.
 """
 
 import asyncio
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
-from typing import Callable, Optional
 
 import structlog
 
+from lib.log_event import log_event
 from models.agent import (
     AgentConfig,
     AgentHeartbeat,
@@ -19,7 +20,6 @@ from models.agent import (
     AgentVersionInfo,
 )
 from services.database import AgentDatabaseService
-from tools.common import log_event
 
 logger = structlog.get_logger("agent_lifecycle")
 
@@ -37,7 +37,7 @@ class AgentLifecycleManager:
     def __init__(
         self,
         agent_db: AgentDatabaseService,
-        default_config: Optional[AgentConfig] = None,
+        default_config: AgentConfig | None = None,
     ):
         """Initialize lifecycle manager.
 
@@ -47,7 +47,7 @@ class AgentLifecycleManager:
         """
         self._agent_db = agent_db
         self._config = default_config or AgentConfig()
-        self._heartbeat_task: Optional[asyncio.Task] = None
+        self._heartbeat_task: asyncio.Task | None = None
         self._shutdown_handlers: list[Callable] = []
         self._last_heartbeats: dict[str, datetime] = {}
         self._running = False

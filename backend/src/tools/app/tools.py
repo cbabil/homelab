@@ -4,12 +4,14 @@ App Catalog and Deployment Tools
 Provides MCP tools for browsing catalog and managing app deployments.
 """
 
-from typing import Dict, Any, Optional, List
+from typing import Any
+
 import structlog
-from services.app_service import AppService
-from services.marketplace_service import MarketplaceService
-from services.deployment import DeploymentService, DeploymentError
+
 from models.app import AppFilter
+from services.app_service import AppService
+from services.deployment import DeploymentError, DeploymentService
+from services.marketplace_service import MarketplaceService
 from tools.common import log_event
 
 logger = structlog.get_logger("app_tools")
@@ -49,10 +51,10 @@ class AppTools:
     async def get_app(
         self,
         app_id: str = None,
-        app_ids: List[str] = None,
+        app_ids: list[str] = None,
         server_id: str = None,
-        filters: Optional[Dict[str, Any]] = None,
-    ) -> Dict[str, Any]:
+        filters: dict[str, Any] | None = None,
+    ) -> dict[str, Any]:
         """Get app details from catalog or installed apps.
 
         Args:
@@ -167,9 +169,9 @@ class AppTools:
         self,
         server_id: str,
         app_id: str = None,
-        app_ids: List[str] = None,
-        config: Dict[str, Any] = None,
-    ) -> Dict[str, Any]:
+        app_ids: list[str] = None,
+        config: dict[str, Any] = None,
+    ) -> dict[str, Any]:
         """Deploy app(s) to a server.
 
         Args:
@@ -304,9 +306,9 @@ class AppTools:
         self,
         server_id: str,
         app_id: str = None,
-        app_ids: List[str] = None,
+        app_ids: list[str] = None,
         remove_data: bool = False,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Remove app(s) from a server.
 
         Args:
@@ -416,9 +418,9 @@ class AppTools:
         self,
         server_id: str,
         app_id: str = None,
-        app_ids: List[str] = None,
+        app_ids: list[str] = None,
         version: str = None,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Update app(s) to a new version.
 
         Args:
@@ -559,7 +561,7 @@ class AppTools:
                 "error": "UPDATE_APP_ERROR",
             }
 
-    async def start_app(self, server_id: str, app_id: str) -> Dict[str, Any]:
+    async def start_app(self, server_id: str, app_id: str) -> dict[str, Any]:
         """Start a stopped app."""
         try:
             success = await self.deployment_service.start_app(server_id, app_id)
@@ -603,7 +605,7 @@ class AppTools:
                 "error": "START_ERROR",
             }
 
-    async def stop_app(self, server_id: str, app_id: str) -> Dict[str, Any]:
+    async def stop_app(self, server_id: str, app_id: str) -> dict[str, Any]:
         """Stop a running app."""
         try:
             success = await self.deployment_service.stop_app(server_id, app_id)
@@ -651,7 +653,7 @@ class AppTools:
     # Deployment Pipeline Tools (Status, Validation, Health, Cleanup)
     # ============================================================
 
-    async def get_installation_status(self, installation_id: str) -> Dict[str, Any]:
+    async def get_installation_status(self, installation_id: str) -> dict[str, Any]:
         """Get installation status by ID for polling during deployment.
 
         Args:
@@ -683,7 +685,7 @@ class AppTools:
                 "error": "STATUS_ERROR",
             }
 
-    async def refresh_installation_status(self, installation_id: str) -> Dict[str, Any]:
+    async def refresh_installation_status(self, installation_id: str) -> dict[str, Any]:
         """Refresh installation status from Docker and update database.
 
         Call this to get live Docker container status when needed.
@@ -718,8 +720,8 @@ class AppTools:
             }
 
     async def validate_deployment_config(
-        self, app_id: str, config: Dict[str, Any] = None
-    ) -> Dict[str, Any]:
+        self, app_id: str, config: dict[str, Any] = None
+    ) -> dict[str, Any]:
         """Validate deployment configuration before install.
 
         Checks required env vars, port ranges, volume paths, etc.
@@ -751,8 +753,8 @@ class AppTools:
             }
 
     async def run_preflight_checks(
-        self, server_id: str, app_id: str, config: Dict[str, Any] = None
-    ) -> Dict[str, Any]:
+        self, server_id: str, app_id: str, config: dict[str, Any] = None
+    ) -> dict[str, Any]:
         """Run pre-flight checks before deployment.
 
         Checks: Docker running, disk space, port availability, architecture.
@@ -793,7 +795,7 @@ class AppTools:
 
     async def check_container_health(
         self, server_id: str, container_name: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Check container health after deployment.
 
         Verifies: running status, restart count, listening ports, recent logs.
@@ -825,7 +827,7 @@ class AppTools:
 
     async def get_container_logs(
         self, server_id: str, container_name: str, tail: int = 100
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Get recent logs from a container.
 
         Args:
@@ -855,7 +857,7 @@ class AppTools:
 
     async def cleanup_failed_deployment(
         self, server_id: str, installation_id: str
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Clean up a failed deployment.
 
         Removes: container, image (if unused), database record.

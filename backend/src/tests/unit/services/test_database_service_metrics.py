@@ -4,10 +4,11 @@ Unit tests for services/database_service.py - Metrics method delegation.
 Tests metrics-related methods that delegate to MetricsDatabaseService.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from models.metrics import ServerMetrics, ContainerMetrics, ActivityLog
+import pytest
+
+from models.metrics import ActivityLog, ContainerMetrics, ServerMetrics
 
 
 @pytest.fixture
@@ -19,16 +20,19 @@ def mock_metrics_service():
 @pytest.fixture
 def db_service_with_metrics_mock(mock_metrics_service):
     """Create DatabaseService with mocked metrics service."""
-    with patch("services.database_service.DatabaseConnection"), \
-         patch("services.database_service.UserDatabaseService"), \
-         patch("services.database_service.ServerDatabaseService"), \
-         patch("services.database_service.SessionDatabaseService"), \
-         patch("services.database_service.AppDatabaseService"), \
-         patch("services.database_service.MetricsDatabaseService") as MockMetrics, \
-         patch("services.database_service.SystemDatabaseService"), \
-         patch("services.database_service.ExportDatabaseService"), \
-         patch("services.database_service.SchemaInitializer"):
+    with (
+        patch("services.database_service.DatabaseConnection"),
+        patch("services.database_service.UserDatabaseService"),
+        patch("services.database_service.ServerDatabaseService"),
+        patch("services.database_service.SessionDatabaseService"),
+        patch("services.database_service.AppDatabaseService"),
+        patch("services.database_service.MetricsDatabaseService") as MockMetrics,
+        patch("services.database_service.SystemDatabaseService"),
+        patch("services.database_service.ExportDatabaseService"),
+        patch("services.database_service.SchemaInitializer"),
+    ):
         from services.database_service import DatabaseService
+
         MockMetrics.return_value = mock_metrics_service
         return DatabaseService()
 
@@ -70,6 +74,7 @@ def sample_container_metrics():
 def sample_activity_log():
     """Create sample ActivityLog."""
     from models.metrics import ActivityType
+
     return ActivityLog(
         id="log-123",
         activity_type=ActivityType.SERVER_ADDED,

@@ -5,12 +5,14 @@ Provides data retention management capabilities for the MCP server.
 Implements preview and cleanup operations with CSRF protection.
 """
 
-from typing import Dict, Any
+from typing import Any
+
 import structlog
 from fastmcp import Context
-from services.retention_service import RetentionService
+
+from models.retention import CleanupRequest, RetentionSettings, RetentionType
 from services.csrf_service import csrf_service
-from models.retention import RetentionType, CleanupRequest, RetentionSettings
+from services.retention_service import RetentionService
 
 logger = structlog.get_logger("retention_tools")
 
@@ -47,8 +49,8 @@ class RetentionTools:
         return role == "admin"
 
     async def get_csrf_token(
-        self, params: Dict[str, Any], ctx: Context
-    ) -> Dict[str, Any]:
+        self, params: dict[str, Any], ctx: Context
+    ) -> dict[str, Any]:
         """Generate a CSRF token for retention operations.
 
         Returns:
@@ -88,8 +90,8 @@ class RetentionTools:
             }
 
     async def preview_retention_cleanup(
-        self, params: Dict[str, Any], ctx: Context
-    ) -> Dict[str, Any]:
+        self, params: dict[str, Any], ctx: Context
+    ) -> dict[str, Any]:
         """Preview cleanup operations without performing deletion (dry-run).
 
         Params:
@@ -164,8 +166,8 @@ class RetentionTools:
             }
 
     async def perform_retention_cleanup(
-        self, params: Dict[str, Any], ctx: Context
-    ) -> Dict[str, Any]:
+        self, params: dict[str, Any], ctx: Context
+    ) -> dict[str, Any]:
         """Perform data cleanup with CSRF protection.
 
         Params:
@@ -274,8 +276,8 @@ class RetentionTools:
             }
 
     async def get_retention_settings(
-        self, params: Dict[str, Any], ctx: Context
-    ) -> Dict[str, Any]:
+        self, params: dict[str, Any], ctx: Context
+    ) -> dict[str, Any]:
         """Get current retention settings.
 
         Returns:
@@ -322,8 +324,8 @@ class RetentionTools:
             }
 
     async def update_retention_settings(
-        self, params: Dict[str, Any], ctx: Context
-    ) -> Dict[str, Any]:
+        self, params: dict[str, Any], ctx: Context
+    ) -> dict[str, Any]:
         """Update retention settings.
 
         Params:
@@ -359,7 +361,9 @@ class RetentionTools:
 
             settings = RetentionSettings(**settings_data)
 
-            success = await self.retention_service.update_retention_settings(user_id, settings)
+            success = await self.retention_service.update_retention_settings(
+                user_id, settings
+            )
 
             if not success:
                 return {
@@ -369,11 +373,15 @@ class RetentionTools:
                 }
 
             # Return updated settings
-            updated_settings = await self.retention_service.get_retention_settings(user_id)
+            updated_settings = await self.retention_service.get_retention_settings(
+                user_id
+            )
 
             return {
                 "success": True,
-                "data": updated_settings.model_dump() if updated_settings else settings.model_dump(),
+                "data": updated_settings.model_dump()
+                if updated_settings
+                else settings.model_dump(),
                 "message": "Retention settings updated",
             }
 

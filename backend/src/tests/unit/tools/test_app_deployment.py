@@ -4,8 +4,9 @@ App Tools Unit Tests - Deployment Pipeline Operations
 Tests for installation status, validation, preflight checks, health, logs, cleanup.
 """
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 
 from tools.app.tools import AppTools
 
@@ -25,7 +26,7 @@ class TestGetInstallationStatus:
     @pytest.fixture
     def app_tools(self, mock_services):
         """Create AppTools instance."""
-        with patch('tools.app.tools.logger'):
+        with patch("tools.app.tools.logger"):
             return AppTools(
                 mock_services["app_service"],
                 mock_services["marketplace_service"],
@@ -84,7 +85,7 @@ class TestRefreshInstallationStatus:
     @pytest.fixture
     def app_tools(self, mock_services):
         """Create AppTools instance."""
-        with patch('tools.app.tools.logger'):
+        with patch("tools.app.tools.logger"):
             return AppTools(
                 mock_services["app_service"],
                 mock_services["marketplace_service"],
@@ -104,7 +105,9 @@ class TestRefreshInstallationStatus:
         assert result["data"]["container_id"] == "abc123"
 
     @pytest.mark.asyncio
-    async def test_refresh_installation_status_not_found(self, app_tools, mock_services):
+    async def test_refresh_installation_status_not_found(
+        self, app_tools, mock_services
+    ):
         """Test refresh status when not found."""
         mock_services["deployment_service"].refresh_installation_status = AsyncMock(
             return_value=None
@@ -116,7 +119,9 @@ class TestRefreshInstallationStatus:
         assert result["error"] == "INSTALLATION_NOT_FOUND"
 
     @pytest.mark.asyncio
-    async def test_refresh_installation_status_exception(self, app_tools, mock_services):
+    async def test_refresh_installation_status_exception(
+        self, app_tools, mock_services
+    ):
         """Test refresh_installation_status handles exceptions."""
         mock_services["deployment_service"].refresh_installation_status = AsyncMock(
             side_effect=Exception("Docker error")
@@ -143,7 +148,7 @@ class TestValidateDeploymentConfig:
     @pytest.fixture
     def app_tools(self, mock_services):
         """Create AppTools instance."""
-        with patch('tools.app.tools.logger'):
+        with patch("tools.app.tools.logger"):
             return AppTools(
                 mock_services["app_service"],
                 mock_services["marketplace_service"],
@@ -222,7 +227,7 @@ class TestRunPreflightChecks:
     @pytest.fixture
     def app_tools(self, mock_services):
         """Create AppTools instance."""
-        with patch('tools.app.tools.logger'):
+        with patch("tools.app.tools.logger"):
             return AppTools(
                 mock_services["app_service"],
                 mock_services["marketplace_service"],
@@ -278,7 +283,7 @@ class TestRunPreflightChecks:
             side_effect=Exception("SSH error")
         )
 
-        with patch('tools.app.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.app.tools.log_event", new_callable=AsyncMock):
             result = await app_tools.run_preflight_checks(
                 server_id="server-123",
                 app_id="nginx",
@@ -303,7 +308,7 @@ class TestCheckContainerHealth:
     @pytest.fixture
     def app_tools(self, mock_services):
         """Create AppTools instance."""
-        with patch('tools.app.tools.logger'):
+        with patch("tools.app.tools.logger"):
             return AppTools(
                 mock_services["app_service"],
                 mock_services["marketplace_service"],
@@ -371,7 +376,7 @@ class TestGetContainerLogs:
     @pytest.fixture
     def app_tools(self, mock_services):
         """Create AppTools instance."""
-        with patch('tools.app.tools.logger'):
+        with patch("tools.app.tools.logger"):
             return AppTools(
                 mock_services["app_service"],
                 mock_services["marketplace_service"],
@@ -442,7 +447,7 @@ class TestCleanupFailedDeployment:
     @pytest.fixture
     def app_tools(self, mock_services):
         """Create AppTools instance."""
-        with patch('tools.app.tools.logger'):
+        with patch("tools.app.tools.logger"):
             return AppTools(
                 mock_services["app_service"],
                 mock_services["marketplace_service"],
@@ -453,10 +458,13 @@ class TestCleanupFailedDeployment:
     async def test_cleanup_success(self, app_tools, mock_services):
         """Test successful cleanup."""
         mock_services["deployment_service"].cleanup_failed_deployment = AsyncMock(
-            return_value={"message": "Cleanup complete", "removed": ["container", "image"]}
+            return_value={
+                "message": "Cleanup complete",
+                "removed": ["container", "image"],
+            }
         )
 
-        with patch('tools.app.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.app.tools.log_event", new_callable=AsyncMock):
             result = await app_tools.cleanup_failed_deployment(
                 server_id="server-123",
                 installation_id="install-123",
@@ -472,7 +480,7 @@ class TestCleanupFailedDeployment:
             side_effect=Exception("Cleanup error")
         )
 
-        with patch('tools.app.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.app.tools.log_event", new_callable=AsyncMock):
             result = await app_tools.cleanup_failed_deployment(
                 server_id="server-123",
                 installation_id="install-123",

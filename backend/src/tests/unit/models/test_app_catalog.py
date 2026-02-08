@@ -10,11 +10,11 @@ from pydantic import ValidationError
 
 from models.app_catalog import (
     AppCategory,
-    InstallationStatus,
+    AppDefinition,
+    AppEnvVar,
     AppPort,
     AppVolume,
-    AppEnvVar,
-    AppDefinition,
+    InstallationStatus,
     InstalledApp,
 )
 

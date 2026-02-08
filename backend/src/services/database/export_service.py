@@ -3,7 +3,7 @@
 Database operations for backup import and export.
 """
 
-from typing import Any, Dict, List
+from typing import Any
 
 import structlog
 
@@ -23,7 +23,7 @@ class ExportDatabaseService:
         """
         self._conn = connection
 
-    async def export_users(self) -> List[Dict[str, Any]]:
+    async def export_users(self) -> list[dict[str, Any]]:
         """Export all users for backup."""
         try:
             async with self._conn.get_connection() as conn:
@@ -37,7 +37,7 @@ class ExportDatabaseService:
             logger.error("Failed to export users", error=str(e))
             return []
 
-    async def export_servers(self) -> List[Dict[str, Any]]:
+    async def export_servers(self) -> list[dict[str, Any]]:
         """Export all servers for backup (including encrypted credentials)."""
         try:
             async with self._conn.get_connection() as conn:
@@ -49,7 +49,7 @@ class ExportDatabaseService:
             logger.error("Failed to export servers", error=str(e))
             return []
 
-    async def export_settings(self) -> Dict[str, Any]:
+    async def export_settings(self) -> dict[str, Any]:
         """Export settings for backup."""
         try:
             async with self._conn.get_connection() as conn:
@@ -62,7 +62,7 @@ class ExportDatabaseService:
             return {}
 
     async def import_users(
-        self, users: List[Dict[str, Any]], overwrite: bool = False
+        self, users: list[dict[str, Any]], overwrite: bool = False
     ) -> None:
         """Import users from backup."""
         try:
@@ -92,7 +92,7 @@ class ExportDatabaseService:
             raise
 
     async def import_servers(
-        self, servers: List[Dict[str, Any]], overwrite: bool = False
+        self, servers: list[dict[str, Any]], overwrite: bool = False
     ) -> None:
         """Import servers from backup."""
         try:
@@ -124,7 +124,7 @@ class ExportDatabaseService:
             raise
 
     async def import_settings(
-        self, settings: Dict[str, Any], overwrite: bool = False
+        self, settings: dict[str, Any], overwrite: bool = False
     ) -> None:
         """Import settings from backup."""
         try:

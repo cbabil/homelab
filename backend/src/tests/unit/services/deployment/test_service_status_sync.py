@@ -4,8 +4,9 @@ Deployment Service Status Sync Unit Tests
 Tests for refresh_installation_status method and Docker status edge cases.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 
 class TestRefreshInstallationStatus:
@@ -19,10 +20,11 @@ class TestRefreshInstallationStatus:
         mock_marketplace_service,
         mock_db_service,
         mock_agent_manager,
-        mock_agent_service
+        mock_agent_service,
     ):
         """Create deployment service with mocked dependencies."""
         from services.deployment import DeploymentService
+
         return DeploymentService(
             ssh_service=mock_ssh_service,
             server_service=mock_server_service,
@@ -30,7 +32,7 @@ class TestRefreshInstallationStatus:
             db_service=mock_db_service,
             activity_service=None,
             agent_manager=mock_agent_manager,
-            agent_service=mock_agent_service
+            agent_service=mock_agent_service,
         )
 
     @pytest.mark.asyncio
@@ -46,16 +48,15 @@ class TestRefreshInstallationStatus:
         )
 
         with patch.object(
-            deployment_service, "_agent_inspect_container",
-            new_callable=AsyncMock
+            deployment_service, "_agent_inspect_container", new_callable=AsyncMock
         ) as mock_inspect:
             mock_inspect.return_value = {
                 "success": True,
                 "data": {
                     "State": {"Status": "created"},
                     "NetworkSettings": {"Networks": {}},
-                    "Mounts": []
-                }
+                    "Mounts": [],
+                },
             }
 
             result = await deployment_service.refresh_installation_status("inst-1")
@@ -75,16 +76,15 @@ class TestRefreshInstallationStatus:
         )
 
         with patch.object(
-            deployment_service, "_agent_inspect_container",
-            new_callable=AsyncMock
+            deployment_service, "_agent_inspect_container", new_callable=AsyncMock
         ) as mock_inspect:
             mock_inspect.return_value = {
                 "success": True,
                 "data": {
                     "State": {"Status": "paused"},
                     "NetworkSettings": {"Networks": {}},
-                    "Mounts": []
-                }
+                    "Mounts": [],
+                },
             }
 
             result = await deployment_service.refresh_installation_status("inst-1")
@@ -104,16 +104,15 @@ class TestRefreshInstallationStatus:
         )
 
         with patch.object(
-            deployment_service, "_agent_inspect_container",
-            new_callable=AsyncMock
+            deployment_service, "_agent_inspect_container", new_callable=AsyncMock
         ) as mock_inspect:
             mock_inspect.return_value = {
                 "success": True,
                 "data": {
                     "State": {"Status": "dead"},
                     "NetworkSettings": {"Networks": {}},
-                    "Mounts": []
-                }
+                    "Mounts": [],
+                },
             }
 
             result = await deployment_service.refresh_installation_status("inst-1")
@@ -134,16 +133,15 @@ class TestRefreshInstallationStatus:
         )
 
         with patch.object(
-            deployment_service, "_agent_inspect_container",
-            new_callable=AsyncMock
+            deployment_service, "_agent_inspect_container", new_callable=AsyncMock
         ) as mock_inspect:
             mock_inspect.return_value = {
                 "success": True,
                 "data": {
                     "State": {"Status": ""},
                     "NetworkSettings": {"Networks": {}},
-                    "Mounts": []
-                }
+                    "Mounts": [],
+                },
             }
 
             result = await deployment_service.refresh_installation_status("inst-1")
@@ -170,9 +168,7 @@ class TestRefreshInstallationStatus:
         assert result["status"] == "pending"
 
     @pytest.mark.asyncio
-    async def test_refresh_status_not_found(
-        self, deployment_service, mock_db_service
-    ):
+    async def test_refresh_status_not_found(self, deployment_service, mock_db_service):
         """Test refresh status when installation not found."""
         mock_db_service.get_installation_by_id = AsyncMock(return_value=None)
 
@@ -193,8 +189,7 @@ class TestRefreshInstallationStatus:
         )
 
         with patch.object(
-            deployment_service, "_agent_inspect_container",
-            new_callable=AsyncMock
+            deployment_service, "_agent_inspect_container", new_callable=AsyncMock
         ) as mock_inspect:
             mock_inspect.return_value = {
                 "success": True,
@@ -202,10 +197,20 @@ class TestRefreshInstallationStatus:
                     "State": {"Status": "running"},
                     "NetworkSettings": {"Networks": {"bridge": {}}},
                     "Mounts": [
-                        {"Type": "volume", "Name": "vol1", "Destination": "/data", "Mode": "rw"},
-                        {"Type": "bind", "Source": "/host", "Destination": "/container", "Mode": "ro"}
-                    ]
-                }
+                        {
+                            "Type": "volume",
+                            "Name": "vol1",
+                            "Destination": "/data",
+                            "Mode": "rw",
+                        },
+                        {
+                            "Type": "bind",
+                            "Source": "/host",
+                            "Destination": "/container",
+                            "Mode": "ro",
+                        },
+                    ],
+                },
             }
 
             result = await deployment_service.refresh_installation_status("inst-1")
@@ -226,16 +231,15 @@ class TestRefreshInstallationStatus:
         )
 
         with patch.object(
-            deployment_service, "_agent_inspect_container",
-            new_callable=AsyncMock
+            deployment_service, "_agent_inspect_container", new_callable=AsyncMock
         ) as mock_inspect:
             mock_inspect.return_value = {
                 "success": True,
                 "data": {
                     "State": {"Status": "exited"},
                     "NetworkSettings": {"Networks": {}},
-                    "Mounts": []
-                }
+                    "Mounts": [],
+                },
             }
 
             result = await deployment_service.refresh_installation_status("inst-1")
@@ -255,16 +259,15 @@ class TestRefreshInstallationStatus:
         )
 
         with patch.object(
-            deployment_service, "_agent_inspect_container",
-            new_callable=AsyncMock
+            deployment_service, "_agent_inspect_container", new_callable=AsyncMock
         ) as mock_inspect:
             mock_inspect.return_value = {
                 "success": True,
                 "data": {
                     "State": {"Status": "restarting"},
                     "NetworkSettings": {"Networks": {}},
-                    "Mounts": []
-                }
+                    "Mounts": [],
+                },
             }
 
             result = await deployment_service.refresh_installation_status("inst-1")
@@ -284,12 +287,11 @@ class TestRefreshInstallationStatus:
         )
 
         with patch.object(
-            deployment_service, "_agent_inspect_container",
-            new_callable=AsyncMock
+            deployment_service, "_agent_inspect_container", new_callable=AsyncMock
         ) as mock_inspect:
             mock_inspect.return_value = {
                 "success": False,
-                "error": "Container not found"
+                "error": "Container not found",
             }
 
             result = await deployment_service.refresh_installation_status("inst-1")

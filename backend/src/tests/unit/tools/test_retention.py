@@ -4,11 +4,12 @@ Retention Tools Unit Tests
 Tests for data retention management tools.
 """
 
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from tools.retention.tools import RetentionTools
+import pytest
+
 from models.retention import RetentionType
+from tools.retention.tools import RetentionTools
 
 
 class TestRetentionToolsInit:
@@ -19,7 +20,7 @@ class TestRetentionToolsInit:
         mock_service = MagicMock()
         mock_auth = MagicMock()
 
-        with patch('tools.retention.tools.logger'):
+        with patch("tools.retention.tools.logger"):
             tools = RetentionTools(mock_service, mock_auth)
 
         assert tools.retention_service == mock_service
@@ -27,8 +28,8 @@ class TestRetentionToolsInit:
 
     def test_initialization_without_service(self):
         """Test RetentionTools creates default service."""
-        with patch('tools.retention.tools.logger'):
-            with patch('tools.retention.tools.RetentionService') as mock_svc_class:
+        with patch("tools.retention.tools.logger"):
+            with patch("tools.retention.tools.RetentionService") as mock_svc_class:
                 tools = RetentionTools()
 
         mock_svc_class.assert_called_once()
@@ -41,7 +42,7 @@ class TestGetUserContext:
     @pytest.fixture
     def tools(self):
         """Create RetentionTools instance."""
-        with patch('tools.retention.tools.logger'):
+        with patch("tools.retention.tools.logger"):
             return RetentionTools(MagicMock())
 
     def test_get_user_context_full(self, tools):
@@ -51,7 +52,7 @@ class TestGetUserContext:
             "user_id": "user-123",
             "session_id": "sess-456",
             "role": "admin",
-            "token": "tok-789"
+            "token": "tok-789",
         }
 
         user_id, session_id, role, token = tools._get_user_context(ctx)
@@ -80,7 +81,7 @@ class TestIsAdmin:
     @pytest.fixture
     def tools(self):
         """Create RetentionTools instance."""
-        with patch('tools.retention.tools.logger'):
+        with patch("tools.retention.tools.logger"):
             return RetentionTools(MagicMock())
 
     def test_is_admin_true(self, tools):
@@ -104,7 +105,7 @@ class TestGetCsrfToken:
     @pytest.fixture
     def tools(self, mock_service):
         """Create RetentionTools instance."""
-        with patch('tools.retention.tools.logger'):
+        with patch("tools.retention.tools.logger"):
             return RetentionTools(mock_service)
 
     @pytest.fixture
@@ -117,7 +118,7 @@ class TestGetCsrfToken:
     @pytest.mark.asyncio
     async def test_get_csrf_token_success(self, tools, mock_admin_ctx):
         """Test successfully generating CSRF token."""
-        with patch('tools.retention.tools.csrf_service') as mock_csrf:
+        with patch("tools.retention.tools.csrf_service") as mock_csrf:
             mock_csrf.generate_token.return_value = "csrf-token-xyz"
 
             result = await tools.get_csrf_token({}, mock_admin_ctx)
@@ -150,7 +151,7 @@ class TestGetCsrfToken:
     @pytest.mark.asyncio
     async def test_get_csrf_token_exception(self, tools, mock_admin_ctx):
         """Test handling exceptions."""
-        with patch('tools.retention.tools.csrf_service') as mock_csrf:
+        with patch("tools.retention.tools.csrf_service") as mock_csrf:
             mock_csrf.generate_token.side_effect = Exception("Token generation failed")
 
             result = await tools.get_csrf_token({}, mock_admin_ctx)
@@ -170,7 +171,7 @@ class TestPreviewRetentionCleanup:
     @pytest.fixture
     def tools(self, mock_service):
         """Create RetentionTools instance."""
-        with patch('tools.retention.tools.logger'):
+        with patch("tools.retention.tools.logger"):
             return RetentionTools(mock_service)
 
     @pytest.fixture
@@ -181,7 +182,7 @@ class TestPreviewRetentionCleanup:
             "user_id": "admin-123",
             "session_id": "sess-456",
             "role": "admin",
-            "token": "tok-789"
+            "token": "tok-789",
         }
         return ctx
 
@@ -299,7 +300,7 @@ class TestPerformRetentionCleanup:
     @pytest.fixture
     def tools(self, mock_service):
         """Create RetentionTools instance."""
-        with patch('tools.retention.tools.logger'):
+        with patch("tools.retention.tools.logger"):
             return RetentionTools(mock_service)
 
     @pytest.fixture
@@ -310,7 +311,7 @@ class TestPerformRetentionCleanup:
             "user_id": "admin-123",
             "session_id": "sess-456",
             "role": "admin",
-            "token": "tok-789"
+            "token": "tok-789",
         }
         return ctx
 
@@ -336,13 +337,16 @@ class TestPerformRetentionCleanup:
         """Test successful cleanup."""
         mock_service.perform_cleanup = AsyncMock(return_value=sample_result)
 
-        with patch('tools.retention.tools.csrf_service') as mock_csrf:
+        with patch("tools.retention.tools.csrf_service") as mock_csrf:
             mock_csrf.validate_token.return_value = (True, None)
 
-            result = await tools.perform_retention_cleanup({
-                "retention_type": "audit_logs",
-                "csrf_token": "valid-token-12345678901234567890"
-            }, mock_admin_ctx)
+            result = await tools.perform_retention_cleanup(
+                {
+                    "retention_type": "audit_logs",
+                    "csrf_token": "valid-token-12345678901234567890",
+                },
+                mock_admin_ctx,
+            )
 
         assert result["success"] is True
         assert result["data"]["records_affected"] == 50
@@ -383,13 +387,16 @@ class TestPerformRetentionCleanup:
     @pytest.mark.asyncio
     async def test_cleanup_invalid_csrf(self, tools, mock_admin_ctx):
         """Test with invalid CSRF token."""
-        with patch('tools.retention.tools.csrf_service') as mock_csrf:
+        with patch("tools.retention.tools.csrf_service") as mock_csrf:
             mock_csrf.validate_token.return_value = (False, "Token expired")
 
-            result = await tools.perform_retention_cleanup({
-                "retention_type": "audit_logs",
-                "csrf_token": "invalid-token-1234567890123456"
-            }, mock_admin_ctx)
+            result = await tools.perform_retention_cleanup(
+                {
+                    "retention_type": "audit_logs",
+                    "csrf_token": "invalid-token-1234567890123456",
+                },
+                mock_admin_ctx,
+            )
 
         assert result["success"] is False
         assert result["error"] == "CSRF_INVALID"
@@ -397,13 +404,16 @@ class TestPerformRetentionCleanup:
     @pytest.mark.asyncio
     async def test_cleanup_invalid_type(self, tools, mock_admin_ctx):
         """Test with invalid retention type."""
-        with patch('tools.retention.tools.csrf_service') as mock_csrf:
+        with patch("tools.retention.tools.csrf_service") as mock_csrf:
             mock_csrf.validate_token.return_value = (True, None)
 
-            result = await tools.perform_retention_cleanup({
-                "retention_type": "invalid",
-                "csrf_token": "valid-token-12345678901234567890"
-            }, mock_admin_ctx)
+            result = await tools.perform_retention_cleanup(
+                {
+                    "retention_type": "invalid",
+                    "csrf_token": "valid-token-12345678901234567890",
+                },
+                mock_admin_ctx,
+            )
 
         assert result["success"] is False
         assert result["error"] == "INVALID_TYPE"
@@ -413,13 +423,16 @@ class TestPerformRetentionCleanup:
         """Test when cleanup returns None."""
         mock_service.perform_cleanup = AsyncMock(return_value=None)
 
-        with patch('tools.retention.tools.csrf_service') as mock_csrf:
+        with patch("tools.retention.tools.csrf_service") as mock_csrf:
             mock_csrf.validate_token.return_value = (True, None)
 
-            result = await tools.perform_retention_cleanup({
-                "retention_type": "audit_logs",
-                "csrf_token": "valid-token-12345678901234567890"
-            }, mock_admin_ctx)
+            result = await tools.perform_retention_cleanup(
+                {
+                    "retention_type": "audit_logs",
+                    "csrf_token": "valid-token-12345678901234567890",
+                },
+                mock_admin_ctx,
+            )
 
         assert result["success"] is False
         assert result["error"] == "CLEANUP_ERROR"
@@ -432,13 +445,16 @@ class TestPerformRetentionCleanup:
         failed_result.error_message = "Cleanup aborted"
         mock_service.perform_cleanup = AsyncMock(return_value=failed_result)
 
-        with patch('tools.retention.tools.csrf_service') as mock_csrf:
+        with patch("tools.retention.tools.csrf_service") as mock_csrf:
             mock_csrf.validate_token.return_value = (True, None)
 
-            result = await tools.perform_retention_cleanup({
-                "retention_type": "audit_logs",
-                "csrf_token": "valid-token-12345678901234567890"
-            }, mock_admin_ctx)
+            result = await tools.perform_retention_cleanup(
+                {
+                    "retention_type": "audit_logs",
+                    "csrf_token": "valid-token-12345678901234567890",
+                },
+                mock_admin_ctx,
+            )
 
         assert result["success"] is False
         assert "Cleanup aborted" in result["message"]
@@ -450,13 +466,16 @@ class TestPerformRetentionCleanup:
             side_effect=Exception("Database error")
         )
 
-        with patch('tools.retention.tools.csrf_service') as mock_csrf:
+        with patch("tools.retention.tools.csrf_service") as mock_csrf:
             mock_csrf.validate_token.return_value = (True, None)
 
-            result = await tools.perform_retention_cleanup({
-                "retention_type": "audit_logs",
-                "csrf_token": "valid-token-12345678901234567890"
-            }, mock_admin_ctx)
+            result = await tools.perform_retention_cleanup(
+                {
+                    "retention_type": "audit_logs",
+                    "csrf_token": "valid-token-12345678901234567890",
+                },
+                mock_admin_ctx,
+            )
 
         assert result["success"] is False
         assert result["error"] == "CLEANUP_ERROR"
@@ -473,7 +492,7 @@ class TestGetRetentionSettings:
     @pytest.fixture
     def tools(self, mock_service):
         """Create RetentionTools instance."""
-        with patch('tools.retention.tools.logger'):
+        with patch("tools.retention.tools.logger"):
             return RetentionTools(mock_service)
 
     @pytest.fixture
@@ -487,10 +506,7 @@ class TestGetRetentionSettings:
     async def test_get_settings_success(self, tools, mock_service, mock_admin_ctx):
         """Test successfully getting settings."""
         settings = MagicMock()
-        settings.model_dump.return_value = {
-            "log_retention": 30,
-            "data_retention": 90
-        }
+        settings.model_dump.return_value = {"log_retention": 30, "data_retention": 90}
         mock_service.get_retention_settings = AsyncMock(return_value=settings)
 
         result = await tools.get_retention_settings({}, mock_admin_ctx)
@@ -554,7 +570,7 @@ class TestUpdateRetentionSettings:
     @pytest.fixture
     def tools(self, mock_service):
         """Create RetentionTools instance."""
-        with patch('tools.retention.tools.logger'):
+        with patch("tools.retention.tools.logger"):
             return RetentionTools(mock_service)
 
     @pytest.fixture
@@ -570,15 +586,14 @@ class TestUpdateRetentionSettings:
         updated_settings = MagicMock()
         updated_settings.model_dump.return_value = {
             "log_retention": 60,
-            "data_retention": 180
+            "data_retention": 180,
         }
         mock_service.update_retention_settings = AsyncMock(return_value=True)
         mock_service.get_retention_settings = AsyncMock(return_value=updated_settings)
 
-        result = await tools.update_retention_settings({
-            "log_retention": 60,
-            "data_retention": 180
-        }, mock_admin_ctx)
+        result = await tools.update_retention_settings(
+            {"log_retention": 60, "data_retention": 180}, mock_admin_ctx
+        )
 
         assert result["success"] is True
         assert result["data"]["log_retention"] == 60
@@ -610,9 +625,9 @@ class TestUpdateRetentionSettings:
         """Test when update fails."""
         mock_service.update_retention_settings = AsyncMock(return_value=False)
 
-        result = await tools.update_retention_settings({
-            "log_retention": 60
-        }, mock_admin_ctx)
+        result = await tools.update_retention_settings(
+            {"log_retention": 60}, mock_admin_ctx
+        )
 
         assert result["success"] is False
         assert result["error"] == "UPDATE_ERROR"
@@ -625,9 +640,9 @@ class TestUpdateRetentionSettings:
         mock_service.update_retention_settings = AsyncMock(return_value=True)
         mock_service.get_retention_settings = AsyncMock(return_value=None)
 
-        result = await tools.update_retention_settings({
-            "log_retention": 45
-        }, mock_admin_ctx)
+        result = await tools.update_retention_settings(
+            {"log_retention": 45}, mock_admin_ctx
+        )
 
         assert result["success"] is True
         # Should use input settings as fallback
@@ -640,9 +655,9 @@ class TestUpdateRetentionSettings:
             side_effect=Exception("Validation error")
         )
 
-        result = await tools.update_retention_settings({
-            "log_retention": 60
-        }, mock_admin_ctx)
+        result = await tools.update_retention_settings(
+            {"log_retention": 60}, mock_admin_ctx
+        )
 
         assert result["success"] is False
         assert result["error"] == "UPDATE_ERROR"

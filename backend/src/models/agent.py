@@ -6,8 +6,8 @@ of WebSocket-based agent communication and registration.
 """
 
 from datetime import datetime
-from typing import Optional
 from enum import Enum
+
 from pydantic import BaseModel, Field
 
 
@@ -51,29 +51,27 @@ class Agent(BaseModel):
 
     id: str = Field(..., description="Unique agent identifier")
     server_id: str = Field(..., description="Associated server identifier")
-    token_hash: Optional[str] = Field(None, description="Hashed authentication token")
-    version: Optional[str] = Field(None, description="Agent software version")
+    token_hash: str | None = Field(None, description="Hashed authentication token")
+    version: str | None = Field(None, description="Agent software version")
     status: AgentStatus = Field(
         default=AgentStatus.PENDING, description="Current agent status"
     )
-    last_seen: Optional[datetime] = Field(None, description="Last heartbeat timestamp")
-    registered_at: Optional[datetime] = Field(
+    last_seen: datetime | None = Field(None, description="Last heartbeat timestamp")
+    registered_at: datetime | None = Field(
         None, description="Agent registration timestamp"
     )
-    config: Optional[AgentConfig] = Field(None, description="Agent configuration")
-    created_at: Optional[datetime] = Field(
-        None, description="Record creation timestamp"
-    )
-    updated_at: Optional[datetime] = Field(None, description="Record update timestamp")
+    config: AgentConfig | None = Field(None, description="Agent configuration")
+    created_at: datetime | None = Field(None, description="Record creation timestamp")
+    updated_at: datetime | None = Field(None, description="Record update timestamp")
 
     # Token rotation fields
-    pending_token_hash: Optional[str] = Field(
+    pending_token_hash: str | None = Field(
         None, description="Pending token hash during rotation"
     )
-    token_issued_at: Optional[datetime] = Field(
+    token_issued_at: datetime | None = Field(
         None, description="When current token was issued"
     )
-    token_expires_at: Optional[datetime] = Field(
+    token_expires_at: datetime | None = Field(
         None, description="When current token should be rotated"
     )
 
@@ -87,24 +85,24 @@ class AgentCreate(BaseModel):
 class AgentUpdate(BaseModel):
     """Parameters for updating an agent (all fields optional for partial updates)."""
 
-    server_id: Optional[str] = Field(None, description="Associated server identifier")
-    token_hash: Optional[str] = Field(None, description="Hashed authentication token")
-    version: Optional[str] = Field(None, description="Agent software version")
-    status: Optional[AgentStatus] = Field(None, description="Current agent status")
-    last_seen: Optional[datetime] = Field(None, description="Last heartbeat timestamp")
-    registered_at: Optional[datetime] = Field(
+    server_id: str | None = Field(None, description="Associated server identifier")
+    token_hash: str | None = Field(None, description="Hashed authentication token")
+    version: str | None = Field(None, description="Agent software version")
+    status: AgentStatus | None = Field(None, description="Current agent status")
+    last_seen: datetime | None = Field(None, description="Last heartbeat timestamp")
+    registered_at: datetime | None = Field(
         None, description="Agent registration timestamp"
     )
-    config: Optional[AgentConfig] = Field(None, description="Agent configuration")
+    config: AgentConfig | None = Field(None, description="Agent configuration")
 
     # Token rotation fields
-    pending_token_hash: Optional[str] = Field(
+    pending_token_hash: str | None = Field(
         None, description="Pending token hash during rotation"
     )
-    token_issued_at: Optional[datetime] = Field(
+    token_issued_at: datetime | None = Field(
         None, description="When current token was issued"
     )
-    token_expires_at: Optional[datetime] = Field(
+    token_expires_at: datetime | None = Field(
         None, description="When current token should be rotated"
     )
 
@@ -117,7 +115,7 @@ class RegistrationCode(BaseModel):
     code: str = Field(..., description="Registration code value")
     expires_at: datetime = Field(..., description="Code expiration timestamp")
     used: bool = Field(default=False, description="Whether code has been used")
-    created_at: Optional[datetime] = Field(None, description="Code creation timestamp")
+    created_at: datetime | None = Field(None, description="Code creation timestamp")
 
 
 class AgentRegistrationRequest(BaseModel):
@@ -141,9 +139,9 @@ class AgentInfo(BaseModel):
     id: str = Field(..., description="Unique agent identifier")
     server_id: str = Field(..., description="Associated server identifier")
     status: AgentStatus = Field(..., description="Current agent status")
-    version: Optional[str] = Field(None, description="Agent software version")
-    last_seen: Optional[datetime] = Field(None, description="Last heartbeat timestamp")
-    registered_at: Optional[datetime] = Field(
+    version: str | None = Field(None, description="Agent software version")
+    last_seen: datetime | None = Field(None, description="Last heartbeat timestamp")
+    registered_at: datetime | None = Field(
         None, description="Agent registration timestamp"
     )
     is_stale: bool = Field(default=False, description="Whether agent missed heartbeats")
@@ -154,9 +152,9 @@ class AgentHeartbeat(BaseModel):
 
     agent_id: str = Field(..., description="Agent identifier")
     timestamp: datetime = Field(..., description="Heartbeat timestamp")
-    cpu_percent: Optional[float] = Field(None, description="Current CPU usage")
-    memory_percent: Optional[float] = Field(None, description="Current memory usage")
-    uptime_seconds: Optional[int] = Field(None, description="Agent uptime in seconds")
+    cpu_percent: float | None = Field(None, description="Current CPU usage")
+    memory_percent: float | None = Field(None, description="Current memory usage")
+    uptime_seconds: int | None = Field(None, description="Agent uptime in seconds")
 
 
 class AgentVersionInfo(BaseModel):
@@ -165,8 +163,8 @@ class AgentVersionInfo(BaseModel):
     current_version: str = Field(..., description="Currently installed version")
     latest_version: str = Field(..., description="Latest available version")
     update_available: bool = Field(..., description="Whether update is available")
-    release_notes: Optional[str] = Field(None, description="Release notes for update")
-    update_url: Optional[str] = Field(None, description="URL to download update")
+    release_notes: str | None = Field(None, description="Release notes for update")
+    update_url: str | None = Field(None, description="URL to download update")
 
 
 class AgentShutdownRequest(BaseModel):

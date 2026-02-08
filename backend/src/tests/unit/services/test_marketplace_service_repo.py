@@ -4,16 +4,17 @@ Unit tests for services/marketplace_service.py - Repository operations.
 Tests add_repo, get_repos, get_repo, remove_repo, and toggle_repo methods.
 """
 
-import pytest
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from services.marketplace_service import MarketplaceService
+import pytest
+
 from models.marketplace import (
-    RepoType,
-    RepoStatus,
     MarketplaceRepoTable,
+    RepoStatus,
+    RepoType,
 )
+from services.marketplace_service import MarketplaceService
 
 
 @pytest.fixture

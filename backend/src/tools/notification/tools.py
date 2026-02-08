@@ -5,11 +5,13 @@ Provides notification management capabilities for the MCP server.
 Implements CRUD operations with role-based access control.
 """
 
-from typing import Dict, Any
+from typing import Any
+
 import structlog
 from fastmcp import Context
-from services.notification_service import NotificationService
+
 from models.notification import NotificationType
+from services.notification_service import NotificationService
 
 logger = structlog.get_logger("notification_tools")
 
@@ -44,8 +46,8 @@ class NotificationTools:
         return role == "admin"
 
     async def list_notifications(
-        self, params: Dict[str, Any], ctx: Context
-    ) -> Dict[str, Any]:
+        self, params: dict[str, Any], ctx: Context
+    ) -> dict[str, Any]:
         """List notifications for the current user.
 
         Params:
@@ -112,8 +114,8 @@ class NotificationTools:
             }
 
     async def get_notification(
-        self, params: Dict[str, Any], ctx: Context
-    ) -> Dict[str, Any]:
+        self, params: dict[str, Any], ctx: Context
+    ) -> dict[str, Any]:
         """Get a single notification by ID.
 
         Params:
@@ -167,8 +169,8 @@ class NotificationTools:
             }
 
     async def create_notification(
-        self, params: Dict[str, Any], ctx: Context
-    ) -> Dict[str, Any]:
+        self, params: dict[str, Any], ctx: Context
+    ) -> dict[str, Any]:
         """Create a notification. Admin only or system use.
 
         Params:
@@ -238,8 +240,8 @@ class NotificationTools:
             }
 
     async def mark_notification_read(
-        self, params: Dict[str, Any], ctx: Context
-    ) -> Dict[str, Any]:
+        self, params: dict[str, Any], ctx: Context
+    ) -> dict[str, Any]:
         """Mark a notification as read.
 
         Params:
@@ -282,8 +284,8 @@ class NotificationTools:
             }
 
     async def mark_all_notifications_read(
-        self, params: Dict[str, Any], ctx: Context
-    ) -> Dict[str, Any]:
+        self, params: dict[str, Any], ctx: Context
+    ) -> dict[str, Any]:
         """Mark all notifications as read for the current user.
 
         Returns:
@@ -316,8 +318,8 @@ class NotificationTools:
             }
 
     async def dismiss_notification(
-        self, params: Dict[str, Any], ctx: Context
-    ) -> Dict[str, Any]:
+        self, params: dict[str, Any], ctx: Context
+    ) -> dict[str, Any]:
         """Dismiss (remove) a notification.
 
         Params:
@@ -360,8 +362,8 @@ class NotificationTools:
             }
 
     async def dismiss_all_notifications(
-        self, params: Dict[str, Any], ctx: Context
-    ) -> Dict[str, Any]:
+        self, params: dict[str, Any], ctx: Context
+    ) -> dict[str, Any]:
         """Dismiss all notifications for the current user.
 
         Returns:
@@ -394,8 +396,8 @@ class NotificationTools:
             }
 
     async def get_unread_count(
-        self, params: Dict[str, Any], ctx: Context
-    ) -> Dict[str, Any]:
+        self, params: dict[str, Any], ctx: Context
+    ) -> dict[str, Any]:
         """Get unread notification count for the current user.
 
         Returns:

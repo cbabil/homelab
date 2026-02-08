@@ -1,7 +1,8 @@
 """Tests for system tools."""
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 
 
 class TestGetSystemSetup:
@@ -12,9 +13,7 @@ class TestGetSystemSetup:
         """Create mock database service."""
         service = MagicMock()
         service.is_system_setup = AsyncMock(return_value=False)
-        service.get_system_info = AsyncMock(return_value={
-            "app_name": "Tomo"
-        })
+        service.get_system_info = AsyncMock(return_value={"app_name": "Tomo"})
         return service
 
     @pytest.mark.asyncio
@@ -65,7 +64,9 @@ class TestGetSystemSetup:
         """Test get_system_setup handles errors gracefully."""
         from tools.system.tools import SystemTools
 
-        mock_db_service.is_system_setup = AsyncMock(side_effect=Exception("Database error"))
+        mock_db_service.is_system_setup = AsyncMock(
+            side_effect=Exception("Database error")
+        )
 
         system_tools = SystemTools(mock_db_service)
 
@@ -82,17 +83,19 @@ class TestGetSystemInfo:
     def mock_db_service(self):
         """Create mock database service."""
         service = MagicMock()
-        service.get_system_info = AsyncMock(return_value={
-            "app_name": "Tomo",
-            "is_setup": True,
-            "setup_completed_at": "2024-01-15T10:00:00",
-            "installation_id": "abc123",
-            "license_type": "community",
-            "license_key": "secret-key",
-            "license_expires_at": None,
-            "created_at": "2024-01-15T10:00:00",
-            "updated_at": "2024-01-15T10:00:00"
-        })
+        service.get_system_info = AsyncMock(
+            return_value={
+                "app_name": "Tomo",
+                "is_setup": True,
+                "setup_completed_at": "2024-01-15T10:00:00",
+                "installation_id": "abc123",
+                "license_type": "community",
+                "license_key": "secret-key",
+                "license_expires_at": None,
+                "created_at": "2024-01-15T10:00:00",
+                "updated_at": "2024-01-15T10:00:00",
+            }
+        )
         return service
 
     @pytest.mark.asyncio
@@ -129,7 +132,9 @@ class TestGetSystemInfo:
         """Test get_system_info handles errors gracefully."""
         from tools.system.tools import SystemTools
 
-        mock_db_service.get_system_info = AsyncMock(side_effect=Exception("Database error"))
+        mock_db_service.get_system_info = AsyncMock(
+            side_effect=Exception("Database error")
+        )
 
         system_tools = SystemTools(mock_db_service)
 
@@ -146,11 +151,28 @@ class TestGetComponentVersions:
     def mock_db_service(self):
         """Create mock database service."""
         service = MagicMock()
-        service.get_component_versions = AsyncMock(return_value=[
-            {"component": "backend", "version": "1.2.0", "updated_at": "2024-01-15T10:00:00", "created_at": "2024-01-01T00:00:00"},
-            {"component": "frontend", "version": "1.2.0", "updated_at": "2024-01-15T10:00:00", "created_at": "2024-01-01T00:00:00"},
-            {"component": "api", "version": "1.1.0", "updated_at": "2024-01-10T10:00:00", "created_at": "2024-01-01T00:00:00"}
-        ])
+        service.get_component_versions = AsyncMock(
+            return_value=[
+                {
+                    "component": "backend",
+                    "version": "1.2.0",
+                    "updated_at": "2024-01-15T10:00:00",
+                    "created_at": "2024-01-01T00:00:00",
+                },
+                {
+                    "component": "frontend",
+                    "version": "1.2.0",
+                    "updated_at": "2024-01-15T10:00:00",
+                    "created_at": "2024-01-01T00:00:00",
+                },
+                {
+                    "component": "api",
+                    "version": "1.1.0",
+                    "updated_at": "2024-01-10T10:00:00",
+                    "created_at": "2024-01-01T00:00:00",
+                },
+            ]
+        )
         return service
 
     @pytest.mark.asyncio
@@ -189,7 +211,9 @@ class TestGetComponentVersions:
         """Test get_component_versions handles errors gracefully."""
         from tools.system.tools import SystemTools
 
-        mock_db_service.get_component_versions = AsyncMock(side_effect=Exception("Database error"))
+        mock_db_service.get_component_versions = AsyncMock(
+            side_effect=Exception("Database error")
+        )
 
         system_tools = SystemTools(mock_db_service)
 
@@ -206,11 +230,28 @@ class TestCheckUpdates:
     def mock_db_service(self):
         """Create mock database service."""
         service = MagicMock()
-        service.get_component_versions = AsyncMock(return_value=[
-            {"component": "backend", "version": "1.0.0", "updated_at": "2024-01-15T10:00:00", "created_at": "2024-01-01T00:00:00"},
-            {"component": "frontend", "version": "1.0.0", "updated_at": "2024-01-15T10:00:00", "created_at": "2024-01-01T00:00:00"},
-            {"component": "api", "version": "1.0.0", "updated_at": "2024-01-15T10:00:00", "created_at": "2024-01-01T00:00:00"}
-        ])
+        service.get_component_versions = AsyncMock(
+            return_value=[
+                {
+                    "component": "backend",
+                    "version": "1.0.0",
+                    "updated_at": "2024-01-15T10:00:00",
+                    "created_at": "2024-01-01T00:00:00",
+                },
+                {
+                    "component": "frontend",
+                    "version": "1.0.0",
+                    "updated_at": "2024-01-15T10:00:00",
+                    "created_at": "2024-01-01T00:00:00",
+                },
+                {
+                    "component": "api",
+                    "version": "1.0.0",
+                    "updated_at": "2024-01-15T10:00:00",
+                    "created_at": "2024-01-01T00:00:00",
+                },
+            ]
+        )
         return service
 
     @pytest.mark.asyncio
@@ -221,14 +262,18 @@ class TestCheckUpdates:
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.raise_for_status = MagicMock()
-        mock_response.json = MagicMock(return_value={
-            "tag_name": "v1.1.0",
-            "html_url": "https://github.com/test/releases/v1.1.0",
-            "body": "Release notes here"
-        })
+        mock_response.json = MagicMock(
+            return_value={
+                "tag_name": "v1.1.0",
+                "html_url": "https://github.com/test/releases/v1.1.0",
+                "body": "Release notes here",
+            }
+        )
 
         with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get = AsyncMock(return_value=mock_response)
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response
+            )
 
             system_tools = SystemTools(mock_db_service)
             result = await system_tools.check_updates()
@@ -246,14 +291,18 @@ class TestCheckUpdates:
         mock_response = MagicMock()
         mock_response.status_code = 200
         mock_response.raise_for_status = MagicMock()
-        mock_response.json = MagicMock(return_value={
-            "tag_name": "v1.0.0",
-            "html_url": "https://github.com/test/releases/v1.0.0",
-            "body": "Current release"
-        })
+        mock_response.json = MagicMock(
+            return_value={
+                "tag_name": "v1.0.0",
+                "html_url": "https://github.com/test/releases/v1.0.0",
+                "body": "Current release",
+            }
+        )
 
         with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get = AsyncMock(return_value=mock_response)
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response
+            )
 
             system_tools = SystemTools(mock_db_service)
             result = await system_tools.check_updates()
@@ -270,7 +319,9 @@ class TestCheckUpdates:
         mock_response.status_code = 404
 
         with patch("httpx.AsyncClient") as mock_client:
-            mock_client.return_value.__aenter__.return_value.get = AsyncMock(return_value=mock_response)
+            mock_client.return_value.__aenter__.return_value.get = AsyncMock(
+                return_value=mock_response
+            )
 
             system_tools = SystemTools(mock_db_service)
             result = await system_tools.check_updates()
@@ -283,6 +334,7 @@ class TestCheckUpdates:
     async def test_check_updates_http_error(self, mock_db_service):
         """Test check_updates handles HTTP errors."""
         import httpx
+
         from tools.system.tools import SystemTools
 
         with patch("httpx.AsyncClient") as mock_client:

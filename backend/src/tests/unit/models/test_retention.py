@@ -4,18 +4,19 @@ Unit tests for models/retention.py
 Tests data retention models including settings, cleanup operations, and audit entries.
 """
 
-from datetime import datetime, UTC
+from datetime import UTC, datetime
+
 import pytest
 from pydantic import ValidationError
 
 from models.retention import (
-    RetentionType,
-    RetentionOperation,
-    RetentionSettings,
     CleanupPreview,
     CleanupRequest,
     CleanupResult,
     RetentionAuditEntry,
+    RetentionOperation,
+    RetentionSettings,
+    RetentionType,
     SecurityValidationResult,
 )
 

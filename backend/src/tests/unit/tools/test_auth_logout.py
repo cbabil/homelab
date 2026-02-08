@@ -4,9 +4,9 @@ Auth Tools Unit Tests - Logout Operations
 Tests for logout method including session handling and exception cases.
 """
 
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
 
 from tools.auth.tools import AuthTools
 

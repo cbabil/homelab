@@ -4,11 +4,12 @@ Notification Tools Unit Tests
 Tests for notification management tools.
 """
 
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from tools.notification.tools import NotificationTools
+import pytest
+
 from models.notification import NotificationType
+from tools.notification.tools import NotificationTools
 
 
 class TestNotificationToolsInit:
@@ -19,7 +20,7 @@ class TestNotificationToolsInit:
         mock_notification_service = MagicMock()
         mock_auth_service = MagicMock()
 
-        with patch('tools.notification.tools.logger'):
+        with patch("tools.notification.tools.logger"):
             tools = NotificationTools(mock_notification_service, mock_auth_service)
 
         assert tools.notification_service == mock_notification_service
@@ -29,7 +30,7 @@ class TestNotificationToolsInit:
         """Test initialization without auth service."""
         mock_notification_service = MagicMock()
 
-        with patch('tools.notification.tools.logger'):
+        with patch("tools.notification.tools.logger"):
             tools = NotificationTools(mock_notification_service)
 
         assert tools.auth_service is None
@@ -41,7 +42,7 @@ class TestGetUserContext:
     @pytest.fixture
     def tools(self):
         """Create NotificationTools instance."""
-        with patch('tools.notification.tools.logger'):
+        with patch("tools.notification.tools.logger"):
             return NotificationTools(MagicMock())
 
     def test_get_user_context_with_meta(self, tools):
@@ -80,7 +81,7 @@ class TestIsAdmin:
     @pytest.fixture
     def tools(self):
         """Create NotificationTools instance."""
-        with patch('tools.notification.tools.logger'):
+        with patch("tools.notification.tools.logger"):
             return NotificationTools(MagicMock())
 
     def test_is_admin_true(self, tools):
@@ -105,7 +106,7 @@ class TestListNotifications:
     @pytest.fixture
     def tools(self, mock_service):
         """Create NotificationTools instance."""
-        with patch('tools.notification.tools.logger'):
+        with patch("tools.notification.tools.logger"):
             return NotificationTools(mock_service)
 
     @pytest.fixture
@@ -122,7 +123,7 @@ class TestListNotifications:
         notification.model_dump.return_value = {
             "id": "notif-1",
             "title": "Test",
-            "message": "Test message"
+            "message": "Test message",
         }
         result = MagicMock()
         result.notifications = [notification]
@@ -191,9 +192,7 @@ class TestListNotifications:
         assert call_kwargs["notification_type"] == NotificationType.INFO
 
     @pytest.mark.asyncio
-    async def test_list_notifications_invalid_type(
-        self, tools, mock_service, mock_ctx
-    ):
+    async def test_list_notifications_invalid_type(self, tools, mock_service, mock_ctx):
         """Test with invalid notification type."""
         result = await tools.list_notifications({"type": "invalid"}, mock_ctx)
 
@@ -214,9 +213,7 @@ class TestListNotifications:
         assert call_kwargs["offset"] == 20
 
     @pytest.mark.asyncio
-    async def test_list_notifications_exception(
-        self, tools, mock_service, mock_ctx
-    ):
+    async def test_list_notifications_exception(self, tools, mock_service, mock_ctx):
         """Test handling exceptions."""
         mock_service.list_notifications = AsyncMock(
             side_effect=Exception("Database error")
@@ -239,7 +236,7 @@ class TestGetNotification:
     @pytest.fixture
     def tools(self, mock_service):
         """Create NotificationTools instance."""
-        with patch('tools.notification.tools.logger'):
+        with patch("tools.notification.tools.logger"):
             return NotificationTools(mock_service)
 
     @pytest.fixture
@@ -257,9 +254,7 @@ class TestGetNotification:
         notification.model_dump.return_value = {"id": "notif-1", "title": "Test"}
         mock_service.get_notification = AsyncMock(return_value=notification)
 
-        result = await tools.get_notification(
-            {"notification_id": "notif-1"}, mock_ctx
-        )
+        result = await tools.get_notification({"notification_id": "notif-1"}, mock_ctx)
 
         assert result["success"] is True
         assert result["data"]["id"] == "notif-1"
@@ -293,9 +288,7 @@ class TestGetNotification:
         notification.user_id = "other-user"
         mock_service.get_notification = AsyncMock(return_value=notification)
 
-        result = await tools.get_notification(
-            {"notification_id": "notif-1"}, mock_ctx
-        )
+        result = await tools.get_notification({"notification_id": "notif-1"}, mock_ctx)
 
         assert result["success"] is False
         assert result["error"] == "PERMISSION_DENIED"
@@ -307,9 +300,7 @@ class TestGetNotification:
             side_effect=Exception("Database error")
         )
 
-        result = await tools.get_notification(
-            {"notification_id": "notif-1"}, mock_ctx
-        )
+        result = await tools.get_notification({"notification_id": "notif-1"}, mock_ctx)
 
         assert result["success"] is False
         assert result["error"] == "GET_ERROR"
@@ -326,7 +317,7 @@ class TestCreateNotification:
     @pytest.fixture
     def tools(self, mock_service):
         """Create NotificationTools instance."""
-        with patch('tools.notification.tools.logger'):
+        with patch("tools.notification.tools.logger"):
             return NotificationTools(mock_service)
 
     @pytest.fixture
@@ -352,12 +343,15 @@ class TestCreateNotification:
         notification.model_dump.return_value = {"id": "notif-1", "title": "Test"}
         mock_service.create_notification = AsyncMock(return_value=notification)
 
-        result = await tools.create_notification({
-            "user_id": "other-user",
-            "type": "info",
-            "title": "Test",
-            "message": "Test message"
-        }, mock_admin_ctx)
+        result = await tools.create_notification(
+            {
+                "user_id": "other-user",
+                "type": "info",
+                "title": "Test",
+                "message": "Test message",
+            },
+            mock_admin_ctx,
+        )
 
         assert result["success"] is True
 
@@ -370,11 +364,9 @@ class TestCreateNotification:
         notification.model_dump.return_value = {"id": "notif-1", "title": "Test"}
         mock_service.create_notification = AsyncMock(return_value=notification)
 
-        result = await tools.create_notification({
-            "type": "info",
-            "title": "Test",
-            "message": "Test message"
-        }, mock_user_ctx)
+        result = await tools.create_notification(
+            {"type": "info", "title": "Test", "message": "Test message"}, mock_user_ctx
+        )
 
         assert result["success"] is True
 
@@ -383,12 +375,15 @@ class TestCreateNotification:
         self, tools, mock_service, mock_user_ctx
     ):
         """Test non-admin trying to create for another user."""
-        result = await tools.create_notification({
-            "user_id": "other-user",
-            "type": "info",
-            "title": "Test",
-            "message": "Test message"
-        }, mock_user_ctx)
+        result = await tools.create_notification(
+            {
+                "user_id": "other-user",
+                "type": "info",
+                "title": "Test",
+                "message": "Test message",
+            },
+            mock_user_ctx,
+        )
 
         assert result["success"] is False
         assert result["error"] == "PERMISSION_DENIED"
@@ -398,10 +393,13 @@ class TestCreateNotification:
         self, tools, mock_service, mock_user_ctx
     ):
         """Test with missing required parameters."""
-        result = await tools.create_notification({
-            "type": "info"
-            # missing title and message
-        }, mock_user_ctx)
+        result = await tools.create_notification(
+            {
+                "type": "info"
+                # missing title and message
+            },
+            mock_user_ctx,
+        )
 
         assert result["success"] is False
         assert result["error"] == "MISSING_PARAM"
@@ -411,11 +409,10 @@ class TestCreateNotification:
         self, tools, mock_service, mock_user_ctx
     ):
         """Test with invalid notification type."""
-        result = await tools.create_notification({
-            "type": "invalid",
-            "title": "Test",
-            "message": "Test message"
-        }, mock_user_ctx)
+        result = await tools.create_notification(
+            {"type": "invalid", "title": "Test", "message": "Test message"},
+            mock_user_ctx,
+        )
 
         assert result["success"] is False
         assert result["error"] == "INVALID_TYPE"
@@ -429,11 +426,9 @@ class TestCreateNotification:
             side_effect=Exception("Database error")
         )
 
-        result = await tools.create_notification({
-            "type": "info",
-            "title": "Test",
-            "message": "Test message"
-        }, mock_user_ctx)
+        result = await tools.create_notification(
+            {"type": "info", "title": "Test", "message": "Test message"}, mock_user_ctx
+        )
 
         assert result["success"] is False
         assert result["error"] == "CREATE_ERROR"
@@ -450,7 +445,7 @@ class TestMarkNotificationRead:
     @pytest.fixture
     def tools(self, mock_service):
         """Create NotificationTools instance."""
-        with patch('tools.notification.tools.logger'):
+        with patch("tools.notification.tools.logger"):
             return NotificationTools(mock_service)
 
     @pytest.fixture
@@ -495,9 +490,7 @@ class TestMarkNotificationRead:
     @pytest.mark.asyncio
     async def test_mark_read_exception(self, tools, mock_service, mock_ctx):
         """Test handling exceptions."""
-        mock_service.mark_as_read = AsyncMock(
-            side_effect=Exception("Database error")
-        )
+        mock_service.mark_as_read = AsyncMock(side_effect=Exception("Database error"))
 
         result = await tools.mark_notification_read(
             {"notification_id": "notif-1"}, mock_ctx
@@ -518,7 +511,7 @@ class TestMarkAllNotificationsRead:
     @pytest.fixture
     def tools(self, mock_service):
         """Create NotificationTools instance."""
-        with patch('tools.notification.tools.logger'):
+        with patch("tools.notification.tools.logger"):
             return NotificationTools(mock_service)
 
     @pytest.fixture
@@ -573,7 +566,7 @@ class TestDismissNotification:
     @pytest.fixture
     def tools(self, mock_service):
         """Create NotificationTools instance."""
-        with patch('tools.notification.tools.logger'):
+        with patch("tools.notification.tools.logger"):
             return NotificationTools(mock_service)
 
     @pytest.fixture
@@ -641,7 +634,7 @@ class TestDismissAllNotifications:
     @pytest.fixture
     def tools(self, mock_service):
         """Create NotificationTools instance."""
-        with patch('tools.notification.tools.logger'):
+        with patch("tools.notification.tools.logger"):
             return NotificationTools(mock_service)
 
     @pytest.fixture
@@ -675,9 +668,7 @@ class TestDismissAllNotifications:
     @pytest.mark.asyncio
     async def test_dismiss_all_exception(self, tools, mock_service, mock_ctx):
         """Test handling exceptions."""
-        mock_service.dismiss_all = AsyncMock(
-            side_effect=Exception("Database error")
-        )
+        mock_service.dismiss_all = AsyncMock(side_effect=Exception("Database error"))
 
         result = await tools.dismiss_all_notifications({}, mock_ctx)
 
@@ -696,7 +687,7 @@ class TestGetUnreadCount:
     @pytest.fixture
     def tools(self, mock_service):
         """Create NotificationTools instance."""
-        with patch('tools.notification.tools.logger'):
+        with patch("tools.notification.tools.logger"):
             return NotificationTools(mock_service)
 
     @pytest.fixture

@@ -3,9 +3,9 @@
 import structlog
 from fastmcp import FastMCP
 
-from lib.tool_loader import register_all_tools
+from lib.config import DEFAULT_ENV_VALUES, load_config, resolve_data_directory
 from lib.logging_config import setup_logging
-from lib.config import load_config, resolve_data_directory
+from lib.tool_loader import register_all_tools
 from services.factory import create_services
 
 # Setup structured logging
@@ -28,7 +28,7 @@ services = create_services(data_directory, config)
 # Create FastMCP app
 app = FastMCP(
     name="tomo",
-    version="0.1.0",
+    version=config.get("version", DEFAULT_ENV_VALUES["VERSION"]),
     instructions="Tomo management and automation server",
 )
 
@@ -44,36 +44,60 @@ database_service = services["database_service"]
 if __name__ == "__main__":
     import asyncio
     import os
+
     import uvicorn
-    from starlette.middleware.cors import CORSMiddleware
     from starlette.middleware import Middleware
+    from starlette.middleware.cors import CORSMiddleware
     from starlette.routing import WebSocketRoute
 
     # Run database migrations and initializations
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(database_service.run_installed_apps_migrations())
-    loop.run_until_complete(database_service.run_users_migrations())
-    loop.run_until_complete(database_service.initialize_system_info_table())
-    loop.run_until_complete(database_service.initialize_users_table())
-    loop.run_until_complete(database_service.initialize_sessions_table())
-    loop.run_until_complete(database_service.initialize_account_locks_table())
-    loop.run_until_complete(database_service.initialize_notifications_table())
-    loop.run_until_complete(database_service.initialize_retention_settings_table())
-    loop.run_until_complete(database_service.initialize_servers_table())
-    loop.run_until_complete(database_service.initialize_agents_table())
-    loop.run_until_complete(database_service.initialize_installed_apps_table())
-    loop.run_until_complete(database_service.initialize_metrics_tables())
+    async def _run_migrations():
+        await database_service.run_installed_apps_migrations()
+        await database_service.run_users_migrations()
+        await database_service.initialize_system_info_table()
+        await database_service.initialize_users_table()
+        await database_service.initialize_sessions_table()
+        await database_service.initialize_account_locks_table()
+        await database_service.initialize_notifications_table()
+        await database_service.initialize_retention_settings_table()
+        await database_service.initialize_servers_table()
+        await database_service.initialize_agents_table()
+        await database_service.initialize_installed_apps_table()
+        await database_service.initialize_metrics_tables()
+
+    asyncio.run(_run_migrations())
 
     # Configure CORS origins from environment variable
     default_origins = "http://localhost:3000,http://localhost:3001,http://localhost:3002,http://localhost:3003"
     allowed_origins = os.getenv("ALLOWED_ORIGINS", default_origins).split(",")
     allowed_origins = [origin.strip() for origin in allowed_origins if origin.strip()]
 
+    # Reject wildcard with credentials (browsers block this anyway)
+    if "*" in allowed_origins and len(allowed_origins) > 1:
+        logger.warning(
+            "Wildcard '*' mixed with specific origins; removing wildcard",
+            origins=allowed_origins,
+        )
+        allowed_origins = [o for o in allowed_origins if o != "*"]
+    if "*" in allowed_origins:
+        env = os.getenv("APP_ENV", "production").lower()
+        if env == "production":
+            logger.error(
+                "Wildcard CORS origin rejected in production mode"
+            )
+            allowed_origins = [o for o in allowed_origins if o != "*"] or [
+                "http://localhost:3000"
+            ]
+        else:
+            logger.warning(
+                "Wildcard CORS origin used — restrict via ALLOWED_ORIGINS in production"
+            )
+
     # Configure CORS middleware
     cors_middleware = Middleware(
         CORSMiddleware,
         allow_origins=allowed_origins,
-        allow_credentials=True,
+        allow_credentials="*" not in allowed_origins,
         allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
         allow_headers=["Content-Type", "Authorization", "mcp-session-id"],
         expose_headers=["mcp-session-id"],
@@ -122,7 +146,7 @@ if __name__ == "__main__":
 
     logger.info(
         "FastMCP HTTP server initialized",
-        version="0.1.0",
+        version=config.get("version", DEFAULT_ENV_VALUES["VERSION"]),
         allowed_origins=allowed_origins,
         mcp_path="/mcp",
         ws_path="/ws/agent",

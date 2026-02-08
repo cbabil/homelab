@@ -4,14 +4,14 @@ System Monitoring Tools
 Provides system, server, app, dashboard, and marketplace metrics collection for the MCP server.
 """
 
-from typing import Dict, Any
+from typing import Any
 
 import structlog
-from services.monitoring_service import MonitoringService
-from services.metrics_service import MetricsService
+
 from services.dashboard_service import DashboardService
 from services.marketplace_service import MarketplaceService
-
+from services.metrics_service import MetricsService
+from services.monitoring_service import MonitoringService
 
 logger = structlog.get_logger("monitoring_tools")
 
@@ -24,7 +24,7 @@ class MonitoringTools:
         monitoring_service: MonitoringService,
         metrics_service: MetricsService,
         dashboard_service: DashboardService,
-        marketplace_service: MarketplaceService
+        marketplace_service: MarketplaceService,
     ):
         """Initialize monitoring tools.
 
@@ -40,7 +40,7 @@ class MonitoringTools:
         self.marketplace_service = marketplace_service
         logger.info("Monitoring tools initialized")
 
-    async def get_system_metrics(self) -> Dict[str, Any]:
+    async def get_system_metrics(self) -> dict[str, Any]:
         """
         Get current system metrics and performance data.
 
@@ -55,7 +55,7 @@ class MonitoringTools:
             return {
                 "success": True,
                 "data": metrics,
-                "message": "System metrics retrieved successfully"
+                "message": "System metrics retrieved successfully",
             }
 
         except Exception as e:
@@ -63,14 +63,12 @@ class MonitoringTools:
             return {
                 "success": False,
                 "message": f"Failed to get metrics: {str(e)}",
-                "error": "METRICS_ERROR"
+                "error": "METRICS_ERROR",
             }
 
     async def get_server_metrics(
-        self,
-        server_id: str,
-        period: str = "24h"
-    ) -> Dict[str, Any]:
+        self, server_id: str, period: str = "24h"
+    ) -> dict[str, Any]:
         """Get server metrics for a time period."""
         try:
             metrics = await self.metrics_service.get_server_metrics(server_id, period)
@@ -81,30 +79,25 @@ class MonitoringTools:
                     "server_id": server_id,
                     "period": period,
                     "metrics": [m.model_dump() for m in metrics],
-                    "count": len(metrics)
+                    "count": len(metrics),
                 },
-                "message": f"Retrieved {len(metrics)} metric records"
+                "message": f"Retrieved {len(metrics)} metric records",
             }
         except Exception as e:
             logger.error("Get server metrics error", error=str(e))
             return {
                 "success": False,
                 "message": f"Failed to get metrics: {str(e)}",
-                "error": "GET_METRICS_ERROR"
+                "error": "GET_METRICS_ERROR",
             }
 
     async def get_app_metrics(
-        self,
-        server_id: str,
-        app_id: str = None,
-        period: str = "24h"
-    ) -> Dict[str, Any]:
+        self, server_id: str, app_id: str = None, period: str = "24h"
+    ) -> dict[str, Any]:
         """Get container metrics for an app."""
         try:
             metrics = await self.metrics_service.get_container_metrics(
-                server_id=server_id,
-                container_name=app_id,
-                period=period
+                server_id=server_id, container_name=app_id, period=period
             )
 
             return {
@@ -114,19 +107,19 @@ class MonitoringTools:
                     "app_id": app_id,
                     "period": period,
                     "metrics": [m.model_dump() for m in metrics],
-                    "count": len(metrics)
+                    "count": len(metrics),
                 },
-                "message": f"Retrieved {len(metrics)} container metrics"
+                "message": f"Retrieved {len(metrics)} container metrics",
             }
         except Exception as e:
             logger.error("Get app metrics error", error=str(e))
             return {
                 "success": False,
                 "message": f"Failed to get app metrics: {str(e)}",
-                "error": "GET_APP_METRICS_ERROR"
+                "error": "GET_APP_METRICS_ERROR",
             }
 
-    async def get_dashboard_metrics(self) -> Dict[str, Any]:
+    async def get_dashboard_metrics(self) -> dict[str, Any]:
         """Get aggregated dashboard metrics."""
         try:
             summary = await self.dashboard_service.get_summary()
@@ -144,19 +137,21 @@ class MonitoringTools:
                     "avg_cpu_percent": summary.avg_cpu_percent,
                     "avg_memory_percent": summary.avg_memory_percent,
                     "avg_disk_percent": summary.avg_disk_percent,
-                    "recent_activities": [a.model_dump() for a in summary.recent_activities]
+                    "recent_activities": [
+                        a.model_dump() for a in summary.recent_activities
+                    ],
                 },
-                "message": "Dashboard metrics retrieved"
+                "message": "Dashboard metrics retrieved",
             }
         except Exception as e:
             logger.error("Get dashboard metrics error", error=str(e))
             return {
                 "success": False,
                 "message": f"Failed to get dashboard metrics: {str(e)}",
-                "error": "GET_DASHBOARD_METRICS_ERROR"
+                "error": "GET_DASHBOARD_METRICS_ERROR",
             }
 
-    async def get_marketplace_metrics(self) -> Dict[str, Any]:
+    async def get_marketplace_metrics(self) -> dict[str, Any]:
         """Get marketplace statistics and metrics."""
         try:
             repos = await self.marketplace_service.get_repos()
@@ -172,7 +167,8 @@ class MonitoringTools:
             total_ratings = sum(a.rating_count for a in apps)
             avg_rating = (
                 sum(a.avg_rating * a.rating_count for a in rated_apps) / total_ratings
-                if total_ratings > 0 else 0.0
+                if total_ratings > 0
+                else 0.0
             )
 
             # Featured apps
@@ -190,14 +186,14 @@ class MonitoringTools:
                     "category_count": len(categories),
                     "total_ratings": total_ratings,
                     "avg_rating": round(avg_rating, 2),
-                    "rated_apps": len(rated_apps)
+                    "rated_apps": len(rated_apps),
                 },
-                "message": "Marketplace metrics retrieved"
+                "message": "Marketplace metrics retrieved",
             }
         except Exception as e:
             logger.error("Get marketplace metrics error", error=str(e))
             return {
                 "success": False,
                 "message": f"Failed to get marketplace metrics: {str(e)}",
-                "error": "GET_MARKETPLACE_METRICS_ERROR"
+                "error": "GET_MARKETPLACE_METRICS_ERROR",
             }

@@ -2,8 +2,8 @@
 
 import time
 from collections import defaultdict
-from dataclasses import dataclass, field
-from typing import TYPE_CHECKING, Any, Dict
+from dataclasses import dataclass
+from typing import TYPE_CHECKING, Any
 
 import structlog
 from starlette.websockets import WebSocket, WebSocketDisconnect, WebSocketState
@@ -50,8 +50,8 @@ class ConnectionRateLimiter:
         self._window_seconds = window_seconds
         self._base_block_seconds = base_block_seconds
         self._max_block_seconds = max_block_seconds
-        self._clients: Dict[str, RateLimitEntry] = defaultdict(RateLimitEntry)
-        self._failure_counts: Dict[str, int] = defaultdict(int)
+        self._clients: dict[str, RateLimitEntry] = defaultdict(RateLimitEntry)
+        self._failure_counts: dict[str, int] = defaultdict(int)
 
     def is_allowed(self, client_ip: str) -> bool:
         """Check if a client is allowed to attempt authentication.

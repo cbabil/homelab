@@ -5,15 +5,16 @@ Tests initialization, create, get, and list notifications.
 """
 
 import json
-import pytest
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from services.notification_service import NotificationService
+import pytest
+
 from models.notification import (
-    NotificationType,
     NotificationListResult,
+    NotificationType,
 )
+from services.notification_service import NotificationService
 
 
 @pytest.fixture
@@ -56,8 +57,10 @@ class TestNotificationServiceInit:
 
     def test_init_creates_default_db_service(self):
         """NotificationService should create default db_service if not provided."""
-        with patch("services.notification_service.logger"), \
-             patch("services.notification_service.DatabaseService") as MockDB:
+        with (
+            patch("services.notification_service.logger"),
+            patch("services.notification_service.DatabaseService") as MockDB,
+        ):
             MockDB.return_value = MagicMock()
             service = NotificationService()
             assert service.db_service is MockDB.return_value
@@ -171,9 +174,7 @@ class TestGetNotification:
     """Tests for get_notification method."""
 
     @pytest.mark.asyncio
-    async def test_get_notification_found(
-        self, notification_service, mock_connection
-    ):
+    async def test_get_notification_found(self, notification_service, mock_connection):
         """get_notification should return notification when found."""
         row = {
             "id": "notif-123",
@@ -320,9 +321,7 @@ class TestListNotifications:
         mock_connection.execute = AsyncMock(side_effect=execute_side_effect)
 
         with patch("services.notification_service.logger"):
-            await notification_service.list_notifications(
-                "user-123", read_filter=False
-            )
+            await notification_service.list_notifications("user-123", read_filter=False)
 
         calls = mock_connection.execute.call_args_list
         list_call = [c for c in calls if "SELECT * FROM" in str(c)][0]

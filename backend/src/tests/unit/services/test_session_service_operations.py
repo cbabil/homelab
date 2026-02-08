@@ -5,12 +5,13 @@ Tests list_sessions, update_session, delete_session, cleanup_expired_sessions,
 and validate_session methods.
 """
 
-import pytest
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
+import pytest
+
+from models.session import Session, SessionListResponse, SessionStatus
 from services.session_service import SessionService
-from models.session import Session, SessionStatus, SessionListResponse
 
 
 @pytest.fixture
@@ -66,14 +67,19 @@ class TestListSessions:
         self, session_service, mock_connection, base_session_list_row
     ):
         """list_sessions should return list of sessions."""
-        with patch.object(
-            session_service, "mark_idle_sessions",
-            new_callable=AsyncMock,
-            return_value=0
-        ), patch.object(
-            session_service, "cleanup_expired_sessions",
-            new_callable=AsyncMock,
-            return_value=0
+        with (
+            patch.object(
+                session_service,
+                "mark_idle_sessions",
+                new_callable=AsyncMock,
+                return_value=0,
+            ),
+            patch.object(
+                session_service,
+                "cleanup_expired_sessions",
+                new_callable=AsyncMock,
+                return_value=0,
+            ),
         ):
             mock_cursor = AsyncMock()
             mock_cursor.fetchall = AsyncMock(return_value=[base_session_list_row])
@@ -92,14 +98,19 @@ class TestListSessions:
         self, session_service, mock_connection, base_session_list_row
     ):
         """list_sessions should filter by user_id."""
-        with patch.object(
-            session_service, "mark_idle_sessions",
-            new_callable=AsyncMock,
-            return_value=0
-        ), patch.object(
-            session_service, "cleanup_expired_sessions",
-            new_callable=AsyncMock,
-            return_value=0
+        with (
+            patch.object(
+                session_service,
+                "mark_idle_sessions",
+                new_callable=AsyncMock,
+                return_value=0,
+            ),
+            patch.object(
+                session_service,
+                "cleanup_expired_sessions",
+                new_callable=AsyncMock,
+                return_value=0,
+            ),
         ):
             mock_cursor = AsyncMock()
             mock_cursor.fetchall = AsyncMock(return_value=[base_session_list_row])
@@ -117,14 +128,19 @@ class TestListSessions:
         self, session_service, mock_connection, base_session_list_row
     ):
         """list_sessions should filter by status."""
-        with patch.object(
-            session_service, "mark_idle_sessions",
-            new_callable=AsyncMock,
-            return_value=0
-        ), patch.object(
-            session_service, "cleanup_expired_sessions",
-            new_callable=AsyncMock,
-            return_value=0
+        with (
+            patch.object(
+                session_service,
+                "mark_idle_sessions",
+                new_callable=AsyncMock,
+                return_value=0,
+            ),
+            patch.object(
+                session_service,
+                "cleanup_expired_sessions",
+                new_callable=AsyncMock,
+                return_value=0,
+            ),
         ):
             mock_cursor = AsyncMock()
             mock_cursor.fetchall = AsyncMock(return_value=[])
@@ -137,17 +153,14 @@ class TestListSessions:
         assert "AND s.status = ?" in call_args[0]
 
     @pytest.mark.asyncio
-    async def test_list_sessions_calls_cleanup(
-        self, session_service, mock_connection
-    ):
+    async def test_list_sessions_calls_cleanup(self, session_service, mock_connection):
         """list_sessions should call mark_idle and cleanup first."""
         mock_mark_idle = AsyncMock(return_value=2)
         mock_cleanup = AsyncMock(return_value=1)
 
-        with patch.object(
-            session_service, "mark_idle_sessions", mock_mark_idle
-        ), patch.object(
-            session_service, "cleanup_expired_sessions", mock_cleanup
+        with (
+            patch.object(session_service, "mark_idle_sessions", mock_mark_idle),
+            patch.object(session_service, "cleanup_expired_sessions", mock_cleanup),
         ):
             mock_cursor = AsyncMock()
             mock_cursor.fetchall = AsyncMock(return_value=[])
@@ -160,9 +173,7 @@ class TestListSessions:
         mock_cleanup.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_list_sessions_no_username(
-        self, session_service, mock_connection
-    ):
+    async def test_list_sessions_no_username(self, session_service, mock_connection):
         """list_sessions should handle missing username."""
         row = {
             "id": "sess_123",
@@ -176,14 +187,19 @@ class TestListSessions:
             "status": "active",
         }
 
-        with patch.object(
-            session_service, "mark_idle_sessions",
-            new_callable=AsyncMock,
-            return_value=0
-        ), patch.object(
-            session_service, "cleanup_expired_sessions",
-            new_callable=AsyncMock,
-            return_value=0
+        with (
+            patch.object(
+                session_service,
+                "mark_idle_sessions",
+                new_callable=AsyncMock,
+                return_value=0,
+            ),
+            patch.object(
+                session_service,
+                "cleanup_expired_sessions",
+                new_callable=AsyncMock,
+                return_value=0,
+            ),
         ):
             mock_cursor = AsyncMock()
             mock_cursor.fetchall = AsyncMock(return_value=[row])
@@ -199,9 +215,7 @@ class TestUpdateSession:
     """Tests for update_session method."""
 
     @pytest.mark.asyncio
-    async def test_update_session_success(
-        self, session_service, mock_connection
-    ):
+    async def test_update_session_success(self, session_service, mock_connection):
         """update_session should update last_activity."""
         mock_cursor = AsyncMock()
         mock_cursor.rowcount = 1
@@ -214,9 +228,7 @@ class TestUpdateSession:
         mock_connection.commit.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_update_session_not_found(
-        self, session_service, mock_connection
-    ):
+    async def test_update_session_not_found(self, session_service, mock_connection):
         """update_session should return False when not found."""
         mock_cursor = AsyncMock()
         mock_cursor.rowcount = 0
@@ -247,9 +259,7 @@ class TestDeleteSession:
     """Tests for delete_session method."""
 
     @pytest.mark.asyncio
-    async def test_delete_session_by_session_id(
-        self, session_service, mock_connection
-    ):
+    async def test_delete_session_by_session_id(self, session_service, mock_connection):
         """delete_session should terminate specific session."""
         mock_cursor = AsyncMock()
         mock_cursor.rowcount = 1
@@ -257,17 +267,14 @@ class TestDeleteSession:
 
         with patch("services.session_service.logger"):
             result = await session_service.delete_session(
-                session_id="sess_123",
-                terminated_by="admin"
+                session_id="sess_123", terminated_by="admin"
             )
 
         assert result == 1
         mock_connection.commit.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_delete_session_by_user_id(
-        self, session_service, mock_connection
-    ):
+    async def test_delete_session_by_user_id(self, session_service, mock_connection):
         """delete_session should terminate all sessions for user."""
         mock_cursor = AsyncMock()
         mock_cursor.rowcount = 3
@@ -275,8 +282,7 @@ class TestDeleteSession:
 
         with patch("services.session_service.logger"):
             result = await session_service.delete_session(
-                user_id="user-123",
-                terminated_by="system"
+                user_id="user-123", terminated_by="system"
             )
 
         assert result == 3
@@ -294,7 +300,7 @@ class TestDeleteSession:
             result = await session_service.delete_session(
                 user_id="user-123",
                 terminated_by="user-123",
-                exclude_session_id="sess_current"
+                exclude_session_id="sess_current",
             )
 
         assert result == 2
@@ -303,9 +309,7 @@ class TestDeleteSession:
         assert "sess_current" in call_args[1]
 
     @pytest.mark.asyncio
-    async def test_delete_session_no_params(
-        self, session_service, mock_connection
-    ):
+    async def test_delete_session_no_params(self, session_service, mock_connection):
         """delete_session should return 0 without session_id or user_id."""
         with patch("services.session_service.logger") as mock_logger:
             result = await session_service.delete_session()
@@ -325,8 +329,7 @@ class TestDeleteSession:
 
         with patch("services.session_service.logger") as mock_logger:
             await session_service.delete_session(
-                session_id="sess_123",
-                terminated_by="admin"
+                session_id="sess_123", terminated_by="admin"
             )
 
         mock_logger.info.assert_called()
@@ -339,9 +342,7 @@ class TestCleanupExpiredSessions:
     """Tests for cleanup_expired_sessions method."""
 
     @pytest.mark.asyncio
-    async def test_cleanup_expired_success(
-        self, session_service, mock_connection
-    ):
+    async def test_cleanup_expired_success(self, session_service, mock_connection):
         """cleanup_expired_sessions should mark expired sessions."""
         mock_cursor = AsyncMock()
         mock_cursor.rowcount = 5
@@ -354,9 +355,7 @@ class TestCleanupExpiredSessions:
         mock_connection.commit.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_cleanup_expired_none(
-        self, session_service, mock_connection
-    ):
+    async def test_cleanup_expired_none(self, session_service, mock_connection):
         """cleanup_expired_sessions should return 0 when no expired."""
         mock_cursor = AsyncMock()
         mock_cursor.rowcount = 0
@@ -368,9 +367,7 @@ class TestCleanupExpiredSessions:
         assert result == 0
 
     @pytest.mark.asyncio
-    async def test_cleanup_expired_logs(
-        self, session_service, mock_connection
-    ):
+    async def test_cleanup_expired_logs(self, session_service, mock_connection):
         """cleanup_expired_sessions should log result."""
         mock_cursor = AsyncMock()
         mock_cursor.rowcount = 3
@@ -394,8 +391,14 @@ def _make_session(status: SessionStatus, expired: bool = False) -> Session:
         expires_at = now + timedelta(hours=1)
         created_at = now
     return Session(
-        id="sess_123", user_id="user-123", ip_address=None, user_agent=None,
-        created_at=created_at, expires_at=expires_at, last_activity=now, status=status
+        id="sess_123",
+        user_id="user-123",
+        ip_address=None,
+        user_agent=None,
+        created_at=created_at,
+        expires_at=expires_at,
+        last_activity=now,
+        status=status,
     )
 
 
@@ -406,7 +409,9 @@ class TestValidateSession:
     async def test_validate_session_success(self, session_service):
         """validate_session should return valid session."""
         mock_session = _make_session(SessionStatus.ACTIVE)
-        with patch.object(session_service, "get_session", AsyncMock(return_value=mock_session)):
+        with patch.object(
+            session_service, "get_session", AsyncMock(return_value=mock_session)
+        ):
             with patch("services.session_service.logger"):
                 result = await session_service.validate_session("sess_123")
         assert result is not None and result.id == "sess_123"
@@ -424,18 +429,26 @@ class TestValidateSession:
         """validate_session should return None and delete expired session."""
         mock_session = _make_session(SessionStatus.ACTIVE, expired=True)
         mock_delete = AsyncMock(return_value=1)
-        with patch.object(session_service, "get_session", AsyncMock(return_value=mock_session)), \
-             patch.object(session_service, "delete_session", mock_delete):
+        with (
+            patch.object(
+                session_service, "get_session", AsyncMock(return_value=mock_session)
+            ),
+            patch.object(session_service, "delete_session", mock_delete),
+        ):
             with patch("services.session_service.logger"):
                 result = await session_service.validate_session("sess_123")
         assert result is None
-        mock_delete.assert_called_once_with(session_id="sess_123", terminated_by="system")
+        mock_delete.assert_called_once_with(
+            session_id="sess_123", terminated_by="system"
+        )
 
     @pytest.mark.asyncio
     async def test_validate_session_terminated_status(self, session_service):
         """validate_session should return None for terminated session."""
         mock_session = _make_session(SessionStatus.TERMINATED)
-        with patch.object(session_service, "get_session", AsyncMock(return_value=mock_session)):
+        with patch.object(
+            session_service, "get_session", AsyncMock(return_value=mock_session)
+        ):
             with patch("services.session_service.logger"):
                 result = await session_service.validate_session("sess_123")
         assert result is None
@@ -444,7 +457,9 @@ class TestValidateSession:
     async def test_validate_session_expired_status(self, session_service):
         """validate_session should return None for expired status."""
         mock_session = _make_session(SessionStatus.EXPIRED)
-        with patch.object(session_service, "get_session", AsyncMock(return_value=mock_session)):
+        with patch.object(
+            session_service, "get_session", AsyncMock(return_value=mock_session)
+        ):
             with patch("services.session_service.logger"):
                 result = await session_service.validate_session("sess_123")
         assert result is None
@@ -453,7 +468,9 @@ class TestValidateSession:
     async def test_validate_session_idle_status_valid(self, session_service):
         """validate_session should return session for idle status."""
         mock_session = _make_session(SessionStatus.IDLE)
-        with patch.object(session_service, "get_session", AsyncMock(return_value=mock_session)):
+        with patch.object(
+            session_service, "get_session", AsyncMock(return_value=mock_session)
+        ):
             with patch("services.session_service.logger"):
                 result = await session_service.validate_session("sess_123")
         assert result is not None and result.status == SessionStatus.IDLE

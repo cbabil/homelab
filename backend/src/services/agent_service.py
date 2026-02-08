@@ -7,13 +7,13 @@ registration, token validation, and revocation.
 import asyncio
 import hashlib
 import secrets
-from typing import TYPE_CHECKING, Callable, List, Optional, Tuple
-
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
+from typing import TYPE_CHECKING, Optional
 
 import structlog
 
-from tools.common import log_event
+from lib.log_event import log_event
 
 if TYPE_CHECKING:
     from services.database import AgentDatabaseService
@@ -42,8 +42,8 @@ class AgentService:
 
     def __init__(
         self,
-        db_service: Optional[DatabaseService] = None,
-        settings_service: Optional[SettingsService] = None,
+        db_service: DatabaseService | None = None,
+        settings_service: SettingsService | None = None,
         agent_db: Optional["AgentDatabaseService"] = None,
     ):
         """Initialize agent service with database and settings dependencies.
@@ -61,10 +61,10 @@ class AgentService:
         self._agent_db = agent_db
 
         # Rotation scheduler state
-        self._rotation_task: Optional[asyncio.Task] = None
+        self._rotation_task: asyncio.Task | None = None
         self._rotation_running = False
         self._rotation_check_interval = 3600  # Default: 1 hour
-        self._rotation_callback: Optional[Callable] = None
+        self._rotation_callback: Callable | None = None
 
         logger.info("Agent service initialized")
 
@@ -199,7 +199,7 @@ class AgentService:
 
         return config
 
-    async def _get_token_rotation_settings(self) -> Tuple[int, int]:
+    async def _get_token_rotation_settings(self) -> tuple[int, int]:
         """Get token rotation settings from database.
 
         Returns:
@@ -229,7 +229,7 @@ class AgentService:
 
         return rotation_days, grace_minutes
 
-    async def create_agent(self, server_id: str) -> Tuple[Agent, RegistrationCode]:
+    async def create_agent(self, server_id: str) -> tuple[Agent, RegistrationCode]:
         """Create a new agent and registration code for a server.
 
         If an agent already exists for the server, it is deleted first
@@ -284,7 +284,7 @@ class AgentService:
 
         return agent, registration_code
 
-    async def validate_registration_code(self, code: str) -> Optional[RegistrationCode]:
+    async def validate_registration_code(self, code: str) -> RegistrationCode | None:
         """Validate a registration code.
 
         Checks if the code exists, has not been used, and has not expired.
@@ -323,7 +323,7 @@ class AgentService:
 
     async def complete_registration(
         self, code: str, agent_version: str
-    ) -> Optional[AgentRegistrationResponse]:
+    ) -> AgentRegistrationResponse | None:
         """Complete agent registration using a registration code.
 
         Validates the code, generates an authentication token, updates
@@ -406,7 +406,7 @@ class AgentService:
             config=config,
         )
 
-    async def validate_token(self, token: str) -> Optional[Agent]:
+    async def validate_token(self, token: str) -> Agent | None:
         """Validate an agent authentication token.
 
         Hashes the provided token and looks up the agent by token hash.
@@ -483,7 +483,7 @@ class AgentService:
 
         return True
 
-    async def get_agent_by_server(self, server_id: str) -> Optional[Agent]:
+    async def get_agent_by_server(self, server_id: str) -> Agent | None:
         """Get agent associated with a server.
 
         Args:
@@ -496,7 +496,7 @@ class AgentService:
 
         return await agent_db.get_agent_by_server(server_id)
 
-    async def list_all_agents(self) -> List[Agent]:
+    async def list_all_agents(self) -> list[Agent]:
         """List all agents.
 
         Returns:
@@ -542,8 +542,8 @@ class AgentService:
         return result
 
     async def register_agent(
-        self, code: str, version: Optional[str] = None
-    ) -> Optional[Tuple[str, str, AgentConfig, str]]:
+        self, code: str, version: str | None = None
+    ) -> tuple[str, str, AgentConfig, str] | None:
         """Register an agent using a registration code (WebSocket API).
 
         Args:
@@ -561,8 +561,8 @@ class AgentService:
         return (result.agent_id, result.token, result.config, result.server_id)
 
     async def authenticate_agent(
-        self, token: str, version: Optional[str] = None
-    ) -> Optional[Tuple[str, AgentConfig, str]]:
+        self, token: str, version: str | None = None
+    ) -> tuple[str, AgentConfig, str] | None:
         """Authenticate an agent using a token (WebSocket API).
 
         Args:
@@ -648,7 +648,7 @@ class AgentService:
     # Token Rotation Methods
     # ─────────────────────────────────────────────────────────────
 
-    async def initiate_rotation(self, agent_id: str) -> Optional[str]:
+    async def initiate_rotation(self, agent_id: str) -> str | None:
         """Initiate token rotation by generating a pending token.
 
         Creates a new token and stores its hash in pending_token_hash.
@@ -798,7 +798,7 @@ class AgentService:
 
         return True
 
-    async def get_agents_needing_rotation(self) -> List[Agent]:
+    async def get_agents_needing_rotation(self) -> list[Agent]:
         """Get agents whose tokens have expired and need rotation.
 
         Returns:

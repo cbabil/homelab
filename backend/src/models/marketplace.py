@@ -1,7 +1,7 @@
 """Marketplace repository models."""
+
 from datetime import datetime
 from enum import Enum
-from typing import List, Optional
 
 from pydantic import BaseModel, ConfigDict, Field
 from sqlalchemy import (
@@ -19,8 +19,8 @@ from sqlalchemy.sql import func
 
 from database.connection import Base
 
-
 # SQLAlchemy Table Definitions
+
 
 class MarketplaceRepoTable(Base):
     """SQLAlchemy table for marketplace repositories."""
@@ -38,7 +38,9 @@ class MarketplaceRepoTable(Base):
     app_count = Column(Integer, nullable=False, default=0)
     error_message = Column(Text, nullable=True)
     created_at = Column(DateTime, nullable=False, default=func.now())
-    updated_at = Column(DateTime, nullable=False, default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime, nullable=False, default=func.now(), onupdate=func.now()
+    )
 
 
 class MarketplaceAppTable(Base):
@@ -59,7 +61,9 @@ class MarketplaceAppTable(Base):
     maintainers = Column(Text, nullable=True)  # JSON array stored as text
     repository = Column(String, nullable=True)
     documentation = Column(String, nullable=True)
-    repo_id = Column(String, ForeignKey("marketplace_repos.id"), nullable=False, index=True)
+    repo_id = Column(
+        String, ForeignKey("marketplace_repos.id"), nullable=False, index=True
+    )
     docker_config = Column(Text, nullable=False)  # JSON stored as text
     requirements = Column(Text, nullable=True)  # JSON stored as text
     install_count = Column(Integer, nullable=False, default=0)
@@ -67,7 +71,9 @@ class MarketplaceAppTable(Base):
     rating_count = Column(Integer, nullable=False, default=0)
     featured = Column(Boolean, nullable=False, default=False)
     created_at = Column(DateTime, nullable=False, default=func.now())
-    updated_at = Column(DateTime, nullable=False, default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime, nullable=False, default=func.now(), onupdate=func.now()
+    )
 
 
 class AppRatingTable(Base):
@@ -76,11 +82,15 @@ class AppRatingTable(Base):
     __tablename__ = "app_ratings"
 
     id = Column(String, primary_key=True)
-    app_id = Column(String, ForeignKey("marketplace_apps.id"), nullable=False, index=True)
+    app_id = Column(
+        String, ForeignKey("marketplace_apps.id"), nullable=False, index=True
+    )
     user_id = Column(String, nullable=False, index=True)
     rating = Column(Integer, nullable=False)
     created_at = Column(DateTime, nullable=False, default=func.now())
-    updated_at = Column(DateTime, nullable=False, default=func.now(), onupdate=func.now())
+    updated_at = Column(
+        DateTime, nullable=False, default=func.now(), onupdate=func.now()
+    )
 
     __table_args__ = (
         Index("idx_app_ratings_unique", "app_id", "user_id", unique=True),
@@ -89,8 +99,10 @@ class AppRatingTable(Base):
 
 # Pydantic Models
 
+
 class RepoType(str, Enum):
     """Repository type classification."""
+
     OFFICIAL = "official"
     COMMUNITY = "community"
     PERSONAL = "personal"
@@ -98,6 +110,7 @@ class RepoType(str, Enum):
 
 class RepoStatus(str, Enum):
     """Repository sync status."""
+
     ACTIVE = "active"
     SYNCING = "syncing"
     ERROR = "error"
@@ -107,10 +120,7 @@ class RepoStatus(str, Enum):
 class MarketplaceRepo(BaseModel):
     """Marketplace repository configuration and status."""
 
-    model_config = ConfigDict(
-        populate_by_name=True,
-        use_enum_values=True
-    )
+    model_config = ConfigDict(populate_by_name=True, use_enum_values=True)
 
     id: str = Field(..., description="Unique repository identifier")
     name: str = Field(..., description="Human-readable repository name")
@@ -119,11 +129,21 @@ class MarketplaceRepo(BaseModel):
     repo_type: RepoType = Field(..., alias="repoType", description="Repository type")
     enabled: bool = Field(..., description="Whether repository is enabled for syncing")
     status: RepoStatus = Field(..., description="Current repository status")
-    last_synced: Optional[datetime] = Field(None, alias="lastSynced", description="Last successful sync timestamp")
-    app_count: int = Field(..., alias="appCount", description="Number of apps in repository")
-    error_message: Optional[str] = Field(None, alias="errorMessage", description="Error message if status is ERROR")
-    created_at: datetime = Field(..., alias="createdAt", description="Repository creation timestamp")
-    updated_at: datetime = Field(..., alias="updatedAt", description="Last update timestamp")
+    last_synced: datetime | None = Field(
+        None, alias="lastSynced", description="Last successful sync timestamp"
+    )
+    app_count: int = Field(
+        ..., alias="appCount", description="Number of apps in repository"
+    )
+    error_message: str | None = Field(
+        None, alias="errorMessage", description="Error message if status is ERROR"
+    )
+    created_at: datetime = Field(
+        ..., alias="createdAt", description="Repository creation timestamp"
+    )
+    updated_at: datetime = Field(
+        ..., alias="updatedAt", description="Last update timestamp"
+    )
 
 
 class AppPort(BaseModel):
@@ -142,7 +162,9 @@ class AppVolume(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     host_path: str = Field(..., alias="hostPath", description="Host path")
-    container_path: str = Field(..., alias="containerPath", description="Container path")
+    container_path: str = Field(
+        ..., alias="containerPath", description="Container path"
+    )
     readonly: bool = Field(False, description="Whether volume is read-only")
 
 
@@ -152,9 +174,9 @@ class AppEnvVar(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     name: str = Field(..., description="Environment variable name")
-    description: Optional[str] = Field(None, description="Variable description")
+    description: str | None = Field(None, description="Variable description")
     required: bool = Field(..., description="Whether variable is required")
-    default: Optional[str] = Field(None, description="Default value")
+    default: str | None = Field(None, description="Default value")
 
 
 class DockerConfig(BaseModel):
@@ -163,13 +185,19 @@ class DockerConfig(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     image: str = Field(..., description="Docker image name and tag")
-    ports: List[AppPort] = Field(..., description="Port mappings")
-    volumes: List[AppVolume] = Field(..., description="Volume mappings")
-    environment: List[AppEnvVar] = Field(..., description="Environment variables")
-    restart_policy: str = Field(..., alias="restartPolicy", description="Container restart policy")
-    network_mode: Optional[str] = Field(None, alias="networkMode", description="Docker network mode")
-    privileged: bool = Field(..., description="Whether container runs in privileged mode")
-    capabilities: List[str] = Field(..., description="Additional Linux capabilities")
+    ports: list[AppPort] = Field(..., description="Port mappings")
+    volumes: list[AppVolume] = Field(..., description="Volume mappings")
+    environment: list[AppEnvVar] = Field(..., description="Environment variables")
+    restart_policy: str = Field(
+        ..., alias="restartPolicy", description="Container restart policy"
+    )
+    network_mode: str | None = Field(
+        None, alias="networkMode", description="Docker network mode"
+    )
+    privileged: bool = Field(
+        ..., description="Whether container runs in privileged mode"
+    )
+    capabilities: list[str] = Field(..., description="Additional Linux capabilities")
 
 
 class AppRequirements(BaseModel):
@@ -177,41 +205,52 @@ class AppRequirements(BaseModel):
 
     model_config = ConfigDict(populate_by_name=True)
 
-    min_ram: Optional[int] = Field(None, alias="minRam", description="Minimum RAM in MB")
-    min_storage: Optional[int] = Field(None, alias="minStorage", description="Minimum storage in MB")
-    architectures: List[str] = Field(..., description="Supported CPU architectures")
+    min_ram: int | None = Field(None, alias="minRam", description="Minimum RAM in MB")
+    min_storage: int | None = Field(
+        None, alias="minStorage", description="Minimum storage in MB"
+    )
+    architectures: list[str] = Field(..., description="Supported CPU architectures")
 
 
 class MarketplaceApp(BaseModel):
     """Marketplace application with full metadata and configuration."""
 
-    model_config = ConfigDict(
-        populate_by_name=True,
-        use_enum_values=True
-    )
+    model_config = ConfigDict(populate_by_name=True, use_enum_values=True)
 
     id: str = Field(..., description="Unique application identifier")
     name: str = Field(..., description="Application name")
     description: str = Field(..., description="Short description")
-    long_description: Optional[str] = Field(None, alias="longDescription", description="Detailed description")
+    long_description: str | None = Field(
+        None, alias="longDescription", description="Detailed description"
+    )
     version: str = Field(..., description="Application version")
     category: str = Field(..., description="Application category")
-    tags: List[str] = Field(..., description="Search tags")
-    icon: Optional[str] = Field(None, description="Icon URL")
+    tags: list[str] = Field(..., description="Search tags")
+    icon: str | None = Field(None, description="Icon URL")
     author: str = Field(..., description="Application author")
     license: str = Field(..., description="Software license")
-    maintainers: List[str] = Field(default_factory=list, description="Package maintainers")
-    repository: Optional[str] = Field(None, description="Source code repository URL")
-    documentation: Optional[str] = Field(None, description="Documentation URL")
-    repo_id: str = Field(..., alias="repoId", description="Source marketplace repository ID")
+    maintainers: list[str] = Field(
+        default_factory=list, description="Package maintainers"
+    )
+    repository: str | None = Field(None, description="Source code repository URL")
+    documentation: str | None = Field(None, description="Documentation URL")
+    repo_id: str = Field(
+        ..., alias="repoId", description="Source marketplace repository ID"
+    )
     docker: DockerConfig = Field(..., description="Docker configuration")
     requirements: AppRequirements = Field(..., description="System requirements")
-    install_count: int = Field(0, alias="installCount", description="Number of installations")
+    install_count: int = Field(
+        0, alias="installCount", description="Number of installations"
+    )
     avg_rating: float = Field(0.0, alias="avgRating", description="Average user rating")
     rating_count: int = Field(0, alias="ratingCount", description="Number of ratings")
     featured: bool = Field(False, description="Whether app is featured")
-    created_at: datetime = Field(..., alias="createdAt", description="App creation timestamp")
-    updated_at: datetime = Field(..., alias="updatedAt", description="Last update timestamp")
+    created_at: datetime = Field(
+        ..., alias="createdAt", description="App creation timestamp"
+    )
+    updated_at: datetime = Field(
+        ..., alias="updatedAt", description="Last update timestamp"
+    )
 
 
 class AppRating(BaseModel):
@@ -221,7 +260,11 @@ class AppRating(BaseModel):
 
     id: str = Field(..., description="Unique rating identifier")
     app_id: str = Field(..., alias="appId", description="Application being rated")
-    user_id: str = Field(..., alias="userId", description="User who submitted the rating")
+    user_id: str = Field(
+        ..., alias="userId", description="User who submitted the rating"
+    )
     rating: int = Field(..., ge=1, le=5, description="Rating value (1-5)")
-    created_at: str = Field(..., alias="createdAt", description="Rating creation timestamp")
+    created_at: str = Field(
+        ..., alias="createdAt", description="Rating creation timestamp"
+    )
     updated_at: str = Field(..., alias="updatedAt", description="Last update timestamp")

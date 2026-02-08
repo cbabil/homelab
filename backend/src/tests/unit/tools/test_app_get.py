@@ -4,8 +4,9 @@ App Tools Unit Tests - Get App Operations
 Tests for get_app method and initialization.
 """
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 
 from tools.app.tools import AppTools
 
@@ -19,7 +20,7 @@ class TestAppToolsInit:
         mock_marketplace_service = MagicMock()
         mock_deployment_service = MagicMock()
 
-        with patch('tools.app.tools.logger'):
+        with patch("tools.app.tools.logger"):
             tools = AppTools(
                 mock_app_service,
                 mock_marketplace_service,
@@ -46,7 +47,7 @@ class TestGetServerName:
     @pytest.fixture
     def app_tools(self, mock_services):
         """Create AppTools instance."""
-        with patch('tools.app.tools.logger'):
+        with patch("tools.app.tools.logger"):
             return AppTools(
                 mock_services["app_service"],
                 mock_services["marketplace_service"],
@@ -104,7 +105,7 @@ class TestGetApp:
     @pytest.fixture
     def app_tools(self, mock_services):
         """Create AppTools instance."""
-        with patch('tools.app.tools.logger'):
+        with patch("tools.app.tools.logger"):
             return AppTools(
                 mock_services["app_service"],
                 mock_services["marketplace_service"],
@@ -158,7 +159,9 @@ class TestGetApp:
     @pytest.mark.asyncio
     async def test_get_all_installations_across_servers(self, app_tools, mock_services):
         """Test getting all installations without filters."""
-        mock_services["deployment_service"].get_all_installations_with_details = AsyncMock(
+        mock_services[
+            "deployment_service"
+        ].get_all_installations_with_details = AsyncMock(
             return_value=[
                 {"app_id": "nginx", "server_id": "server-1"},
                 {"app_id": "redis", "server_id": "server-2"},
@@ -242,9 +245,9 @@ class TestGetApp:
     async def test_get_apps_with_empty_filters(self, app_tools, mock_services):
         """Test searching apps with empty filters falls back to all installations."""
         # Empty dict {} is falsy, so it calls get_all_installations_with_details
-        mock_services["deployment_service"].get_all_installations_with_details = AsyncMock(
-            return_value=[]
-        )
+        mock_services[
+            "deployment_service"
+        ].get_all_installations_with_details = AsyncMock(return_value=[])
 
         result = await app_tools.get_app(filters={})
 

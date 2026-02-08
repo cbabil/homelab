@@ -4,9 +4,10 @@ Unit tests for services/monitoring_service.py
 Tests metrics collection and log management for system monitoring.
 """
 
-import pytest
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from services.monitoring_service import MonitoringService
 
@@ -38,12 +39,12 @@ class TestMonitoringServiceInit:
 
     def test_init_calls_initialize_sample_data(self):
         """MonitoringService should call _initialize_sample_data."""
-        with patch("services.monitoring_service.logger"):
-            with patch.object(
-                MonitoringService, "_initialize_sample_data"
-            ) as mock_init:
-                MonitoringService()
-                mock_init.assert_called_once()
+        with (
+            patch("services.monitoring_service.logger"),
+            patch.object(MonitoringService, "_initialize_sample_data") as mock_init,
+        ):
+            MonitoringService()
+            mock_init.assert_called_once()
 
 
 class TestInitializeSampleData:
@@ -51,14 +52,14 @@ class TestInitializeSampleData:
 
     def test_initialize_sample_data_calls_initialize_metrics(self):
         """_initialize_sample_data should call _initialize_metrics."""
-        with patch("services.monitoring_service.logger"):
-            with patch.object(
-                MonitoringService, "_initialize_metrics"
-            ) as mock_init_metrics:
-                service = MonitoringService.__new__(MonitoringService)
-                service.metrics_cache = {}
-                service._initialize_sample_data()
-                mock_init_metrics.assert_called_once()
+        with (
+            patch("services.monitoring_service.logger"),
+            patch.object(MonitoringService, "_initialize_metrics") as mock_init_metrics,
+        ):
+            service = MonitoringService.__new__(MonitoringService)
+            service.metrics_cache = {}
+            service._initialize_sample_data()
+            mock_init_metrics.assert_called_once()
 
 
 class TestInitializeMetrics:
@@ -151,8 +152,10 @@ class TestInitializeLogs:
     @pytest.mark.asyncio
     async def test_initialize_logs_handles_error(self, monitoring_service):
         """_initialize_logs should handle errors gracefully."""
-        with patch("services.monitoring_service.log_service") as mock_log_service, \
-             patch("services.monitoring_service.logger") as mock_logger:
+        with (
+            patch("services.monitoring_service.log_service") as mock_log_service,
+            patch("services.monitoring_service.logger") as mock_logger,
+        ):
             mock_log_service.create_log_entry = AsyncMock(
                 side_effect=Exception("DB error")
             )
@@ -175,6 +178,7 @@ class TestGetCurrentMetrics:
         """get_current_metrics should update timestamp."""
         # Small delay to ensure different timestamp
         import time
+
         time.sleep(0.01)
 
         result = monitoring_service.get_current_metrics()
@@ -209,8 +213,10 @@ class TestGetFilteredLogs:
         mock_log_entry.message = "Test message"
         mock_log_entry.tags = ["test"]
 
-        with patch("services.monitoring_service.log_service") as mock_log_service, \
-             patch("services.monitoring_service.logger"):
+        with (
+            patch("services.monitoring_service.log_service") as mock_log_service,
+            patch("services.monitoring_service.logger"),
+        ):
             mock_log_service.get_logs = AsyncMock(return_value=[mock_log_entry])
 
             result = await monitoring_service.get_filtered_logs()
@@ -223,8 +229,10 @@ class TestGetFilteredLogs:
     @pytest.mark.asyncio
     async def test_get_filtered_logs_with_level_filter(self, monitoring_service):
         """get_filtered_logs should apply level filter."""
-        with patch("services.monitoring_service.log_service") as mock_log_service, \
-             patch("services.monitoring_service.logger"):
+        with (
+            patch("services.monitoring_service.log_service") as mock_log_service,
+            patch("services.monitoring_service.logger"),
+        ):
             mock_log_service.get_logs = AsyncMock(return_value=[])
 
             await monitoring_service.get_filtered_logs({"level": "ERROR"})
@@ -236,8 +244,10 @@ class TestGetFilteredLogs:
     @pytest.mark.asyncio
     async def test_get_filtered_logs_with_source_filter(self, monitoring_service):
         """get_filtered_logs should apply source filter."""
-        with patch("services.monitoring_service.log_service") as mock_log_service, \
-             patch("services.monitoring_service.logger"):
+        with (
+            patch("services.monitoring_service.log_service") as mock_log_service,
+            patch("services.monitoring_service.logger"),
+        ):
             mock_log_service.get_logs = AsyncMock(return_value=[])
 
             await monitoring_service.get_filtered_logs({"source": "docker"})
@@ -248,8 +258,10 @@ class TestGetFilteredLogs:
     @pytest.mark.asyncio
     async def test_get_filtered_logs_with_limit(self, monitoring_service):
         """get_filtered_logs should apply limit."""
-        with patch("services.monitoring_service.log_service") as mock_log_service, \
-             patch("services.monitoring_service.logger"):
+        with (
+            patch("services.monitoring_service.log_service") as mock_log_service,
+            patch("services.monitoring_service.logger"),
+        ):
             mock_log_service.get_logs = AsyncMock(return_value=[])
 
             await monitoring_service.get_filtered_logs({"limit": 50})
@@ -260,8 +272,10 @@ class TestGetFilteredLogs:
     @pytest.mark.asyncio
     async def test_get_filtered_logs_limit_max(self, monitoring_service):
         """get_filtered_logs should cap limit at 1000."""
-        with patch("services.monitoring_service.log_service") as mock_log_service, \
-             patch("services.monitoring_service.logger"):
+        with (
+            patch("services.monitoring_service.log_service") as mock_log_service,
+            patch("services.monitoring_service.logger"),
+        ):
             mock_log_service.get_logs = AsyncMock(return_value=[])
 
             await monitoring_service.get_filtered_logs({"limit": 5000})
@@ -280,12 +294,12 @@ class TestGetFilteredLogs:
         mock_log_entry.message = "Test"
         mock_log_entry.tags = []
 
-        with patch("services.monitoring_service.log_service") as mock_log_service, \
-             patch("services.monitoring_service.logger"):
+        with (
+            patch("services.monitoring_service.log_service") as mock_log_service,
+            patch("services.monitoring_service.logger"),
+        ):
             # First call returns empty, second returns data
-            mock_log_service.get_logs = AsyncMock(
-                side_effect=[[], [mock_log_entry]]
-            )
+            mock_log_service.get_logs = AsyncMock(side_effect=[[], [mock_log_entry]])
             mock_log_service.create_log_entry = AsyncMock()
 
             await monitoring_service.get_filtered_logs()
@@ -306,8 +320,10 @@ class TestGetFilteredLogs:
         mock_log_entry.message = "Container high memory"
         mock_log_entry.tags = ["docker", "memory"]
 
-        with patch("services.monitoring_service.log_service") as mock_log_service, \
-             patch("services.monitoring_service.logger"):
+        with (
+            patch("services.monitoring_service.log_service") as mock_log_service,
+            patch("services.monitoring_service.logger"),
+        ):
             mock_log_service.get_logs = AsyncMock(return_value=[mock_log_entry])
 
             result = await monitoring_service.get_filtered_logs()
@@ -324,8 +340,10 @@ class TestGetFilteredLogs:
     @pytest.mark.asyncio
     async def test_get_filtered_logs_handles_error(self, monitoring_service):
         """get_filtered_logs should return empty list on error."""
-        with patch("services.monitoring_service.log_service") as mock_log_service, \
-             patch("services.monitoring_service.logger") as mock_logger:
+        with (
+            patch("services.monitoring_service.log_service") as mock_log_service,
+            patch("services.monitoring_service.logger") as mock_logger,
+        ):
             mock_log_service.get_logs = AsyncMock(side_effect=Exception("DB error"))
 
             result = await monitoring_service.get_filtered_logs()
@@ -344,8 +362,10 @@ class TestGetFilteredLogs:
         mock_log_entry.message = "Test"
         mock_log_entry.tags = []
 
-        with patch("services.monitoring_service.log_service") as mock_log_service, \
-             patch("services.monitoring_service.logger") as mock_logger:
+        with (
+            patch("services.monitoring_service.log_service") as mock_log_service,
+            patch("services.monitoring_service.logger") as mock_logger,
+        ):
             mock_log_service.get_logs = AsyncMock(
                 return_value=[mock_log_entry, mock_log_entry]
             )

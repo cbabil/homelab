@@ -4,12 +4,13 @@ Unit tests for services/activity_service.py
 Tests activity logging and querying functionality.
 """
 
-import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-from datetime import datetime, UTC
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, patch
 
-from services.activity_service import ActivityService
+import pytest
+
 from models.metrics import ActivityLog, ActivityType
+from services.activity_service import ActivityService
 
 
 @pytest.fixture
@@ -50,7 +51,7 @@ class TestLogActivity:
         result = await activity_service.log_activity(
             activity_type=ActivityType.USER_LOGIN,
             message="User logged in",
-            user_id="user-123"
+            user_id="user-123",
         )
 
         assert result is not None
@@ -61,7 +62,9 @@ class TestLogActivity:
         mock_db_service.save_activity_log.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_log_activity_with_all_fields(self, activity_service, mock_db_service):
+    async def test_log_activity_with_all_fields(
+        self, activity_service, mock_db_service
+    ):
         """log_activity should handle all optional fields."""
         mock_db_service.save_activity_log = AsyncMock()
 
@@ -71,7 +74,7 @@ class TestLogActivity:
             user_id="user-123",
             server_id="server-456",
             app_id="app-789",
-            details={"version": "1.0.0"}
+            details={"version": "1.0.0"},
         )
 
         assert result.user_id == "user-123"
@@ -80,29 +83,30 @@ class TestLogActivity:
         assert result.details == {"version": "1.0.0"}
 
     @pytest.mark.asyncio
-    async def test_log_activity_default_details(self, activity_service, mock_db_service):
+    async def test_log_activity_default_details(
+        self, activity_service, mock_db_service
+    ):
         """log_activity should default details to empty dict."""
         mock_db_service.save_activity_log = AsyncMock()
 
         result = await activity_service.log_activity(
-            activity_type=ActivityType.SERVER_ADDED,
-            message="Server added"
+            activity_type=ActivityType.SERVER_ADDED, message="Server added"
         )
 
         assert result.details == {}
 
     @pytest.mark.asyncio
-    async def test_log_activity_generates_unique_id(self, activity_service, mock_db_service):
+    async def test_log_activity_generates_unique_id(
+        self, activity_service, mock_db_service
+    ):
         """log_activity should generate unique IDs."""
         mock_db_service.save_activity_log = AsyncMock()
 
         result1 = await activity_service.log_activity(
-            activity_type=ActivityType.USER_LOGIN,
-            message="Login 1"
+            activity_type=ActivityType.USER_LOGIN, message="Login 1"
         )
         result2 = await activity_service.log_activity(
-            activity_type=ActivityType.USER_LOGIN,
-            message="Login 2"
+            activity_type=ActivityType.USER_LOGIN, message="Login 2"
         )
 
         assert result1.id != result2.id
@@ -110,14 +114,11 @@ class TestLogActivity:
     @pytest.mark.asyncio
     async def test_log_activity_db_error(self, activity_service, mock_db_service):
         """log_activity should raise on database error."""
-        mock_db_service.save_activity_log = AsyncMock(
-            side_effect=Exception("DB error")
-        )
+        mock_db_service.save_activity_log = AsyncMock(side_effect=Exception("DB error"))
 
         with pytest.raises(Exception) as exc_info:
             await activity_service.log_activity(
-                activity_type=ActivityType.USER_LOGIN,
-                message="Login"
+                activity_type=ActivityType.USER_LOGIN, message="Login"
             )
         assert "DB error" in str(exc_info.value)
 
@@ -128,8 +129,7 @@ class TestLogActivity:
 
         with patch("services.activity_service.logger") as mock_logger:
             await activity_service.log_activity(
-                activity_type=ActivityType.USER_LOGIN,
-                message="User logged in"
+                activity_type=ActivityType.USER_LOGIN, message="User logged in"
             )
             mock_logger.info.assert_called()
 
@@ -138,14 +138,16 @@ class TestGetRecentActivities:
     """Tests for get_recent_activities method."""
 
     @pytest.mark.asyncio
-    async def test_get_recent_activities_success(self, activity_service, mock_db_service):
+    async def test_get_recent_activities_success(
+        self, activity_service, mock_db_service
+    ):
         """get_recent_activities should return activities from db."""
         expected = [
             ActivityLog(
                 id="act-1",
                 activity_type=ActivityType.USER_LOGIN,
                 message="Login",
-                timestamp=datetime.now(UTC).isoformat()
+                timestamp=datetime.now(UTC).isoformat(),
             )
         ]
         mock_db_service.get_activity_logs = AsyncMock(return_value=expected)
@@ -156,7 +158,9 @@ class TestGetRecentActivities:
         mock_db_service.get_activity_logs.assert_called_once_with(limit=20)
 
     @pytest.mark.asyncio
-    async def test_get_recent_activities_custom_limit(self, activity_service, mock_db_service):
+    async def test_get_recent_activities_custom_limit(
+        self, activity_service, mock_db_service
+    ):
         """get_recent_activities should use custom limit."""
         mock_db_service.get_activity_logs = AsyncMock(return_value=[])
 
@@ -165,11 +169,11 @@ class TestGetRecentActivities:
         mock_db_service.get_activity_logs.assert_called_once_with(limit=50)
 
     @pytest.mark.asyncio
-    async def test_get_recent_activities_db_error(self, activity_service, mock_db_service):
+    async def test_get_recent_activities_db_error(
+        self, activity_service, mock_db_service
+    ):
         """get_recent_activities should return empty list on error."""
-        mock_db_service.get_activity_logs = AsyncMock(
-            side_effect=Exception("DB error")
-        )
+        mock_db_service.get_activity_logs = AsyncMock(side_effect=Exception("DB error"))
 
         result = await activity_service.get_recent_activities()
 
@@ -193,11 +197,13 @@ class TestGetActivities:
             since=None,
             until=None,
             limit=100,
-            offset=0
+            offset=0,
         )
 
     @pytest.mark.asyncio
-    async def test_get_activities_with_type_filter(self, activity_service, mock_db_service):
+    async def test_get_activities_with_type_filter(
+        self, activity_service, mock_db_service
+    ):
         """get_activities should convert activity types to values."""
         mock_db_service.get_activity_logs = AsyncMock(return_value=[])
 
@@ -209,7 +215,9 @@ class TestGetActivities:
         assert call_args.kwargs["activity_types"] == ["user_login", "user_logout"]
 
     @pytest.mark.asyncio
-    async def test_get_activities_with_all_filters(self, activity_service, mock_db_service):
+    async def test_get_activities_with_all_filters(
+        self, activity_service, mock_db_service
+    ):
         """get_activities should pass all filters to db."""
         mock_db_service.get_activity_logs = AsyncMock(return_value=[])
 
@@ -220,7 +228,7 @@ class TestGetActivities:
             since="2024-01-01T00:00:00",
             until="2024-12-31T23:59:59",
             limit=50,
-            offset=10
+            offset=10,
         )
 
         mock_db_service.get_activity_logs.assert_called_once_with(
@@ -230,15 +238,13 @@ class TestGetActivities:
             since="2024-01-01T00:00:00",
             until="2024-12-31T23:59:59",
             limit=50,
-            offset=10
+            offset=10,
         )
 
     @pytest.mark.asyncio
     async def test_get_activities_db_error(self, activity_service, mock_db_service):
         """get_activities should return empty list on error."""
-        mock_db_service.get_activity_logs = AsyncMock(
-            side_effect=Exception("DB error")
-        )
+        mock_db_service.get_activity_logs = AsyncMock(side_effect=Exception("DB error"))
 
         result = await activity_service.get_activities()
 
@@ -249,7 +255,9 @@ class TestGetActivityCount:
     """Tests for get_activity_count method."""
 
     @pytest.mark.asyncio
-    async def test_get_activity_count_no_filters(self, activity_service, mock_db_service):
+    async def test_get_activity_count_no_filters(
+        self, activity_service, mock_db_service
+    ):
         """get_activity_count should call db with default params."""
         mock_db_service.count_activity_logs = AsyncMock(return_value=42)
 
@@ -257,12 +265,13 @@ class TestGetActivityCount:
 
         assert result == 42
         mock_db_service.count_activity_logs.assert_called_once_with(
-            activity_types=None,
-            since=None
+            activity_types=None, since=None
         )
 
     @pytest.mark.asyncio
-    async def test_get_activity_count_with_type_filter(self, activity_service, mock_db_service):
+    async def test_get_activity_count_with_type_filter(
+        self, activity_service, mock_db_service
+    ):
         """get_activity_count should convert activity types to values."""
         mock_db_service.count_activity_logs = AsyncMock(return_value=10)
 
@@ -274,15 +283,16 @@ class TestGetActivityCount:
         assert call_args.kwargs["activity_types"] == ["app_installed"]
 
     @pytest.mark.asyncio
-    async def test_get_activity_count_with_since(self, activity_service, mock_db_service):
+    async def test_get_activity_count_with_since(
+        self, activity_service, mock_db_service
+    ):
         """get_activity_count should pass since filter."""
         mock_db_service.count_activity_logs = AsyncMock(return_value=5)
 
         await activity_service.get_activity_count(since="2024-01-01T00:00:00")
 
         mock_db_service.count_activity_logs.assert_called_once_with(
-            activity_types=None,
-            since="2024-01-01T00:00:00"
+            activity_types=None, since="2024-01-01T00:00:00"
         )
 
     @pytest.mark.asyncio

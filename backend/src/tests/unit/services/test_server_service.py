@@ -4,11 +4,12 @@ Unit tests for services/server_service.py
 Tests server management with database persistence and encryption.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from services.server_service import ServerService
+import pytest
+
 from models.server import ServerConnection, ServerStatus
+from services.server_service import ServerService
 
 
 @pytest.fixture
@@ -29,8 +30,10 @@ def mock_credential_manager():
 @pytest.fixture
 def server_service(mock_db_service, mock_credential_manager):
     """Create ServerService instance with mocked dependencies."""
-    with patch("services.server_service.CredentialManager") as MockCM, \
-         patch("services.server_service.logger"):
+    with (
+        patch("services.server_service.CredentialManager") as MockCM,
+        patch("services.server_service.logger"),
+    ):
         MockCM.return_value = mock_credential_manager
         service = ServerService(mock_db_service)
         return service
@@ -41,32 +44,40 @@ class TestServerServiceInit:
 
     def test_init_stores_db_service(self, mock_db_service, mock_credential_manager):
         """ServerService should store db_service reference."""
-        with patch("services.server_service.CredentialManager") as MockCM, \
-             patch("services.server_service.logger"):
+        with (
+            patch("services.server_service.CredentialManager") as MockCM,
+            patch("services.server_service.logger"),
+        ):
             MockCM.return_value = mock_credential_manager
             service = ServerService(mock_db_service)
             assert service.db_service is mock_db_service
 
     def test_init_creates_credential_manager(self, mock_db_service):
         """ServerService should create credential manager."""
-        with patch("services.server_service.CredentialManager") as MockCM, \
-             patch("services.server_service.logger"):
+        with (
+            patch("services.server_service.CredentialManager") as MockCM,
+            patch("services.server_service.logger"),
+        ):
             MockCM.return_value = MagicMock()
             service = ServerService(mock_db_service)
             assert service.credential_manager is not None
 
     def test_init_handles_credential_manager_error(self, mock_db_service):
         """ServerService should handle credential manager initialization error."""
-        with patch("services.server_service.CredentialManager") as MockCM, \
-             patch("services.server_service.logger"):
+        with (
+            patch("services.server_service.CredentialManager") as MockCM,
+            patch("services.server_service.logger"),
+        ):
             MockCM.side_effect = ValueError("No encryption key")
             service = ServerService(mock_db_service)
             assert service.credential_manager is None
 
     def test_init_logs_message(self, mock_db_service, mock_credential_manager):
         """ServerService should log initialization."""
-        with patch("services.server_service.CredentialManager") as MockCM, \
-             patch("services.server_service.logger") as mock_logger:
+        with (
+            patch("services.server_service.CredentialManager") as MockCM,
+            patch("services.server_service.logger") as mock_logger,
+        ):
             MockCM.return_value = mock_credential_manager
             ServerService(mock_db_service)
             mock_logger.info.assert_called_with("Server service initialized")
@@ -101,8 +112,10 @@ class TestAddServer:
     @pytest.mark.asyncio
     async def test_add_server_without_credential_manager(self, mock_db_service):
         """add_server should work without credential manager."""
-        with patch("services.server_service.CredentialManager") as MockCM, \
-             patch("services.server_service.logger"):
+        with (
+            patch("services.server_service.CredentialManager") as MockCM,
+            patch("services.server_service.logger"),
+        ):
             MockCM.side_effect = ValueError("No key")
             service = ServerService(mock_db_service)
 
@@ -124,9 +137,7 @@ class TestAddServer:
             assert call_kwargs["encrypted_credentials"] == ""
 
     @pytest.mark.asyncio
-    async def test_add_server_empty_credentials(
-        self, server_service, mock_db_service
-    ):
+    async def test_add_server_empty_credentials(self, server_service, mock_db_service):
         """add_server should handle empty credentials."""
         mock_server = MagicMock(spec=ServerConnection)
         mock_db_service.create_server = AsyncMock(return_value=mock_server)
@@ -216,7 +227,10 @@ class TestGetAllServers:
     @pytest.mark.asyncio
     async def test_get_all_servers(self, server_service, mock_db_service):
         """get_all_servers should return all servers."""
-        mock_servers = [MagicMock(spec=ServerConnection), MagicMock(spec=ServerConnection)]
+        mock_servers = [
+            MagicMock(spec=ServerConnection),
+            MagicMock(spec=ServerConnection),
+        ]
         mock_db_service.get_all_servers_from_db = AsyncMock(return_value=mock_servers)
 
         result = await server_service.get_all_servers()
@@ -254,8 +268,10 @@ class TestGetCredentials:
     @pytest.mark.asyncio
     async def test_get_credentials_no_credential_manager(self, mock_db_service):
         """get_credentials should return None without credential manager."""
-        with patch("services.server_service.CredentialManager") as MockCM, \
-             patch("services.server_service.logger"):
+        with (
+            patch("services.server_service.CredentialManager") as MockCM,
+            patch("services.server_service.logger"),
+        ):
             MockCM.side_effect = ValueError("No key")
             service = ServerService(mock_db_service)
             mock_db_service.get_server_credentials = AsyncMock(return_value="encrypted")
@@ -265,9 +281,7 @@ class TestGetCredentials:
             assert result is None
 
     @pytest.mark.asyncio
-    async def test_get_credentials_error(
-        self, server_service, mock_db_service
-    ):
+    async def test_get_credentials_error(self, server_service, mock_db_service):
         """get_credentials should return None on error."""
         mock_db_service.get_server_credentials = AsyncMock(
             side_effect=Exception("DB error")
@@ -305,8 +319,10 @@ class TestUpdateCredentials:
     @pytest.mark.asyncio
     async def test_update_credentials_no_credential_manager(self, mock_db_service):
         """update_credentials should return False without credential manager."""
-        with patch("services.server_service.CredentialManager") as MockCM, \
-             patch("services.server_service.logger"):
+        with (
+            patch("services.server_service.CredentialManager") as MockCM,
+            patch("services.server_service.logger"),
+        ):
             MockCM.side_effect = ValueError("No key")
             service = ServerService(mock_db_service)
 
@@ -315,9 +331,7 @@ class TestUpdateCredentials:
             assert result is False
 
     @pytest.mark.asyncio
-    async def test_update_credentials_error(
-        self, server_service, mock_db_service
-    ):
+    async def test_update_credentials_error(self, server_service, mock_db_service):
         """update_credentials should return False on error."""
         mock_db_service.update_server_credentials = AsyncMock(
             side_effect=Exception("DB error")
@@ -393,7 +407,9 @@ class TestUpdateServerSystemInfo:
     """Tests for update_server_system_info method."""
 
     @pytest.mark.asyncio
-    async def test_update_system_info_with_docker(self, server_service, mock_db_service):
+    async def test_update_system_info_with_docker(
+        self, server_service, mock_db_service
+    ):
         """update_server_system_info should detect docker_installed."""
         mock_db_service.update_server = AsyncMock(return_value=True)
 
@@ -430,9 +446,7 @@ class TestUpdateServerSystemInfo:
         assert call_kwargs["docker_installed"] == 0
 
     @pytest.mark.asyncio
-    async def test_update_system_info_docker_na(
-        self, server_service, mock_db_service
-    ):
+    async def test_update_system_info_docker_na(self, server_service, mock_db_service):
         """update_server_system_info should handle docker_version='n/a'."""
         mock_db_service.update_server = AsyncMock(return_value=True)
 

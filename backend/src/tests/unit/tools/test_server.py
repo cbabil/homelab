@@ -5,8 +5,9 @@ Tests for server management tools: add_server, get_server, list_servers,
 update_server, delete_server, test_connection.
 """
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 
 
 class TestServerTools:
@@ -16,11 +17,13 @@ class TestServerTools:
     def mock_ssh_service(self):
         """Create mock SSH service."""
         service = MagicMock()
-        service.test_connection = AsyncMock(return_value=(
-            True,
-            "Connected",
-            {"os": "Ubuntu 22.04", "docker_version": "24.0.0"}
-        ))
+        service.test_connection = AsyncMock(
+            return_value=(
+                True,
+                "Connected",
+                {"os": "Ubuntu 22.04", "docker_version": "24.0.0"},
+            )
+        )
         service.execute_command = AsyncMock(return_value=(True, "success"))
         return service
 
@@ -56,20 +59,23 @@ class TestServerTools:
         server.username = "admin"
         server.auth_type = MagicMock(value="password")
         server.docker_installed = True
-        server.model_dump = MagicMock(return_value={
-            "id": "server-123",
-            "name": "Test Server",
-            "host": "192.168.1.100",
-            "port": 22,
-            "username": "admin",
-            "docker_installed": True
-        })
+        server.model_dump = MagicMock(
+            return_value={
+                "id": "server-123",
+                "name": "Test Server",
+                "host": "192.168.1.100",
+                "port": 22,
+                "username": "admin",
+                "docker_installed": True,
+            }
+        )
         return server
 
     @pytest.fixture
     def server_tools(self, mock_ssh_service, mock_server_service, mock_agent_service):
         """Create ServerTools instance."""
         from tools.server.tools import ServerTools
+
         return ServerTools(mock_ssh_service, mock_server_service, mock_agent_service)
 
 
@@ -98,11 +104,9 @@ class TestAddServer:
         server.name = "New Server"
         server.host = "10.0.0.1"
         server.docker_installed = False
-        server.model_dump = MagicMock(return_value={
-            "id": "server-new",
-            "name": "New Server",
-            "host": "10.0.0.1"
-        })
+        server.model_dump = MagicMock(
+            return_value={"id": "server-new", "name": "New Server", "host": "10.0.0.1"}
+        )
         return server
 
     @pytest.mark.asyncio
@@ -119,14 +123,14 @@ class TestAddServer:
 
         tools = ServerTools(mock_ssh_service, mock_server_service, mock_agent_service)
 
-        with patch('tools.server.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.server.tools.log_event", new_callable=AsyncMock):
             result = await tools.add_server(
                 name="New Server",
                 host="10.0.0.1",
                 port=22,
                 username="admin",
                 auth_type="password",
-                password="secret123"
+                password="secret123",
             )
 
         assert result["success"] is True
@@ -144,14 +148,14 @@ class TestAddServer:
 
         tools = ServerTools(mock_ssh_service, mock_server_service, mock_agent_service)
 
-        with patch('tools.server.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.server.tools.log_event", new_callable=AsyncMock):
             result = await tools.add_server(
                 name="Bad Server",
                 host="invalid",
                 port=22,
                 username="admin",
                 auth_type="password",
-                password="secret"
+                password="secret",
             )
 
         assert result["success"] is False
@@ -178,10 +182,9 @@ class TestGetServer:
         server = MagicMock()
         server.id = "server-123"
         server.name = "Test Server"
-        server.model_dump = MagicMock(return_value={
-            "id": "server-123",
-            "name": "Test Server"
-        })
+        server.model_dump = MagicMock(
+            return_value={"id": "server-123", "name": "Test Server"}
+        )
         return server
 
     @pytest.mark.asyncio
@@ -292,10 +295,9 @@ class TestUpdateServer:
         mock_server_service.update_server = AsyncMock(return_value=True)
         tools = ServerTools(mock_ssh_service, mock_server_service, mock_agent_service)
 
-        with patch('tools.server.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.server.tools.log_event", new_callable=AsyncMock):
             result = await tools.update_server(
-                server_id="server-123",
-                name="Updated Server"
+                server_id="server-123", name="Updated Server"
             )
 
         assert result["success"] is True
@@ -310,10 +312,7 @@ class TestUpdateServer:
         mock_server_service.update_server = AsyncMock(return_value=False)
         tools = ServerTools(mock_ssh_service, mock_server_service, mock_agent_service)
 
-        result = await tools.update_server(
-            server_id="nonexistent",
-            name="New Name"
-        )
+        result = await tools.update_server(server_id="nonexistent", name="New Name")
 
         assert result["success"] is False
         assert result["error"] == "SERVER_NOT_FOUND"
@@ -347,7 +346,7 @@ class TestDeleteServer:
         mock_server_service.delete_server = AsyncMock(return_value=True)
         tools = ServerTools(mock_ssh_service, mock_server_service, mock_agent_service)
 
-        with patch('tools.server.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.server.tools.log_event", new_callable=AsyncMock):
             result = await tools.delete_server("server-123")
 
         assert result["success"] is True
@@ -363,7 +362,7 @@ class TestDeleteServer:
         mock_server_service.delete_server = AsyncMock(return_value=False)
         tools = ServerTools(mock_ssh_service, mock_server_service, mock_agent_service)
 
-        with patch('tools.server.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.server.tools.log_event", new_callable=AsyncMock):
             result = await tools.delete_server("nonexistent")
 
         assert result["success"] is False
@@ -404,23 +403,25 @@ class TestTestConnection:
         from tools.server.tools import ServerTools
 
         mock_server_service.get_server = AsyncMock(return_value=mock_server)
-        mock_server_service.get_credentials = AsyncMock(return_value={"password": "secret"})
+        mock_server_service.get_credentials = AsyncMock(
+            return_value={"password": "secret"}
+        )
         mock_server_service.update_server_status = AsyncMock()
         mock_server_service.update_server_system_info = AsyncMock()
 
-        mock_ssh_service.test_connection = AsyncMock(return_value=(
-            True,
-            "Connected",
-            {"os": "Ubuntu 22.04", "docker_version": "24.0.0"}
-        ))
+        mock_ssh_service.test_connection = AsyncMock(
+            return_value=(
+                True,
+                "Connected",
+                {"os": "Ubuntu 22.04", "docker_version": "24.0.0"},
+            )
+        )
 
         mock_agent_service.get_agent_by_server = AsyncMock(return_value=None)
 
-        tools = ServerTools(
-            mock_ssh_service, mock_server_service, mock_agent_service
-        )
+        tools = ServerTools(mock_ssh_service, mock_server_service, mock_agent_service)
 
-        with patch('tools.server.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.server.tools.log_event", new_callable=AsyncMock):
             result = await tools.test_connection("server-123")
 
         assert result["success"] is True
@@ -434,9 +435,7 @@ class TestTestConnection:
         from tools.server.tools import ServerTools
 
         mock_server_service.get_server = AsyncMock(return_value=None)
-        tools = ServerTools(
-            mock_ssh_service, mock_server_service, mock_agent_service
-        )
+        tools = ServerTools(mock_ssh_service, mock_server_service, mock_agent_service)
 
         result = await tools.test_connection("nonexistent")
 
@@ -451,20 +450,18 @@ class TestTestConnection:
         from tools.server.tools import ServerTools
 
         mock_server_service.get_server = AsyncMock(return_value=mock_server)
-        mock_server_service.get_credentials = AsyncMock(return_value={"password": "secret"})
+        mock_server_service.get_credentials = AsyncMock(
+            return_value={"password": "secret"}
+        )
         mock_server_service.update_server_status = AsyncMock()
 
-        mock_ssh_service.test_connection = AsyncMock(return_value=(
-            False,
-            "Connection refused",
-            None
-        ))
-
-        tools = ServerTools(
-            mock_ssh_service, mock_server_service, mock_agent_service
+        mock_ssh_service.test_connection = AsyncMock(
+            return_value=(False, "Connection refused", None)
         )
 
-        with patch('tools.server.tools.log_event', new_callable=AsyncMock):
+        tools = ServerTools(mock_ssh_service, mock_server_service, mock_agent_service)
+
+        with patch("tools.server.tools.log_event", new_callable=AsyncMock):
             result = await tools.test_connection("server-123")
 
         assert result["success"] is False

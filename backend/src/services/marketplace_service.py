@@ -8,7 +8,6 @@ import json
 import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import List, Optional
 
 import structlog
 from sqlalchemy import delete, select, update
@@ -17,16 +16,16 @@ from database.connection import db_manager
 from init_db.schema_marketplace import initialize_marketplace_database
 from lib.git_sync import GitSync
 from models.marketplace import (
-    MarketplaceApp,
-    MarketplaceRepo,
     AppRating,
-    MarketplaceRepoTable,
-    MarketplaceAppTable,
     AppRatingTable,
-    RepoType,
-    RepoStatus,
-    DockerConfig,
     AppRequirements,
+    DockerConfig,
+    MarketplaceApp,
+    MarketplaceAppTable,
+    MarketplaceRepo,
+    MarketplaceRepoTable,
+    RepoStatus,
+    RepoType,
 )
 
 logger = structlog.get_logger("marketplace_service")
@@ -177,7 +176,7 @@ class MarketplaceService:
         )
         return repo
 
-    async def get_repos(self, enabled_only: bool = False) -> List[MarketplaceRepo]:
+    async def get_repos(self, enabled_only: bool = False) -> list[MarketplaceRepo]:
         """Get all marketplace repositories.
 
         Args:
@@ -202,7 +201,7 @@ class MarketplaceService:
         )
         return repos
 
-    async def get_repo(self, repo_id: str) -> Optional[MarketplaceRepo]:
+    async def get_repo(self, repo_id: str) -> MarketplaceRepo | None:
         """Get a single repository by ID.
 
         Args:
@@ -288,8 +287,8 @@ class MarketplaceService:
         return updated
 
     async def sync_repo(
-        self, repo_id: str, local_path: Optional[Path] = None
-    ) -> List[MarketplaceApp]:
+        self, repo_id: str, local_path: Path | None = None
+    ) -> list[MarketplaceApp]:
         """Sync apps from a repository.
 
         Args:
@@ -318,7 +317,7 @@ class MarketplaceService:
             )
 
         git_sync = GitSync()
-        apps: List[MarketplaceApp] = []
+        apps: list[MarketplaceApp] = []
 
         try:
             # Use local path for testing or clone from URL
@@ -453,16 +452,16 @@ class MarketplaceService:
 
     async def search_apps(
         self,
-        search: Optional[str] = None,
-        category: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-        repo_id: Optional[str] = None,
-        featured: Optional[bool] = None,
+        search: str | None = None,
+        category: str | None = None,
+        tags: list[str] | None = None,
+        repo_id: str | None = None,
+        featured: bool | None = None,
         sort_by: str = "name",
         sort_order: str = "asc",
         limit: int = 50,
         offset: int = 0,
-    ) -> List[MarketplaceApp]:
+    ) -> list[MarketplaceApp]:
         """Search marketplace apps with filters.
 
         Args:
@@ -537,7 +536,7 @@ class MarketplaceService:
         # Pagination
         return apps[offset : offset + limit]
 
-    async def get_app(self, app_id: str) -> Optional[MarketplaceApp]:
+    async def get_app(self, app_id: str) -> MarketplaceApp | None:
         """Get app by ID.
 
         Args:
@@ -556,7 +555,7 @@ class MarketplaceService:
 
         return self._app_from_table(row) if row else None
 
-    async def get_featured_apps(self, limit: int = 10) -> List[MarketplaceApp]:
+    async def get_featured_apps(self, limit: int = 10) -> list[MarketplaceApp]:
         """Get featured apps.
 
         Args:
@@ -567,7 +566,7 @@ class MarketplaceService:
         """
         return await self.search_apps(featured=True, limit=limit)
 
-    async def get_trending_apps(self, limit: int = 10) -> List[MarketplaceApp]:
+    async def get_trending_apps(self, limit: int = 10) -> list[MarketplaceApp]:
         """Get trending apps by recent popularity.
 
         Args:
@@ -580,7 +579,7 @@ class MarketplaceService:
             sort_by="popularity", sort_order="desc", limit=limit
         )
 
-    async def get_categories(self) -> List[dict]:
+    async def get_categories(self) -> list[dict]:
         """Get all categories with app counts.
 
         Returns:
@@ -680,7 +679,7 @@ class MarketplaceService:
             updated_at=now.isoformat(),
         )
 
-    async def get_user_rating(self, app_id: str, user_id: str) -> Optional[int]:
+    async def get_user_rating(self, app_id: str, user_id: str) -> int | None:
         """Get user's rating for an app.
 
         Args:

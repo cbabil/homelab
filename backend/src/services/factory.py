@@ -6,28 +6,28 @@ from typing import Any
 import structlog
 
 from database.connection import db_manager
+from services.activity_service import ActivityService
+from services.agent_lifecycle import AgentLifecycleManager
+from services.agent_manager import AgentManager
+from services.agent_service import AgentService
+from services.agent_websocket import AgentWebSocketHandler
 from services.app_service import AppService
 from services.auth_service import AuthService
-from services.activity_service import ActivityService
-from services.agent_service import AgentService
-from services.agent_manager import AgentManager
-from services.agent_lifecycle import AgentLifecycleManager
-from services.agent_websocket import AgentWebSocketHandler
-from services.command_router import CommandRouter
 from services.backup_service import BackupService
+from services.command_router import CommandRouter
 from services.dashboard_service import DashboardService
+from services.database import AgentDatabaseService, DatabaseConnection
 from services.database_service import DatabaseService
-from services.database import DatabaseConnection, AgentDatabaseService
 from services.deployment import DeploymentService
 from services.deployment.ssh_executor import AgentExecutor
 from services.marketplace_service import MarketplaceService
 from services.metrics_service import MetricsService
 from services.monitoring_service import MonitoringService
+from services.notification_service import NotificationService
+from services.retention_service import RetentionService
 from services.server_service import ServerService
 from services.session_service import SessionService
 from services.settings_service import SettingsService
-from services.notification_service import NotificationService
-from services.retention_service import RetentionService
 from services.ssh_service import SSHService
 
 logger = structlog.get_logger("service_factory")

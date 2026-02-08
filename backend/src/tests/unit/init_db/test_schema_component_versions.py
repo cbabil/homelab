@@ -4,13 +4,14 @@ Component Versions Schema Unit Tests
 Tests for schema_component_versions.py - SQL schema and initialization.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from init_db.schema_component_versions import (
     COMPONENT_VERSIONS_SCHEMA,
-    initialize_component_versions_schema,
     check_component_versions_exists,
+    initialize_component_versions_schema,
 )
 
 
@@ -24,7 +25,9 @@ class TestComponentVersionsSchema:
 
     def test_schema_creates_table(self):
         """Test that schema contains CREATE TABLE statement."""
-        assert "CREATE TABLE IF NOT EXISTS component_versions" in COMPONENT_VERSIONS_SCHEMA
+        assert (
+            "CREATE TABLE IF NOT EXISTS component_versions" in COMPONENT_VERSIONS_SCHEMA
+        )
 
     def test_schema_has_required_columns(self):
         """Test that schema has all required columns."""
@@ -39,7 +42,10 @@ class TestComponentVersionsSchema:
 
     def test_schema_has_component_check(self):
         """Test that component has CHECK constraint."""
-        assert "CHECK (component IN ('backend', 'frontend', 'api'))" in COMPONENT_VERSIONS_SCHEMA
+        assert (
+            "CHECK (component IN ('backend', 'frontend', 'api'))"
+            in COMPONENT_VERSIONS_SCHEMA
+        )
 
     def test_schema_inserts_default_values(self):
         """Test that schema inserts default component versions."""
@@ -50,7 +56,10 @@ class TestComponentVersionsSchema:
 
     def test_schema_has_update_trigger(self):
         """Test that schema creates update trigger."""
-        assert "CREATE TRIGGER IF NOT EXISTS component_versions_updated_at" in COMPONENT_VERSIONS_SCHEMA
+        assert (
+            "CREATE TRIGGER IF NOT EXISTS component_versions_updated_at"
+            in COMPONENT_VERSIONS_SCHEMA
+        )
         assert "AFTER UPDATE ON component_versions" in COMPONENT_VERSIONS_SCHEMA
 
 
@@ -65,10 +74,12 @@ class TestInitializeComponentVersionsSchema:
         mock_conn.executescript = AsyncMock()
         mock_conn.commit = AsyncMock()
 
-        manager.get_connection = MagicMock(return_value=AsyncMock(
-            __aenter__=AsyncMock(return_value=mock_conn),
-            __aexit__=AsyncMock(return_value=None),
-        ))
+        manager.get_connection = MagicMock(
+            return_value=AsyncMock(
+                __aenter__=AsyncMock(return_value=mock_conn),
+                __aexit__=AsyncMock(return_value=None),
+            )
+        )
         return manager, mock_conn
 
     @pytest.mark.asyncio
@@ -91,14 +102,18 @@ class TestInitializeComponentVersionsSchema:
         mock_conn.commit = AsyncMock()
 
         mock_manager = MagicMock()
-        mock_manager.get_connection = MagicMock(return_value=AsyncMock(
-            __aenter__=AsyncMock(return_value=mock_conn),
-            __aexit__=AsyncMock(return_value=None),
-        ))
+        mock_manager.get_connection = MagicMock(
+            return_value=AsyncMock(
+                __aenter__=AsyncMock(return_value=mock_conn),
+                __aexit__=AsyncMock(return_value=None),
+            )
+        )
 
         with (
-            patch("init_db.schema_component_versions.DatabaseManager",
-                  return_value=mock_manager),
+            patch(
+                "init_db.schema_component_versions.DatabaseManager",
+                return_value=mock_manager,
+            ),
             patch("init_db.schema_component_versions.logger"),
         ):
             result = await initialize_component_versions_schema(None)
@@ -128,10 +143,12 @@ class TestCheckComponentVersionsExists:
         mock_cursor = AsyncMock()
         mock_conn.execute = AsyncMock(return_value=mock_cursor)
 
-        manager.get_connection = MagicMock(return_value=AsyncMock(
-            __aenter__=AsyncMock(return_value=mock_conn),
-            __aexit__=AsyncMock(return_value=None),
-        ))
+        manager.get_connection = MagicMock(
+            return_value=AsyncMock(
+                __aenter__=AsyncMock(return_value=mock_conn),
+                __aexit__=AsyncMock(return_value=None),
+            )
+        )
         return manager, mock_cursor
 
     @pytest.mark.asyncio
@@ -165,14 +182,18 @@ class TestCheckComponentVersionsExists:
         mock_conn.execute = AsyncMock(return_value=mock_cursor)
 
         mock_manager = MagicMock()
-        mock_manager.get_connection = MagicMock(return_value=AsyncMock(
-            __aenter__=AsyncMock(return_value=mock_conn),
-            __aexit__=AsyncMock(return_value=None),
-        ))
+        mock_manager.get_connection = MagicMock(
+            return_value=AsyncMock(
+                __aenter__=AsyncMock(return_value=mock_conn),
+                __aexit__=AsyncMock(return_value=None),
+            )
+        )
 
         with (
-            patch("init_db.schema_component_versions.DatabaseManager",
-                  return_value=mock_manager),
+            patch(
+                "init_db.schema_component_versions.DatabaseManager",
+                return_value=mock_manager,
+            ),
             patch("init_db.schema_component_versions.logger"),
         ):
             result = await check_component_versions_exists(None)

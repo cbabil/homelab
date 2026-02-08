@@ -4,11 +4,12 @@ Session Tools Unit Tests
 Tests for session management tools.
 """
 
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from tools.session.tools import SessionTools
+import pytest
+
 from models.session import SessionStatus
+from tools.session.tools import SessionTools
 
 
 class TestSessionToolsInit:
@@ -19,7 +20,7 @@ class TestSessionToolsInit:
         mock_session_service = MagicMock()
         mock_auth_service = MagicMock()
 
-        with patch('tools.session.tools.logger'):
+        with patch("tools.session.tools.logger"):
             tools = SessionTools(mock_session_service, mock_auth_service)
 
         assert tools.session_service == mock_session_service
@@ -29,7 +30,7 @@ class TestSessionToolsInit:
         """Test initialization without auth service."""
         mock_session_service = MagicMock()
 
-        with patch('tools.session.tools.logger'):
+        with patch("tools.session.tools.logger"):
             tools = SessionTools(mock_session_service)
 
         assert tools.auth_service is None
@@ -41,7 +42,7 @@ class TestGetUserContext:
     @pytest.fixture
     def tools(self):
         """Create SessionTools instance."""
-        with patch('tools.session.tools.logger'):
+        with patch("tools.session.tools.logger"):
             return SessionTools(MagicMock())
 
     def test_get_user_context_full(self, tools):
@@ -73,7 +74,7 @@ class TestIsAdmin:
     @pytest.fixture
     def tools(self):
         """Create SessionTools instance."""
-        with patch('tools.session.tools.logger'):
+        with patch("tools.session.tools.logger"):
             return SessionTools(MagicMock())
 
     def test_is_admin_true(self, tools):
@@ -96,7 +97,7 @@ class TestListSessions:
     @pytest.fixture
     def tools(self, mock_service):
         """Create SessionTools instance."""
-        with patch('tools.session.tools.logger'):
+        with patch("tools.session.tools.logger"):
             return SessionTools(mock_service)
 
     @pytest.fixture
@@ -147,23 +148,17 @@ class TestListSessions:
         """Test admin listing another user's sessions."""
         mock_service.list_sessions = AsyncMock(return_value=sample_sessions)
 
-        result = await tools.list_sessions(
-            {"user_id": "other-user"}, mock_admin_ctx
-        )
+        result = await tools.list_sessions({"user_id": "other-user"}, mock_admin_ctx)
 
         assert result["success"] is True
-        mock_service.list_sessions.assert_called_with(
-            user_id="other-user", status=None
-        )
+        mock_service.list_sessions.assert_called_with(user_id="other-user", status=None)
 
     @pytest.mark.asyncio
     async def test_list_sessions_user_denied_other(
         self, tools, mock_service, mock_user_ctx
     ):
         """Test user cannot list another user's sessions."""
-        result = await tools.list_sessions(
-            {"user_id": "other-user"}, mock_user_ctx
-        )
+        result = await tools.list_sessions({"user_id": "other-user"}, mock_user_ctx)
 
         assert result["success"] is False
         assert result["error"] == "PERMISSION_DENIED"
@@ -175,9 +170,7 @@ class TestListSessions:
         """Test listing with status filter."""
         mock_service.list_sessions = AsyncMock(return_value=sample_sessions)
 
-        result = await tools.list_sessions(
-            {"status": "active"}, mock_user_ctx
-        )
+        result = await tools.list_sessions({"status": "active"}, mock_user_ctx)
 
         assert result["success"] is True
         mock_service.list_sessions.assert_called_with(
@@ -187,9 +180,7 @@ class TestListSessions:
     @pytest.mark.asyncio
     async def test_list_sessions_exception(self, tools, mock_service, mock_user_ctx):
         """Test handling exceptions."""
-        mock_service.list_sessions = AsyncMock(
-            side_effect=Exception("Database error")
-        )
+        mock_service.list_sessions = AsyncMock(side_effect=Exception("Database error"))
 
         result = await tools.list_sessions({}, mock_user_ctx)
 
@@ -208,7 +199,7 @@ class TestGetSession:
     @pytest.fixture
     def tools(self, mock_service):
         """Create SessionTools instance."""
-        with patch('tools.session.tools.logger'):
+        with patch("tools.session.tools.logger"):
             return SessionTools(mock_service)
 
     @pytest.fixture
@@ -306,7 +297,7 @@ class TestUpdateSession:
     @pytest.fixture
     def tools(self, mock_service):
         """Create SessionTools instance."""
-        with patch('tools.session.tools.logger'):
+        with patch("tools.session.tools.logger"):
             return SessionTools(mock_service)
 
     @pytest.fixture
@@ -405,7 +396,7 @@ class TestDeleteSession:
     @pytest.fixture
     def tools(self, mock_service):
         """Create SessionTools instance."""
-        with patch('tools.session.tools.logger'):
+        with patch("tools.session.tools.logger"):
             return SessionTools(mock_service)
 
     @pytest.fixture
@@ -475,7 +466,7 @@ class TestDeleteSession:
         mock_service.delete_session.assert_called_with(
             user_id="user-123",
             terminated_by="user-123",
-            exclude_session_id="sess-current"
+            exclude_session_id="sess-current",
         )
 
     @pytest.mark.asyncio
@@ -491,9 +482,7 @@ class TestDeleteSession:
 
         assert result["success"] is True
         mock_service.delete_session.assert_called_with(
-            user_id="user-123",
-            terminated_by="user-123",
-            exclude_session_id=None
+            user_id="user-123", terminated_by="user-123", exclude_session_id=None
         )
 
     @pytest.mark.asyncio
@@ -501,15 +490,13 @@ class TestDeleteSession:
         """Test admin deleting by user_id."""
         mock_service.delete_session = AsyncMock(return_value=5)
 
-        result = await tools.delete_session(
-            {"user_id": "target-user"}, mock_admin_ctx
-        )
+        result = await tools.delete_session({"user_id": "target-user"}, mock_admin_ctx)
 
         assert result["success"] is True
         mock_service.delete_session.assert_called_with(
             user_id="target-user",
             terminated_by="admin-123",
-            exclude_session_id="sess-admin"
+            exclude_session_id="sess-admin",
         )
 
     @pytest.mark.asyncio
@@ -517,9 +504,7 @@ class TestDeleteSession:
         self, tools, mock_service, mock_user_ctx
     ):
         """Test non-admin cannot delete by user_id of another user."""
-        result = await tools.delete_session(
-            {"user_id": "other-user"}, mock_user_ctx
-        )
+        result = await tools.delete_session({"user_id": "other-user"}, mock_user_ctx)
 
         assert result["success"] is False
         assert result["error"] == "PERMISSION_DENIED"
@@ -554,7 +539,7 @@ class TestCleanupExpiredSessions:
     @pytest.fixture
     def tools(self, mock_service):
         """Create SessionTools instance."""
-        with patch('tools.session.tools.logger'):
+        with patch("tools.session.tools.logger"):
             return SessionTools(mock_service)
 
     @pytest.fixture

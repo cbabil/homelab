@@ -4,8 +4,9 @@ Unit tests for services/deployment/service.py - Install Operations
 Tests for install_app method and _wait_for_container helper.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 
 @pytest.fixture

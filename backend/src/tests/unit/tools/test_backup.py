@@ -4,8 +4,9 @@ Backup Tools Unit Tests
 Tests for backup tools: export_backup, import_backup.
 """
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
 
 from tools.backup.tools import BackupTools
 
@@ -40,20 +41,21 @@ class TestExportBackup:
     @pytest.mark.asyncio
     async def test_export_backup_success(self, mock_backup_service):
         """Test successful backup export."""
-        mock_backup_service.export_backup = AsyncMock(return_value={
-            "success": True,
-            "path": "/backups/tomo-2024-01-15.enc",
-            "checksum": "abc123def456",
-            "size": 1024000,
-            "timestamp": "2024-01-15T10:30:00Z"
-        })
+        mock_backup_service.export_backup = AsyncMock(
+            return_value={
+                "success": True,
+                "path": "/backups/tomo-2024-01-15.enc",
+                "checksum": "abc123def456",
+                "size": 1024000,
+                "timestamp": "2024-01-15T10:30:00Z",
+            }
+        )
 
         tools = BackupTools(mock_backup_service)
 
         with patch("tools.backup.tools.log_event", new_callable=AsyncMock):
             result = await tools.export_backup(
-                output_path="/backups/tomo-2024-01-15.enc",
-                password="securepass123"
+                output_path="/backups/tomo-2024-01-15.enc", password="securepass123"
             )
 
         assert result["success"] is True
@@ -65,20 +67,21 @@ class TestExportBackup:
     @pytest.mark.asyncio
     async def test_export_backup_logs_success(self, mock_backup_service):
         """Test that successful export is logged."""
-        mock_backup_service.export_backup = AsyncMock(return_value={
-            "success": True,
-            "path": "/backups/backup.enc",
-            "checksum": "abc123",
-            "size": 500,
-            "timestamp": "2024-01-15T10:30:00Z"
-        })
+        mock_backup_service.export_backup = AsyncMock(
+            return_value={
+                "success": True,
+                "path": "/backups/backup.enc",
+                "checksum": "abc123",
+                "size": 500,
+                "timestamp": "2024-01-15T10:30:00Z",
+            }
+        )
 
         tools = BackupTools(mock_backup_service)
 
         with patch("tools.backup.tools.log_event", new_callable=AsyncMock) as mock_log:
             await tools.export_backup(
-                output_path="/backups/backup.enc",
-                password="pass123"
+                output_path="/backups/backup.enc", password="pass123"
             )
 
         mock_log.assert_called_once()
@@ -87,17 +90,15 @@ class TestExportBackup:
     @pytest.mark.asyncio
     async def test_export_backup_service_failure(self, mock_backup_service):
         """Test backup export when service returns failure."""
-        mock_backup_service.export_backup = AsyncMock(return_value={
-            "success": False,
-            "error": "Insufficient disk space"
-        })
+        mock_backup_service.export_backup = AsyncMock(
+            return_value={"success": False, "error": "Insufficient disk space"}
+        )
 
         tools = BackupTools(mock_backup_service)
 
         with patch("tools.backup.tools.log_event", new_callable=AsyncMock):
             result = await tools.export_backup(
-                output_path="/backups/backup.enc",
-                password="pass123"
+                output_path="/backups/backup.enc", password="pass123"
             )
 
         assert result["success"] is False
@@ -107,17 +108,15 @@ class TestExportBackup:
     @pytest.mark.asyncio
     async def test_export_backup_failure_logs_error(self, mock_backup_service):
         """Test that failed export is logged."""
-        mock_backup_service.export_backup = AsyncMock(return_value={
-            "success": False,
-            "error": "Disk full"
-        })
+        mock_backup_service.export_backup = AsyncMock(
+            return_value={"success": False, "error": "Disk full"}
+        )
 
         tools = BackupTools(mock_backup_service)
 
         with patch("tools.backup.tools.log_event", new_callable=AsyncMock) as mock_log:
             await tools.export_backup(
-                output_path="/backups/backup.enc",
-                password="pass123"
+                output_path="/backups/backup.enc", password="pass123"
             )
 
         mock_log.assert_called_once()
@@ -134,13 +133,14 @@ class TestExportBackup:
 
         with patch("tools.backup.tools.log_event", new_callable=AsyncMock):
             result = await tools.export_backup(
-                output_path="/backups/backup.enc",
-                password="pass123"
+                output_path="/backups/backup.enc", password="pass123"
             )
 
         assert result["success"] is False
         assert result["error"] == "EXPORT_ERROR"
-        assert "Database connection lost" in result["message"]
+        # Error message should be sanitized (no raw exception details)
+        assert "Database connection lost" not in result["message"]
+        assert "Backup export failed" in result["message"]
 
 
 class TestImportBackup:
@@ -149,20 +149,21 @@ class TestImportBackup:
     @pytest.mark.asyncio
     async def test_import_backup_success(self, mock_backup_service):
         """Test successful backup import."""
-        mock_backup_service.import_backup = AsyncMock(return_value={
-            "success": True,
-            "version": "1.0.0",
-            "timestamp": "2024-01-15T10:30:00Z",
-            "users_imported": 5,
-            "servers_imported": 10
-        })
+        mock_backup_service.import_backup = AsyncMock(
+            return_value={
+                "success": True,
+                "version": "1.0.0",
+                "timestamp": "2024-01-15T10:30:00Z",
+                "users_imported": 5,
+                "servers_imported": 10,
+            }
+        )
 
         tools = BackupTools(mock_backup_service)
 
         with patch("tools.backup.tools.log_event", new_callable=AsyncMock):
             result = await tools.import_backup(
-                input_path="/backups/tomo-2024-01-15.enc",
-                password="securepass123"
+                input_path="/backups/tomo-2024-01-15.enc", password="securepass123"
             )
 
         assert result["success"] is True
@@ -174,20 +175,21 @@ class TestImportBackup:
     @pytest.mark.asyncio
     async def test_import_backup_logs_success(self, mock_backup_service):
         """Test that successful import is logged."""
-        mock_backup_service.import_backup = AsyncMock(return_value={
-            "success": True,
-            "version": "1.0.0",
-            "timestamp": "2024-01-15T10:30:00Z",
-            "users_imported": 3,
-            "servers_imported": 5
-        })
+        mock_backup_service.import_backup = AsyncMock(
+            return_value={
+                "success": True,
+                "version": "1.0.0",
+                "timestamp": "2024-01-15T10:30:00Z",
+                "users_imported": 3,
+                "servers_imported": 5,
+            }
+        )
 
         tools = BackupTools(mock_backup_service)
 
         with patch("tools.backup.tools.log_event", new_callable=AsyncMock) as mock_log:
             await tools.import_backup(
-                input_path="/backups/backup.enc",
-                password="pass123"
+                input_path="/backups/backup.enc", password="pass123"
             )
 
         mock_log.assert_called_once()
@@ -196,21 +198,21 @@ class TestImportBackup:
     @pytest.mark.asyncio
     async def test_import_backup_with_overwrite(self, mock_backup_service):
         """Test backup import with overwrite option."""
-        mock_backup_service.import_backup = AsyncMock(return_value={
-            "success": True,
-            "version": "1.0.0",
-            "timestamp": "2024-01-15T10:30:00Z",
-            "users_imported": 3,
-            "servers_imported": 7
-        })
+        mock_backup_service.import_backup = AsyncMock(
+            return_value={
+                "success": True,
+                "version": "1.0.0",
+                "timestamp": "2024-01-15T10:30:00Z",
+                "users_imported": 3,
+                "servers_imported": 7,
+            }
+        )
 
         tools = BackupTools(mock_backup_service)
 
         with patch("tools.backup.tools.log_event", new_callable=AsyncMock):
             result = await tools.import_backup(
-                input_path="/backups/backup.enc",
-                password="pass123",
-                overwrite=True
+                input_path="/backups/backup.enc", password="pass123", overwrite=True
             )
 
         assert result["success"] is True
@@ -221,17 +223,15 @@ class TestImportBackup:
     @pytest.mark.asyncio
     async def test_import_backup_service_failure(self, mock_backup_service):
         """Test backup import when service returns failure."""
-        mock_backup_service.import_backup = AsyncMock(return_value={
-            "success": False,
-            "error": "Invalid password"
-        })
+        mock_backup_service.import_backup = AsyncMock(
+            return_value={"success": False, "error": "Invalid password"}
+        )
 
         tools = BackupTools(mock_backup_service)
 
         with patch("tools.backup.tools.log_event", new_callable=AsyncMock):
             result = await tools.import_backup(
-                input_path="/backups/backup.enc",
-                password="wrongpass"
+                input_path="/backups/backup.enc", password="wrongpass"
             )
 
         assert result["success"] is False
@@ -241,17 +241,15 @@ class TestImportBackup:
     @pytest.mark.asyncio
     async def test_import_backup_failure_logs_error(self, mock_backup_service):
         """Test that failed import is logged."""
-        mock_backup_service.import_backup = AsyncMock(return_value={
-            "success": False,
-            "error": "Bad password"
-        })
+        mock_backup_service.import_backup = AsyncMock(
+            return_value={"success": False, "error": "Bad password"}
+        )
 
         tools = BackupTools(mock_backup_service)
 
         with patch("tools.backup.tools.log_event", new_callable=AsyncMock) as mock_log:
             await tools.import_backup(
-                input_path="/backups/backup.enc",
-                password="wrong"
+                input_path="/backups/backup.enc", password="wrong"
             )
 
         mock_log.assert_called_once()
@@ -260,17 +258,15 @@ class TestImportBackup:
     @pytest.mark.asyncio
     async def test_import_backup_file_not_found(self, mock_backup_service):
         """Test backup import when file doesn't exist."""
-        mock_backup_service.import_backup = AsyncMock(return_value={
-            "success": False,
-            "error": "Backup file not found"
-        })
+        mock_backup_service.import_backup = AsyncMock(
+            return_value={"success": False, "error": "Backup file not found"}
+        )
 
         tools = BackupTools(mock_backup_service)
 
         with patch("tools.backup.tools.log_event", new_callable=AsyncMock):
             result = await tools.import_backup(
-                input_path="/backups/nonexistent.enc",
-                password="pass123"
+                input_path="/backups/nonexistent.enc", password="pass123"
             )
 
         assert result["success"] is False
@@ -288,10 +284,11 @@ class TestImportBackup:
 
         with patch("tools.backup.tools.log_event", new_callable=AsyncMock):
             result = await tools.import_backup(
-                input_path="/backups/corrupted.enc",
-                password="pass123"
+                input_path="/backups/corrupted.enc", password="pass123"
             )
 
         assert result["success"] is False
         assert result["error"] == "IMPORT_ERROR"
-        assert "Corrupted backup file" in result["message"]
+        # Error message should be sanitized (no raw exception details)
+        assert "Corrupted backup file" not in result["message"]
+        assert "Backup import failed" in result["message"]

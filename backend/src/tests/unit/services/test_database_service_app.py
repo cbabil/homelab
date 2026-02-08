@@ -4,8 +4,9 @@ Unit tests for services/database_service.py - App/Installation method delegation
 Tests installation-related methods that delegate to AppDatabaseService.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from models.app_catalog import InstalledApp
 
@@ -19,16 +20,19 @@ def mock_app_service():
 @pytest.fixture
 def db_service_with_app_mock(mock_app_service):
     """Create DatabaseService with mocked app service."""
-    with patch("services.database_service.DatabaseConnection"), \
-         patch("services.database_service.UserDatabaseService"), \
-         patch("services.database_service.ServerDatabaseService"), \
-         patch("services.database_service.SessionDatabaseService"), \
-         patch("services.database_service.AppDatabaseService") as MockApp, \
-         patch("services.database_service.MetricsDatabaseService"), \
-         patch("services.database_service.SystemDatabaseService"), \
-         patch("services.database_service.ExportDatabaseService"), \
-         patch("services.database_service.SchemaInitializer"):
+    with (
+        patch("services.database_service.DatabaseConnection"),
+        patch("services.database_service.UserDatabaseService"),
+        patch("services.database_service.ServerDatabaseService"),
+        patch("services.database_service.SessionDatabaseService"),
+        patch("services.database_service.AppDatabaseService") as MockApp,
+        patch("services.database_service.MetricsDatabaseService"),
+        patch("services.database_service.SystemDatabaseService"),
+        patch("services.database_service.ExportDatabaseService"),
+        patch("services.database_service.SchemaInitializer"),
+    ):
         from services.database_service import DatabaseService
+
         MockApp.return_value = mock_app_service
         return DatabaseService()
 
@@ -37,6 +41,7 @@ def db_service_with_app_mock(mock_app_service):
 def sample_installed_app():
     """Create sample InstalledApp."""
     from models.app_catalog import InstallationStatus
+
     return InstalledApp(
         id="install-123",
         server_id="srv-123",

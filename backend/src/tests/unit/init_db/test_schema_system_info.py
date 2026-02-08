@@ -4,13 +4,14 @@ System Info Schema Unit Tests
 Tests for schema_system_info.py - SQL schema and initialization.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from init_db.schema_system_info import (
     SYSTEM_INFO_SCHEMA,
-    initialize_system_info_schema,
     check_system_info_exists,
+    initialize_system_info_schema,
 )
 
 
@@ -54,7 +55,10 @@ class TestSystemInfoSchema:
 
     def test_schema_has_license_type_check(self):
         """Test that license_type has CHECK constraint."""
-        assert "CHECK (license_type IN ('community', 'pro', 'enterprise'))" in SYSTEM_INFO_SCHEMA
+        assert (
+            "CHECK (license_type IN ('community', 'pro', 'enterprise'))"
+            in SYSTEM_INFO_SCHEMA
+        )
 
     def test_schema_inserts_default_row(self):
         """Test that schema inserts default system info row."""
@@ -63,7 +67,9 @@ class TestSystemInfoSchema:
 
     def test_schema_has_update_trigger(self):
         """Test that schema creates update trigger."""
-        assert "CREATE TRIGGER IF NOT EXISTS system_info_updated_at" in SYSTEM_INFO_SCHEMA
+        assert (
+            "CREATE TRIGGER IF NOT EXISTS system_info_updated_at" in SYSTEM_INFO_SCHEMA
+        )
         assert "AFTER UPDATE ON system_info" in SYSTEM_INFO_SCHEMA
 
     def test_schema_has_index(self):
@@ -82,10 +88,12 @@ class TestInitializeSystemInfoSchema:
         mock_conn.executescript = AsyncMock()
         mock_conn.commit = AsyncMock()
 
-        manager.get_connection = MagicMock(return_value=AsyncMock(
-            __aenter__=AsyncMock(return_value=mock_conn),
-            __aexit__=AsyncMock(return_value=None),
-        ))
+        manager.get_connection = MagicMock(
+            return_value=AsyncMock(
+                __aenter__=AsyncMock(return_value=mock_conn),
+                __aexit__=AsyncMock(return_value=None),
+            )
+        )
         return manager, mock_conn
 
     @pytest.mark.asyncio
@@ -108,14 +116,17 @@ class TestInitializeSystemInfoSchema:
         mock_conn.commit = AsyncMock()
 
         mock_manager = MagicMock()
-        mock_manager.get_connection = MagicMock(return_value=AsyncMock(
-            __aenter__=AsyncMock(return_value=mock_conn),
-            __aexit__=AsyncMock(return_value=None),
-        ))
+        mock_manager.get_connection = MagicMock(
+            return_value=AsyncMock(
+                __aenter__=AsyncMock(return_value=mock_conn),
+                __aexit__=AsyncMock(return_value=None),
+            )
+        )
 
         with (
-            patch("init_db.schema_system_info.DatabaseManager",
-                  return_value=mock_manager),
+            patch(
+                "init_db.schema_system_info.DatabaseManager", return_value=mock_manager
+            ),
             patch("init_db.schema_system_info.logger"),
         ):
             result = await initialize_system_info_schema(None)
@@ -145,10 +156,12 @@ class TestCheckSystemInfoExists:
         mock_cursor = AsyncMock()
         mock_conn.execute = AsyncMock(return_value=mock_cursor)
 
-        manager.get_connection = MagicMock(return_value=AsyncMock(
-            __aenter__=AsyncMock(return_value=mock_conn),
-            __aexit__=AsyncMock(return_value=None),
-        ))
+        manager.get_connection = MagicMock(
+            return_value=AsyncMock(
+                __aenter__=AsyncMock(return_value=mock_conn),
+                __aexit__=AsyncMock(return_value=None),
+            )
+        )
         return manager, mock_cursor
 
     @pytest.mark.asyncio
@@ -182,14 +195,17 @@ class TestCheckSystemInfoExists:
         mock_conn.execute = AsyncMock(return_value=mock_cursor)
 
         mock_manager = MagicMock()
-        mock_manager.get_connection = MagicMock(return_value=AsyncMock(
-            __aenter__=AsyncMock(return_value=mock_conn),
-            __aexit__=AsyncMock(return_value=None),
-        ))
+        mock_manager.get_connection = MagicMock(
+            return_value=AsyncMock(
+                __aenter__=AsyncMock(return_value=mock_conn),
+                __aexit__=AsyncMock(return_value=None),
+            )
+        )
 
         with (
-            patch("init_db.schema_system_info.DatabaseManager",
-                  return_value=mock_manager),
+            patch(
+                "init_db.schema_system_info.DatabaseManager", return_value=mock_manager
+            ),
             patch("init_db.schema_system_info.logger"),
         ):
             result = await check_system_info_exists(None)

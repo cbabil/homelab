@@ -4,12 +4,13 @@ Unit tests for services/marketplace_service.py - Rating operations.
 Tests rate_app and get_user_rating methods.
 """
 
-import pytest
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from services.marketplace_service import MarketplaceService
+import pytest
+
 from models.marketplace import AppRatingTable
+from services.marketplace_service import MarketplaceService
 
 
 @pytest.fixture

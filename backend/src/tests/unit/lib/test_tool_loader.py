@@ -4,21 +4,21 @@ Unit tests for lib/tool_loader.py
 Tests dynamic MCP tool discovery and registration.
 """
 
-import sys
 from pathlib import Path
 from types import ModuleType
-from unittest.mock import MagicMock, patch, PropertyMock
+from unittest.mock import MagicMock, patch
+
 import pytest
 
 from lib.tool_loader import (
-    SRC_ROOT,
     DEFAULT_TOOLS_DIRECTORY,
     DEFAULT_TOOLS_PACKAGE,
-    _resolve_tools_path,
+    SRC_ROOT,
     _discover_tool_packages,
     _find_tools_class,
-    _instantiate_tools_class,
     _get_public_methods,
+    _instantiate_tools_class,
+    _resolve_tools_path,
     register_all_tools,
 )
 
@@ -190,6 +190,7 @@ class TestInstantiateToolsClass:
 
     def test_instantiate_no_deps(self):
         """Should instantiate class with no dependencies."""
+
         class SimpleTools:
             def __init__(self):
                 self.initialized = True
@@ -199,6 +200,7 @@ class TestInstantiateToolsClass:
 
     def test_instantiate_with_deps(self):
         """Should instantiate class with dependencies."""
+
         class ServiceTools:
             def __init__(self, auth_service, db_service):
                 self.auth = auth_service
@@ -214,6 +216,7 @@ class TestInstantiateToolsClass:
 
     def test_instantiate_with_defaults(self):
         """Should use default values when not in dependencies."""
+
         class OptionalTools:
             def __init__(self, required, optional="default_value"):
                 self.required = required
@@ -226,6 +229,7 @@ class TestInstantiateToolsClass:
 
     def test_instantiate_override_defaults(self):
         """Should override defaults when in dependencies."""
+
         class OptionalTools:
             def __init__(self, value="default"):
                 self.value = value
@@ -236,6 +240,7 @@ class TestInstantiateToolsClass:
 
     def test_instantiate_missing_required_raises(self):
         """Should raise KeyError for missing required dependency."""
+
         class RequiredTools:
             def __init__(self, required_service):
                 self.service = required_service
@@ -251,6 +256,7 @@ class TestGetPublicMethods:
 
     def test_get_public_methods_returns_methods(self):
         """Should return public methods."""
+
         class ToolsClass:
             def public_method(self):
                 pass
@@ -267,6 +273,7 @@ class TestGetPublicMethods:
 
     def test_get_public_methods_ignores_private(self):
         """Should ignore methods starting with underscore."""
+
         class ToolsClass:
             def public_method(self):
                 pass
@@ -287,6 +294,7 @@ class TestGetPublicMethods:
 
     def test_get_public_methods_ignores_attributes(self):
         """Should ignore non-method attributes."""
+
         class ToolsClass:
             def __init__(self):
                 self.attribute = "value"
@@ -305,6 +313,7 @@ class TestGetPublicMethods:
 
     def test_get_public_methods_empty_class(self):
         """Should return empty list for class with no public methods."""
+
         class EmptyTools:
             def _private_only(self):
                 pass

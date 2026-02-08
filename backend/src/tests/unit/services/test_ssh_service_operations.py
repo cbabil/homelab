@@ -4,8 +4,9 @@ Unit tests for SSHService operations in services/ssh_service.py
 Tests test_connection, execute_command, and execute_command_with_progress.
 """
 
+from unittest.mock import AsyncMock, MagicMock, patch
+
 import pytest
-from unittest.mock import MagicMock, patch, AsyncMock
 
 from services.ssh_service import SSHService
 
@@ -23,8 +24,10 @@ def mock_ssh_client():
 @pytest.fixture
 def ssh_service():
     """Create an SSHService instance with mocked dependencies."""
-    with patch("services.ssh_service.logger"), \
-         patch("services.ssh_service.SSHConnectionPool"):
+    with (
+        patch("services.ssh_service.logger"),
+        patch("services.ssh_service.SSHConnectionPool"),
+    ):
         service = SSHService(strict_host_key_checking=False)
         service._pool.get = AsyncMock(return_value=None)
         service._pool.put = AsyncMock()
@@ -41,10 +44,18 @@ class TestTestConnection:
         """test_connection should return success with system info."""
         system_info = {"os": "Ubuntu", "docker_version": "24.0.1"}
 
-        with patch.object(ssh_service, "_create_ssh_client", return_value=mock_ssh_client), \
-             patch("services.ssh_service.logger"), \
-             patch("services.helpers.ssh_helpers.connect_password", new_callable=AsyncMock), \
-             patch("services.helpers.ssh_helpers.get_system_info", new_callable=AsyncMock) as mock_info:
+        with (
+            patch.object(
+                ssh_service, "_create_ssh_client", return_value=mock_ssh_client
+            ),
+            patch("services.ssh_service.logger"),
+            patch(
+                "services.helpers.ssh_helpers.connect_password", new_callable=AsyncMock
+            ),
+            patch(
+                "services.helpers.ssh_helpers.get_system_info", new_callable=AsyncMock
+            ) as mock_info,
+        ):
             mock_info.return_value = system_info
 
             success, message, info = await ssh_service.test_connection(
@@ -58,9 +69,15 @@ class TestTestConnection:
     @pytest.mark.asyncio
     async def test_connection_failure(self, ssh_service, mock_ssh_client):
         """test_connection should return failure on error."""
-        with patch.object(ssh_service, "_create_ssh_client", return_value=mock_ssh_client), \
-             patch("services.ssh_service.logger"), \
-             patch("services.helpers.ssh_helpers.connect_password", new_callable=AsyncMock) as mock_conn:
+        with (
+            patch.object(
+                ssh_service, "_create_ssh_client", return_value=mock_ssh_client
+            ),
+            patch("services.ssh_service.logger"),
+            patch(
+                "services.helpers.ssh_helpers.connect_password", new_callable=AsyncMock
+            ) as mock_conn,
+        ):
             mock_conn.side_effect = Exception("Connection refused")
 
             success, message, info = await ssh_service.test_connection(
@@ -74,10 +91,18 @@ class TestTestConnection:
     @pytest.mark.asyncio
     async def test_connection_logs_attempt(self, ssh_service, mock_ssh_client):
         """test_connection should log connection attempt."""
-        with patch.object(ssh_service, "_create_ssh_client", return_value=mock_ssh_client), \
-             patch("services.ssh_service.logger") as mock_logger, \
-             patch("services.helpers.ssh_helpers.connect_password", new_callable=AsyncMock), \
-             patch("services.helpers.ssh_helpers.get_system_info", new_callable=AsyncMock):
+        with (
+            patch.object(
+                ssh_service, "_create_ssh_client", return_value=mock_ssh_client
+            ),
+            patch("services.ssh_service.logger") as mock_logger,
+            patch(
+                "services.helpers.ssh_helpers.connect_password", new_callable=AsyncMock
+            ),
+            patch(
+                "services.helpers.ssh_helpers.get_system_info", new_callable=AsyncMock
+            ),
+        ):
             await ssh_service.test_connection(
                 "192.168.1.1", 22, "admin", "password", {}
             )
@@ -92,13 +117,19 @@ class TestTestConnection:
     @pytest.mark.asyncio
     async def test_connection_logs_success(self, ssh_service, mock_ssh_client):
         """test_connection should log success."""
-        with patch.object(ssh_service, "_create_ssh_client", return_value=mock_ssh_client), \
-             patch("services.ssh_service.logger") as mock_logger, \
-             patch("services.helpers.ssh_helpers.connect_password", new_callable=AsyncMock), \
-             patch("services.helpers.ssh_helpers.get_system_info", new_callable=AsyncMock):
-            await ssh_service.test_connection(
-                "host", 22, "user", "password", {}
-            )
+        with (
+            patch.object(
+                ssh_service, "_create_ssh_client", return_value=mock_ssh_client
+            ),
+            patch("services.ssh_service.logger") as mock_logger,
+            patch(
+                "services.helpers.ssh_helpers.connect_password", new_callable=AsyncMock
+            ),
+            patch(
+                "services.helpers.ssh_helpers.get_system_info", new_callable=AsyncMock
+            ),
+        ):
+            await ssh_service.test_connection("host", 22, "user", "password", {})
 
             mock_logger.info.assert_any_call(
                 "SSH connection test successful", host="host"
@@ -107,14 +138,18 @@ class TestTestConnection:
     @pytest.mark.asyncio
     async def test_connection_logs_failure(self, ssh_service, mock_ssh_client):
         """test_connection should log failure."""
-        with patch.object(ssh_service, "_create_ssh_client", return_value=mock_ssh_client), \
-             patch("services.ssh_service.logger") as mock_logger, \
-             patch("services.helpers.ssh_helpers.connect_password", new_callable=AsyncMock) as mock_conn:
+        with (
+            patch.object(
+                ssh_service, "_create_ssh_client", return_value=mock_ssh_client
+            ),
+            patch("services.ssh_service.logger") as mock_logger,
+            patch(
+                "services.helpers.ssh_helpers.connect_password", new_callable=AsyncMock
+            ) as mock_conn,
+        ):
             mock_conn.side_effect = Exception("Auth failed")
 
-            await ssh_service.test_connection(
-                "host", 22, "user", "password", {}
-            )
+            await ssh_service.test_connection("host", 22, "user", "password", {})
 
             mock_logger.error.assert_called_with(
                 "SSH connection failed", host="host", error="Auth failed"
@@ -134,7 +169,11 @@ class TestExecuteCommand:
         mock_stdout.channel.recv_exit_status.return_value = 0
         mock_stdout.read.return_value = b"command output"
         mock_stderr.read.return_value = b""
-        mock_ssh_client.exec_command.return_value = (mock_stdin, mock_stdout, mock_stderr)
+        mock_ssh_client.exec_command.return_value = (
+            mock_stdin,
+            mock_stdout,
+            mock_stderr,
+        )
 
         ssh_service._pool.get = AsyncMock(return_value=mock_ssh_client)
 
@@ -147,7 +186,9 @@ class TestExecuteCommand:
             assert output == "command output"
 
     @pytest.mark.asyncio
-    async def test_execute_command_failure_exit_code(self, ssh_service, mock_ssh_client):
+    async def test_execute_command_failure_exit_code(
+        self, ssh_service, mock_ssh_client
+    ):
         """execute_command should return failure on non-zero exit."""
         mock_stdin = MagicMock()
         mock_stdout = MagicMock()
@@ -155,7 +196,11 @@ class TestExecuteCommand:
         mock_stdout.channel.recv_exit_status.return_value = 1
         mock_stdout.read.return_value = b""
         mock_stderr.read.return_value = b"command not found"
-        mock_ssh_client.exec_command.return_value = (mock_stdin, mock_stdout, mock_stderr)
+        mock_ssh_client.exec_command.return_value = (
+            mock_stdin,
+            mock_stdout,
+            mock_stderr,
+        )
 
         ssh_service._pool.get = AsyncMock(return_value=mock_ssh_client)
 
@@ -178,7 +223,11 @@ class TestExecuteCommand:
         mock_stdout.channel.recv_exit_status.return_value = 1
         mock_stdout.read.return_value = b"stdout error message"
         mock_stderr.read.return_value = b""
-        mock_ssh_client.exec_command.return_value = (mock_stdin, mock_stdout, mock_stderr)
+        mock_ssh_client.exec_command.return_value = (
+            mock_stdin,
+            mock_stdout,
+            mock_stderr,
+        )
 
         ssh_service._pool.get = AsyncMock(return_value=mock_ssh_client)
 
@@ -193,9 +242,15 @@ class TestExecuteCommand:
     @pytest.mark.asyncio
     async def test_execute_command_connection_error(self, ssh_service, mock_ssh_client):
         """execute_command should return failure on connection error."""
-        with patch.object(ssh_service, "_create_ssh_client", return_value=mock_ssh_client), \
-             patch("services.ssh_service.logger"), \
-             patch("services.helpers.ssh_helpers.connect_password", new_callable=AsyncMock) as mock_conn:
+        with (
+            patch.object(
+                ssh_service, "_create_ssh_client", return_value=mock_ssh_client
+            ),
+            patch("services.ssh_service.logger"),
+            patch(
+                "services.helpers.ssh_helpers.connect_password", new_callable=AsyncMock
+            ) as mock_conn,
+        ):
             mock_conn.side_effect = Exception("Network unreachable")
 
             success, output = await ssh_service.execute_command(
@@ -214,7 +269,11 @@ class TestExecuteCommand:
         mock_stdout.channel.recv_exit_status.return_value = 0
         mock_stdout.read.return_value = b"output"
         mock_stderr.read.return_value = b""
-        mock_ssh_client.exec_command.return_value = (mock_stdin, mock_stdout, mock_stderr)
+        mock_ssh_client.exec_command.return_value = (
+            mock_stdin,
+            mock_stdout,
+            mock_stderr,
+        )
 
         ssh_service._pool.get = AsyncMock(return_value=mock_ssh_client)
 
@@ -234,14 +293,16 @@ class TestExecuteCommand:
         mock_stdout.channel.recv_exit_status.return_value = 0
         mock_stdout.read.return_value = b"output"
         mock_stderr.read.return_value = b""
-        mock_ssh_client.exec_command.return_value = (mock_stdin, mock_stdout, mock_stderr)
+        mock_ssh_client.exec_command.return_value = (
+            mock_stdin,
+            mock_stdout,
+            mock_stderr,
+        )
 
         ssh_service._pool.get = AsyncMock(return_value=mock_ssh_client)
 
         with patch("services.ssh_service.logger") as mock_logger:
-            await ssh_service.execute_command(
-                "host", 22, "user", "password", {}, "cmd"
-            )
+            await ssh_service.execute_command("host", 22, "user", "password", {}, "cmd")
 
             mock_logger.info.assert_any_call(
                 "Executing SSH command", host="host", port=22, username="user"
@@ -256,14 +317,16 @@ class TestExecuteCommand:
         mock_stdout.channel.recv_exit_status.return_value = 0
         mock_stdout.read.return_value = b"output"
         mock_stderr.read.return_value = b""
-        mock_ssh_client.exec_command.return_value = (mock_stdin, mock_stdout, mock_stderr)
+        mock_ssh_client.exec_command.return_value = (
+            mock_stdin,
+            mock_stdout,
+            mock_stderr,
+        )
 
         ssh_service._pool.get = AsyncMock(return_value=mock_ssh_client)
 
         with patch("services.ssh_service.logger") as mock_logger:
-            await ssh_service.execute_command(
-                "host", 22, "user", "password", {}, "cmd"
-            )
+            await ssh_service.execute_command("host", 22, "user", "password", {}, "cmd")
 
             mock_logger.info.assert_any_call(
                 "SSH command executed successfully", host="host"
@@ -278,14 +341,16 @@ class TestExecuteCommand:
         mock_stdout.channel.recv_exit_status.return_value = 1
         mock_stdout.read.return_value = b""
         mock_stderr.read.return_value = b"error"
-        mock_ssh_client.exec_command.return_value = (mock_stdin, mock_stdout, mock_stderr)
+        mock_ssh_client.exec_command.return_value = (
+            mock_stdin,
+            mock_stdout,
+            mock_stderr,
+        )
 
         ssh_service._pool.get = AsyncMock(return_value=mock_ssh_client)
 
         with patch("services.ssh_service.logger") as mock_logger:
-            await ssh_service.execute_command(
-                "host", 22, "user", "password", {}, "cmd"
-            )
+            await ssh_service.execute_command("host", 22, "user", "password", {}, "cmd")
 
             mock_logger.error.assert_any_call(
                 "SSH command failed", host="host", exit_status=1
@@ -310,7 +375,11 @@ class TestExecuteCommandWithProgress:
         mock_stdout.channel = channel
         mock_stderr.read.return_value = b""
 
-        mock_ssh_client.exec_command.return_value = (mock_stdin, mock_stdout, mock_stderr)
+        mock_ssh_client.exec_command.return_value = (
+            mock_stdin,
+            mock_stdout,
+            mock_stderr,
+        )
         ssh_service._pool.get = AsyncMock(return_value=mock_ssh_client)
 
         with patch("services.ssh_service.logger"):
@@ -335,7 +404,11 @@ class TestExecuteCommandWithProgress:
         mock_stdout.channel = channel
         mock_stderr.read.return_value = b"error output"
 
-        mock_ssh_client.exec_command.return_value = (mock_stdin, mock_stdout, mock_stderr)
+        mock_ssh_client.exec_command.return_value = (
+            mock_stdin,
+            mock_stdout,
+            mock_stderr,
+        )
         ssh_service._pool.get = AsyncMock(return_value=mock_ssh_client)
 
         with patch("services.ssh_service.logger"):
@@ -361,7 +434,11 @@ class TestExecuteCommandWithProgress:
         mock_stdout.channel = channel
         mock_stderr.read.return_value = b""
 
-        mock_ssh_client.exec_command.return_value = (mock_stdin, mock_stdout, mock_stderr)
+        mock_ssh_client.exec_command.return_value = (
+            mock_stdin,
+            mock_stdout,
+            mock_stderr,
+        )
         ssh_service._pool.get = AsyncMock(return_value=mock_ssh_client)
 
         callback_lines = []
@@ -371,8 +448,13 @@ class TestExecuteCommandWithProgress:
 
         with patch("services.ssh_service.logger"):
             await ssh_service.execute_command_with_progress(
-                "host", 22, "user", "password", {}, "cmd",
-                progress_callback=progress_callback
+                "host",
+                22,
+                "user",
+                "password",
+                {},
+                "cmd",
+                progress_callback=progress_callback,
             )
 
             # Note: Due to threading complexity, callback may not be called
@@ -381,9 +463,15 @@ class TestExecuteCommandWithProgress:
     @pytest.mark.asyncio
     async def test_progress_connection_error(self, ssh_service, mock_ssh_client):
         """execute_command_with_progress should handle connection error."""
-        with patch.object(ssh_service, "_create_ssh_client", return_value=mock_ssh_client), \
-             patch("services.ssh_service.logger"), \
-             patch("services.helpers.ssh_helpers.connect_password", new_callable=AsyncMock) as mock_conn:
+        with (
+            patch.object(
+                ssh_service, "_create_ssh_client", return_value=mock_ssh_client
+            ),
+            patch("services.ssh_service.logger"),
+            patch(
+                "services.helpers.ssh_helpers.connect_password", new_callable=AsyncMock
+            ) as mock_conn,
+        ):
             mock_conn.side_effect = Exception("Connection timeout")
 
             success, output = await ssh_service.execute_command_with_progress(
@@ -407,7 +495,11 @@ class TestExecuteCommandWithProgress:
         mock_stdout.channel = channel
         mock_stderr.read.return_value = b""
 
-        mock_ssh_client.exec_command.return_value = (mock_stdin, mock_stdout, mock_stderr)
+        mock_ssh_client.exec_command.return_value = (
+            mock_stdin,
+            mock_stdout,
+            mock_stderr,
+        )
         ssh_service._pool.get = AsyncMock(return_value=mock_ssh_client)
 
         with patch("services.ssh_service.logger") as mock_logger:
@@ -420,7 +512,9 @@ class TestExecuteCommandWithProgress:
             )
 
     @pytest.mark.asyncio
-    async def test_progress_handles_remaining_buffer(self, ssh_service, mock_ssh_client):
+    async def test_progress_handles_remaining_buffer(
+        self, ssh_service, mock_ssh_client
+    ):
         """execute_command_with_progress should handle remaining buffer."""
         mock_stdin = MagicMock()
         mock_stdout = MagicMock()
@@ -435,7 +529,11 @@ class TestExecuteCommandWithProgress:
         mock_stdout.channel = channel
         mock_stderr.read.return_value = b""
 
-        mock_ssh_client.exec_command.return_value = (mock_stdin, mock_stdout, mock_stderr)
+        mock_ssh_client.exec_command.return_value = (
+            mock_stdin,
+            mock_stdout,
+            mock_stderr,
+        )
         ssh_service._pool.get = AsyncMock(return_value=mock_ssh_client)
 
         with patch("services.ssh_service.logger"):
@@ -460,7 +558,11 @@ class TestExecuteCommandWithProgress:
         mock_stdout.channel = channel
         mock_stderr.read.return_value = b""
 
-        mock_ssh_client.exec_command.return_value = (mock_stdin, mock_stdout, mock_stderr)
+        mock_ssh_client.exec_command.return_value = (
+            mock_stdin,
+            mock_stdout,
+            mock_stderr,
+        )
         ssh_service._pool.get = AsyncMock(return_value=mock_ssh_client)
 
         with patch("services.ssh_service.logger"):
@@ -471,7 +573,9 @@ class TestExecuteCommandWithProgress:
             mock_ssh_client.exec_command.assert_called_with("cmd", timeout=900)
 
     @pytest.mark.asyncio
-    async def test_progress_waits_when_no_data_ready(self, ssh_service, mock_ssh_client):
+    async def test_progress_waits_when_no_data_ready(
+        self, ssh_service, mock_ssh_client
+    ):
         """execute_command_with_progress should sleep when no data is ready."""
         mock_stdin = MagicMock()
         mock_stdout = MagicMock()
@@ -488,11 +592,14 @@ class TestExecuteCommandWithProgress:
         mock_stdout.channel = channel
         mock_stderr.read.return_value = b""
 
-        mock_ssh_client.exec_command.return_value = (mock_stdin, mock_stdout, mock_stderr)
+        mock_ssh_client.exec_command.return_value = (
+            mock_stdin,
+            mock_stdout,
+            mock_stderr,
+        )
         ssh_service._pool.get = AsyncMock(return_value=mock_ssh_client)
 
-        with patch("services.ssh_service.logger"), \
-             patch("time.sleep") as mock_sleep:
+        with patch("services.ssh_service.logger"), patch("time.sleep") as mock_sleep:
             success, output = await ssh_service.execute_command_with_progress(
                 "host", 22, "user", "password", {}, "cmd"
             )
@@ -502,7 +609,9 @@ class TestExecuteCommandWithProgress:
             mock_sleep.assert_called_with(0.1)
 
     @pytest.mark.asyncio
-    async def test_progress_remaining_buffer_with_callback(self, ssh_service, mock_ssh_client):
+    async def test_progress_remaining_buffer_with_callback(
+        self, ssh_service, mock_ssh_client
+    ):
         """execute_command_with_progress should call callback for remaining buffer."""
         mock_stdin = MagicMock()
         mock_stdout = MagicMock()
@@ -517,7 +626,11 @@ class TestExecuteCommandWithProgress:
         mock_stdout.channel = channel
         mock_stderr.read.return_value = b""
 
-        mock_ssh_client.exec_command.return_value = (mock_stdin, mock_stdout, mock_stderr)
+        mock_ssh_client.exec_command.return_value = (
+            mock_stdin,
+            mock_stdout,
+            mock_stderr,
+        )
         ssh_service._pool.get = AsyncMock(return_value=mock_ssh_client)
 
         callback_lines = []
@@ -527,8 +640,13 @@ class TestExecuteCommandWithProgress:
 
         with patch("services.ssh_service.logger"):
             success, output = await ssh_service.execute_command_with_progress(
-                "host", 22, "user", "password", {}, "cmd",
-                progress_callback=progress_callback
+                "host",
+                22,
+                "user",
+                "password",
+                {},
+                "cmd",
+                progress_callback=progress_callback,
             )
 
             assert success is True

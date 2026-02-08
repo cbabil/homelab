@@ -5,10 +5,11 @@ Provides basic health check tools for the MCP server.
 Implements Phase 1 foundation health monitoring capabilities.
 """
 
+from collections.abc import Mapping
 from datetime import UTC, datetime
-from typing import Any, Dict, Mapping
-import structlog
+from typing import Any
 
+import structlog
 
 logger = structlog.get_logger("health_tools")
 
@@ -25,7 +26,7 @@ class HealthTools:
         self.config = dict(config)
         logger.info("Health tools initialized")
 
-    async def health_check(self, detailed: bool = False) -> Dict[str, Any]:
+    async def health_check(self, detailed: bool = False) -> dict[str, Any]:
         """
         Check MCP server health status.
 
@@ -40,11 +41,7 @@ class HealthTools:
             timestamp = datetime.now(UTC).isoformat()
 
             if not detailed:
-                return {
-                    "success": True,
-                    "message": "pong",
-                    "timestamp": timestamp
-                }
+                return {"success": True, "message": "pong", "timestamp": timestamp}
 
             health_status = {
                 "status": "healthy",
@@ -53,24 +50,26 @@ class HealthTools:
                 "components": {
                     "mcp_server": "healthy",
                     "configuration": "healthy",
-                    "logging": "healthy"
+                    "logging": "healthy",
                 },
                 "configuration": {
                     "ssh_timeout": self.config.get("ssh_timeout", 30),
-                    "max_connections": self.config.get("max_concurrent_connections", 10)
-                }
+                    "max_connections": self.config.get(
+                        "max_concurrent_connections", 10
+                    ),
+                },
             }
 
             logger.info("Health check completed", status="healthy", detailed=detailed)
             return {
                 "success": True,
                 "data": health_status,
-                "message": "Health check completed successfully"
+                "message": "Health check completed successfully",
             }
         except Exception as e:
             logger.error("Health check failed", error=str(e))
             return {
                 "success": False,
                 "message": f"Health check failed: {str(e)}",
-                "error": "HEALTH_CHECK_ERROR"
+                "error": "HEALTH_CHECK_ERROR",
             }

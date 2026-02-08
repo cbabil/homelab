@@ -2,10 +2,10 @@
 Shared fixtures and helpers for user_service tests.
 """
 
-import json
-import pytest
-from unittest.mock import MagicMock
 from contextlib import asynccontextmanager
+from unittest.mock import MagicMock
+
+import pytest
 
 
 @pytest.fixture

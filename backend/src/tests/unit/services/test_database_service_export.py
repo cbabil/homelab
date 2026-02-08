@@ -4,8 +4,9 @@ Unit tests for services/database_service.py - Export/Import method delegation.
 Tests export and import methods that delegate to ExportDatabaseService.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 
 @pytest.fixture
@@ -17,16 +18,19 @@ def mock_export_service():
 @pytest.fixture
 def db_service_with_export_mock(mock_export_service):
     """Create DatabaseService with mocked export service."""
-    with patch("services.database_service.DatabaseConnection"), \
-         patch("services.database_service.UserDatabaseService"), \
-         patch("services.database_service.ServerDatabaseService"), \
-         patch("services.database_service.SessionDatabaseService"), \
-         patch("services.database_service.AppDatabaseService"), \
-         patch("services.database_service.MetricsDatabaseService"), \
-         patch("services.database_service.SystemDatabaseService"), \
-         patch("services.database_service.ExportDatabaseService") as MockExport, \
-         patch("services.database_service.SchemaInitializer"):
+    with (
+        patch("services.database_service.DatabaseConnection"),
+        patch("services.database_service.UserDatabaseService"),
+        patch("services.database_service.ServerDatabaseService"),
+        patch("services.database_service.SessionDatabaseService"),
+        patch("services.database_service.AppDatabaseService"),
+        patch("services.database_service.MetricsDatabaseService"),
+        patch("services.database_service.SystemDatabaseService"),
+        patch("services.database_service.ExportDatabaseService") as MockExport,
+        patch("services.database_service.SchemaInitializer"),
+    ):
         from services.database_service import DatabaseService
+
         MockExport.return_value = mock_export_service
         return DatabaseService()
 
@@ -113,7 +117,9 @@ class TestExportServers:
         self, db_service_with_export_mock, mock_export_service, sample_server_export
     ):
         """export_servers should return list of server dicts."""
-        mock_export_service.export_servers = AsyncMock(return_value=sample_server_export)
+        mock_export_service.export_servers = AsyncMock(
+            return_value=sample_server_export
+        )
 
         result = await db_service_with_export_mock.export_servers()
 

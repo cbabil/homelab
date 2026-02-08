@@ -1,12 +1,18 @@
 """Unit tests for services/settings_service.py - Reset and defaults operations."""
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
-from services.settings_service import SettingsService
-from models.settings import (
-    SettingCategory, SettingScope, SettingDataType, SettingValue, SystemSetting,
-)
+
+import pytest
+
 from models.auth import User, UserRole
+from models.settings import (
+    SettingCategory,
+    SettingDataType,
+    SettingScope,
+    SettingValue,
+    SystemSetting,
+)
+from services.settings_service import SettingsService
 
 
 @pytest.fixture
@@ -40,8 +46,12 @@ def settings_service(mock_db_service, mock_connection):
 def admin_user():
     """Create admin user for testing."""
     return User(
-        id="admin-123", username="admin", email="admin@example.com",
-        role=UserRole.ADMIN, last_login="2024-01-15T10:00:00+00:00", is_active=True,
+        id="admin-123",
+        username="admin",
+        email="admin@example.com",
+        role=UserRole.ADMIN,
+        last_login="2024-01-15T10:00:00+00:00",
+        is_active=True,
     )
 
 
@@ -49,8 +59,12 @@ def admin_user():
 def regular_user():
     """Create regular user for testing."""
     return User(
-        id="user-456", username="regular", email="user@example.com",
-        role=UserRole.USER, last_login="2024-01-15T10:00:00+00:00", is_active=True,
+        id="user-456",
+        username="regular",
+        email="user@example.com",
+        role=UserRole.USER,
+        last_login="2024-01-15T10:00:00+00:00",
+        is_active=True,
     )
 
 
@@ -58,12 +72,21 @@ def regular_user():
 def sample_system_setting():
     """Create sample system setting for testing."""
     return SystemSetting(
-        id=1, setting_key="ui.theme",
-        setting_value=SettingValue(raw_value='"dark"', data_type=SettingDataType.STRING),
-        default_value=SettingValue(raw_value='"light"', data_type=SettingDataType.STRING),
-        category=SettingCategory.UI, scope=SettingScope.USER_OVERRIDABLE,
-        data_type=SettingDataType.STRING, is_admin_only=False,
-        description="UI theme setting", validation_rules=None, version=1,
+        id=1,
+        setting_key="ui.theme",
+        setting_value=SettingValue(
+            raw_value='"dark"', data_type=SettingDataType.STRING
+        ),
+        default_value=SettingValue(
+            raw_value='"light"', data_type=SettingDataType.STRING
+        ),
+        category=SettingCategory.UI,
+        scope=SettingScope.USER_OVERRIDABLE,
+        data_type=SettingDataType.STRING,
+        is_admin_only=False,
+        description="UI theme setting",
+        validation_rules=None,
+        version=1,
     )
 
 
@@ -74,10 +97,12 @@ class TestResetUserSettings:
     async def test_reset_user_settings_success(self, settings_service, mock_connection):
         """reset_user_settings should delete user overrides."""
         mock_cursor = AsyncMock()
-        mock_cursor.fetchall = AsyncMock(return_value=[
-            {"id": 1, "setting_key": "ui.theme", "setting_value": '"dark"'},
-            {"id": 2, "setting_key": "ui.language", "setting_value": '"fr"'},
-        ])
+        mock_cursor.fetchall = AsyncMock(
+            return_value=[
+                {"id": 1, "setting_key": "ui.theme", "setting_value": '"dark"'},
+                {"id": 2, "setting_key": "ui.language", "setting_value": '"fr"'},
+            ]
+        )
         mock_cursor.lastrowid = 1
         mock_connection.execute = AsyncMock(return_value=mock_cursor)
         with patch("services.settings_service.logger"):
@@ -87,12 +112,16 @@ class TestResetUserSettings:
         mock_connection.commit.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_reset_user_settings_with_category(self, settings_service, mock_connection):
+    async def test_reset_user_settings_with_category(
+        self, settings_service, mock_connection
+    ):
         """reset_user_settings should filter by category."""
         mock_cursor = AsyncMock()
-        mock_cursor.fetchall = AsyncMock(return_value=[
-            {"id": 1, "setting_key": "ui.theme", "setting_value": '"dark"'},
-        ])
+        mock_cursor.fetchall = AsyncMock(
+            return_value=[
+                {"id": 1, "setting_key": "ui.theme", "setting_value": '"dark"'},
+            ]
+        )
         mock_cursor.lastrowid = 1
         mock_connection.execute = AsyncMock(return_value=mock_cursor)
         with patch("services.settings_service.logger"):
@@ -104,7 +133,9 @@ class TestResetUserSettings:
         assert any("category = ?" in str(call) for call in execute_calls)
 
     @pytest.mark.asyncio
-    async def test_reset_user_settings_no_overrides(self, settings_service, mock_connection):
+    async def test_reset_user_settings_no_overrides(
+        self, settings_service, mock_connection
+    ):
         """reset_user_settings should handle no overrides gracefully."""
         mock_cursor = AsyncMock()
         mock_cursor.fetchall = AsyncMock(return_value=[])
@@ -116,12 +147,16 @@ class TestResetUserSettings:
         assert result.data["deleted_count"] == 0
 
     @pytest.mark.asyncio
-    async def test_reset_user_settings_creates_audit_entries(self, settings_service, mock_connection):
+    async def test_reset_user_settings_creates_audit_entries(
+        self, settings_service, mock_connection
+    ):
         """reset_user_settings should create audit entries for deletions."""
         mock_cursor = AsyncMock()
-        mock_cursor.fetchall = AsyncMock(return_value=[
-            {"id": 1, "setting_key": "ui.theme", "setting_value": '"dark"'},
-        ])
+        mock_cursor.fetchall = AsyncMock(
+            return_value=[
+                {"id": 1, "setting_key": "ui.theme", "setting_value": '"dark"'},
+            ]
+        )
         mock_cursor.lastrowid = 1
         mock_connection.execute = AsyncMock(return_value=mock_cursor)
         with patch("services.settings_service.logger"):
@@ -129,20 +164,28 @@ class TestResetUserSettings:
         assert mock_connection.execute.call_count >= 3
 
     @pytest.mark.asyncio
-    async def test_reset_user_settings_rollback_on_error(self, settings_service, mock_connection):
+    async def test_reset_user_settings_rollback_on_error(
+        self, settings_service, mock_connection
+    ):
         """reset_user_settings should rollback on error."""
         mock_cursor = AsyncMock()
-        mock_cursor.fetchall = AsyncMock(return_value=[
-            {"id": 1, "setting_key": "ui.theme", "setting_value": '"dark"'},
-        ])
-        mock_connection.execute = AsyncMock(side_effect=[mock_cursor, Exception("DB error")])
+        mock_cursor.fetchall = AsyncMock(
+            return_value=[
+                {"id": 1, "setting_key": "ui.theme", "setting_value": '"dark"'},
+            ]
+        )
+        mock_connection.execute = AsyncMock(
+            side_effect=[mock_cursor, Exception("DB error")]
+        )
         with patch("services.settings_service.logger"):
             result = await settings_service.reset_user_settings("user-123")
         assert result.success is False
         mock_connection.rollback.assert_called()
 
     @pytest.mark.asyncio
-    async def test_reset_user_settings_has_checksum(self, settings_service, mock_connection):
+    async def test_reset_user_settings_has_checksum(
+        self, settings_service, mock_connection
+    ):
         """reset_user_settings response should include checksum."""
         mock_cursor = AsyncMock()
         mock_cursor.fetchall = AsyncMock(return_value=[])
@@ -164,10 +207,16 @@ class TestResetSystemSettings:
         """reset_system_settings should reset settings for admin."""
         mock_db_service.get_user_by_id = AsyncMock(return_value=admin_user)
         mock_cursor = AsyncMock()
-        mock_cursor.fetchall = AsyncMock(return_value=[{
-            "id": 1, "setting_key": "ui.theme", "setting_value": '"dark"',
-            "default_value": '"light"',
-        }])
+        mock_cursor.fetchall = AsyncMock(
+            return_value=[
+                {
+                    "id": 1,
+                    "setting_key": "ui.theme",
+                    "setting_value": '"dark"',
+                    "default_value": '"light"',
+                }
+            ]
+        )
         mock_cursor.lastrowid = 1
         mock_connection.execute = AsyncMock(return_value=mock_cursor)
         with patch("services.settings_service.logger"):
@@ -198,11 +247,14 @@ class TestResetSystemSettings:
         mock_cursor.lastrowid = 0
         mock_connection.execute = AsyncMock(return_value=mock_cursor)
         with patch("services.settings_service.logger"):
-            await settings_service.reset_system_settings("admin-123", category=SettingCategory.UI)
+            await settings_service.reset_system_settings(
+                "admin-123", category=SettingCategory.UI
+            )
         call_args_list = mock_connection.execute.call_args_list
         select_call_found = any(
             "category = ?" in str(call[0][0])
-            for call in call_args_list if len(call[0]) > 0
+            for call in call_args_list
+            if len(call[0]) > 0
         )
         assert select_call_found, "Expected category filter in one of the execute calls"
 
@@ -213,10 +265,16 @@ class TestResetSystemSettings:
         """reset_system_settings should create audit entries."""
         mock_db_service.get_user_by_id = AsyncMock(return_value=admin_user)
         mock_cursor = AsyncMock()
-        mock_cursor.fetchall = AsyncMock(return_value=[{
-            "id": 1, "setting_key": "ui.theme", "setting_value": '"dark"',
-            "default_value": '"light"',
-        }])
+        mock_cursor.fetchall = AsyncMock(
+            return_value=[
+                {
+                    "id": 1,
+                    "setting_key": "ui.theme",
+                    "setting_value": '"dark"',
+                    "default_value": '"light"',
+                }
+            ]
+        )
         mock_cursor.lastrowid = 1
         mock_connection.execute = AsyncMock(return_value=mock_cursor)
         with patch("services.settings_service.logger"):
@@ -230,10 +288,16 @@ class TestResetSystemSettings:
         """reset_system_settings should rollback on error."""
         mock_db_service.get_user_by_id = AsyncMock(return_value=admin_user)
         mock_cursor = AsyncMock()
-        mock_cursor.fetchall = AsyncMock(return_value=[{
-            "id": 1, "setting_key": "ui.theme", "setting_value": '"dark"',
-            "default_value": '"light"',
-        }])
+        mock_cursor.fetchall = AsyncMock(
+            return_value=[
+                {
+                    "id": 1,
+                    "setting_key": "ui.theme",
+                    "setting_value": '"dark"',
+                    "default_value": '"light"',
+                }
+            ]
+        )
         mock_connection.execute = AsyncMock(
             side_effect=[mock_cursor, mock_cursor, Exception("DB error")]
         )
@@ -247,15 +311,29 @@ class TestGetDefaultSettings:
     """Tests for get_default_settings method."""
 
     @pytest.mark.asyncio
-    async def test_get_default_settings_success(self, settings_service, mock_connection):
+    async def test_get_default_settings_success(
+        self, settings_service, mock_connection
+    ):
         """get_default_settings should return default values."""
         mock_cursor = AsyncMock()
-        mock_cursor.fetchall = AsyncMock(return_value=[
-            {"setting_key": "ui.theme", "default_value": '"light"',
-             "category": "ui", "data_type": "string", "description": "UI theme"},
-            {"setting_key": "system.refresh_interval", "default_value": "30",
-             "category": "system", "data_type": "number", "description": "Refresh interval"},
-        ])
+        mock_cursor.fetchall = AsyncMock(
+            return_value=[
+                {
+                    "setting_key": "ui.theme",
+                    "default_value": '"light"',
+                    "category": "ui",
+                    "data_type": "string",
+                    "description": "UI theme",
+                },
+                {
+                    "setting_key": "system.refresh_interval",
+                    "default_value": "30",
+                    "category": "system",
+                    "data_type": "number",
+                    "description": "Refresh interval",
+                },
+            ]
+        )
         mock_connection.execute = AsyncMock(return_value=mock_cursor)
         with patch("services.settings_service.logger"):
             result = await settings_service.get_default_settings()
@@ -265,7 +343,9 @@ class TestGetDefaultSettings:
         assert result.data["defaults"]["ui.theme"]["value"] == "light"
 
     @pytest.mark.asyncio
-    async def test_get_default_settings_with_category(self, settings_service, mock_connection):
+    async def test_get_default_settings_with_category(
+        self, settings_service, mock_connection
+    ):
         """get_default_settings should filter by category."""
         mock_cursor = AsyncMock()
         mock_cursor.fetchall = AsyncMock(return_value=[])
@@ -276,13 +356,22 @@ class TestGetDefaultSettings:
         assert "category = ?" in call_args[0][0]
 
     @pytest.mark.asyncio
-    async def test_get_default_settings_handles_invalid_value(self, settings_service, mock_connection):
+    async def test_get_default_settings_handles_invalid_value(
+        self, settings_service, mock_connection
+    ):
         """get_default_settings should skip invalid values."""
         mock_cursor = AsyncMock()
-        mock_cursor.fetchall = AsyncMock(return_value=[{
-            "setting_key": "ui.theme", "default_value": "invalid json",
-            "category": "ui", "data_type": "string", "description": "UI theme",
-        }])
+        mock_cursor.fetchall = AsyncMock(
+            return_value=[
+                {
+                    "setting_key": "ui.theme",
+                    "default_value": "invalid json",
+                    "category": "ui",
+                    "data_type": "string",
+                    "description": "UI theme",
+                }
+            ]
+        )
         mock_connection.execute = AsyncMock(return_value=mock_cursor)
         with patch("services.settings_service.logger") as mock_logger:
             result = await settings_service.get_default_settings()
@@ -291,7 +380,9 @@ class TestGetDefaultSettings:
         mock_logger.warning.assert_called()
 
     @pytest.mark.asyncio
-    async def test_get_default_settings_handles_error(self, settings_service, mock_connection):
+    async def test_get_default_settings_handles_error(
+        self, settings_service, mock_connection
+    ):
         """get_default_settings should handle errors gracefully."""
         mock_connection.execute = AsyncMock(side_effect=Exception("DB error"))
         with patch("services.settings_service.logger") as mock_logger:
@@ -308,11 +399,19 @@ class TestGetSettingsSchema:
     async def test_get_settings_schema_success(self, settings_service, mock_connection):
         """get_settings_schema should return schema information."""
         mock_cursor = AsyncMock()
-        mock_cursor.fetchall = AsyncMock(return_value=[{
-            "setting_key": "ui.theme", "category": "ui", "scope": "user_overridable",
-            "data_type": "string", "is_admin_only": 0, "description": "UI theme",
-            "validation_rules": '{"enum": ["light", "dark"]}',
-        }])
+        mock_cursor.fetchall = AsyncMock(
+            return_value=[
+                {
+                    "setting_key": "ui.theme",
+                    "category": "ui",
+                    "scope": "user_overridable",
+                    "data_type": "string",
+                    "is_admin_only": 0,
+                    "description": "UI theme",
+                    "validation_rules": '{"enum": ["light", "dark"]}',
+                }
+            ]
+        )
         mock_connection.execute = AsyncMock(return_value=mock_cursor)
         with patch("services.settings_service.logger"):
             result = await settings_service.get_settings_schema()
@@ -324,14 +423,24 @@ class TestGetSettingsSchema:
         assert schema_entry["validation_rules"]["enum"] == ["light", "dark"]
 
     @pytest.mark.asyncio
-    async def test_get_settings_schema_no_validation_rules(self, settings_service, mock_connection):
+    async def test_get_settings_schema_no_validation_rules(
+        self, settings_service, mock_connection
+    ):
         """get_settings_schema should handle null validation rules."""
         mock_cursor = AsyncMock()
-        mock_cursor.fetchall = AsyncMock(return_value=[{
-            "setting_key": "ui.theme", "category": "ui", "scope": "user_overridable",
-            "data_type": "string", "is_admin_only": 0, "description": "UI theme",
-            "validation_rules": None,
-        }])
+        mock_cursor.fetchall = AsyncMock(
+            return_value=[
+                {
+                    "setting_key": "ui.theme",
+                    "category": "ui",
+                    "scope": "user_overridable",
+                    "data_type": "string",
+                    "is_admin_only": 0,
+                    "description": "UI theme",
+                    "validation_rules": None,
+                }
+            ]
+        )
         mock_connection.execute = AsyncMock(return_value=mock_cursor)
         with patch("services.settings_service.logger"):
             result = await settings_service.get_settings_schema()
@@ -339,7 +448,9 @@ class TestGetSettingsSchema:
         assert result.data["schema"]["ui.theme"]["validation_rules"] is None
 
     @pytest.mark.asyncio
-    async def test_get_settings_schema_handles_error(self, settings_service, mock_connection):
+    async def test_get_settings_schema_handles_error(
+        self, settings_service, mock_connection
+    ):
         """get_settings_schema should handle errors gracefully."""
         mock_connection.execute = AsyncMock(side_effect=Exception("DB error"))
         with patch("services.settings_service.logger") as mock_logger:

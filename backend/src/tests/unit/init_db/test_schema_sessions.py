@@ -4,8 +4,9 @@ Sessions Schema Unit Tests
 Tests for schema_sessions.py - SQL schema and initialization.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
+
+import pytest
 
 from init_db.schema_sessions import (
     SESSIONS_SCHEMA,
@@ -44,7 +45,10 @@ class TestSessionsSchema:
 
     def test_schema_has_status_check(self):
         """Test that status has CHECK constraint."""
-        assert "CHECK (status IN ('active', 'idle', 'expired', 'terminated'))" in SESSIONS_SCHEMA
+        assert (
+            "CHECK (status IN ('active', 'idle', 'expired', 'terminated'))"
+            in SESSIONS_SCHEMA
+        )
 
     def test_schema_has_foreign_key(self):
         """Test that schema has foreign key to users."""
@@ -73,10 +77,12 @@ class TestInitializeSessionsSchema:
         mock_conn.executescript = AsyncMock()
         mock_conn.commit = AsyncMock()
 
-        manager.get_connection = MagicMock(return_value=AsyncMock(
-            __aenter__=AsyncMock(return_value=mock_conn),
-            __aexit__=AsyncMock(return_value=None),
-        ))
+        manager.get_connection = MagicMock(
+            return_value=AsyncMock(
+                __aenter__=AsyncMock(return_value=mock_conn),
+                __aexit__=AsyncMock(return_value=None),
+            )
+        )
         return manager, mock_conn
 
     @pytest.mark.asyncio
@@ -99,14 +105,15 @@ class TestInitializeSessionsSchema:
         mock_conn.commit = AsyncMock()
 
         mock_manager = MagicMock()
-        mock_manager.get_connection = MagicMock(return_value=AsyncMock(
-            __aenter__=AsyncMock(return_value=mock_conn),
-            __aexit__=AsyncMock(return_value=None),
-        ))
+        mock_manager.get_connection = MagicMock(
+            return_value=AsyncMock(
+                __aenter__=AsyncMock(return_value=mock_conn),
+                __aexit__=AsyncMock(return_value=None),
+            )
+        )
 
         with (
-            patch("init_db.schema_sessions.DatabaseManager",
-                  return_value=mock_manager),
+            patch("init_db.schema_sessions.DatabaseManager", return_value=mock_manager),
             patch("init_db.schema_sessions.logger"),
         ):
             result = await initialize_sessions_schema(None)

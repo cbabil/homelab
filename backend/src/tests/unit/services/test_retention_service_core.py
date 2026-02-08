@@ -4,17 +4,18 @@ Unit tests for services/retention_service.py - Core operations.
 Tests initialization, security validation, retention settings, and audit logging.
 """
 
-import pytest
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from services.retention_service import RetentionService
-from models.retention import (
-    RetentionSettings,
-    CleanupRequest,
-    RetentionType,
-    RetentionOperation,
-)
+import pytest
+
 from models.auth import User, UserRole
+from models.retention import (
+    CleanupRequest,
+    RetentionOperation,
+    RetentionSettings,
+    RetentionType,
+)
+from services.retention_service import RetentionService
 
 
 @pytest.fixture

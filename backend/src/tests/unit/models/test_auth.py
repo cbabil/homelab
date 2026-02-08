@@ -8,15 +8,15 @@ import pytest
 from pydantic import ValidationError
 
 from models.auth import (
-    UserRole,
-    TokenType,
-    User,
+    AuthState,
     LoginCredentials,
+    LoginResponse,
     RegistrationCredentials,
     SessionActivity,
     SessionWarning,
-    AuthState,
-    LoginResponse,
+    TokenType,
+    User,
+    UserRole,
 )
 
 

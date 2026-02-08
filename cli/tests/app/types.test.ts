@@ -36,7 +36,7 @@ describe('app/types', () => {
     });
 
     it('should support all message types', () => {
-      const types: MessageType[] = ['info', 'success', 'error', 'command', 'system'];
+      const types: MessageType[] = ['info', 'success', 'error', 'system'];
 
       for (const type of types) {
         const msg = createMessage(type, `${type} message`);
@@ -46,7 +46,7 @@ describe('app/types', () => {
 
     it('should have id starting with msg-', () => {
       const msg = createMessage('info', 'Test');
-      expect(msg.id).toMatch(/^msg-\d+-[a-z0-9]+$/);
+      expect(msg.id).toMatch(/^msg-\d+-\d+$/);
     });
   });
 

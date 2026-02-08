@@ -5,18 +5,19 @@ Tests AgentLifecycleManager - heartbeat tracking, version management,
 shutdown handling, and stale agent detection.
 """
 
-import pytest
-from datetime import datetime, timedelta, UTC
+from datetime import UTC, datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from services.agent_lifecycle import AgentLifecycleManager, CURRENT_AGENT_VERSION
+import pytest
+
 from models.agent import (
+    Agent,
     AgentConfig,
     AgentHeartbeat,
     AgentShutdownRequest,
     AgentStatus,
-    Agent,
 )
+from services.agent_lifecycle import CURRENT_AGENT_VERSION, AgentLifecycleManager
 
 
 @pytest.fixture
@@ -162,7 +163,9 @@ class TestRecordHeartbeat:
         mock_agent_db.update_agent.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_record_heartbeat_updates_existing(self, lifecycle_manager, mock_agent_db):
+    async def test_record_heartbeat_updates_existing(
+        self, lifecycle_manager, mock_agent_db
+    ):
         """record_heartbeat should update existing agent timestamp."""
         old_time = datetime.now(UTC) - timedelta(minutes=5)
         new_time = datetime.now(UTC)
@@ -201,7 +204,9 @@ class TestHandleShutdown:
         assert "agent-123" not in lifecycle_manager._last_heartbeats
 
     @pytest.mark.asyncio
-    async def test_handle_shutdown_restart_pending(self, lifecycle_manager, mock_agent_db):
+    async def test_handle_shutdown_restart_pending(
+        self, lifecycle_manager, mock_agent_db
+    ):
         """handle_shutdown with restart should set status to pending."""
         mock_agent_db.update_agent = AsyncMock()
 
@@ -219,7 +224,9 @@ class TestHandleShutdown:
         assert update.status == AgentStatus.PENDING
 
     @pytest.mark.asyncio
-    async def test_handle_shutdown_calls_handlers(self, lifecycle_manager, mock_agent_db):
+    async def test_handle_shutdown_calls_handlers(
+        self, lifecycle_manager, mock_agent_db
+    ):
         """handle_shutdown should notify all handlers."""
         handler1 = AsyncMock()
         handler2 = AsyncMock()
@@ -235,7 +242,9 @@ class TestHandleShutdown:
         handler2.assert_called_once_with("agent-123", "test", False)
 
     @pytest.mark.asyncio
-    async def test_handle_shutdown_handler_error(self, lifecycle_manager, mock_agent_db):
+    async def test_handle_shutdown_handler_error(
+        self, lifecycle_manager, mock_agent_db
+    ):
         """handle_shutdown should continue if handler errors."""
         handler1 = AsyncMock(side_effect=Exception("Handler error"))
         handler2 = AsyncMock()
@@ -282,11 +291,15 @@ class TestTriggerUpdate:
     @pytest.mark.asyncio
     async def test_trigger_update_success(self, lifecycle_manager, mock_agent_db):
         """trigger_update should mark agent for update."""
-        mock_agent = Agent(id="agent-123", server_id="srv-1", status=AgentStatus.CONNECTED)
+        mock_agent = Agent(
+            id="agent-123", server_id="srv-1", status=AgentStatus.CONNECTED
+        )
         mock_agent_db.update_agent = AsyncMock(return_value=mock_agent)
 
-        with patch("services.agent_lifecycle.logger"), \
-             patch("services.agent_lifecycle.log_event", new_callable=AsyncMock):
+        with (
+            patch("services.agent_lifecycle.logger"),
+            patch("services.agent_lifecycle.log_event", new_callable=AsyncMock),
+        ):
             result = await lifecycle_manager.trigger_update("agent-123")
 
         assert result is True
@@ -370,7 +383,9 @@ class TestRegisterUnregisterConnection:
             assert "agent-123" in lifecycle_manager._last_heartbeats
             lifecycle_manager.unregister_agent_connection("agent-123")
             assert "agent-123" not in lifecycle_manager._last_heartbeats
-            lifecycle_manager.unregister_agent_connection("nonexistent")  # Should not raise
+            lifecycle_manager.unregister_agent_connection(
+                "nonexistent"
+            )  # Should not raise
 
 
 class TestCompareVersions:
@@ -421,7 +436,9 @@ class TestCheckStaleAgents:
     """Tests for _check_stale_agents method."""
 
     @pytest.mark.asyncio
-    async def test_check_stale_agents_updates_status(self, lifecycle_manager, mock_agent_db):
+    async def test_check_stale_agents_updates_status(
+        self, lifecycle_manager, mock_agent_db
+    ):
         """_check_stale_agents should update stale agent status."""
         old_time = datetime.now(UTC) - timedelta(seconds=120)
         lifecycle_manager._last_heartbeats["agent-1"] = old_time
@@ -482,6 +499,7 @@ class TestHeartbeatMonitorLoop:
     async def test_heartbeat_loop_handles_cancelled(self, lifecycle_manager):
         """_heartbeat_monitor_loop should exit on CancelledError."""
         import asyncio
+
         lifecycle_manager._config.heartbeat_interval = 0.1
         lifecycle_manager._running = True
 

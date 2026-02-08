@@ -4,10 +4,12 @@ Marketplace MCP Tools
 Provides MCP tools for managing marketplace repositories and apps.
 """
 
-from typing import Dict, Any, List, Optional
+from typing import Any
+
 import structlog
-from services.marketplace_service import MarketplaceService
+
 from models.marketplace import RepoType
+from services.marketplace_service import MarketplaceService
 from tools.common import log_event
 
 logger = structlog.get_logger("marketplace_tools")
@@ -33,7 +35,7 @@ class MarketplaceTools:
     # Repository Management Tools
     # ─────────────────────────────────────────────────────────────
 
-    async def list_repos(self) -> Dict[str, Any]:
+    async def list_repos(self) -> dict[str, Any]:
         """List all marketplace repositories.
 
         Returns all configured marketplace repositories with their status,
@@ -54,7 +56,7 @@ class MarketplaceTools:
 
     async def add_repo(
         self, name: str, url: str, repo_type: str = "community", branch: str = "main"
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Add a new marketplace repository.
 
         Adds a Git repository as a marketplace source. The repository should
@@ -103,7 +105,7 @@ class MarketplaceTools:
             )
             return {"success": False, "error": str(e)}
 
-    async def remove_repo(self, repo_id: str) -> Dict[str, Any]:
+    async def remove_repo(self, repo_id: str) -> dict[str, Any]:
         """Remove a marketplace repository.
 
         Removes a repository and all its associated apps from the marketplace.
@@ -145,7 +147,7 @@ class MarketplaceTools:
             )
             return {"success": False, "error": str(e)}
 
-    async def sync_repo(self, repo_id: str) -> Dict[str, Any]:
+    async def sync_repo(self, repo_id: str) -> dict[str, Any]:
         """Sync apps from a repository.
 
         Clones or pulls the repository and syncs all app definitions.
@@ -188,7 +190,7 @@ class MarketplaceTools:
             )
             return {"success": False, "error": str(e)}
 
-    async def toggle_repo(self, repo_id: str, enabled: bool) -> Dict[str, Any]:
+    async def toggle_repo(self, repo_id: str, enabled: bool) -> dict[str, Any]:
         """Enable or disable a marketplace repository.
 
         When disabled, the repository's apps will not appear in search results.
@@ -241,13 +243,13 @@ class MarketplaceTools:
 
     async def search_marketplace(
         self,
-        search: Optional[str] = None,
-        category: Optional[str] = None,
-        tags: Optional[List[str]] = None,
-        featured: Optional[bool] = None,
+        search: str | None = None,
+        category: str | None = None,
+        tags: list[str] | None = None,
+        featured: bool | None = None,
         sort_by: str = "name",
         limit: int = 50,
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Search marketplace apps.
 
         Search and filter apps in the marketplace with various criteria.
@@ -283,7 +285,7 @@ class MarketplaceTools:
             logger.error("Search marketplace error", error=str(e))
             return {"success": False, "error": str(e)}
 
-    async def get_marketplace_app(self, app_id: str) -> Dict[str, Any]:
+    async def get_marketplace_app(self, app_id: str) -> dict[str, Any]:
         """Get details of a marketplace app.
 
         Retrieves full details for a specific app including Docker
@@ -304,7 +306,7 @@ class MarketplaceTools:
             logger.error("Get marketplace app error", error=str(e))
             return {"success": False, "error": str(e)}
 
-    async def get_marketplace_categories(self) -> Dict[str, Any]:
+    async def get_marketplace_categories(self) -> dict[str, Any]:
         """Get all marketplace categories with counts.
 
         Returns a list of all available categories in the marketplace
@@ -320,7 +322,7 @@ class MarketplaceTools:
             logger.error("Get categories error", error=str(e))
             return {"success": False, "error": str(e)}
 
-    async def get_featured_apps(self, limit: int = 10) -> Dict[str, Any]:
+    async def get_featured_apps(self, limit: int = 10) -> dict[str, Any]:
         """Get featured marketplace apps.
 
         Returns curated featured apps from the marketplace.
@@ -341,7 +343,7 @@ class MarketplaceTools:
             logger.error("Get featured apps error", error=str(e))
             return {"success": False, "error": str(e)}
 
-    async def get_trending_apps(self, limit: int = 10) -> Dict[str, Any]:
+    async def get_trending_apps(self, limit: int = 10) -> dict[str, Any]:
         """Get trending marketplace apps.
 
         Returns apps sorted by recent popularity and install count.
@@ -368,7 +370,7 @@ class MarketplaceTools:
 
     async def rate_marketplace_app(
         self, app_id: str, user_id: str, rating: int
-    ) -> Dict[str, Any]:
+    ) -> dict[str, Any]:
         """Rate a marketplace app (1-5 stars).
 
         Submit or update a rating for an app. Updates the app's average
@@ -409,7 +411,7 @@ class MarketplaceTools:
             )
             return {"success": False, "error": str(e)}
 
-    async def import_app(self, app_id: str, user_id: str) -> Dict[str, Any]:
+    async def import_app(self, app_id: str, user_id: str) -> dict[str, Any]:
         """Import a marketplace app to the local applications catalog.
 
         Copies app definition from marketplace to local catalog for deployment.

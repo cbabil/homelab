@@ -4,23 +4,24 @@ Unit tests for services/marketplace_service.py - Core functionality.
 Tests initialization, ensure_initialized, and official marketplace setup.
 """
 
-import pytest
-from datetime import datetime, UTC
+from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
-from services.marketplace_service import (
-    MarketplaceService,
-    CASAOS_APPSTORE_URL,
-    CASAOS_APPSTORE_NAME,
-    CASAOS_APPSTORE_BRANCH,
-    OFFICIAL_MARKETPLACE_URL,
-    OFFICIAL_MARKETPLACE_NAME,
-    OFFICIAL_MARKETPLACE_BRANCH,
-)
+import pytest
+
 from models.marketplace import (
-    RepoType,
-    RepoStatus,
     MarketplaceRepoTable,
+    RepoStatus,
+    RepoType,
+)
+from services.marketplace_service import (
+    CASAOS_APPSTORE_BRANCH,
+    CASAOS_APPSTORE_NAME,
+    CASAOS_APPSTORE_URL,
+    OFFICIAL_MARKETPLACE_BRANCH,
+    OFFICIAL_MARKETPLACE_NAME,
+    OFFICIAL_MARKETPLACE_URL,
+    MarketplaceService,
 )
 
 
@@ -66,9 +67,7 @@ class TestMarketplaceServiceInit:
         """MarketplaceService should log initialization."""
         with patch("services.marketplace_service.logger") as mock_logger:
             MarketplaceService()
-            mock_logger.info.assert_called_once_with(
-                "Marketplace service initialized"
-            )
+            mock_logger.info.assert_called_once_with("Marketplace service initialized")
 
 
 class TestEnsureInitialized:
@@ -199,9 +198,7 @@ class TestEnsureOfficialMarketplace:
         mock_result.scalar_one_or_none.return_value = None
         session.execute = AsyncMock(return_value=mock_result)
         session.add = MagicMock()
-        session.commit = AsyncMock(
-            side_effect=[IntegrityError("", None, None), None]
-        )
+        session.commit = AsyncMock(side_effect=[IntegrityError("", None, None), None])
         session.rollback = AsyncMock()
 
         with (
@@ -231,9 +228,7 @@ class TestEnsureOfficialMarketplace:
         session.execute = AsyncMock(side_effect=mock_results)
         session.add = MagicMock()
         # Commit fails with IntegrityError for official marketplace
-        session.commit = AsyncMock(
-            side_effect=IntegrityError("", None, None)
-        )
+        session.commit = AsyncMock(side_effect=IntegrityError("", None, None))
         session.rollback = AsyncMock()
 
         with (

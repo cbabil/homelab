@@ -5,12 +5,12 @@ Database operations for server management.
 
 import json
 from datetime import UTC, datetime
-from typing import List, Optional
 
 import structlog
 
-from models.server import ServerConnection, AuthType, ServerStatus, SystemInfo
-from .base import DatabaseConnection, ALLOWED_SERVER_COLUMNS
+from models.server import AuthType, ServerConnection, ServerStatus, SystemInfo
+
+from .base import ALLOWED_SERVER_COLUMNS, DatabaseConnection
 
 logger = structlog.get_logger("database.server")
 
@@ -35,7 +35,7 @@ class ServerDatabaseService:
         username: str,
         auth_type: str,
         encrypted_credentials: str,
-    ) -> Optional[ServerConnection]:
+    ) -> ServerConnection | None:
         """Create a new server in the database."""
         try:
             now = datetime.now(UTC).isoformat()
@@ -73,7 +73,7 @@ class ServerDatabaseService:
 
     async def get_server_by_connection(
         self, host: str, port: int, username: str
-    ) -> Optional[ServerConnection]:
+    ) -> ServerConnection | None:
         """Get server by connection details (host, port, username)."""
         try:
             async with self._conn.get_connection() as conn:
@@ -90,8 +90,12 @@ class ServerDatabaseService:
             if row["system_info"]:
                 try:
                     system_info = SystemInfo(**json.loads(row["system_info"]))
-                except (json.JSONDecodeError, TypeError):
-                    pass
+                except (json.JSONDecodeError, TypeError) as e:
+                    logger.warning(
+                        "Failed to parse system_info",
+                        server_id=row["id"],
+                        error=str(e),
+                    )
 
             return ServerConnection(
                 id=row["id"],
@@ -111,7 +115,7 @@ class ServerDatabaseService:
             logger.error("Failed to get server by connection", error=str(e))
             return None
 
-    async def get_server_by_id(self, server_id: str) -> Optional[ServerConnection]:
+    async def get_server_by_id(self, server_id: str) -> ServerConnection | None:
         """Get server by ID."""
         try:
             logger.info("get_server_by_id called", server_id=server_id)
@@ -134,8 +138,12 @@ class ServerDatabaseService:
             if row["system_info"]:
                 try:
                     system_info = SystemInfo(**json.loads(row["system_info"]))
-                except (json.JSONDecodeError, TypeError):
-                    pass
+                except (json.JSONDecodeError, TypeError) as e:
+                    logger.warning(
+                        "Failed to parse system_info",
+                        server_id=server_id,
+                        error=str(e),
+                    )
 
             return ServerConnection(
                 id=row["id"],
@@ -159,7 +167,7 @@ class ServerDatabaseService:
             )
             return None
 
-    async def get_all_servers_from_db(self) -> List[ServerConnection]:
+    async def get_all_servers_from_db(self) -> list[ServerConnection]:
         """Get all servers from database."""
 
         def parse_server_row(row) -> ServerConnection:
@@ -167,8 +175,12 @@ class ServerDatabaseService:
             if row["system_info"]:
                 try:
                     system_info = SystemInfo(**json.loads(row["system_info"]))
-                except (json.JSONDecodeError, TypeError):
-                    pass
+                except (json.JSONDecodeError, TypeError) as e:
+                    logger.warning(
+                        "Failed to parse system_info",
+                        server_id=row["id"],
+                        error=str(e),
+                    )
 
             return ServerConnection(
                 id=row["id"],
@@ -195,7 +207,7 @@ class ServerDatabaseService:
             logger.error("Failed to get servers", error=str(e))
             return []
 
-    async def get_server_credentials(self, server_id: str) -> Optional[str]:
+    async def get_server_credentials(self, server_id: str) -> str | None:
         """Get encrypted credentials for a server."""
         try:
             async with self._conn.get_connection() as conn:

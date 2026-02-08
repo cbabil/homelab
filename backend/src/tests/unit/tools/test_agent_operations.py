@@ -4,12 +4,13 @@ Agent Tools Unit Tests - Agent Operations
 Tests for install_agent, get_agent_status, revoke_agent_token, uninstall_agent.
 """
 
-import pytest
-from unittest.mock import MagicMock, AsyncMock, patch
-from datetime import datetime, timezone
+from datetime import UTC, datetime
+from unittest.mock import AsyncMock, MagicMock, patch
 
-from tools.agent.tools import AgentTools
+import pytest
+
 from models.agent import AgentStatus
+from tools.agent.tools import AgentTools
 
 
 class TestInstallAgent:
@@ -32,7 +33,7 @@ class TestInstallAgent:
         mock_services["packager"].package.return_value = "BASE64=="
         mock_services["packager"].get_version.return_value = "1.0.0"
 
-        with patch('tools.agent.tools.logger'):
+        with patch("tools.agent.tools.logger"):
             return AgentTools(
                 mock_services["agent_service"],
                 mock_services["agent_manager"],
@@ -46,7 +47,7 @@ class TestInstallAgent:
         """Test install_agent when server not found."""
         mock_services["server_service"].get_server = AsyncMock(return_value=None)
 
-        with patch('tools.agent.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
             result = await agent_tools.install_agent("server-123")
 
         assert result["success"] is False
@@ -61,7 +62,7 @@ class TestInstallAgent:
         server.system_info.docker_version = "not installed"
         mock_services["server_service"].get_server = AsyncMock(return_value=server)
 
-        with patch('tools.agent.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
             result = await agent_tools.install_agent("server-123")
 
         assert result["success"] is False
@@ -76,7 +77,7 @@ class TestInstallAgent:
         server.system_info.docker_version = None
         mock_services["server_service"].get_server = AsyncMock(return_value=server)
 
-        with patch('tools.agent.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
             result = await agent_tools.install_agent("server-123")
 
         assert result["success"] is False
@@ -90,14 +91,16 @@ class TestInstallAgent:
         server.system_info = None
         mock_services["server_service"].get_server = AsyncMock(return_value=server)
 
-        with patch('tools.agent.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
             result = await agent_tools.install_agent("server-123")
 
         assert result["success"] is False
         assert result["error"] == "DOCKER_NOT_INSTALLED"
 
     @pytest.mark.asyncio
-    async def test_install_agent_credentials_not_found(self, agent_tools, mock_services):
+    async def test_install_agent_credentials_not_found(
+        self, agent_tools, mock_services
+    ):
         """Test install_agent when credentials not found."""
         server = MagicMock()
         server.name = "test-server"
@@ -106,7 +109,7 @@ class TestInstallAgent:
         mock_services["server_service"].get_server = AsyncMock(return_value=server)
         mock_services["server_service"].get_credentials = AsyncMock(return_value=None)
 
-        with patch('tools.agent.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
             result = await agent_tools.install_agent("server-123")
 
         assert result["success"] is False
@@ -130,13 +133,17 @@ class TestInstallAgent:
         reg_code.code = "validcode123"
 
         mock_services["server_service"].get_server = AsyncMock(return_value=server)
-        mock_services["server_service"].get_credentials = AsyncMock(return_value="password123")
-        mock_services["agent_service"].create_agent = AsyncMock(return_value=(agent, reg_code))
+        mock_services["server_service"].get_credentials = AsyncMock(
+            return_value="password123"
+        )
+        mock_services["agent_service"].create_agent = AsyncMock(
+            return_value=(agent, reg_code)
+        )
         mock_services["ssh_service"].execute_command = AsyncMock(
             return_value=(False, "Connection refused")
         )
 
-        with patch('tools.agent.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
             result = await agent_tools.install_agent("server-123")
 
         assert result["success"] is False
@@ -161,14 +168,18 @@ class TestInstallAgent:
         reg_code.code = "validcode123"
 
         mock_services["server_service"].get_server = AsyncMock(return_value=server)
-        mock_services["server_service"].get_credentials = AsyncMock(return_value="password123")
+        mock_services["server_service"].get_credentials = AsyncMock(
+            return_value="password123"
+        )
         mock_services["server_service"].update_server_system_info = AsyncMock()
-        mock_services["agent_service"].create_agent = AsyncMock(return_value=(agent, reg_code))
+        mock_services["agent_service"].create_agent = AsyncMock(
+            return_value=(agent, reg_code)
+        )
         mock_services["ssh_service"].execute_command = AsyncMock(
             return_value=(True, "Agent installed!")
         )
 
-        with patch('tools.agent.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
             result = await agent_tools.install_agent("server-123")
 
         assert result["success"] is True
@@ -182,7 +193,7 @@ class TestInstallAgent:
             side_effect=Exception("Database error")
         )
 
-        with patch('tools.agent.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
             result = await agent_tools.install_agent("server-123")
 
         assert result["success"] is False
@@ -206,7 +217,7 @@ class TestGetAgentStatus:
     @pytest.fixture
     def agent_tools(self, mock_services):
         """Create AgentTools instance."""
-        with patch('tools.agent.tools.logger'):
+        with patch("tools.agent.tools.logger"):
             return AgentTools(
                 mock_services["agent_service"],
                 mock_services["agent_manager"],
@@ -217,7 +228,9 @@ class TestGetAgentStatus:
     @pytest.mark.asyncio
     async def test_get_agent_status_no_agent(self, agent_tools, mock_services):
         """Test get_agent_status when no agent exists."""
-        mock_services["agent_service"].get_agent_by_server = AsyncMock(return_value=None)
+        mock_services["agent_service"].get_agent_by_server = AsyncMock(
+            return_value=None
+        )
 
         result = await agent_tools.get_agent_status("server-123")
 
@@ -233,10 +246,12 @@ class TestGetAgentStatus:
         agent.server_id = "server-123"
         agent.status = AgentStatus.CONNECTED
         agent.version = "1.0.0"
-        agent.last_seen = datetime.now(timezone.utc)
-        agent.registered_at = datetime.now(timezone.utc)
+        agent.last_seen = datetime.now(UTC)
+        agent.registered_at = datetime.now(UTC)
 
-        mock_services["agent_service"].get_agent_by_server = AsyncMock(return_value=agent)
+        mock_services["agent_service"].get_agent_by_server = AsyncMock(
+            return_value=agent
+        )
         mock_services["agent_manager"].is_connected.return_value = True
 
         result = await agent_tools.get_agent_status("server-123")
@@ -254,9 +269,11 @@ class TestGetAgentStatus:
         agent.status = AgentStatus.DISCONNECTED
         agent.version = "1.0.0"
         agent.last_seen = None
-        agent.registered_at = datetime.now(timezone.utc)
+        agent.registered_at = datetime.now(UTC)
 
-        mock_services["agent_service"].get_agent_by_server = AsyncMock(return_value=agent)
+        mock_services["agent_service"].get_agent_by_server = AsyncMock(
+            return_value=agent
+        )
         mock_services["agent_manager"].is_connected.return_value = False
 
         result = await agent_tools.get_agent_status("server-123")
@@ -293,7 +310,7 @@ class TestRevokeAgentToken:
     @pytest.fixture
     def agent_tools(self, mock_services):
         """Create AgentTools instance."""
-        with patch('tools.agent.tools.logger'):
+        with patch("tools.agent.tools.logger"):
             return AgentTools(
                 mock_services["agent_service"],
                 mock_services["agent_manager"],
@@ -304,7 +321,9 @@ class TestRevokeAgentToken:
     @pytest.mark.asyncio
     async def test_revoke_agent_token_no_agent(self, agent_tools, mock_services):
         """Test revoke_agent_token when no agent exists."""
-        mock_services["agent_service"].get_agent_by_server = AsyncMock(return_value=None)
+        mock_services["agent_service"].get_agent_by_server = AsyncMock(
+            return_value=None
+        )
 
         result = await agent_tools.revoke_agent_token("server-123")
 
@@ -312,17 +331,21 @@ class TestRevokeAgentToken:
         assert result["error"] == "AGENT_NOT_FOUND"
 
     @pytest.mark.asyncio
-    async def test_revoke_agent_token_success_connected(self, agent_tools, mock_services):
+    async def test_revoke_agent_token_success_connected(
+        self, agent_tools, mock_services
+    ):
         """Test successful token revocation for connected agent."""
         agent = MagicMock()
         agent.id = "agent-123"
 
-        mock_services["agent_service"].get_agent_by_server = AsyncMock(return_value=agent)
+        mock_services["agent_service"].get_agent_by_server = AsyncMock(
+            return_value=agent
+        )
         mock_services["agent_manager"].is_connected.return_value = True
         mock_services["agent_manager"].unregister_connection = AsyncMock()
         mock_services["agent_service"].revoke_agent_token = AsyncMock(return_value=True)
 
-        with patch('tools.agent.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
             result = await agent_tools.revoke_agent_token("server-123")
 
         assert result["success"] is True
@@ -330,16 +353,20 @@ class TestRevokeAgentToken:
         mock_services["agent_manager"].unregister_connection.assert_called_once()
 
     @pytest.mark.asyncio
-    async def test_revoke_agent_token_success_not_connected(self, agent_tools, mock_services):
+    async def test_revoke_agent_token_success_not_connected(
+        self, agent_tools, mock_services
+    ):
         """Test successful token revocation for disconnected agent."""
         agent = MagicMock()
         agent.id = "agent-123"
 
-        mock_services["agent_service"].get_agent_by_server = AsyncMock(return_value=agent)
+        mock_services["agent_service"].get_agent_by_server = AsyncMock(
+            return_value=agent
+        )
         mock_services["agent_manager"].is_connected.return_value = False
         mock_services["agent_service"].revoke_agent_token = AsyncMock(return_value=True)
 
-        with patch('tools.agent.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
             result = await agent_tools.revoke_agent_token("server-123")
 
         assert result["success"] is True
@@ -351,9 +378,13 @@ class TestRevokeAgentToken:
         agent = MagicMock()
         agent.id = "agent-123"
 
-        mock_services["agent_service"].get_agent_by_server = AsyncMock(return_value=agent)
+        mock_services["agent_service"].get_agent_by_server = AsyncMock(
+            return_value=agent
+        )
         mock_services["agent_manager"].is_connected.return_value = False
-        mock_services["agent_service"].revoke_agent_token = AsyncMock(return_value=False)
+        mock_services["agent_service"].revoke_agent_token = AsyncMock(
+            return_value=False
+        )
 
         result = await agent_tools.revoke_agent_token("server-123")
 
@@ -367,7 +398,7 @@ class TestRevokeAgentToken:
             side_effect=Exception("DB error")
         )
 
-        with patch('tools.agent.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
             result = await agent_tools.revoke_agent_token("server-123")
 
         assert result["success"] is False
@@ -390,7 +421,7 @@ class TestUninstallAgent:
     @pytest.fixture
     def agent_tools(self, mock_services):
         """Create AgentTools instance."""
-        with patch('tools.agent.tools.logger'):
+        with patch("tools.agent.tools.logger"):
             return AgentTools(
                 mock_services["agent_service"],
                 mock_services["agent_manager"],
@@ -401,29 +432,35 @@ class TestUninstallAgent:
     @pytest.mark.asyncio
     async def test_uninstall_agent_server_not_found(self, agent_tools, mock_services):
         """Test uninstall_agent when server not found."""
-        mock_services["agent_service"].get_agent_by_server = AsyncMock(return_value=None)
+        mock_services["agent_service"].get_agent_by_server = AsyncMock(
+            return_value=None
+        )
         mock_services["server_service"].get_server = AsyncMock(return_value=None)
 
-        with patch('tools.agent.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
             result = await agent_tools.uninstall_agent("server-123")
 
         assert result["success"] is False
         assert result["error"] == "SERVER_NOT_FOUND"
 
     @pytest.mark.asyncio
-    async def test_uninstall_agent_credentials_not_found(self, agent_tools, mock_services):
+    async def test_uninstall_agent_credentials_not_found(
+        self, agent_tools, mock_services
+    ):
         """Test uninstall_agent when credentials not found."""
         agent = MagicMock()
         agent.id = "agent-123"
         server = MagicMock()
         server.name = "test-server"
 
-        mock_services["agent_service"].get_agent_by_server = AsyncMock(return_value=agent)
+        mock_services["agent_service"].get_agent_by_server = AsyncMock(
+            return_value=agent
+        )
         mock_services["agent_manager"].is_connected.return_value = False
         mock_services["server_service"].get_server = AsyncMock(return_value=server)
         mock_services["server_service"].get_credentials = AsyncMock(return_value=None)
 
-        with patch('tools.agent.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
             result = await agent_tools.uninstall_agent("server-123")
 
         assert result["success"] is False
@@ -443,16 +480,20 @@ class TestUninstallAgent:
         server.system_info = MagicMock()
         server.system_info.model_dump.return_value = {}
 
-        mock_services["agent_service"].get_agent_by_server = AsyncMock(return_value=agent)
+        mock_services["agent_service"].get_agent_by_server = AsyncMock(
+            return_value=agent
+        )
         mock_services["agent_manager"].is_connected.return_value = True
         mock_services["agent_manager"].unregister_connection = AsyncMock()
         mock_services["server_service"].get_server = AsyncMock(return_value=server)
         mock_services["server_service"].get_credentials = AsyncMock(return_value="pass")
         mock_services["server_service"].update_server_system_info = AsyncMock()
-        mock_services["ssh_service"].execute_command = AsyncMock(return_value=(True, "OK"))
+        mock_services["ssh_service"].execute_command = AsyncMock(
+            return_value=(True, "OK")
+        )
         mock_services["agent_service"].delete_agent = AsyncMock(return_value=True)
 
-        with patch('tools.agent.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
             result = await agent_tools.uninstall_agent("server-123")
 
         assert result["success"] is True
@@ -469,19 +510,25 @@ class TestUninstallAgent:
         server.auth_type = MagicMock(value="password")
         server.system_info = None
 
-        mock_services["agent_service"].get_agent_by_server = AsyncMock(return_value=None)
+        mock_services["agent_service"].get_agent_by_server = AsyncMock(
+            return_value=None
+        )
         mock_services["server_service"].get_server = AsyncMock(return_value=server)
         mock_services["server_service"].get_credentials = AsyncMock(return_value="pass")
-        mock_services["ssh_service"].execute_command = AsyncMock(return_value=(True, "OK"))
+        mock_services["ssh_service"].execute_command = AsyncMock(
+            return_value=(True, "OK")
+        )
 
-        with patch('tools.agent.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
             result = await agent_tools.uninstall_agent("server-123")
 
         assert result["success"] is True
         assert result["data"]["agent_id"] is None
 
     @pytest.mark.asyncio
-    async def test_uninstall_agent_ssh_failure_continues(self, agent_tools, mock_services):
+    async def test_uninstall_agent_ssh_failure_continues(
+        self, agent_tools, mock_services
+    ):
         """Test uninstall continues even if SSH command fails."""
         agent = MagicMock()
         agent.id = "agent-123"
@@ -493,7 +540,9 @@ class TestUninstallAgent:
         server.auth_type = MagicMock(value="password")
         server.system_info = None
 
-        mock_services["agent_service"].get_agent_by_server = AsyncMock(return_value=agent)
+        mock_services["agent_service"].get_agent_by_server = AsyncMock(
+            return_value=agent
+        )
         mock_services["agent_manager"].is_connected.return_value = False
         mock_services["server_service"].get_server = AsyncMock(return_value=server)
         mock_services["server_service"].get_credentials = AsyncMock(return_value="pass")
@@ -502,13 +551,15 @@ class TestUninstallAgent:
         )
         mock_services["agent_service"].delete_agent = AsyncMock(return_value=True)
 
-        with patch('tools.agent.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
             result = await agent_tools.uninstall_agent("server-123")
 
         assert result["success"] is True
 
     @pytest.mark.asyncio
-    async def test_uninstall_agent_delete_record_fails(self, agent_tools, mock_services):
+    async def test_uninstall_agent_delete_record_fails(
+        self, agent_tools, mock_services
+    ):
         """Test uninstall continues even if delete_agent fails."""
         agent = MagicMock()
         agent.id = "agent-123"
@@ -520,15 +571,19 @@ class TestUninstallAgent:
         server.auth_type = MagicMock(value="password")
         server.system_info = None
 
-        mock_services["agent_service"].get_agent_by_server = AsyncMock(return_value=agent)
+        mock_services["agent_service"].get_agent_by_server = AsyncMock(
+            return_value=agent
+        )
         mock_services["agent_manager"].is_connected.return_value = False
         mock_services["server_service"].get_server = AsyncMock(return_value=server)
         mock_services["server_service"].get_credentials = AsyncMock(return_value="pass")
-        mock_services["ssh_service"].execute_command = AsyncMock(return_value=(True, "OK"))
+        mock_services["ssh_service"].execute_command = AsyncMock(
+            return_value=(True, "OK")
+        )
         mock_services["agent_service"].delete_agent = AsyncMock(return_value=False)
 
-        with patch('tools.agent.tools.log_event', new_callable=AsyncMock):
-            with patch('tools.agent.tools.logger') as mock_logger:
+        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
+            with patch("tools.agent.tools.logger") as mock_logger:
                 result = await agent_tools.uninstall_agent("server-123")
 
         assert result["success"] is True
@@ -541,7 +596,7 @@ class TestUninstallAgent:
             side_effect=Exception("DB error")
         )
 
-        with patch('tools.agent.tools.log_event', new_callable=AsyncMock):
+        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
             result = await agent_tools.uninstall_agent("server-123")
 
         assert result["success"] is False
