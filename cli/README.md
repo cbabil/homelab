@@ -1,6 +1,6 @@
 # Tomo CLI
 
-Command-line interface for managing Tomo users.
+Interactive terminal UI for managing Tomo infrastructure.
 
 ## Installation
 
@@ -8,9 +8,9 @@ Command-line interface for managing Tomo users.
 
 ```bash
 cd cli
-npm install
-npm run build
-npm link
+bun install
+bun run build
+bun link
 ```
 
 This makes the `tomo` command available globally.
@@ -18,97 +18,79 @@ This makes the `tomo` command available globally.
 ### Unlink
 
 ```bash
-npm unlink -g @tomo/cli
+bun unlink @tomo/cli
 ```
 
 ## Requirements
 
-- Node.js 18+
-- The backend database must be initialized (run the backend server first)
+- [Bun](https://bun.sh) (latest)
+- A running Tomo backend (MCP server)
 
-## Commands
-
-### Admin Management
-
-#### Create Admin User
+## Usage
 
 ```bash
-tomo admin create
+# Launch interactive TUI
+tomo
+
+# Launch with custom MCP server URL
+tomo -m http://custom-host:8000/mcp
+
+# Show version
+tomo --version
 ```
 
-Creates a new admin user with interactive prompts for username, email, and password.
+All commands are entered as slash commands inside the interactive TUI:
 
-**Options:**
-| Flag | Description |
-|------|-------------|
-| `-u, --username <username>` | Admin username |
-| `-e, --email <email>` | Admin email |
-| `-p, --password <password>` | Admin password |
-| `-d, --data-dir <path>` | Custom data directory path |
+### Available Commands
 
-**Examples:**
+| Command | Description |
+|---------|-------------|
+| `/help` | Show all available commands |
+| `/status` | Show connection status |
+| `/servers` | List all servers |
+| `/agents` | List all agents |
+| `/login` | Authenticate as admin |
+| `/logout` | Clear authentication |
+| `/view <tab>` | Switch view (dashboard, agents, logs, settings) |
+| `/refresh` | Force data refresh |
+| `/clear` | Clear output history |
+| `/quit` | Exit the CLI |
 
-```bash
-# Interactive mode
-tomo admin create
+### Management Commands
 
-# Non-interactive mode
-tomo admin create -u admin -e admin@example.com -p securepassword123
-```
-
-### User Management
-
-#### Reset User Password
-
-```bash
-tomo user reset-password
-```
-
-Resets any user's password (admin or regular user).
-
-**Options:**
-| Flag | Description |
-|------|-------------|
-| `-u, --username <username>` | Username |
-| `-p, --password <password>` | New password |
-| `-d, --data-dir <path>` | Custom data directory path |
-
-**Examples:**
-
-```bash
-# Interactive mode
-tomo user reset-password
-
-# Non-interactive mode
-tomo user reset-password -u admin -p newsecurepassword123
-```
-
-## Validation Rules
-
-- **Username**: Minimum 3 characters
-- **Email**: Valid email format
-- **Password**: Minimum 8 characters
-
-## Database Location
-
-The CLI searches for the database in the following locations (in order):
-
-1. Custom path (if provided via `--data-dir`)
-2. `../backend/data/tomo.db` (relative to CLI)
-3. `/var/lib/tomo/data/tomo.db`
-4. `~/.tomo/data/tomo.db`
+| Command | Description |
+|---------|-------------|
+| `/agent list` | List all agents |
+| `/agent install <server>` | Install agent on a server |
+| `/agent status <server>` | Get agent status |
+| `/agent ping <server>` | Ping agent connectivity |
+| `/agent rotate <server>` | Rotate agent auth token |
+| `/server list` | List all servers |
+| `/update` | Check for updates |
+| `/security list-locked` | List locked accounts |
+| `/security unlock <id>` | Unlock a locked account |
+| `/backup export [path]` | Export encrypted backup |
+| `/backup import <path>` | Import backup from file |
+| `/user reset-password <user>` | Reset a user's password |
+| `/admin create` | Initial admin setup |
 
 ## Development
 
 ```bash
 # Build
-npm run build
+bun run build
 
-# Run without global install
-npm run dev -- admin create
+# Run in dev mode
+bun run dev
+
+# Run tests
+bun run test
+
+# Watch tests
+bun run test:watch
 
 # Clean build artifacts
-npm run clean
+bun run clean
 ```
 
 ## Project Structure
@@ -116,12 +98,22 @@ npm run clean
 ```
 cli/
 ├── src/
+│   ├── app/              # Interactive TUI (React Ink)
+│   │   ├── handlers/     # Command handler functions
+│   │   ├── views/        # Dashboard views
+│   │   ├── App.tsx        # Main app component
+│   │   ├── CommandRouter.ts # Slash command routing
+│   │   └── signals.ts     # Signal constants
 │   ├── bin/
-│   │   └── tomo.ts    # CLI entry point
-│   └── lib/
-│       ├── admin.ts      # Admin operations
-│       └── db.ts         # Database connection
-├── dist/                 # Compiled JavaScript
+│   │   └── tomo.tsx       # CLI entry point
+│   ├── components/        # Shared UI components
+│   │   ├── dashboard/     # Dashboard panels
+│   │   ├── common/        # Reusable components
+│   │   └── ui/            # Base UI elements
+│   ├── hooks/             # React hooks
+│   └── lib/               # MCP client, auth, utilities
+├── tests/                 # Test files (mirrors src/)
+├── dist/                  # Compiled JavaScript
 ├── package.json
 ├── tsconfig.json
 └── README.md

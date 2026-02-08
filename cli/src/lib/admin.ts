@@ -7,55 +7,13 @@
 
 import { getMCPClient } from './mcp-client.js';
 
-export interface User {
-  id: string;
-  username: string;
-  email?: string;
-  role: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface AdminResult {
+interface AdminResult {
   success: boolean;
   error?: string;
 }
 
-interface UserData {
-  id: string;
-  username: string;
-  email?: string;
-  role: string;
-  is_active: boolean;
-  created_at: string;
-  updated_at: string;
-}
-
 interface AdminCreateData {
   username: string;
-}
-
-/**
- * Get a user by username via MCP
- */
-export async function getUser(username: string): Promise<User | null> {
-  const client = getMCPClient();
-  const response = await client.callTool<UserData>('get_user_by_username', { username });
-
-  if (response.success && response.data) {
-    return {
-      id: response.data.id,
-      username: response.data.username,
-      email: response.data.email,
-      role: response.data.role,
-      is_active: response.data.is_active,
-      created_at: response.data.created_at,
-      updated_at: response.data.updated_at
-    };
-  }
-
-  return null;
 }
 
 /**

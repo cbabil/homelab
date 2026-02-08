@@ -2,7 +2,9 @@
  * Shared types for the interactive CLI
  */
 
-export type MessageType = 'info' | 'success' | 'error' | 'command' | 'system';
+import { DEFAULT_MCP_URL } from '../lib/constants.js';
+
+export type MessageType = 'info' | 'success' | 'error' | 'system';
 
 export interface OutputMessage {
   id: string;
@@ -38,15 +40,9 @@ export interface CommandResult {
   exit?: boolean;
 }
 
-export interface CommandHandler {
-  name: string;
-  description: string;
-  execute: (args: string[], state: AppState) => Promise<CommandResult[]>;
-}
-
 export const initialAppState: AppState = {
   mcpConnected: false,
-  mcpUrl: process.env.MCP_SERVER_URL || 'http://localhost:8000/mcp',
+  mcpUrl: DEFAULT_MCP_URL,
   mcpConnecting: true,
   mcpError: null,
   authenticated: false,
@@ -58,12 +54,18 @@ export const initialAppState: AppState = {
   isRunningCommand: false,
 };
 
+let messageCounter = 0;
+
+export function resetMessageCounter(): void {
+  messageCounter = 0;
+}
+
 export function createMessage(
   type: MessageType,
   content: string
 ): OutputMessage {
   return {
-    id: `msg-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`,
+    id: `msg-${Date.now()}-${++messageCounter}`,
     timestamp: new Date(),
     type,
     content,

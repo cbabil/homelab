@@ -137,6 +137,34 @@ describe('mcp-client module', () => {
 
       await expect(client.connect()).rejects.toThrow('MCP initialization error: Server error');
     });
+
+    it('should reject plaintext HTTP for remote servers', async () => {
+      const client = new MCPClient({ baseUrl: 'http://remote-server:8000/mcp' });
+
+      await expect(client.connect()).rejects.toThrow(
+        'Refusing to connect to remote MCP server over plaintext HTTP'
+      );
+    });
+
+    it('should allow plaintext HTTP for localhost', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          headers: new Map([['mcp-session-id', 'test-session']]),
+          ok: true
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          text: () => Promise.resolve('data: {"jsonrpc":"2.0","result":{},"id":"init"}')
+        })
+        .mockResolvedValueOnce({
+          ok: true
+        });
+
+      const client = new MCPClient({ baseUrl: 'http://localhost:8000/mcp' });
+      await client.connect();
+
+      expect(client.isConnected()).toBe(true);
+    });
   });
 
   describe('MCPClient disconnect', () => {
@@ -321,7 +349,7 @@ describe('mcp-client module', () => {
       expect(result.success).toBe(true);
     });
 
-    it('should throw error on non-400 HTTP error', async () => {
+    it('should return error with httpStatus on non-400 HTTP error', async () => {
       mockFetch
         .mockResolvedValueOnce({
           headers: new Map([['mcp-session-id', 'test-session']]),
@@ -347,6 +375,7 @@ describe('mcp-client module', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toBe('MCP call failed: 500');
+      expect(result.httpStatus).toBe(500);
     });
 
     it('should handle response without data line', async () => {
@@ -431,6 +460,156 @@ describe('mcp-client module', () => {
 
       expect(result.success).toBe(true);
       expect(result.data).toEqual({ custom: 'data' });
+    });
+  });
+
+  describe('MCPClient callToolRaw', () => {
+    it('should not trigger refresh on 401', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          headers: new Map([['mcp-session-id', 'test-session']]),
+          ok: true
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          text: () => Promise.resolve('data: {"jsonrpc":"2.0","result":{},"id":"init"}')
+        })
+        .mockResolvedValueOnce({
+          ok: true
+        });
+
+      const client = new MCPClient({ baseUrl: 'http://localhost:8000/mcp' });
+      await client.connect();
+
+      const mockRefresher = vi.fn();
+      client.setTokenRefresher(mockRefresher);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401
+      });
+
+      const result = await client.callToolRaw('test_tool');
+
+      expect(result.success).toBe(false);
+      expect(result.httpStatus).toBe(401);
+      expect(mockRefresher).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('MCPClient callTool 401 handling', () => {
+    it('should try refresh then retry on 401', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          headers: new Map([['mcp-session-id', 'test-session']]),
+          ok: true
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          text: () => Promise.resolve('data: {"jsonrpc":"2.0","result":{},"id":"init"}')
+        })
+        .mockResolvedValueOnce({
+          ok: true
+        });
+
+      const client = new MCPClient({ baseUrl: 'http://localhost:8000/mcp' });
+      await client.connect();
+
+      client.setTokenRefresher(() => Promise.resolve(true));
+
+      // First call returns 401
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401
+      });
+
+      // Retry after refresh succeeds
+      mockFetch.mockResolvedValueOnce({
+        ok: true,
+        text: () => Promise.resolve('data: {"jsonrpc":"2.0","result":{"structuredContent":{"retried":true}},"id":"tool-2"}')
+      });
+
+      const result = await client.callTool('test_tool');
+
+      expect(result.success).toBe(true);
+      expect(result.data).toEqual({ retried: true });
+    });
+
+    it('should call force logout when refresh fails', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          headers: new Map([['mcp-session-id', 'test-session']]),
+          ok: true
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          text: () => Promise.resolve('data: {"jsonrpc":"2.0","result":{},"id":"init"}')
+        })
+        .mockResolvedValueOnce({
+          ok: true
+        });
+
+      const client = new MCPClient({ baseUrl: 'http://localhost:8000/mcp' });
+      await client.connect();
+
+      const mockForceLogout = vi.fn();
+      client.setTokenRefresher(() => Promise.resolve(false));
+      client.setForceLogoutHandler(mockForceLogout);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401
+      });
+
+      const result = await client.callTool('test_tool');
+
+      expect(result.success).toBe(false);
+      expect(mockForceLogout).toHaveBeenCalled();
+    });
+
+    it('should not call force logout when no refresher is set', async () => {
+      mockFetch
+        .mockResolvedValueOnce({
+          headers: new Map([['mcp-session-id', 'test-session']]),
+          ok: true
+        })
+        .mockResolvedValueOnce({
+          ok: true,
+          text: () => Promise.resolve('data: {"jsonrpc":"2.0","result":{},"id":"init"}')
+        })
+        .mockResolvedValueOnce({
+          ok: true
+        });
+
+      const client = new MCPClient({ baseUrl: 'http://localhost:8000/mcp' });
+      await client.connect();
+
+      const mockForceLogout = vi.fn();
+      client.setForceLogoutHandler(mockForceLogout);
+
+      mockFetch.mockResolvedValueOnce({
+        ok: false,
+        status: 401
+      });
+
+      const result = await client.callTool('test_tool');
+
+      expect(result.success).toBe(false);
+      expect(mockForceLogout).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('MCPClient setTokenRefresher and setForceLogoutHandler', () => {
+    it('should store token refresher callback', () => {
+      const client = new MCPClient({ baseUrl: 'http://localhost:8000/mcp' });
+      const refresher = vi.fn();
+      expect(() => client.setTokenRefresher(refresher)).not.toThrow();
+    });
+
+    it('should store force logout handler', () => {
+      const client = new MCPClient({ baseUrl: 'http://localhost:8000/mcp' });
+      const handler = vi.fn();
+      expect(() => client.setForceLogoutHandler(handler)).not.toThrow();
     });
   });
 

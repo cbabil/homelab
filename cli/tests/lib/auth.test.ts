@@ -1,8 +1,7 @@
 /**
  * Tests for auth module.
  *
- * Tests authentication functions including checkSystemSetup,
- * authenticateAdmin, requireAdmin, and auth state management.
+ * Tests checkSystemSetup, authenticateAdmin, and clearAuth.
  */
 
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
@@ -12,45 +11,33 @@ vi.mock('../../src/lib/mcp-client.js', () => ({
   getMCPClient: vi.fn()
 }));
 
-vi.mock('inquirer', () => ({
-  default: {
-    prompt: vi.fn()
-  }
-}));
-
-vi.mock('chalk', () => ({
-  default: {
-    cyan: (s: string) => s,
-    red: (s: string) => s,
-    yellow: (s: string) => s,
-    green: (s: string) => s
-  }
-}));
-
 // Import after mocks are set up
 import {
   checkSystemSetup,
   authenticateAdmin,
-  requireAdmin,
-  isAuthenticated,
+  clearAuth,
   getAuthToken,
-  clearAuth
+  getRefreshToken,
+  getUsername,
+  getRole,
+  revokeToken,
+  refreshAuthToken,
 } from '../../src/lib/auth.js';
 import { getMCPClient } from '../../src/lib/mcp-client.js';
-import inquirer from 'inquirer';
 
 describe('auth module', () => {
   let mockClient: {
     callTool: ReturnType<typeof vi.fn>;
+    callToolRaw: ReturnType<typeof vi.fn>;
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
-    clearAuth(); // Reset auth state before each test
+    clearAuth();
 
-    // Set up mock MCP client
     mockClient = {
-      callTool: vi.fn()
+      callTool: vi.fn(),
+      callToolRaw: vi.fn(),
     };
     vi.mocked(getMCPClient).mockReturnValue(mockClient as any);
   });
@@ -108,11 +95,6 @@ describe('auth module', () => {
 
   describe('authenticateAdmin', () => {
     it('should authenticate successfully with valid admin credentials', async () => {
-      vi.mocked(inquirer.prompt).mockResolvedValue({
-        username: 'admin',
-        password: 'password123'
-      });
-
       mockClient.callTool.mockResolvedValue({
         success: true,
         data: {
@@ -125,19 +107,12 @@ describe('auth module', () => {
         }
       });
 
-      const result = await authenticateAdmin();
+      const result = await authenticateAdmin('admin', 'password123');
 
-      expect(result).toBe(true);
-      expect(isAuthenticated()).toBe(true);
-      expect(getAuthToken()).toBe('jwt-token-123');
+      expect(result).toEqual({ success: true });
     });
 
     it('should reject non-admin users', async () => {
-      vi.mocked(inquirer.prompt).mockResolvedValue({
-        username: 'user',
-        password: 'password123'
-      });
-
       mockClient.callTool.mockResolvedValue({
         success: true,
         data: {
@@ -145,53 +120,66 @@ describe('auth module', () => {
           user: {
             id: '2',
             username: 'user',
-            role: 'user' // Not admin
+            role: 'user'
           }
         }
       });
 
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      const result = await authenticateAdmin();
+      const result = await authenticateAdmin('user', 'password123');
 
-      expect(result).toBe(false);
-      expect(isAuthenticated()).toBe(false);
-      consoleSpy.mockRestore();
+      expect(result).toEqual({ success: false, error: 'Only admin users can run CLI commands' });
     });
 
-    it('should return false with invalid credentials', async () => {
-      vi.mocked(inquirer.prompt).mockResolvedValue({
-        username: 'admin',
-        password: 'wrongpassword'
-      });
-
+    it('should return failure with invalid credentials', async () => {
       mockClient.callTool.mockResolvedValue({
         success: false,
         error: 'Invalid credentials'
       });
 
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      const result = await authenticateAdmin();
+      const result = await authenticateAdmin('admin', 'wrongpassword');
 
-      expect(result).toBe(false);
-      expect(isAuthenticated()).toBe(false);
-      consoleSpy.mockRestore();
+      expect(result).toEqual({ success: false, error: 'Invalid credentials' });
     });
 
-    it('should call login tool with correct parameters', async () => {
-      vi.mocked(inquirer.prompt).mockResolvedValue({
-        username: 'testadmin',
-        password: 'testpass'
-      });
-
+    it('should reject invalid token from server', async () => {
       mockClient.callTool.mockResolvedValue({
         success: true,
         data: {
-          token: 'token',
+          token: 'short',
+          user: { id: '1', username: 'admin', role: 'admin' },
+        },
+      });
+
+      const result = await authenticateAdmin('admin', 'password');
+
+      expect(result).toEqual({ success: false, error: 'Invalid token received from server' });
+      expect(getAuthToken()).toBeNull();
+    });
+
+    it('should reject empty token from server', async () => {
+      mockClient.callTool.mockResolvedValue({
+        success: true,
+        data: {
+          token: '',
+          user: { id: '1', username: 'admin', role: 'admin' },
+        },
+      });
+
+      const result = await authenticateAdmin('admin', 'password');
+
+      expect(result).toEqual({ success: false, error: 'Invalid token received from server' });
+    });
+
+    it('should call login tool with correct parameters', async () => {
+      mockClient.callTool.mockResolvedValue({
+        success: true,
+        data: {
+          token: 'valid-token-1234',
           user: { id: '1', username: 'testadmin', role: 'admin' }
         }
       });
 
-      await authenticateAdmin();
+      await authenticateAdmin('testadmin', 'testpass');
 
       expect(mockClient.callTool).toHaveBeenCalledWith('login', {
         username: 'testadmin',
@@ -200,176 +188,387 @@ describe('auth module', () => {
     });
   });
 
-  describe('requireAdmin', () => {
-    it('should allow access without auth when system needs setup', async () => {
-      mockClient.callTool.mockResolvedValue({
-        success: true,
-        data: { needs_setup: true }
-      });
-
-      const result = await requireAdmin();
-
-      expect(result).toBe(true);
-    });
-
-    it('should require authentication when system is set up', async () => {
-      // First call: checkSystemSetup returns false
-      mockClient.callTool.mockResolvedValueOnce({
-        success: true,
-        data: { needs_setup: false }
-      });
-
-      // Second call: login succeeds
-      mockClient.callTool.mockResolvedValueOnce({
-        success: true,
-        data: {
-          token: 'token',
-          user: { id: '1', username: 'admin', role: 'admin' }
-        }
-      });
-
-      vi.mocked(inquirer.prompt).mockResolvedValue({
-        username: 'admin',
-        password: 'password'
-      });
-
-      const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
-      const result = await requireAdmin();
-
-      expect(result).toBe(true);
-      expect(mockClient.callTool).toHaveBeenCalledTimes(2);
-      consoleSpy.mockRestore();
-    });
-  });
-
-  describe('isAuthenticated', () => {
-    it('should return false initially', () => {
-      expect(isAuthenticated()).toBe(false);
-    });
-
-    it('should return true after successful authentication', async () => {
-      vi.mocked(inquirer.prompt).mockResolvedValue({
-        username: 'admin',
-        password: 'password'
-      });
-
-      mockClient.callTool.mockResolvedValue({
-        success: true,
-        data: {
-          token: 'token',
-          user: { id: '1', username: 'admin', role: 'admin' }
-        }
-      });
-
-      await authenticateAdmin();
-
-      expect(isAuthenticated()).toBe(true);
-    });
-
-    it('should return false after clearAuth', async () => {
-      vi.mocked(inquirer.prompt).mockResolvedValue({
-        username: 'admin',
-        password: 'password'
-      });
-
-      mockClient.callTool.mockResolvedValue({
-        success: true,
-        data: {
-          token: 'token',
-          user: { id: '1', username: 'admin', role: 'admin' }
-        }
-      });
-
-      await authenticateAdmin();
-      expect(isAuthenticated()).toBe(true);
-
-      clearAuth();
-      expect(isAuthenticated()).toBe(false);
-    });
-  });
-
   describe('getAuthToken', () => {
-    it('should return null initially', () => {
+    it('should return null when not authenticated', () => {
+      clearAuth();
       expect(getAuthToken()).toBeNull();
     });
 
-    it('should return token after authentication', async () => {
-      vi.mocked(inquirer.prompt).mockResolvedValue({
-        username: 'admin',
-        password: 'password'
-      });
-
+    it('should return token after successful authentication', async () => {
       mockClient.callTool.mockResolvedValue({
         success: true,
         data: {
-          token: 'my-auth-token',
+          token: 'jwt-token-abc',
           user: { id: '1', username: 'admin', role: 'admin' }
         }
       });
 
-      await authenticateAdmin();
-
-      expect(getAuthToken()).toBe('my-auth-token');
+      await authenticateAdmin('admin', 'password');
+      expect(getAuthToken()).toBe('jwt-token-abc');
     });
 
     it('should return null after clearAuth', async () => {
-      vi.mocked(inquirer.prompt).mockResolvedValue({
-        username: 'admin',
-        password: 'password'
-      });
-
       mockClient.callTool.mockResolvedValue({
         success: true,
         data: {
-          token: 'token',
+          token: 'jwt-token-abc',
           user: { id: '1', username: 'admin', role: 'admin' }
         }
       });
 
-      await authenticateAdmin();
+      await authenticateAdmin('admin', 'password');
       clearAuth();
-
       expect(getAuthToken()).toBeNull();
     });
   });
 
   describe('clearAuth', () => {
-    it('should reset all auth state', async () => {
-      vi.mocked(inquirer.prompt).mockResolvedValue({
-        username: 'admin',
-        password: 'password'
-      });
-
-      mockClient.callTool.mockResolvedValue({
-        success: true,
-        data: {
-          token: 'token',
-          user: { id: '1', username: 'admin', role: 'admin' }
-        }
-      });
-
-      await authenticateAdmin();
-
-      // Verify authenticated
-      expect(isAuthenticated()).toBe(true);
-      expect(getAuthToken()).not.toBeNull();
-
-      // Clear auth
-      clearAuth();
-
-      // Verify cleared
-      expect(isAuthenticated()).toBe(false);
-      expect(getAuthToken()).toBeNull();
-    });
-
     it('should be safe to call multiple times', () => {
       expect(() => {
         clearAuth();
         clearAuth();
         clearAuth();
       }).not.toThrow();
+    });
+  });
 
-      expect(isAuthenticated()).toBe(false);
+  describe('getRefreshToken', () => {
+    it('should return null when not authenticated', () => {
+      expect(getRefreshToken()).toBeNull();
+    });
+
+    it('should return refresh token after authentication with refresh token', async () => {
+      mockClient.callTool.mockResolvedValue({
+        success: true,
+        data: {
+          token: 'jwt-token-valid',
+          refresh_token: 'refresh-token-abc',
+          user: { id: '1', username: 'admin', role: 'admin' },
+        },
+      });
+
+      await authenticateAdmin('admin', 'password');
+      expect(getRefreshToken()).toBe('refresh-token-abc');
+    });
+
+    it('should return null after authentication without refresh token', async () => {
+      mockClient.callTool.mockResolvedValue({
+        success: true,
+        data: {
+          token: 'jwt-token-valid',
+          user: { id: '1', username: 'admin', role: 'admin' },
+        },
+      });
+
+      await authenticateAdmin('admin', 'password');
+      expect(getRefreshToken()).toBeNull();
+    });
+  });
+
+  describe('getUsername and getRole', () => {
+    it('should return null when not authenticated', () => {
+      expect(getUsername()).toBeNull();
+      expect(getRole()).toBeNull();
+    });
+
+    it('should return username and role after authentication', async () => {
+      mockClient.callTool.mockResolvedValue({
+        success: true,
+        data: {
+          token: 'jwt-token-valid',
+          user: { id: '1', username: 'admin', role: 'admin' },
+        },
+      });
+
+      await authenticateAdmin('admin', 'password');
+      expect(getUsername()).toBe('admin');
+      expect(getRole()).toBe('admin');
+    });
+  });
+
+  describe('revokeToken', () => {
+    it('should revoke both access and refresh tokens', async () => {
+      mockClient.callTool.mockResolvedValue({
+        success: true,
+        data: {
+          token: 'jwt-token-123',
+          refresh_token: 'refresh-token-456',
+          user: { id: '1', username: 'admin', role: 'admin' },
+        },
+      });
+      await authenticateAdmin('admin', 'password');
+
+      mockClient.callToolRaw.mockResolvedValue({ success: true });
+
+      await revokeToken();
+
+      expect(mockClient.callToolRaw).toHaveBeenCalledWith('revoke_token', {
+        token: 'jwt-token-123',
+      });
+      expect(mockClient.callToolRaw).toHaveBeenCalledWith('revoke_token', {
+        token: 'refresh-token-456',
+      });
+      expect(getAuthToken()).toBeNull();
+      expect(getRefreshToken()).toBeNull();
+    });
+
+    it('should clear auth before server calls (no race condition)', async () => {
+      mockClient.callTool.mockResolvedValue({
+        success: true,
+        data: {
+          token: 'jwt-token-123',
+          user: { id: '1', username: 'admin', role: 'admin' },
+        },
+      });
+      await authenticateAdmin('admin', 'password');
+
+      // Verify auth is cleared before callToolRaw resolves
+      mockClient.callToolRaw.mockImplementation(async () => {
+        expect(getAuthToken()).toBeNull();
+        return { success: true };
+      });
+
+      await revokeToken();
+    });
+
+    it('should clear auth even when MCP call fails', async () => {
+      mockClient.callTool.mockResolvedValue({
+        success: true,
+        data: {
+          token: 'jwt-token-valid',
+          user: { id: '1', username: 'admin', role: 'admin' },
+        },
+      });
+      await authenticateAdmin('admin', 'password');
+
+      mockClient.callToolRaw.mockRejectedValue(new Error('Network error'));
+
+      await revokeToken();
+
+      expect(getAuthToken()).toBeNull();
+    });
+
+    it('should be a no-op when no token is present', async () => {
+      await revokeToken();
+
+      expect(mockClient.callToolRaw).not.toHaveBeenCalled();
+      expect(getAuthToken()).toBeNull();
+    });
+
+    it('should revoke refresh token even when access token revocation fails', async () => {
+      mockClient.callTool.mockResolvedValue({
+        success: true,
+        data: {
+          token: 'jwt-token-123',
+          refresh_token: 'refresh-token-456',
+          user: { id: '1', username: 'admin', role: 'admin' },
+        },
+      });
+      await authenticateAdmin('admin', 'password');
+
+      // Match on token value to decide which call fails, not call order
+      mockClient.callToolRaw.mockImplementation(async (_name: string, args: Record<string, unknown>) => {
+        if (args.token === 'jwt-token-123') {
+          throw new Error('Network error');
+        }
+        return { success: true };
+      });
+
+      await revokeToken();
+
+      expect(mockClient.callToolRaw).toHaveBeenCalledTimes(2);
+      expect(mockClient.callToolRaw).toHaveBeenCalledWith('revoke_token', {
+        token: 'jwt-token-123',
+      });
+      expect(mockClient.callToolRaw).toHaveBeenCalledWith('revoke_token', {
+        token: 'refresh-token-456',
+      });
+    });
+  });
+
+  describe('refreshAuthToken', () => {
+    it('should update tokens on successful refresh', async () => {
+      // First authenticate to set a refresh token
+      mockClient.callTool.mockResolvedValue({
+        success: true,
+        data: {
+          token: 'old-token-valid',
+          refresh_token: 'old-refresh',
+          user: { id: '1', username: 'admin', role: 'admin' },
+        },
+      });
+      await authenticateAdmin('admin', 'password');
+
+      // Mock the refresh call
+      mockClient.callToolRaw.mockResolvedValue({
+        success: true,
+        data: {
+          token: 'new-token-valid',
+          refresh_token: 'new-refresh',
+          user: { id: '1', username: 'admin', role: 'admin' },
+        },
+      });
+
+      const result = await refreshAuthToken();
+
+      expect(result).toBe(true);
+      expect(getAuthToken()).toBe('new-token-valid');
+      expect(getRefreshToken()).toBe('new-refresh');
+      expect(mockClient.callToolRaw).toHaveBeenCalledWith('refresh_token', {
+        refresh_token: 'old-refresh',
+      });
+    });
+
+    it('should clear auth on refresh failure', async () => {
+      mockClient.callTool.mockResolvedValue({
+        success: true,
+        data: {
+          token: 'old-token-valid',
+          refresh_token: 'old-refresh',
+          user: { id: '1', username: 'admin', role: 'admin' },
+        },
+      });
+      await authenticateAdmin('admin', 'password');
+
+      mockClient.callToolRaw.mockResolvedValue({
+        success: false,
+        error: 'Invalid refresh token',
+      });
+
+      const result = await refreshAuthToken();
+
+      expect(result).toBe(false);
+      expect(getAuthToken()).toBeNull();
+    });
+
+    it('should clear auth when no refresh token is stored', async () => {
+      mockClient.callTool.mockResolvedValue({
+        success: true,
+        data: {
+          token: 'jwt-token-valid',
+          user: { id: '1', username: 'admin', role: 'admin' },
+        },
+      });
+      await authenticateAdmin('admin', 'password');
+
+      const result = await refreshAuthToken();
+
+      expect(result).toBe(false);
+      expect(getAuthToken()).toBeNull();
+    });
+
+    it('should clear auth when refresh call throws', async () => {
+      mockClient.callTool.mockResolvedValue({
+        success: true,
+        data: {
+          token: 'old-token-valid',
+          refresh_token: 'old-refresh',
+          user: { id: '1', username: 'admin', role: 'admin' },
+        },
+      });
+      await authenticateAdmin('admin', 'password');
+
+      mockClient.callToolRaw.mockRejectedValue(new Error('Network error'));
+
+      const result = await refreshAuthToken();
+
+      expect(result).toBe(false);
+      expect(getAuthToken()).toBeNull();
+    });
+
+    it('should clear auth when refresh returns invalid token', async () => {
+      mockClient.callTool.mockResolvedValue({
+        success: true,
+        data: {
+          token: 'old-token-valid',
+          refresh_token: 'old-refresh',
+          user: { id: '1', username: 'admin', role: 'admin' },
+        },
+      });
+      await authenticateAdmin('admin', 'password');
+
+      mockClient.callToolRaw.mockResolvedValue({
+        success: true,
+        data: {
+          token: 'short',
+          refresh_token: 'new-refresh',
+          user: { id: '1', username: 'admin', role: 'admin' },
+        },
+      });
+
+      const result = await refreshAuthToken();
+
+      expect(result).toBe(false);
+      expect(getAuthToken()).toBeNull();
+    });
+
+    it('should abort refresh if auth state changed during in-flight call', async () => {
+      mockClient.callTool.mockResolvedValue({
+        success: true,
+        data: {
+          token: 'old-token-valid',
+          refresh_token: 'old-refresh',
+          user: { id: '1', username: 'admin', role: 'admin' },
+        },
+      });
+      await authenticateAdmin('admin', 'password');
+
+      // Simulate a logout happening while the refresh call is in-flight
+      mockClient.callToolRaw.mockImplementation(async () => {
+        clearAuth();
+        return {
+          success: true,
+          data: {
+            token: 'new-token-valid',
+            refresh_token: 'new-refresh',
+            user: { id: '1', username: 'admin', role: 'admin' },
+          },
+        };
+      });
+
+      const result = await refreshAuthToken();
+
+      expect(result).toBe(false);
+      expect(getAuthToken()).toBeNull();
+    });
+
+    it('should return false without calling server when auth is cleared', async () => {
+      clearAuth();
+
+      const result = await refreshAuthToken();
+
+      expect(result).toBe(false);
+      expect(mockClient.callToolRaw).not.toHaveBeenCalled();
+    });
+
+    it('should deduplicate concurrent refresh calls', async () => {
+      mockClient.callTool.mockResolvedValue({
+        success: true,
+        data: {
+          token: 'old-token-valid',
+          refresh_token: 'old-refresh',
+          user: { id: '1', username: 'admin', role: 'admin' },
+        },
+      });
+      await authenticateAdmin('admin', 'password');
+
+      mockClient.callToolRaw.mockResolvedValue({
+        success: true,
+        data: {
+          token: 'new-token-valid',
+          refresh_token: 'new-refresh',
+          user: { id: '1', username: 'admin', role: 'admin' },
+        },
+      });
+
+      const [result1, result2] = await Promise.all([
+        refreshAuthToken(),
+        refreshAuthToken(),
+      ]);
+
+      expect(result1).toBe(true);
+      expect(result2).toBe(true);
+      expect(mockClient.callToolRaw).toHaveBeenCalledTimes(1);
     });
   });
 });
