@@ -6,14 +6,12 @@ Tests log entry models including validation, serialization, and conversions.
 
 import json
 from datetime import UTC, datetime
-from unittest.mock import MagicMock
 
 import pytest
 from pydantic import ValidationError
 
 from models.log import (
     LogEntry,
-    LogEntryTable,
     LogFilter,
 )
 
@@ -104,46 +102,47 @@ class TestLogEntry:
         data = entry.model_dump()
         assert data["created_at"] is None
 
-    def test_from_table_model(self):
-        """Test conversion from SQLAlchemy model."""
-        table = MagicMock(spec=LogEntryTable)
-        table.id = "log-123"
-        table.timestamp = datetime(2024, 1, 15, 10, 0, 0)
-        table.level = "WARNING"
-        table.source = "application"
-        table.message = "Warning message"
-        table.tags = json.dumps(["tag1", "tag2"])
-        table.extra_data = json.dumps({"key": "value"})
-        table.created_at = datetime(2024, 1, 15, 10, 0, 1)
+    def test_from_row(self):
+        """Test creation from a dict-like row (aiosqlite.Row)."""
+        row = {
+            "id": "log-123",
+            "timestamp": "2024-01-15T10:00:00",
+            "level": "WARNING",
+            "source": "application",
+            "message": "Warning message",
+            "tags": json.dumps(["tag1", "tag2"]),
+            "extra_data": json.dumps({"key": "value"}),
+            "created_at": "2024-01-15T10:00:01",
+        }
 
-        entry = LogEntry.from_table_model(table)
+        entry = LogEntry.from_row(row)
         assert entry.id == "log-123"
         assert entry.level == "WARNING"
         assert entry.source == "application"
         assert entry.message == "Warning message"
         assert entry.tags == ["tag1", "tag2"]
         assert entry.metadata == {"key": "value"}
-        assert entry.created_at == datetime(2024, 1, 15, 10, 0, 1)
 
-    def test_from_table_model_empty_json(self):
-        """Test conversion handles empty JSON fields."""
-        table = MagicMock(spec=LogEntryTable)
-        table.id = "log-123"
-        table.timestamp = datetime(2024, 1, 15, 10, 0, 0)
-        table.level = "INFO"
-        table.source = "system"
-        table.message = "Message"
-        table.tags = None
-        table.extra_data = None
-        table.created_at = None
+    def test_from_row_empty_json(self):
+        """Test from_row handles None JSON fields."""
+        row = {
+            "id": "log-123",
+            "timestamp": "2024-01-15T10:00:00",
+            "level": "INFO",
+            "source": "system",
+            "message": "Message",
+            "tags": None,
+            "extra_data": None,
+            "created_at": None,
+        }
 
-        entry = LogEntry.from_table_model(table)
+        entry = LogEntry.from_row(row)
         assert entry.tags == []
         assert entry.metadata == {}
         assert entry.created_at is None
 
-    def test_to_table_model(self):
-        """Test conversion to SQLAlchemy model."""
+    def test_to_insert_params(self):
+        """Test conversion to insert parameters dict."""
         now = datetime(2024, 1, 15, 10, 0, 0)
         entry = LogEntry(
             id="log-123",
@@ -154,17 +153,17 @@ class TestLogEntry:
             tags=["error", "critical"],
             metadata={"error_code": 500},
         )
-        table = entry.to_table_model()
-        assert table.id == "log-123"
-        assert table.timestamp == now
-        assert table.level == "ERROR"
-        assert table.source == "docker"
-        assert table.message == "Error message"
-        assert json.loads(table.tags) == ["error", "critical"]
-        assert json.loads(table.extra_data) == {"error_code": 500}
+        params = entry.to_insert_params()
+        assert params["id"] == "log-123"
+        assert params["timestamp"] == "2024-01-15T10:00:00"
+        assert params["level"] == "ERROR"
+        assert params["source"] == "docker"
+        assert params["message"] == "Error message"
+        assert json.loads(params["tags"]) == ["error", "critical"]
+        assert json.loads(params["extra_data"]) == {"error_code": 500}
 
-    def test_to_table_model_empty_collections(self):
-        """Test conversion with empty tags and metadata."""
+    def test_to_insert_params_empty_collections(self):
+        """Test to_insert_params with empty tags and metadata."""
         now = datetime(2024, 1, 15, 10, 0, 0)
         entry = LogEntry(
             id="log-123",
@@ -175,9 +174,9 @@ class TestLogEntry:
             tags=[],
             metadata={},
         )
-        table = entry.to_table_model()
-        assert table.tags is None
-        assert table.extra_data is None
+        params = entry.to_insert_params()
+        assert params["tags"] is None
+        assert params["extra_data"] is None
 
     def test_log_levels(self):
         """Test various log levels."""

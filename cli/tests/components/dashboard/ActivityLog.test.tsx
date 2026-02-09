@@ -22,9 +22,10 @@ vi.mock('ink', async () => {
   };
 });
 
-import { ActivityLog, type ActivityLogEntry } from '../../../src/components/dashboard/ActivityLog.js';
+import { ActivityLog } from '../../../src/components/dashboard/ActivityLog.js';
+import type { ActivityEntry } from '../../../src/app/dashboard-types.js';
 
-const testEntries: ActivityLogEntry[] = [
+const testEntries: ActivityEntry[] = [
   { id: '1', timestamp: new Date('2025-01-01T10:30:00'), type: 'CMD', message: 'agent list' },
   { id: '2', timestamp: new Date('2025-01-01T10:30:05'), type: 'OK', message: 'Fetched 3 agents' },
   { id: '3', timestamp: new Date('2025-01-01T10:31:00'), type: 'ERR', message: 'Connection timeout' },
@@ -79,7 +80,7 @@ describe('ActivityLog', () => {
   });
 
   it('should auto-scroll to show latest entries', () => {
-    const manyEntries: ActivityLogEntry[] = Array.from({ length: 30 }, (_, i) => ({
+    const manyEntries: ActivityEntry[] = Array.from({ length: 30 }, (_, i) => ({
       id: String(i),
       timestamp: new Date('2025-01-01T10:00:00'),
       type: 'SYS' as const,
@@ -105,7 +106,7 @@ describe('ActivityLog', () => {
   });
 
   it('should register keyboard input handler', () => {
-    const manyEntries: ActivityLogEntry[] = Array.from({ length: 30 }, (_, i) => ({
+    const manyEntries: ActivityEntry[] = Array.from({ length: 30 }, (_, i) => ({
       id: String(i),
       timestamp: new Date('2025-01-01T10:00:00'),
       type: 'SYS' as const,
@@ -118,7 +119,7 @@ describe('ActivityLog', () => {
   });
 
   it('should show scrollbar when content overflows', () => {
-    const manyEntries: ActivityLogEntry[] = Array.from({ length: 30 }, (_, i) => ({
+    const manyEntries: ActivityEntry[] = Array.from({ length: 30 }, (_, i) => ({
       id: String(i),
       timestamp: new Date('2025-01-01T10:00:00'),
       type: 'SYS' as const,

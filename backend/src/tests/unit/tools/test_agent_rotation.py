@@ -90,14 +90,14 @@ class TestRotateAgentToken:
         mock_services["agent_service"].initiate_rotation = AsyncMock(
             return_value="new-token-123"
         )
-        mock_services["agent_service"]._get_token_rotation_settings = AsyncMock(
+        mock_services["agent_service"].get_token_rotation_settings = AsyncMock(
             return_value=(7, 5)  # 7 days rotation, 5 minutes grace
         )
         mock_services["agent_manager"].send_command = AsyncMock(
             return_value={"status": "ok"}
         )
 
-        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
+        with patch("tools.agent.lifecycle.log_event", new_callable=AsyncMock):
             result = await agent_tools.rotate_agent_token("server-1")
 
         assert result["success"] is True
@@ -147,7 +147,7 @@ class TestRotateAgentToken:
         mock_services["agent_service"].initiate_rotation = AsyncMock(
             return_value="new-token-123"
         )
-        mock_services["agent_service"]._get_token_rotation_settings = AsyncMock(
+        mock_services["agent_service"].get_token_rotation_settings = AsyncMock(
             return_value=(7, 5)
         )
         mock_services["agent_manager"].send_command = AsyncMock(
@@ -180,14 +180,14 @@ class TestRotateAgentToken:
         mock_services["agent_service"].initiate_rotation = AsyncMock(
             return_value="new-token"
         )
-        mock_services["agent_service"]._get_token_rotation_settings = AsyncMock(
+        mock_services["agent_service"].get_token_rotation_settings = AsyncMock(
             return_value=(7, 5)
         )
         mock_services["agent_manager"].send_command = AsyncMock(
             return_value={"status": "ok"}
         )
 
-        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
+        with patch("tools.agent.lifecycle.log_event", new_callable=AsyncMock):
             result = await agent_tools.rotate_agent_token("server-1")
 
         assert result["success"] is True

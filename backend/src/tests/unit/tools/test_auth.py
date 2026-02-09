@@ -103,11 +103,9 @@ class TestLogin:
             )
         )
 
-        with patch("tools.auth.login_tool.login_rate_limiter") as mock_limiter:
-            mock_limiter.is_allowed.return_value = True
-            result = await auth_tools.login(
-                {"username": "testuser", "password": "password123"}, ctx
-            )
+        result = await auth_tools.login(
+            {"username": "testuser", "password": "password123"}, ctx
+        )
 
         assert result["success"] is True
         assert "data" in result
@@ -131,11 +129,9 @@ class TestLogin:
             return_value=MagicMock(client=MagicMock(host="127.0.0.1"), headers={})
         )
 
-        with patch("tools.auth.login_tool.login_rate_limiter") as mock_limiter:
-            mock_limiter.is_allowed.return_value = True
-            result = await auth_tools.login(
-                {"username": "baduser", "password": "wrongpass"}, ctx
-            )
+        result = await auth_tools.login(
+            {"username": "baduser", "password": "wrongpass"}, ctx
+        )
 
         assert result["success"] is False
         assert result["error"] == "INVALID_CREDENTIALS"

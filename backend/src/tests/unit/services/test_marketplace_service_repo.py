@@ -4,13 +4,11 @@ Unit tests for services/marketplace_service.py - Repository operations.
 Tests add_repo, get_repos, get_repo, remove_repo, and toggle_repo methods.
 """
 
-from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 
 from models.marketplace import (
-    MarketplaceRepoTable,
     RepoStatus,
     RepoType,
 )
@@ -18,67 +16,59 @@ from services.marketplace_service import MarketplaceService
 
 
 @pytest.fixture
-def mock_db_session():
-    """Create mock database session with async context manager."""
-    session = AsyncMock()
-    context_manager = AsyncMock()
-    context_manager.__aenter__.return_value = session
-    context_manager.__aexit__.return_value = None
-    return session, context_manager
+def mock_db_conn():
+    """Create mock DatabaseConnection with async context manager."""
+    mock_aiosqlite_conn = AsyncMock()
+    mock_connection = MagicMock()
+    ctx = AsyncMock()
+    ctx.__aenter__.return_value = mock_aiosqlite_conn
+    ctx.__aexit__.return_value = None
+    mock_connection.get_connection.return_value = ctx
+    return mock_connection, mock_aiosqlite_conn
 
 
-@pytest.fixture
-def mock_repo_table():
-    """Create mock MarketplaceRepoTable row."""
-    repo = MagicMock(spec=MarketplaceRepoTable)
-    repo.id = "test-repo"
-    repo.name = "Test Repo"
-    repo.url = "https://github.com/test/repo"
-    repo.branch = "main"
-    repo.repo_type = "community"
-    repo.enabled = True
-    repo.status = "active"
-    repo.last_synced = datetime(2024, 1, 15, tzinfo=UTC)
-    repo.app_count = 10
-    repo.error_message = None
-    repo.created_at = datetime(2024, 1, 1, tzinfo=UTC)
-    repo.updated_at = datetime(2024, 1, 15, tzinfo=UTC)
-    return repo
-
-
-@pytest.fixture
-def service_with_mocks(mock_db_session):
-    """Create MarketplaceService with mocked dependencies."""
-    _, context_manager = mock_db_session
-
-    with (
-        patch("services.marketplace_service.logger"),
-        patch("services.marketplace_service.db_manager") as mock_db,
-        patch("services.marketplace_service.initialize_marketplace_database"),
-    ):
-        mock_db.get_session.return_value = context_manager
-        service = MarketplaceService()
-        service._initialized = True  # Skip initialization
-        yield service, mock_db, context_manager
+def make_repo_row(**overrides):
+    """Create a dict row for marketplace repo."""
+    row = {
+        "id": "test-repo",
+        "name": "Test Repo",
+        "url": "https://github.com/test/repo",
+        "branch": "main",
+        "repo_type": "community",
+        "enabled": 1,
+        "status": "active",
+        "last_synced": "2024-01-15T00:00:00",
+        "app_count": 10,
+        "error_message": None,
+        "created_at": "2024-01-01T00:00:00",
+        "updated_at": "2024-01-15T00:00:00",
+    }
+    row.update(overrides)
+    return row
 
 
 class TestAddRepo:
     """Tests for add_repo method."""
 
     @pytest.mark.asyncio
-    async def test_add_repo_creates_repository(self, mock_db_session):
+    async def test_add_repo_creates_repository(self, mock_db_conn):
         """add_repo should create a new repository."""
-        session, context_manager = mock_db_session
-        session.add = MagicMock()
-        session.flush = AsyncMock()
+        mock_conn, mock_aiosqlite = mock_db_conn
 
-        with (
-            patch("services.marketplace_service.logger") as mock_logger,
-            patch("services.marketplace_service.db_manager") as mock_db,
-            patch("services.marketplace_service.initialize_marketplace_database"),
-        ):
-            mock_db.get_session.return_value = context_manager
-            service = MarketplaceService()
+        # add_repo: INSERT then SELECT * WHERE id = ?
+        mock_cursor = AsyncMock()
+        mock_cursor.fetchone.return_value = make_repo_row(
+            name="My Repo",
+            url="https://github.com/user/repo",
+            repo_type="community",
+            last_synced=None,
+            app_count=0,
+        )
+        mock_aiosqlite.execute.return_value = mock_cursor
+        mock_aiosqlite.commit = AsyncMock()
+
+        with patch("services.marketplace_service.logger") as mock_logger:
+            service = MarketplaceService(connection=mock_conn)
             service._initialized = True
 
             result = await service.add_repo(
@@ -94,23 +84,35 @@ class TestAddRepo:
             assert result.branch == "main"
             assert result.enabled is True
             assert result.status == RepoStatus.ACTIVE
-            session.add.assert_called_once()
             mock_logger.info.assert_called()
 
     @pytest.mark.asyncio
-    async def test_add_repo_generates_unique_id(self, mock_db_session):
+    async def test_add_repo_generates_unique_id(self, mock_db_conn):
         """add_repo should generate a unique repo ID."""
-        session, context_manager = mock_db_session
-        session.add = MagicMock()
-        session.flush = AsyncMock()
+        mock_conn, mock_aiosqlite = mock_db_conn
 
-        with (
-            patch("services.marketplace_service.logger"),
-            patch("services.marketplace_service.db_manager") as mock_db,
-            patch("services.marketplace_service.initialize_marketplace_database"),
-        ):
-            mock_db.get_session.return_value = context_manager
-            service = MarketplaceService()
+        # Capture the INSERT params to get the generated ID
+        captured_ids = []
+
+        async def capture_execute(sql, params=None):
+            if params and "INSERT" in str(sql):
+                captured_ids.append(params[0])
+            cursor = AsyncMock()
+            cursor.fetchone.return_value = make_repo_row(
+                id=captured_ids[0] if captured_ids else "abcd1234",
+                name="My Repo",
+                url="https://github.com/user/repo",
+                repo_type="personal",
+                last_synced=None,
+                app_count=0,
+            )
+            return cursor
+
+        mock_aiosqlite.execute = capture_execute
+        mock_aiosqlite.commit = AsyncMock()
+
+        with patch("services.marketplace_service.logger"):
+            service = MarketplaceService(connection=mock_conn)
             service._initialized = True
 
             result = await service.add_repo(
@@ -123,19 +125,23 @@ class TestAddRepo:
             assert len(result.id) == 8  # uuid.uuid4().hex[:8]
 
     @pytest.mark.asyncio
-    async def test_add_repo_with_custom_branch(self, mock_db_session):
+    async def test_add_repo_with_custom_branch(self, mock_db_conn):
         """add_repo should respect custom branch parameter."""
-        session, context_manager = mock_db_session
-        session.add = MagicMock()
-        session.flush = AsyncMock()
+        mock_conn, mock_aiosqlite = mock_db_conn
 
-        with (
-            patch("services.marketplace_service.logger"),
-            patch("services.marketplace_service.db_manager") as mock_db,
-            patch("services.marketplace_service.initialize_marketplace_database"),
-        ):
-            mock_db.get_session.return_value = context_manager
-            service = MarketplaceService()
+        mock_cursor = AsyncMock()
+        mock_cursor.fetchone.return_value = make_repo_row(
+            branch="develop",
+            name="My Repo",
+            url="https://github.com/user/repo",
+            last_synced=None,
+            app_count=0,
+        )
+        mock_aiosqlite.execute.return_value = mock_cursor
+        mock_aiosqlite.commit = AsyncMock()
+
+        with patch("services.marketplace_service.logger"):
+            service = MarketplaceService(connection=mock_conn)
             service._initialized = True
 
             result = await service.add_repo(
@@ -152,20 +158,15 @@ class TestGetRepos:
     """Tests for get_repos method."""
 
     @pytest.mark.asyncio
-    async def test_get_repos_returns_all(self, mock_db_session, mock_repo_table):
+    async def test_get_repos_returns_all(self, mock_db_conn):
         """get_repos should return all repositories."""
-        session, context_manager = mock_db_session
-        mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = [mock_repo_table]
-        session.execute = AsyncMock(return_value=mock_result)
+        mock_conn, mock_aiosqlite = mock_db_conn
+        mock_cursor = AsyncMock()
+        mock_cursor.fetchall.return_value = [make_repo_row()]
+        mock_aiosqlite.execute.return_value = mock_cursor
 
-        with (
-            patch("services.marketplace_service.logger") as mock_logger,
-            patch("services.marketplace_service.db_manager") as mock_db,
-            patch("services.marketplace_service.initialize_marketplace_database"),
-        ):
-            mock_db.get_session.return_value = context_manager
-            service = MarketplaceService()
+        with patch("services.marketplace_service.logger") as mock_logger:
+            service = MarketplaceService(connection=mock_conn)
             service._initialized = True
 
             result = await service.get_repos()
@@ -177,20 +178,15 @@ class TestGetRepos:
             )
 
     @pytest.mark.asyncio
-    async def test_get_repos_enabled_only(self, mock_db_session, mock_repo_table):
+    async def test_get_repos_enabled_only(self, mock_db_conn):
         """get_repos should filter enabled repos when requested."""
-        session, context_manager = mock_db_session
-        mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = [mock_repo_table]
-        session.execute = AsyncMock(return_value=mock_result)
+        mock_conn, mock_aiosqlite = mock_db_conn
+        mock_cursor = AsyncMock()
+        mock_cursor.fetchall.return_value = [make_repo_row()]
+        mock_aiosqlite.execute.return_value = mock_cursor
 
-        with (
-            patch("services.marketplace_service.logger") as mock_logger,
-            patch("services.marketplace_service.db_manager") as mock_db,
-            patch("services.marketplace_service.initialize_marketplace_database"),
-        ):
-            mock_db.get_session.return_value = context_manager
-            service = MarketplaceService()
+        with patch("services.marketplace_service.logger") as mock_logger:
+            service = MarketplaceService(connection=mock_conn)
             service._initialized = True
 
             result = await service.get_repos(enabled_only=True)
@@ -201,20 +197,15 @@ class TestGetRepos:
             )
 
     @pytest.mark.asyncio
-    async def test_get_repos_returns_empty_list(self, mock_db_session):
+    async def test_get_repos_returns_empty_list(self, mock_db_conn):
         """get_repos should return empty list when no repos exist."""
-        session, context_manager = mock_db_session
-        mock_result = MagicMock()
-        mock_result.scalars.return_value.all.return_value = []
-        session.execute = AsyncMock(return_value=mock_result)
+        mock_conn, mock_aiosqlite = mock_db_conn
+        mock_cursor = AsyncMock()
+        mock_cursor.fetchall.return_value = []
+        mock_aiosqlite.execute.return_value = mock_cursor
 
-        with (
-            patch("services.marketplace_service.logger"),
-            patch("services.marketplace_service.db_manager") as mock_db,
-            patch("services.marketplace_service.initialize_marketplace_database"),
-        ):
-            mock_db.get_session.return_value = context_manager
-            service = MarketplaceService()
+        with patch("services.marketplace_service.logger"):
+            service = MarketplaceService(connection=mock_conn)
             service._initialized = True
 
             result = await service.get_repos()
@@ -226,20 +217,15 @@ class TestGetRepo:
     """Tests for get_repo method."""
 
     @pytest.mark.asyncio
-    async def test_get_repo_returns_repo(self, mock_db_session, mock_repo_table):
+    async def test_get_repo_returns_repo(self, mock_db_conn):
         """get_repo should return repository when found."""
-        session, context_manager = mock_db_session
-        mock_result = MagicMock()
-        mock_result.scalar_one_or_none.return_value = mock_repo_table
-        session.execute = AsyncMock(return_value=mock_result)
+        mock_conn, mock_aiosqlite = mock_db_conn
+        mock_cursor = AsyncMock()
+        mock_cursor.fetchone.return_value = make_repo_row()
+        mock_aiosqlite.execute.return_value = mock_cursor
 
-        with (
-            patch("services.marketplace_service.logger") as mock_logger,
-            patch("services.marketplace_service.db_manager") as mock_db,
-            patch("services.marketplace_service.initialize_marketplace_database"),
-        ):
-            mock_db.get_session.return_value = context_manager
-            service = MarketplaceService()
+        with patch("services.marketplace_service.logger") as mock_logger:
+            service = MarketplaceService(connection=mock_conn)
             service._initialized = True
 
             result = await service.get_repo("test-repo")
@@ -251,20 +237,15 @@ class TestGetRepo:
             )
 
     @pytest.mark.asyncio
-    async def test_get_repo_returns_none_when_not_found(self, mock_db_session):
+    async def test_get_repo_returns_none_when_not_found(self, mock_db_conn):
         """get_repo should return None when repository not found."""
-        session, context_manager = mock_db_session
-        mock_result = MagicMock()
-        mock_result.scalar_one_or_none.return_value = None
-        session.execute = AsyncMock(return_value=mock_result)
+        mock_conn, mock_aiosqlite = mock_db_conn
+        mock_cursor = AsyncMock()
+        mock_cursor.fetchone.return_value = None
+        mock_aiosqlite.execute.return_value = mock_cursor
 
-        with (
-            patch("services.marketplace_service.logger") as mock_logger,
-            patch("services.marketplace_service.db_manager") as mock_db,
-            patch("services.marketplace_service.initialize_marketplace_database"),
-        ):
-            mock_db.get_session.return_value = context_manager
-            service = MarketplaceService()
+        with patch("services.marketplace_service.logger") as mock_logger:
+            service = MarketplaceService(connection=mock_conn)
             service._initialized = True
 
             result = await service.get_repo("nonexistent")
@@ -279,46 +260,52 @@ class TestRemoveRepo:
     """Tests for remove_repo method."""
 
     @pytest.mark.asyncio
-    async def test_remove_repo_deletes_repo_and_apps(self, mock_db_session):
+    async def test_remove_repo_deletes_repo_and_apps(self, mock_db_conn):
         """remove_repo should delete repository and associated apps."""
-        session, context_manager = mock_db_session
-        mock_result = MagicMock()
-        mock_result.rowcount = 1
-        session.execute = AsyncMock(return_value=mock_result)
+        mock_conn, mock_aiosqlite = mock_db_conn
 
-        with (
-            patch("services.marketplace_service.logger") as mock_logger,
-            patch("services.marketplace_service.db_manager") as mock_db,
-            patch("services.marketplace_service.initialize_marketplace_database"),
-        ):
-            mock_db.get_session.return_value = context_manager
-            service = MarketplaceService()
+        # The last execute (DELETE repo) needs rowcount > 0
+        call_count = [0]
+
+        async def mock_execute(sql, params=None):
+            call_count[0] += 1
+            cursor = AsyncMock()
+            cursor.rowcount = 1
+            return cursor
+
+        mock_aiosqlite.execute = mock_execute
+        mock_aiosqlite.commit = AsyncMock()
+
+        with patch("services.marketplace_service.logger") as mock_logger:
+            service = MarketplaceService(connection=mock_conn)
             service._initialized = True
 
             result = await service.remove_repo("test-repo")
 
             assert result is True
-            # Should be called twice: once for apps, once for repo
-            assert session.execute.call_count == 2
+            # 3 execute calls: DELETE ratings, DELETE apps, DELETE repo
+            assert call_count[0] == 3
             mock_logger.info.assert_called_with(
                 "Repository removed", repo_id="test-repo"
             )
 
     @pytest.mark.asyncio
-    async def test_remove_repo_returns_false_when_not_found(self, mock_db_session):
+    async def test_remove_repo_returns_false_when_not_found(
+        self, mock_db_conn
+    ):
         """remove_repo should return False when repository not found."""
-        session, context_manager = mock_db_session
-        mock_result = MagicMock()
-        mock_result.rowcount = 0
-        session.execute = AsyncMock(return_value=mock_result)
+        mock_conn, mock_aiosqlite = mock_db_conn
 
-        with (
-            patch("services.marketplace_service.logger") as mock_logger,
-            patch("services.marketplace_service.db_manager") as mock_db,
-            patch("services.marketplace_service.initialize_marketplace_database"),
-        ):
-            mock_db.get_session.return_value = context_manager
-            service = MarketplaceService()
+        async def mock_execute(sql, params=None):
+            cursor = AsyncMock()
+            cursor.rowcount = 0
+            return cursor
+
+        mock_aiosqlite.execute = mock_execute
+        mock_aiosqlite.commit = AsyncMock()
+
+        with patch("services.marketplace_service.logger") as mock_logger:
+            service = MarketplaceService(connection=mock_conn)
             service._initialized = True
 
             result = await service.remove_repo("nonexistent")
@@ -333,20 +320,16 @@ class TestToggleRepo:
     """Tests for toggle_repo method."""
 
     @pytest.mark.asyncio
-    async def test_toggle_repo_enables_repository(self, mock_db_session):
+    async def test_toggle_repo_enables_repository(self, mock_db_conn):
         """toggle_repo should enable repository."""
-        session, context_manager = mock_db_session
-        mock_result = MagicMock()
-        mock_result.rowcount = 1
-        session.execute = AsyncMock(return_value=mock_result)
+        mock_conn, mock_aiosqlite = mock_db_conn
+        mock_cursor = AsyncMock()
+        mock_cursor.rowcount = 1
+        mock_aiosqlite.execute.return_value = mock_cursor
+        mock_aiosqlite.commit = AsyncMock()
 
-        with (
-            patch("services.marketplace_service.logger") as mock_logger,
-            patch("services.marketplace_service.db_manager") as mock_db,
-            patch("services.marketplace_service.initialize_marketplace_database"),
-        ):
-            mock_db.get_session.return_value = context_manager
-            service = MarketplaceService()
+        with patch("services.marketplace_service.logger") as mock_logger:
+            service = MarketplaceService(connection=mock_conn)
             service._initialized = True
 
             result = await service.toggle_repo("test-repo", enabled=True)
@@ -357,20 +340,16 @@ class TestToggleRepo:
             )
 
     @pytest.mark.asyncio
-    async def test_toggle_repo_disables_repository(self, mock_db_session):
+    async def test_toggle_repo_disables_repository(self, mock_db_conn):
         """toggle_repo should disable repository."""
-        session, context_manager = mock_db_session
-        mock_result = MagicMock()
-        mock_result.rowcount = 1
-        session.execute = AsyncMock(return_value=mock_result)
+        mock_conn, mock_aiosqlite = mock_db_conn
+        mock_cursor = AsyncMock()
+        mock_cursor.rowcount = 1
+        mock_aiosqlite.execute.return_value = mock_cursor
+        mock_aiosqlite.commit = AsyncMock()
 
-        with (
-            patch("services.marketplace_service.logger") as mock_logger,
-            patch("services.marketplace_service.db_manager") as mock_db,
-            patch("services.marketplace_service.initialize_marketplace_database"),
-        ):
-            mock_db.get_session.return_value = context_manager
-            service = MarketplaceService()
+        with patch("services.marketplace_service.logger") as mock_logger:
+            service = MarketplaceService(connection=mock_conn)
             service._initialized = True
 
             result = await service.toggle_repo("test-repo", enabled=False)
@@ -381,20 +360,18 @@ class TestToggleRepo:
             )
 
     @pytest.mark.asyncio
-    async def test_toggle_repo_returns_false_when_not_found(self, mock_db_session):
+    async def test_toggle_repo_returns_false_when_not_found(
+        self, mock_db_conn
+    ):
         """toggle_repo should return False when repository not found."""
-        session, context_manager = mock_db_session
-        mock_result = MagicMock()
-        mock_result.rowcount = 0
-        session.execute = AsyncMock(return_value=mock_result)
+        mock_conn, mock_aiosqlite = mock_db_conn
+        mock_cursor = AsyncMock()
+        mock_cursor.rowcount = 0
+        mock_aiosqlite.execute.return_value = mock_cursor
+        mock_aiosqlite.commit = AsyncMock()
 
-        with (
-            patch("services.marketplace_service.logger") as mock_logger,
-            patch("services.marketplace_service.db_manager") as mock_db,
-            patch("services.marketplace_service.initialize_marketplace_database"),
-        ):
-            mock_db.get_session.return_value = context_manager
-            service = MarketplaceService()
+        with patch("services.marketplace_service.logger") as mock_logger:
+            service = MarketplaceService(connection=mock_conn)
             service._initialized = True
 
             result = await service.toggle_repo("nonexistent", enabled=True)

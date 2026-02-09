@@ -5,7 +5,7 @@ Tests mark_app_installed, mark_app_uninstalled, install_app,
 and bulk installation operations.
 """
 
-from datetime import UTC, datetime
+from datetime import datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -13,9 +13,7 @@ import pytest
 from models.app import (
     App,
     AppCategory,
-    AppCategoryTable,
     AppInstallation,
-    ApplicationTable,
     AppRequirements,
     AppStatus,
 )
@@ -23,13 +21,15 @@ from services.app_service import AppService
 
 
 @pytest.fixture
-def mock_db_session():
-    """Create mock database session with async context manager."""
-    session = AsyncMock()
-    context_manager = AsyncMock()
-    context_manager.__aenter__.return_value = session
-    context_manager.__aexit__.return_value = None
-    return session, context_manager
+def mock_db_conn():
+    """Create mock DatabaseConnection with get_connection context manager."""
+    mock_aiosqlite_conn = AsyncMock()
+    mock_connection = MagicMock()
+    ctx = AsyncMock()
+    ctx.__aenter__.return_value = mock_aiosqlite_conn
+    ctx.__aexit__.return_value = None
+    mock_connection.get_connection.return_value = ctx
+    return mock_connection, mock_aiosqlite_conn
 
 
 @pytest.fixture
@@ -67,95 +67,79 @@ def sample_app(sample_category):
 
 
 @pytest.fixture
-def sample_app_table():
-    """Create mock ApplicationTable row."""
-    app = MagicMock(spec=ApplicationTable)
-    app.id = "plex"
-    app.name = "Plex"
-    app.description = "Media server"
-    app.long_description = None
-    app.version = "1.0.0"
-    app.category_id = "media"
-    app.tags = '["media", "streaming"]'
-    app.icon = None
-    app.screenshots = None
-    app.author = "Plex Inc"
-    app.repository = None
-    app.documentation = None
-    app.license = "MIT"
-    app.requirements = None
-    app.status = "available"
-    app.install_count = 100
-    app.rating = 4.5
-    app.featured = True
-    app.created_at = datetime(2024, 1, 1, tzinfo=UTC)
-    app.updated_at = datetime(2024, 6, 1, tzinfo=UTC)
-    app.connected_server_id = None
-    return app
-
-
-@pytest.fixture
-def sample_category_table():
-    """Create mock AppCategoryTable row."""
-    cat = MagicMock(spec=AppCategoryTable)
-    cat.id = "media"
-    cat.name = "Media"
-    cat.description = "Media applications"
-    cat.icon = "Video"
-    cat.color = "text-blue-500"
-    return cat
+def sample_app_row():
+    """Create dict-like row as returned by aiosqlite JOIN query."""
+    return {
+        "id": "plex",
+        "name": "Plex",
+        "description": "Media server",
+        "long_description": None,
+        "version": "1.0.0",
+        "category_id": "media",
+        "tags": '["media", "streaming"]',
+        "icon": None,
+        "screenshots": None,
+        "author": "Plex Inc",
+        "repository": None,
+        "documentation": None,
+        "license": "MIT",
+        "requirements": None,
+        "status": "available",
+        "install_count": 100,
+        "rating": 4.5,
+        "featured": 1,
+        "created_at": "2024-01-01T00:00:00",
+        "updated_at": "2024-06-01T00:00:00",
+        "connected_server_id": None,
+        "cat_id": "media",
+        "cat_name": "Media",
+        "cat_desc": "Media applications",
+        "cat_icon": "Video",
+        "cat_color": "text-blue-500",
+    }
 
 
 class TestMarkAppUninstalled:
     """Tests for mark_app_uninstalled method."""
 
     @pytest.mark.asyncio
-    async def test_mark_app_uninstalled_success(
-        self, mock_db_session, sample_app_table
-    ):
+    async def test_mark_app_uninstalled_success(self, mock_db_conn):
         """mark_app_uninstalled should update status to available."""
-        session, context_manager = mock_db_session
-        sample_app_table.status = "installed"
-        sample_app_table.connected_server_id = "srv-123"
+        mock_conn, mock_aiosqlite = mock_db_conn
 
-        result = MagicMock()
-        result.first.return_value = (sample_app_table,)
-        session.execute = AsyncMock(return_value=result)
+        cursor_select = AsyncMock()
+        cursor_select.fetchone.return_value = {"id": "plex"}
 
-        with (
-            patch("services.app_service.logger") as mock_logger,
-            patch("services.app_service.initialize_app_database"),
-            patch("services.app_service.db_manager") as mock_db,
-        ):
-            mock_db.get_session.return_value = context_manager
+        cursor_update = AsyncMock()
 
-            service = AppService()
+        mock_aiosqlite.execute = AsyncMock(
+            side_effect=[cursor_select, cursor_update]
+        )
+        mock_aiosqlite.commit = AsyncMock()
+
+        mock_log = MagicMock()
+        with patch("services.app_service.logger") as mock_logger:
+            service = AppService(connection=mock_conn, log_service=mock_log)
             success = await service.mark_app_uninstalled("plex")
 
             assert success is True
-            assert sample_app_table.status == "available"
-            assert sample_app_table.connected_server_id is None
+            mock_aiosqlite.commit.assert_called_once()
             mock_logger.info.assert_any_call(
                 "Application marked as uninstalled", app_id="plex"
             )
 
     @pytest.mark.asyncio
-    async def test_mark_app_uninstalled_not_found(self, mock_db_session):
+    async def test_mark_app_uninstalled_not_found(self, mock_db_conn):
         """mark_app_uninstalled should return False when not found."""
-        session, context_manager = mock_db_session
+        mock_conn, mock_aiosqlite = mock_db_conn
 
-        result = MagicMock()
-        result.first.return_value = None
-        session.execute = AsyncMock(return_value=result)
+        cursor_select = AsyncMock()
+        cursor_select.fetchone.return_value = None
+        mock_aiosqlite.execute = AsyncMock(return_value=cursor_select)
 
-        with (
-            patch("services.app_service.logger"),
-            patch("services.app_service.initialize_app_database"),
-            patch("services.app_service.db_manager") as mock_db,
-        ):
-            mock_db.get_session.return_value = context_manager
-
-            service = AppService()
+        mock_log = MagicMock()
+        with patch("services.app_service.logger"):
+            service = AppService(connection=mock_conn, log_service=mock_log)
             success = await service.mark_app_uninstalled("nonexistent")
 
             assert success is False
@@ -165,107 +149,99 @@ class TestMarkAppInstalled:
     """Tests for mark_app_installed method."""
 
     @pytest.mark.asyncio
-    async def test_mark_app_installed_success(self, mock_db_session, sample_app_table):
+    async def test_mark_app_installed_success(self, mock_db_conn):
         """mark_app_installed should update status and server_id."""
-        session, context_manager = mock_db_session
+        mock_conn, mock_aiosqlite = mock_db_conn
 
-        result = MagicMock()
-        result.first.return_value = (sample_app_table,)
-        session.execute = AsyncMock(return_value=result)
+        cursor_select = AsyncMock()
+        cursor_select.fetchone.return_value = {"id": "plex"}
 
-        with (
-            patch("services.app_service.logger") as mock_logger,
-            patch("services.app_service.initialize_app_database"),
-            patch("services.app_service.db_manager") as mock_db,
-        ):
-            mock_db.get_session.return_value = context_manager
+        cursor_update = AsyncMock()
 
-            service = AppService()
+        mock_aiosqlite.execute = AsyncMock(
+            side_effect=[cursor_select, cursor_update]
+        )
+        mock_aiosqlite.commit = AsyncMock()
+
+        mock_log = MagicMock()
+        with patch("services.app_service.logger") as mock_logger:
+            service = AppService(connection=mock_conn, log_service=mock_log)
             success = await service.mark_app_installed("plex", "srv-123")
 
             assert success is True
-            assert sample_app_table.status == "installed"
-            assert sample_app_table.connected_server_id == "srv-123"
+            mock_aiosqlite.commit.assert_called_once()
             mock_logger.info.assert_any_call(
-                "Application marked as installed", app_id="plex", server_id="srv-123"
+                "Application marked as installed",
+                app_id="plex",
+                server_id="srv-123",
             )
 
     @pytest.mark.asyncio
-    async def test_mark_app_installed_not_found(self, mock_db_session):
+    async def test_mark_app_installed_not_found(self, mock_db_conn):
         """mark_app_installed should return False when not found."""
-        session, context_manager = mock_db_session
+        mock_conn, mock_aiosqlite = mock_db_conn
 
-        result = MagicMock()
-        result.first.return_value = None
-        session.execute = AsyncMock(return_value=result)
+        cursor_select = AsyncMock()
+        cursor_select.fetchone.return_value = None
+        mock_aiosqlite.execute = AsyncMock(return_value=cursor_select)
 
-        with (
-            patch("services.app_service.logger") as mock_logger,
-            patch("services.app_service.initialize_app_database"),
-            patch("services.app_service.db_manager") as mock_db,
-        ):
-            mock_db.get_session.return_value = context_manager
-
-            service = AppService()
+        mock_log = MagicMock()
+        with patch("services.app_service.logger") as mock_logger:
+            service = AppService(connection=mock_conn, log_service=mock_log)
             success = await service.mark_app_installed("nonexistent", "srv-123")
 
             assert success is False
             mock_logger.warning.assert_called_with(
-                "Application not found for marking installed", app_id="nonexistent"
+                "Application not found for marking installed",
+                app_id="nonexistent",
             )
 
     @pytest.mark.asyncio
-    async def test_mark_app_installed_with_casaos_prefix(
-        self, mock_db_session, sample_app_table
-    ):
+    async def test_mark_app_installed_with_casaos_prefix(self, mock_db_conn):
         """mark_app_installed should strip casaos- prefix if not found."""
-        session, context_manager = mock_db_session
-        sample_app_table.id = "plex"
+        mock_conn, mock_aiosqlite = mock_db_conn
 
         call_count = [0]
 
         def execute_side_effect(*args, **kwargs):
             call_count[0] += 1
-            result = MagicMock()
+            cursor = AsyncMock()
             if call_count[0] == 1:
-                result.first.return_value = None  # casaos-plex not found
+                # casaos-plex not found
+                cursor.fetchone.return_value = None
+            elif call_count[0] == 2:
+                # plex found after stripping prefix
+                cursor.fetchone.return_value = {"id": "plex"}
             else:
-                result.first.return_value = (sample_app_table,)  # plex found
-            return result
+                # UPDATE statement
+                cursor.fetchone.return_value = None
+            return cursor
 
-        session.execute = AsyncMock(side_effect=execute_side_effect)
+        mock_aiosqlite.execute = AsyncMock(side_effect=execute_side_effect)
+        mock_aiosqlite.commit = AsyncMock()
 
-        with (
-            patch("services.app_service.logger"),
-            patch("services.app_service.initialize_app_database"),
-            patch("services.app_service.db_manager") as mock_db,
-        ):
-            mock_db.get_session.return_value = context_manager
-
-            service = AppService()
+        mock_log = MagicMock()
+        with patch("services.app_service.logger"):
+            service = AppService(connection=mock_conn, log_service=mock_log)
             success = await service.mark_app_installed("casaos-plex", "srv-123")
 
             assert success is True
-            assert sample_app_table.status == "installed"
 
     @pytest.mark.asyncio
-    async def test_mark_app_installed_with_prefix_not_found(self, mock_db_session):
+    async def test_mark_app_installed_with_prefix_not_found(self, mock_db_conn):
         """mark_app_installed should return False if prefix stripping fails."""
-        session, context_manager = mock_db_session
+        mock_conn, mock_aiosqlite = mock_db_conn
 
-        result = MagicMock()
-        result.first.return_value = None
-        session.execute = AsyncMock(return_value=result)
+        cursor_select = AsyncMock()
+        cursor_select.fetchone.return_value = None
+        mock_aiosqlite.execute = AsyncMock(return_value=cursor_select)
 
-        with (
-            patch("services.app_service.logger"),
-            patch("services.app_service.initialize_app_database"),
-            patch("services.app_service.db_manager") as mock_db,
-        ):
-            mock_db.get_session.return_value = context_manager
-
-            service = AppService()
-            success = await service.mark_app_installed("casaos-unknown", "srv-123")
+        mock_log = MagicMock()
+        with patch("services.app_service.logger"):
+            service = AppService(connection=mock_conn, log_service=mock_log)
+            success = await service.mark_app_installed(
+                "casaos-unknown", "srv-123"
+            )
 
             assert success is False
 
@@ -274,79 +250,62 @@ class TestMarkAppsUninstalledBulk:
     """Tests for mark_apps_uninstalled_bulk method."""
 
     @pytest.mark.asyncio
-    async def test_mark_apps_uninstalled_bulk_success(
-        self, mock_db_session, sample_app_table
-    ):
+    async def test_mark_apps_uninstalled_bulk_success(self, mock_db_conn):
         """mark_apps_uninstalled_bulk should uninstall multiple apps."""
-        session, context_manager = mock_db_session
-        sample_app_table.status = "installed"
+        mock_conn, mock_aiosqlite = mock_db_conn
+        mock_log = MagicMock()
 
-        result = MagicMock()
-        result.first.return_value = (sample_app_table,)
-        session.execute = AsyncMock(return_value=result)
+        with patch("services.app_service.logger"):
+            service = AppService(connection=mock_conn, log_service=mock_log)
 
-        with (
-            patch("services.app_service.logger"),
-            patch("services.app_service.initialize_app_database"),
-            patch("services.app_service.db_manager") as mock_db,
-        ):
-            mock_db.get_session.return_value = context_manager
-
-            service = AppService()
-            result = await service.mark_apps_uninstalled_bulk(["plex", "jellyfin"])
+        with patch.object(
+            service, "mark_app_uninstalled", new_callable=AsyncMock
+        ) as mock_uninstall:
+            mock_uninstall.return_value = True
+            result = await service.mark_apps_uninstalled_bulk(
+                ["plex", "jellyfin"]
+            )
 
             assert result["uninstalled_count"] == 2
             assert len(result["uninstalled"]) == 2
 
     @pytest.mark.asyncio
-    async def test_mark_apps_uninstalled_bulk_partial(
-        self, mock_db_session, sample_app_table
-    ):
+    async def test_mark_apps_uninstalled_bulk_partial(self, mock_db_conn):
         """mark_apps_uninstalled_bulk should handle partial success."""
-        session, context_manager = mock_db_session
+        mock_conn, mock_aiosqlite = mock_db_conn
+        mock_log = MagicMock()
 
-        call_count = [0]
+        with patch("services.app_service.logger"):
+            service = AppService(connection=mock_conn, log_service=mock_log)
 
-        def execute_side_effect(*args, **kwargs):
-            call_count[0] += 1
-            result = MagicMock()
-            if call_count[0] % 2 == 1:
-                sample_app_table.status = "installed"
-                result.first.return_value = (sample_app_table,)
-            else:
-                result.first.return_value = None
-            return result
+        async def uninstall_side_effect(app_id):
+            return app_id == "app1"
 
-        session.execute = AsyncMock(side_effect=execute_side_effect)
-
-        with (
-            patch("services.app_service.logger"),
-            patch("services.app_service.initialize_app_database"),
-            patch("services.app_service.db_manager") as mock_db,
+        with patch.object(
+            service, "mark_app_uninstalled", side_effect=uninstall_side_effect
         ):
-            mock_db.get_session.return_value = context_manager
-
-            service = AppService()
             result = await service.mark_apps_uninstalled_bulk(["app1", "app2"])
 
             assert result["uninstalled_count"] == 1
             assert result["skipped_count"] == 1
 
     @pytest.mark.asyncio
-    async def test_mark_apps_uninstalled_bulk_error_handling(self, mock_db_session):
+    async def test_mark_apps_uninstalled_bulk_error_handling(
+        self, mock_db_conn
+    ):
         """mark_apps_uninstalled_bulk should handle exceptions."""
-        session, context_manager = mock_db_session
+        mock_conn, mock_aiosqlite = mock_db_conn
+        mock_log = MagicMock()
 
-        session.execute = AsyncMock(side_effect=Exception("DB error"))
+        with patch("services.app_service.logger"):
+            service = AppService(connection=mock_conn, log_service=mock_log)
 
-        with (
-            patch("services.app_service.logger"),
-            patch("services.app_service.initialize_app_database"),
-            patch("services.app_service.db_manager") as mock_db,
+        with patch.object(
+            service,
+            "mark_app_uninstalled",
+            new_callable=AsyncMock,
+            side_effect=Exception("DB error"),
         ):
-            mock_db.get_session.return_value = context_manager
-
-            service = AppService()
             result = await service.mark_apps_uninstalled_bulk(["app1"])
 
             assert result["uninstalled_count"] == 0
@@ -358,24 +317,17 @@ class TestInstallApp:
     """Tests for install_app method."""
 
     @pytest.mark.asyncio
-    async def test_install_app_success(
-        self, mock_db_session, sample_app_table, sample_category_table
-    ):
+    async def test_install_app_success(self, mock_db_conn, sample_app_row):
         """install_app should create installation record."""
-        session, context_manager = mock_db_session
+        mock_conn, mock_aiosqlite = mock_db_conn
 
-        result = MagicMock()
-        result.first.return_value = (sample_app_table, sample_category_table)
-        session.execute = AsyncMock(return_value=result)
+        mock_cursor = AsyncMock()
+        mock_cursor.fetchone.return_value = sample_app_row
+        mock_aiosqlite.execute.return_value = mock_cursor
 
-        with (
-            patch("services.app_service.logger") as mock_logger,
-            patch("services.app_service.initialize_app_database"),
-            patch("services.app_service.db_manager") as mock_db,
-        ):
-            mock_db.get_session.return_value = context_manager
-
-            service = AppService()
+        mock_log = MagicMock()
+        with patch("services.app_service.logger") as mock_logger:
+            service = AppService(connection=mock_conn, log_service=mock_log)
             installation = await service.install_app("plex")
 
             assert isinstance(installation, AppInstallation)
@@ -388,68 +340,51 @@ class TestInstallApp:
             )
 
     @pytest.mark.asyncio
-    async def test_install_app_with_config(
-        self, mock_db_session, sample_app_table, sample_category_table
-    ):
+    async def test_install_app_with_config(self, mock_db_conn, sample_app_row):
         """install_app should accept configuration."""
-        session, context_manager = mock_db_session
+        mock_conn, mock_aiosqlite = mock_db_conn
 
-        result = MagicMock()
-        result.first.return_value = (sample_app_table, sample_category_table)
-        session.execute = AsyncMock(return_value=result)
+        mock_cursor = AsyncMock()
+        mock_cursor.fetchone.return_value = sample_app_row
+        mock_aiosqlite.execute.return_value = mock_cursor
 
-        with (
-            patch("services.app_service.logger"),
-            patch("services.app_service.initialize_app_database"),
-            patch("services.app_service.db_manager") as mock_db,
-        ):
-            mock_db.get_session.return_value = context_manager
-
-            service = AppService()
+        mock_log = MagicMock()
+        with patch("services.app_service.logger"):
+            service = AppService(connection=mock_conn, log_service=mock_log)
             config = {"port": 32400, "transcode": True}
             installation = await service.install_app("plex", config=config)
 
             assert installation.config == config
 
     @pytest.mark.asyncio
-    async def test_install_app_not_found(self, mock_db_session):
+    async def test_install_app_not_found(self, mock_db_conn):
         """install_app should raise ValueError when app not found."""
-        session, context_manager = mock_db_session
+        mock_conn, mock_aiosqlite = mock_db_conn
 
-        result = MagicMock()
-        result.first.return_value = None
-        session.execute = AsyncMock(return_value=result)
+        mock_cursor = AsyncMock()
+        mock_cursor.fetchone.return_value = None
+        mock_aiosqlite.execute.return_value = mock_cursor
 
-        with (
-            patch("services.app_service.logger"),
-            patch("services.app_service.initialize_app_database"),
-            patch("services.app_service.db_manager") as mock_db,
-        ):
-            mock_db.get_session.return_value = context_manager
-
-            service = AppService()
+        mock_log = MagicMock()
+        with patch("services.app_service.logger"):
+            service = AppService(connection=mock_conn, log_service=mock_log)
             with pytest.raises(ValueError, match="not found"):
                 await service.install_app("nonexistent")
 
     @pytest.mark.asyncio
     async def test_install_app_stores_installation(
-        self, mock_db_session, sample_app_table, sample_category_table
+        self, mock_db_conn, sample_app_row
     ):
         """install_app should store installation in memory."""
-        session, context_manager = mock_db_session
+        mock_conn, mock_aiosqlite = mock_db_conn
 
-        result = MagicMock()
-        result.first.return_value = (sample_app_table, sample_category_table)
-        session.execute = AsyncMock(return_value=result)
+        mock_cursor = AsyncMock()
+        mock_cursor.fetchone.return_value = sample_app_row
+        mock_aiosqlite.execute.return_value = mock_cursor
 
-        with (
-            patch("services.app_service.logger"),
-            patch("services.app_service.initialize_app_database"),
-            patch("services.app_service.db_manager") as mock_db,
-        ):
-            mock_db.get_session.return_value = context_manager
-
-            service = AppService()
+        mock_log = MagicMock()
+        with patch("services.app_service.logger"):
+            service = AppService(connection=mock_conn, log_service=mock_log)
             await service.install_app("plex")
 
             assert "plex" in service.installations
@@ -457,48 +392,40 @@ class TestInstallApp:
 
     @pytest.mark.asyncio
     async def test_install_app_default_config(
-        self, mock_db_session, sample_app_table, sample_category_table
+        self, mock_db_conn, sample_app_row
     ):
         """install_app should use empty config by default."""
-        session, context_manager = mock_db_session
+        mock_conn, mock_aiosqlite = mock_db_conn
 
-        result = MagicMock()
-        result.first.return_value = (sample_app_table, sample_category_table)
-        session.execute = AsyncMock(return_value=result)
+        mock_cursor = AsyncMock()
+        mock_cursor.fetchone.return_value = sample_app_row
+        mock_aiosqlite.execute.return_value = mock_cursor
 
-        with (
-            patch("services.app_service.logger"),
-            patch("services.app_service.initialize_app_database"),
-            patch("services.app_service.db_manager") as mock_db,
-        ):
-            mock_db.get_session.return_value = context_manager
-
-            service = AppService()
+        mock_log = MagicMock()
+        with patch("services.app_service.logger"):
+            service = AppService(connection=mock_conn, log_service=mock_log)
             installation = await service.install_app("plex")
 
             assert installation.config == {}
 
     @pytest.mark.asyncio
     async def test_install_app_sets_timestamp(
-        self, mock_db_session, sample_app_table, sample_category_table
+        self, mock_db_conn, sample_app_row
     ):
         """install_app should set installed_at timestamp."""
-        session, context_manager = mock_db_session
+        mock_conn, mock_aiosqlite = mock_db_conn
 
-        result = MagicMock()
-        result.first.return_value = (sample_app_table, sample_category_table)
-        session.execute = AsyncMock(return_value=result)
+        mock_cursor = AsyncMock()
+        mock_cursor.fetchone.return_value = sample_app_row
+        mock_aiosqlite.execute.return_value = mock_cursor
 
-        with (
-            patch("services.app_service.logger"),
-            patch("services.app_service.initialize_app_database"),
-            patch("services.app_service.db_manager") as mock_db,
-        ):
-            mock_db.get_session.return_value = context_manager
-
-            service = AppService()
+        mock_log = MagicMock()
+        with patch("services.app_service.logger"):
+            service = AppService(connection=mock_conn, log_service=mock_log)
             installation = await service.install_app("plex")
 
             assert installation.installed_at is not None
-            # Verify it's a valid ISO timestamp
-            datetime.fromisoformat(installation.installed_at.replace("Z", "+00:00"))
+            # Verify it is a valid ISO timestamp
+            datetime.fromisoformat(
+                installation.installed_at.replace("Z", "+00:00")
+            )

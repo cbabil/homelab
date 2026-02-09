@@ -1,4 +1,4 @@
-"""Marketplace Service
+"""Marketplace Service.
 
 Provides data access and business logic for marketplace repository management."""
 
@@ -10,23 +10,18 @@ from datetime import datetime
 from pathlib import Path
 
 import structlog
-from sqlalchemy import delete, select, update
 
-from database.connection import db_manager
-from init_db.schema_marketplace import initialize_marketplace_database
 from lib.git_sync import GitSync
 from models.marketplace import (
     AppRating,
-    AppRatingTable,
     AppRequirements,
     DockerConfig,
     MarketplaceApp,
-    MarketplaceAppTable,
     MarketplaceRepo,
-    MarketplaceRepoTable,
     RepoStatus,
     RepoType,
 )
+from services.database.base import DatabaseConnection
 
 logger = structlog.get_logger("marketplace_service")
 
@@ -44,212 +39,178 @@ OFFICIAL_MARKETPLACE_BRANCH = "master"
 class MarketplaceService:
     """Service for managing marketplace repositories."""
 
-    def __init__(self) -> None:
+    def __init__(self, connection: DatabaseConnection) -> None:
+        self._conn = connection
         self._initialized = False
         logger.info("Marketplace service initialized")
 
     async def _ensure_initialized(self) -> None:
-        """Ensure the marketplace database is initialized with official marketplace."""
+        """Ensure the marketplace database is initialized with official repos."""
         if not self._initialized:
-            await initialize_marketplace_database()
             await self._ensure_official_marketplace()
             self._initialized = True
 
     async def _ensure_official_marketplace(self) -> None:
-        """Add the CasaOS app store and official marketplace if not already present."""
-        from sqlalchemy.exc import IntegrityError
+        """Add CasaOS app store and official marketplace if not already present."""
+        now = datetime.utcnow().isoformat()
 
-        async with db_manager.get_session() as session:
-            # Check if CasaOS app store exists
-            result = await session.execute(
-                select(MarketplaceRepoTable).where(MarketplaceRepoTable.id == "casaos")
+        async with self._conn.get_connection() as conn:
+            # CasaOS app store
+            cursor = await conn.execute(
+                "SELECT id FROM marketplace_repos WHERE id = ?", ("casaos",)
             )
-            casaos_exists = result.scalar_one_or_none()
-
-            if not casaos_exists:
-                # Add CasaOS app store as primary source
-                now = datetime.utcnow()
-                casaos_repo = MarketplaceRepoTable(
-                    id="casaos",
-                    name=CASAOS_APPSTORE_NAME,
+            if not await cursor.fetchone():
+                await conn.execute(
+                    """INSERT OR IGNORE INTO marketplace_repos
+                       (id, name, url, branch, repo_type, enabled, status,
+                        app_count, created_at, updated_at)
+                       VALUES (?, ?, ?, ?, ?, 1, ?, 0, ?, ?)""",
+                    (
+                        "casaos",
+                        CASAOS_APPSTORE_NAME,
+                        CASAOS_APPSTORE_URL,
+                        CASAOS_APPSTORE_BRANCH,
+                        RepoType.OFFICIAL.value,
+                        RepoStatus.ACTIVE.value,
+                        now,
+                        now,
+                    ),
+                )
+                await conn.commit()
+                logger.info(
+                    "CasaOS app store added",
+                    repo_id="casaos",
                     url=CASAOS_APPSTORE_URL,
-                    branch=CASAOS_APPSTORE_BRANCH,
-                    repo_type=RepoType.OFFICIAL.value,
-                    enabled=True,
-                    status=RepoStatus.ACTIVE.value,
-                    last_synced=None,
-                    app_count=0,
-                    error_message=None,
-                    created_at=now,
-                    updated_at=now,
                 )
-                session.add(casaos_repo)
-                try:
-                    await session.commit()
-                    logger.info(
-                        "CasaOS app store added",
-                        repo_id="casaos",
-                        url=CASAOS_APPSTORE_URL,
-                    )
-                except IntegrityError:
-                    await session.rollback()
-                    logger.debug("CasaOS app store already exists")
 
-            # Check if legacy official marketplace exists
-            result = await session.execute(
-                select(MarketplaceRepoTable).where(
-                    MarketplaceRepoTable.id == "official"
-                )
+            # Legacy official marketplace
+            cursor = await conn.execute(
+                "SELECT id FROM marketplace_repos WHERE id = ?", ("official",)
             )
-            official_exists = result.scalar_one_or_none()
-
-            if not official_exists:
-                # Add legacy official marketplace (disabled by default)
-                now = datetime.utcnow()
-                repo_table = MarketplaceRepoTable(
-                    id="official",
-                    name=OFFICIAL_MARKETPLACE_NAME,
-                    url=OFFICIAL_MARKETPLACE_URL,
-                    branch=OFFICIAL_MARKETPLACE_BRANCH,
-                    repo_type=RepoType.COMMUNITY.value,
-                    enabled=True,
-                    status=RepoStatus.ACTIVE.value,
-                    last_synced=None,
-                    app_count=0,
-                    error_message=None,
-                    created_at=now,
-                    updated_at=now,
+            if not await cursor.fetchone():
+                await conn.execute(
+                    """INSERT OR IGNORE INTO marketplace_repos
+                       (id, name, url, branch, repo_type, enabled, status,
+                        app_count, created_at, updated_at)
+                       VALUES (?, ?, ?, ?, ?, 1, ?, 0, ?, ?)""",
+                    (
+                        "official",
+                        OFFICIAL_MARKETPLACE_NAME,
+                        OFFICIAL_MARKETPLACE_URL,
+                        OFFICIAL_MARKETPLACE_BRANCH,
+                        RepoType.COMMUNITY.value,
+                        RepoStatus.ACTIVE.value,
+                        now,
+                        now,
+                    ),
                 )
-                session.add(repo_table)
-                try:
-                    await session.commit()
-                    logger.info(
-                        "Official marketplace added (disabled)",
-                        repo_id="official",
-                        url=OFFICIAL_MARKETPLACE_URL,
-                    )
-                except IntegrityError:
-                    await session.rollback()
-                    logger.debug("Official marketplace already exists")
+                await conn.commit()
+                logger.info(
+                    "Official marketplace added",
+                    repo_id="official",
+                    url=OFFICIAL_MARKETPLACE_URL,
+                )
 
     async def add_repo(
         self, name: str, url: str, repo_type: RepoType, branch: str = "main"
     ) -> MarketplaceRepo:
-        """Create a new marketplace repository.
-
-        Args:
-            name: Human-readable repository name
-            url: Git repository URL
-            repo_type: Repository type (official/community/personal)
-            branch: Git branch to sync from (default: "main")
-
-        Returns:
-            Created MarketplaceRepo instance
-        """
+        """Create a new marketplace repository."""
         await self._ensure_initialized()
 
         repo_id = uuid.uuid4().hex[:8]
-        now = datetime.utcnow()
+        now = datetime.utcnow().isoformat()
 
-        async with db_manager.get_session() as session:
-            repo_table = MarketplaceRepoTable(
-                id=repo_id,
-                name=name,
-                url=url,
-                branch=branch,
-                repo_type=repo_type.value,
-                enabled=True,
-                status=RepoStatus.ACTIVE.value,
-                last_synced=None,
-                app_count=0,
-                error_message=None,
-                created_at=now,
-                updated_at=now,
+        async with self._conn.get_connection() as conn:
+            await conn.execute(
+                """INSERT INTO marketplace_repos
+                   (id, name, url, branch, repo_type, enabled, status,
+                    app_count, created_at, updated_at)
+                   VALUES (?, ?, ?, ?, ?, 1, ?, 0, ?, ?)""",
+                (
+                    repo_id,
+                    name,
+                    url,
+                    branch,
+                    repo_type.value,
+                    RepoStatus.ACTIVE.value,
+                    now,
+                    now,
+                ),
             )
-            session.add(repo_table)
-            await session.flush()
+            await conn.commit()
 
-            repo = self._repo_from_table(repo_table)
+            cursor = await conn.execute(
+                "SELECT * FROM marketplace_repos WHERE id = ?", (repo_id,)
+            )
+            row = await cursor.fetchone()
 
+        repo = self._repo_from_row(row)
         logger.info(
-            "Repository added", repo_id=repo_id, name=name, repo_type=repo_type.value
+            "Repository added",
+            repo_id=repo_id,
+            name=name,
+            repo_type=repo_type.value,
         )
         return repo
 
     async def get_repos(self, enabled_only: bool = False) -> list[MarketplaceRepo]:
-        """Get all marketplace repositories.
-
-        Args:
-            enabled_only: If True, only return enabled repositories
-
-        Returns:
-            List of MarketplaceRepo instances
-        """
+        """Get all marketplace repositories."""
         await self._ensure_initialized()
 
-        async with db_manager.get_session() as session:
-            query = select(MarketplaceRepoTable)
-            if enabled_only:
-                query = query.where(MarketplaceRepoTable.enabled == True)  # noqa: E712
+        sql = "SELECT * FROM marketplace_repos"
+        params: list = []
+        if enabled_only:
+            sql += " WHERE enabled = 1"
 
-            result = await session.execute(query)
-            rows = result.scalars().all()
+        async with self._conn.get_connection() as conn:
+            cursor = await conn.execute(sql, params)
+            rows = await cursor.fetchall()
 
-        repos = [self._repo_from_table(row) for row in rows]
+        repos = [self._repo_from_row(row) for row in rows]
         logger.debug(
             "Fetched repositories", count=len(repos), enabled_only=enabled_only
         )
         return repos
 
     async def get_repo(self, repo_id: str) -> MarketplaceRepo | None:
-        """Get a single repository by ID.
-
-        Args:
-            repo_id: Repository identifier
-
-        Returns:
-            MarketplaceRepo instance if found, None otherwise
-        """
+        """Get a single repository by ID."""
         await self._ensure_initialized()
 
-        async with db_manager.get_session() as session:
-            result = await session.execute(
-                select(MarketplaceRepoTable).where(MarketplaceRepoTable.id == repo_id)
+        async with self._conn.get_connection() as conn:
+            cursor = await conn.execute(
+                "SELECT * FROM marketplace_repos WHERE id = ?", (repo_id,)
             )
-            row = result.scalar_one_or_none()
+            row = await cursor.fetchone()
 
         if not row:
             logger.warning("Repository not found", repo_id=repo_id)
             return None
 
-        repo = self._repo_from_table(row)
+        repo = self._repo_from_row(row)
         logger.debug("Retrieved repository", repo_id=repo_id)
         return repo
 
     async def remove_repo(self, repo_id: str) -> bool:
-        """Delete a repository and all its associated apps.
-
-        Args:
-            repo_id: Repository identifier
-
-        Returns:
-            True if deleted, False if not found
-        """
+        """Delete a repository and all its associated apps."""
         await self._ensure_initialized()
 
-        async with db_manager.get_session() as session:
-            # First, delete all apps associated with this repo
-            await session.execute(
-                delete(MarketplaceAppTable).where(
-                    MarketplaceAppTable.repo_id == repo_id
-                )
+        async with self._conn.get_connection() as conn:
+            # Delete ratings for apps in this repo
+            await conn.execute(
+                """DELETE FROM app_ratings WHERE app_id IN
+                   (SELECT id FROM marketplace_apps WHERE repo_id = ?)""",
+                (repo_id,),
             )
-
-            # Then delete the repository
-            result = await session.execute(
-                delete(MarketplaceRepoTable).where(MarketplaceRepoTable.id == repo_id)
+            # Delete apps
+            await conn.execute(
+                "DELETE FROM marketplace_apps WHERE repo_id = ?", (repo_id,)
             )
-            deleted = result.rowcount > 0
+            # Delete repo
+            cursor = await conn.execute(
+                "DELETE FROM marketplace_repos WHERE id = ?", (repo_id,)
+            )
+            deleted = cursor.rowcount > 0
+            await conn.commit()
 
         if deleted:
             logger.info("Repository removed", repo_id=repo_id)
@@ -259,24 +220,17 @@ class MarketplaceService:
         return deleted
 
     async def toggle_repo(self, repo_id: str, enabled: bool) -> bool:
-        """Enable or disable a repository.
-
-        Args:
-            repo_id: Repository identifier
-            enabled: True to enable, False to disable
-
-        Returns:
-            True if updated, False if not found
-        """
+        """Enable or disable a repository."""
         await self._ensure_initialized()
 
-        async with db_manager.get_session() as session:
-            result = await session.execute(
-                update(MarketplaceRepoTable)
-                .where(MarketplaceRepoTable.id == repo_id)
-                .values(enabled=enabled, updated_at=datetime.utcnow())
+        now = datetime.utcnow().isoformat()
+        async with self._conn.get_connection() as conn:
+            cursor = await conn.execute(
+                "UPDATE marketplace_repos SET enabled = ?, updated_at = ? WHERE id = ?",
+                (1 if enabled else 0, now, repo_id),
             )
-            updated = result.rowcount > 0
+            updated = cursor.rowcount > 0
+            await conn.commit()
 
         if updated:
             action = "enabled" if enabled else "disabled"
@@ -289,19 +243,7 @@ class MarketplaceService:
     async def sync_repo(
         self, repo_id: str, local_path: Path | None = None
     ) -> list[MarketplaceApp]:
-        """Sync apps from a repository.
-
-        Args:
-            repo_id: Repository identifier
-            local_path: Optional local path for testing (skips Git clone/pull)
-
-        Returns:
-            List of synced MarketplaceApp instances
-
-        Raises:
-            ValueError: If repository not found
-            RuntimeError: If Git operations fail
-        """
+        """Sync apps from a repository."""
         await self._ensure_initialized()
 
         repo = await self.get_repo(repo_id)
@@ -309,28 +251,25 @@ class MarketplaceService:
             raise ValueError(f"Repository {repo_id} not found")
 
         # Update status to SYNCING
-        async with db_manager.get_session() as session:
-            await session.execute(
-                update(MarketplaceRepoTable)
-                .where(MarketplaceRepoTable.id == repo_id)
-                .values(status=RepoStatus.SYNCING.value)
+        async with self._conn.get_connection() as conn:
+            await conn.execute(
+                "UPDATE marketplace_repos SET status = ? WHERE id = ?",
+                (RepoStatus.SYNCING.value, repo_id),
             )
+            await conn.commit()
 
         git_sync = GitSync()
         apps: list[MarketplaceApp] = []
 
         try:
-            # Use local path for testing or clone from URL
             if local_path:
                 repo_path = Path(local_path)
             else:
                 repo_path = git_sync.clone_or_pull(repo.url, repo.branch)
 
-            # Detect repository format and parse accordingly
             is_casaos_format = self._is_casaos_repo(repo_path)
 
             if is_casaos_format:
-                # CasaOS format: Apps/<AppName>/docker-compose.yml
                 app_files = git_sync.find_casaos_app_files(repo_path)
                 for app_file in app_files:
                     app = git_sync.load_casaos_app(app_file, repo_id)
@@ -338,10 +277,11 @@ class MarketplaceService:
                         apps.append(app)
                         await self._upsert_app(app)
                 logger.info(
-                    "Synced CasaOS format repo", repo_id=repo_id, app_count=len(apps)
+                    "Synced CasaOS format repo",
+                    repo_id=repo_id,
+                    app_count=len(apps),
                 )
             else:
-                # Legacy format: apps/<app>/app.yaml
                 app_files = git_sync.find_app_files(repo_path)
                 for app_file in app_files:
                     app = git_sync.load_app_from_file(app_file, repo_id)
@@ -349,32 +289,30 @@ class MarketplaceService:
                         apps.append(app)
                         await self._upsert_app(app)
                 logger.info(
-                    "Synced legacy format repo", repo_id=repo_id, app_count=len(apps)
+                    "Synced legacy format repo",
+                    repo_id=repo_id,
+                    app_count=len(apps),
                 )
 
-            # Update repo with success
-            async with db_manager.get_session() as session:
-                await session.execute(
-                    update(MarketplaceRepoTable)
-                    .where(MarketplaceRepoTable.id == repo_id)
-                    .values(
-                        status=RepoStatus.ACTIVE.value,
-                        last_synced=datetime.utcnow(),
-                        app_count=len(apps),
-                        error_message=None,
-                    )
+            now = datetime.utcnow().isoformat()
+            async with self._conn.get_connection() as conn:
+                await conn.execute(
+                    """UPDATE marketplace_repos
+                       SET status = ?, last_synced = ?, app_count = ?, error_message = NULL
+                       WHERE id = ?""",
+                    (RepoStatus.ACTIVE.value, now, len(apps), repo_id),
                 )
+                await conn.commit()
 
             logger.info("Repository synced", repo_id=repo_id, app_count=len(apps))
 
         except Exception as e:
-            # Update repo with error
-            async with db_manager.get_session() as session:
-                await session.execute(
-                    update(MarketplaceRepoTable)
-                    .where(MarketplaceRepoTable.id == repo_id)
-                    .values(status=RepoStatus.ERROR.value, error_message=str(e))
+            async with self._conn.get_connection() as conn:
+                await conn.execute(
+                    "UPDATE marketplace_repos SET status = ?, error_message = ? WHERE id = ?",
+                    (RepoStatus.ERROR.value, str(e), repo_id),
                 )
+                await conn.commit()
             logger.error("Repository sync failed", repo_id=repo_id, error=str(e))
             raise
 
@@ -385,66 +323,77 @@ class MarketplaceService:
         return apps
 
     async def _upsert_app(self, app: MarketplaceApp) -> None:
-        """Insert or update an app in the database.
-
-        Args:
-            app: MarketplaceApp instance to upsert
-        """
+        """Insert or update an app in the database."""
         docker_json = app.docker.model_dump_json()
         req_json = app.requirements.model_dump_json()
         tags_json = json.dumps(app.tags)
+        maintainers_json = json.dumps(app.maintainers)
+        now = datetime.utcnow().isoformat()
 
-        async with db_manager.get_session() as session:
-            # Check if exists
-            result = await session.execute(
-                select(MarketplaceAppTable).where(MarketplaceAppTable.id == app.id)
+        async with self._conn.get_connection() as conn:
+            cursor = await conn.execute(
+                "SELECT id FROM marketplace_apps WHERE id = ?", (app.id,)
             )
-            existing = result.scalar_one_or_none()
+            existing = await cursor.fetchone()
 
             if existing:
-                # Update
-                await session.execute(
-                    update(MarketplaceAppTable)
-                    .where(MarketplaceAppTable.id == app.id)
-                    .values(
-                        name=app.name,
-                        description=app.description,
-                        long_description=app.long_description,
-                        version=app.version,
-                        category=app.category,
-                        tags=tags_json,
-                        icon=app.icon,
-                        author=app.author,
-                        license=app.license,
-                        maintainers=json.dumps(app.maintainers),
-                        repository=app.repository,
-                        documentation=app.documentation,
-                        docker_config=docker_json,
-                        requirements=req_json,
-                        updated_at=datetime.utcnow(),
-                    )
+                await conn.execute(
+                    """UPDATE marketplace_apps SET
+                       name = ?, description = ?, long_description = ?,
+                       version = ?, category = ?, tags = ?, icon = ?,
+                       author = ?, license = ?, maintainers = ?,
+                       repository = ?, documentation = ?,
+                       docker_config = ?, requirements = ?, updated_at = ?
+                       WHERE id = ?""",
+                    (
+                        app.name,
+                        app.description,
+                        app.long_description,
+                        app.version,
+                        app.category,
+                        tags_json,
+                        app.icon,
+                        app.author,
+                        app.license,
+                        maintainers_json,
+                        app.repository,
+                        app.documentation,
+                        docker_json,
+                        req_json,
+                        now,
+                        app.id,
+                    ),
                 )
             else:
-                # Insert
-                table_row = MarketplaceAppTable(
-                    id=app.id,
-                    name=app.name,
-                    description=app.description,
-                    long_description=app.long_description,
-                    version=app.version,
-                    category=app.category,
-                    tags=tags_json,
-                    icon=app.icon,
-                    author=app.author,
-                    license=app.license,
-                    maintainers=json.dumps(app.maintainers),
-                    repository=app.repository,
-                    documentation=app.documentation,
-                    repo_id=app.repo_id,
-                    docker_config=docker_json,
-                    requirements=req_json,
+                await conn.execute(
+                    """INSERT INTO marketplace_apps
+                       (id, name, description, long_description, version,
+                        category, tags, icon, author, license, maintainers,
+                        repository, documentation, repo_id,
+                        docker_config, requirements, created_at, updated_at)
+                       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                    (
+                        app.id,
+                        app.name,
+                        app.description,
+                        app.long_description,
+                        app.version,
+                        app.category,
+                        tags_json,
+                        app.icon,
+                        app.author,
+                        app.license,
+                        maintainers_json,
+                        app.repository,
+                        app.documentation,
+                        app.repo_id,
+                        docker_json,
+                        req_json,
+                        now,
+                        now,
+                    ),
                 )
-                session.add(table_row)
+            await conn.commit()
 
     # ─────────────────────────────────────────────────────────────
     # App Search & Discovery
@@ -462,47 +411,29 @@ class MarketplaceService:
         limit: int = 50,
         offset: int = 0,
     ) -> list[MarketplaceApp]:
-        """Search marketplace apps with filters.
-
-        Args:
-            search: Search term to match against name or description
-            category: Filter by category
-            tags: Filter by tags (all tags must match)
-            repo_id: Filter by repository ID
-            featured: Filter by featured status
-            sort_by: Sort field (name, rating, popularity, updated)
-            sort_order: Sort order (asc, desc)
-            limit: Maximum number of results
-            offset: Offset for pagination
-
-        Returns:
-            List of matching MarketplaceApp instances
-        """
+        """Search marketplace apps with filters."""
         await self._ensure_initialized()
 
-        async with db_manager.get_session() as session:
-            query = (
-                select(MarketplaceAppTable, MarketplaceRepoTable)
-                .join(
-                    MarketplaceRepoTable,
-                    MarketplaceAppTable.repo_id == MarketplaceRepoTable.id,
-                )
-                .where(MarketplaceRepoTable.enabled == True)
-            )  # noqa: E712
+        sql = """SELECT a.* FROM marketplace_apps a
+                 JOIN marketplace_repos r ON a.repo_id = r.id
+                 WHERE r.enabled = 1"""
+        params: list = []
 
-            # Apply filters
-            if category:
-                query = query.where(MarketplaceAppTable.category == category)
-            if repo_id:
-                query = query.where(MarketplaceAppTable.repo_id == repo_id)
-            if featured is not None:
-                query = query.where(MarketplaceAppTable.featured == featured)
+        if category:
+            sql += " AND a.category = ?"
+            params.append(category)
+        if repo_id:
+            sql += " AND a.repo_id = ?"
+            params.append(repo_id)
+        if featured is not None:
+            sql += " AND a.featured = ?"
+            params.append(1 if featured else 0)
 
-            result = await session.execute(query)
-            rows = result.all()
+        async with self._conn.get_connection() as conn:
+            cursor = await conn.execute(sql, params)
+            rows = await cursor.fetchall()
 
-        # Convert to models
-        apps = [self._app_from_table(app_row) for app_row, _ in rows]
+        apps = [self._app_from_row(row) for row in rows]
 
         # In-memory filtering for search and tags
         if search:
@@ -533,68 +464,41 @@ class MarketplaceService:
         elif sort_by == "updated":
             apps.sort(key=lambda a: a.updated_at, reverse=reverse)
 
-        # Pagination
         return apps[offset : offset + limit]
 
     async def get_app(self, app_id: str) -> MarketplaceApp | None:
-        """Get app by ID.
-
-        Args:
-            app_id: Application identifier
-
-        Returns:
-            MarketplaceApp instance if found, None otherwise
-        """
+        """Get app by ID."""
         await self._ensure_initialized()
 
-        async with db_manager.get_session() as session:
-            result = await session.execute(
-                select(MarketplaceAppTable).where(MarketplaceAppTable.id == app_id)
+        async with self._conn.get_connection() as conn:
+            cursor = await conn.execute(
+                "SELECT * FROM marketplace_apps WHERE id = ?", (app_id,)
             )
-            row = result.scalar_one_or_none()
+            row = await cursor.fetchone()
 
-        return self._app_from_table(row) if row else None
+        return self._app_from_row(row) if row else None
 
     async def get_featured_apps(self, limit: int = 10) -> list[MarketplaceApp]:
-        """Get featured apps.
-
-        Args:
-            limit: Maximum number of apps to return
-
-        Returns:
-            List of featured MarketplaceApp instances
-        """
+        """Get featured apps."""
         return await self.search_apps(featured=True, limit=limit)
 
     async def get_trending_apps(self, limit: int = 10) -> list[MarketplaceApp]:
-        """Get trending apps by recent popularity.
-
-        Args:
-            limit: Maximum number of apps to return
-
-        Returns:
-            List of trending MarketplaceApp instances sorted by popularity
-        """
+        """Get trending apps by recent popularity."""
         return await self.search_apps(
             sort_by="popularity", sort_order="desc", limit=limit
         )
 
     async def get_categories(self) -> list[dict]:
-        """Get all categories with app counts.
-
-        Returns:
-            List of dictionaries with category id, name, and count
-        """
+        """Get all categories with app counts."""
         await self._ensure_initialized()
 
-        async with db_manager.get_session() as session:
-            result = await session.execute(select(MarketplaceAppTable.category))
-            rows = result.all()
+        async with self._conn.get_connection() as conn:
+            cursor = await conn.execute("SELECT category FROM marketplace_apps")
+            rows = await cursor.fetchall()
 
-        # Count apps per category
         category_counts: dict = {}
         for row in rows:
-            cat = row[0]
+            cat = row["category"]
             category_counts[cat] = category_counts.get(cat, 0) + 1
 
         return [
@@ -607,66 +511,51 @@ class MarketplaceService:
     # ─────────────────────────────────────────────────────────────
 
     async def rate_app(self, app_id: str, user_id: str, rating: int) -> AppRating:
-        """Rate an app (1-5 stars). Updates existing rating if present.
-
-        Args:
-            app_id: Application identifier
-            user_id: User identifier
-            rating: Rating value (1-5)
-
-        Returns:
-            AppRating instance
-
-        Raises:
-            ValueError: If rating is not between 1 and 5
-        """
+        """Rate an app (1-5 stars). Updates existing rating if present."""
         await self._ensure_initialized()
 
         if not 1 <= rating <= 5:
             raise ValueError("Rating must be between 1 and 5")
 
         rating_id = f"rating-{uuid.uuid4().hex[:8]}"
-        now = datetime.utcnow()
+        now = datetime.utcnow().isoformat()
 
-        async with db_manager.get_session() as session:
+        async with self._conn.get_connection() as conn:
             # Check for existing rating
-            result = await session.execute(
-                select(AppRatingTable).where(
-                    AppRatingTable.app_id == app_id, AppRatingTable.user_id == user_id
-                )
+            cursor = await conn.execute(
+                "SELECT id FROM app_ratings WHERE app_id = ? AND user_id = ?",
+                (app_id, user_id),
             )
-            existing = result.scalar_one_or_none()
+            existing = await cursor.fetchone()
 
             if existing:
-                # Update existing
-                await session.execute(
-                    update(AppRatingTable)
-                    .where(AppRatingTable.id == existing.id)
-                    .values(rating=rating, updated_at=now)
+                rating_id = existing["id"]
+                await conn.execute(
+                    "UPDATE app_ratings SET rating = ?, updated_at = ? WHERE id = ?",
+                    (rating, now, rating_id),
                 )
-                rating_id = existing.id
             else:
-                # Insert new
-                new_rating = AppRatingTable(
-                    id=rating_id, app_id=app_id, user_id=user_id, rating=rating
+                await conn.execute(
+                    """INSERT INTO app_ratings
+                       (id, app_id, user_id, rating, created_at, updated_at)
+                       VALUES (?, ?, ?, ?, ?, ?)""",
+                    (rating_id, app_id, user_id, rating, now, now),
                 )
-                session.add(new_rating)
 
-            # Flush to ensure the new rating is committed
-            await session.flush()
+            await conn.commit()
 
-            # Update app's average rating - query again after flush
-            avg_result = await session.execute(
-                select(AppRatingTable.rating).where(AppRatingTable.app_id == app_id)
+            # Update app's average rating
+            cursor = await conn.execute(
+                "SELECT rating FROM app_ratings WHERE app_id = ?", (app_id,)
             )
-            all_ratings = [r[0] for r in avg_result.all()]
+            all_ratings = [r["rating"] for r in await cursor.fetchall()]
             avg_rating = sum(all_ratings) / len(all_ratings) if all_ratings else None
 
-            await session.execute(
-                update(MarketplaceAppTable)
-                .where(MarketplaceAppTable.id == app_id)
-                .values(avg_rating=avg_rating, rating_count=len(all_ratings))
+            await conn.execute(
+                "UPDATE marketplace_apps SET avg_rating = ?, rating_count = ? WHERE id = ?",
+                (avg_rating, len(all_ratings), app_id),
             )
+            await conn.commit()
 
         logger.info("App rated", app_id=app_id, user_id=user_id, rating=rating)
 
@@ -675,31 +564,22 @@ class MarketplaceService:
             app_id=app_id,
             user_id=user_id,
             rating=rating,
-            created_at=now.isoformat(),
-            updated_at=now.isoformat(),
+            created_at=now,
+            updated_at=now,
         )
 
     async def get_user_rating(self, app_id: str, user_id: str) -> int | None:
-        """Get user's rating for an app.
-
-        Args:
-            app_id: Application identifier
-            user_id: User identifier
-
-        Returns:
-            Rating value (1-5) if found, None otherwise
-        """
+        """Get user's rating for an app."""
         await self._ensure_initialized()
 
-        async with db_manager.get_session() as session:
-            result = await session.execute(
-                select(AppRatingTable.rating).where(
-                    AppRatingTable.app_id == app_id, AppRatingTable.user_id == user_id
-                )
+        async with self._conn.get_connection() as conn:
+            cursor = await conn.execute(
+                "SELECT rating FROM app_ratings WHERE app_id = ? AND user_id = ?",
+                (app_id, user_id),
             )
-            row = result.scalar_one_or_none()
+            row = await cursor.fetchone()
 
-        return row if row else None
+        return row["rating"] if row else None
 
     # ─────────────────────────────────────────────────────────────
     # Helper Methods
@@ -707,82 +587,64 @@ class MarketplaceService:
 
     @staticmethod
     def _is_casaos_repo(repo_path: Path) -> bool:
-        """Detect if repository uses CasaOS format.
-
-        CasaOS format has an 'Apps' directory with docker-compose.yml files.
-        """
+        """Detect if repository uses CasaOS format."""
         apps_dir = repo_path / "Apps"
         if apps_dir.exists():
-            # Check if any subdirectory contains docker-compose.yml
             for subdir in apps_dir.iterdir():
                 if subdir.is_dir() and (subdir / "docker-compose.yml").exists():
                     return True
         return False
 
     @staticmethod
-    def _repo_from_table(row: MarketplaceRepoTable) -> MarketplaceRepo:
-        """Convert a table row to a MarketplaceRepo model.
-
-        Args:
-            row: SQLAlchemy MarketplaceRepoTable instance
-
-        Returns:
-            MarketplaceRepo Pydantic model
-        """
+    def _repo_from_row(row) -> MarketplaceRepo:
+        """Convert an aiosqlite.Row to a MarketplaceRepo model."""
         return MarketplaceRepo(
-            id=row.id,
-            name=row.name,
-            url=row.url,
-            branch=row.branch,
-            repo_type=RepoType(row.repo_type),
-            enabled=row.enabled,
-            status=RepoStatus(row.status),
-            last_synced=row.last_synced,
-            app_count=row.app_count,
-            error_message=row.error_message,
-            created_at=row.created_at,
-            updated_at=row.updated_at,
+            id=row["id"],
+            name=row["name"],
+            url=row["url"],
+            branch=row["branch"],
+            repo_type=RepoType(row["repo_type"]),
+            enabled=bool(row["enabled"]),
+            status=RepoStatus(row["status"]),
+            last_synced=row["last_synced"],
+            app_count=row["app_count"],
+            error_message=row["error_message"],
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
         )
 
     @staticmethod
-    def _app_from_table(row: MarketplaceAppTable) -> MarketplaceApp:
-        """Convert table row to MarketplaceApp model.
-
-        Args:
-            row: SQLAlchemy MarketplaceAppTable instance
-
-        Returns:
-            MarketplaceApp Pydantic model
-        """
-        docker_config = DockerConfig.model_validate_json(row.docker_config)
+    def _app_from_row(row) -> MarketplaceApp:
+        """Convert an aiosqlite.Row to a MarketplaceApp model."""
+        docker_config = DockerConfig.model_validate_json(row["docker_config"])
         requirements = (
-            AppRequirements.model_validate_json(row.requirements)
-            if row.requirements
+            AppRequirements.model_validate_json(row["requirements"])
+            if row["requirements"]
             else AppRequirements(architectures=["amd64", "arm64"])
         )
-        tags = json.loads(row.tags) if row.tags else []
+        tags = json.loads(row["tags"]) if row["tags"] else []
 
         return MarketplaceApp(
-            id=row.id,
-            name=row.name,
-            description=row.description,
-            long_description=row.long_description,
-            version=row.version,
-            category=row.category,
+            id=row["id"],
+            name=row["name"],
+            description=row["description"],
+            long_description=row["long_description"],
+            version=row["version"],
+            category=row["category"],
             tags=tags,
-            icon=row.icon,
-            author=row.author,
-            license=row.license,
-            maintainers=json.loads(row.maintainers) if row.maintainers else [],
-            repository=row.repository,
-            documentation=row.documentation,
-            repo_id=row.repo_id,
+            icon=row["icon"],
+            author=row["author"],
+            license=row["license"],
+            maintainers=json.loads(row["maintainers"]) if row["maintainers"] else [],
+            repository=row["repository"],
+            documentation=row["documentation"],
+            repo_id=row["repo_id"],
             docker=docker_config,
             requirements=requirements,
-            install_count=row.install_count or 0,
-            avg_rating=row.avg_rating or 0.0,
-            rating_count=row.rating_count or 0,
-            featured=row.featured or False,
-            created_at=row.created_at,
-            updated_at=row.updated_at,
+            install_count=row["install_count"] or 0,
+            avg_rating=row["avg_rating"] or 0.0,
+            rating_count=row["rating_count"] or 0,
+            featured=bool(row["featured"]),
+            created_at=row["created_at"],
+            updated_at=row["updated_at"],
         )

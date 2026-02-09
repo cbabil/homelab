@@ -27,7 +27,7 @@ class TestChangePassword:
         """Create AuthTools instance."""
         with patch("tools.auth.tools.logger"):
             tools = AuthTools(mock_auth_service)
-            tools._password_change_attempts = {}
+            tools._password_tools._password_change_attempts = {}
             return tools
 
     @pytest.mark.asyncio
@@ -120,7 +120,7 @@ class TestChangePassword:
         mock_auth_service._log_security_event = AsyncMock()
 
         # Set up lockout
-        auth_tools._password_change_attempts["testuser:unknown"] = {
+        auth_tools._password_tools._password_change_attempts["testuser:unknown"] = {
             "count": 5,
             "lockout_until": datetime.now(UTC) + timedelta(minutes=10),
         }
@@ -361,7 +361,7 @@ class TestChangePassword:
         mock_auth_service._log_security_event = AsyncMock()
 
         # Set up with 4 existing attempts (MAX_ATTEMPTS - 1)
-        auth_tools._password_change_attempts["testuser:unknown"] = {"count": 4}
+        auth_tools._password_tools._password_change_attempts["testuser:unknown"] = {"count": 4}
 
         with patch("lib.auth_helpers.verify_password", return_value=False):
             result = await auth_tools.change_password(
@@ -416,7 +416,7 @@ class TestChangePassword:
         mock_auth_service._log_security_event = AsyncMock()
 
         # Set up existing rate limiting
-        auth_tools._password_change_attempts["testuser:unknown"] = {"count": 2}
+        auth_tools._password_tools._password_change_attempts["testuser:unknown"] = {"count": 2}
 
         with patch("lib.auth_helpers.verify_password", return_value=True):
             with patch("lib.auth_helpers.hash_password", return_value="$newhash$"):
@@ -429,7 +429,7 @@ class TestChangePassword:
                 )
 
         assert result["success"] is True
-        assert "testuser:unknown" not in auth_tools._password_change_attempts
+        assert "testuser:unknown" not in auth_tools._password_tools._password_change_attempts
 
     @pytest.mark.asyncio
     async def test_exception_with_logging_failure(self, auth_tools, mock_auth_service):

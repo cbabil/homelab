@@ -11,7 +11,7 @@ from typing import Any
 import structlog
 
 from models.log import LogEntry, LogFilter
-from services.service_log import log_service
+from services.service_log import LogService
 
 logger = structlog.get_logger("monitoring_service")
 
@@ -19,8 +19,9 @@ logger = structlog.get_logger("monitoring_service")
 class MonitoringService:
     """Service for managing system metrics and logs."""
 
-    def __init__(self):
+    def __init__(self, log_service: LogService | None = None):
         """Initialize monitoring service with storage."""
+        self._log_service = log_service
         self.metrics_cache: dict[str, Any] = {}
         logger.info("Monitoring service initialized")
 
@@ -154,7 +155,7 @@ class MonitoringService:
 
             # Store in database
             for log_entry in sample_logs:
-                await log_service.create_log_entry(log_entry)
+                await self._log_service.create_log_entry(log_entry)
 
             logger.info("Sample logs initialized in database")
 
@@ -184,12 +185,12 @@ class MonitoringService:
                 )
 
             # Get logs from database
-            log_entries = await log_service.get_logs(log_filter)
+            log_entries = await self._log_service.get_logs(log_filter)
 
             # If no logs exist, initialize sample data
             if not log_entries:
                 await self._initialize_logs()
-                log_entries = await log_service.get_logs(log_filter)
+                log_entries = await self._log_service.get_logs(log_filter)
 
             # Convert LogEntry models to dict format for frontend compatibility
             filtered_logs = []

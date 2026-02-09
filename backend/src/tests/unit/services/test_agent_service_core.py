@@ -133,23 +133,23 @@ class TestAgentServiceInit:
 
 
 class TestGetAgentDb:
-    """Tests for _get_agent_db method."""
+    """Tests for get_agent_db method."""
 
     def test_get_agent_db_returns_injected(
         self, mock_db_service, mock_settings_service, mock_agent_db
     ):
-        """_get_agent_db should return injected agent_db."""
+        """get_agent_db should return injected agent_db."""
         with patch("services.agent_service.logger"):
             service = AgentService(
                 db_service=mock_db_service,
                 settings_service=mock_settings_service,
                 agent_db=mock_agent_db,
             )
-        result = service._get_agent_db()
+        result = service.get_agent_db()
         assert result is mock_agent_db
 
     def test_get_agent_db_creates_lazily(self, mock_db_service, mock_settings_service):
-        """_get_agent_db should create agent_db lazily if not provided."""
+        """get_agent_db should create agent_db lazily if not provided."""
         with patch("services.agent_service.logger"):
             service = AgentService(
                 db_service=mock_db_service,
@@ -165,7 +165,7 @@ class TestGetAgentDb:
             MockConn.return_value = MagicMock()
             MockAgentDB.return_value = MagicMock()
 
-            result = service._get_agent_db()
+            result = service.get_agent_db()
 
             MockConn.assert_called_once_with(db_path=mock_db_service.db_path)
             MockAgentDB.assert_called_once()

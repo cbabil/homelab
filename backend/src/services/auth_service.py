@@ -23,7 +23,7 @@ from lib.auth_helpers import (
 from models.auth import LoginCredentials, LoginResponse, TokenType, User, UserRole
 from models.log import LogEntry
 from services.database_service import DatabaseService
-from services.service_log import log_service
+from services.service_log import LogService
 from services.session_service import SessionService
 
 logger = structlog.get_logger("auth_service")
@@ -37,6 +37,7 @@ class AuthService:
         jwt_secret: str | None = None,
         db_service: DatabaseService | None = None,
         session_service: SessionService | None = None,
+        log_service: LogService | None = None,
     ):
         """Initialize authentication service with JWT configuration."""
         # Require JWT secret from environment in production
@@ -59,6 +60,9 @@ class AuthService:
         self.session_service = session_service or SessionService(
             db_service=self.db_service
         )
+
+        # Log service for security event logging
+        self._log_service = log_service
 
         logger.info("Authentication service initialized")
 
@@ -98,7 +102,8 @@ class AuthService:
                     "timestamp": datetime.now(UTC).isoformat(),
                 },
             )
-            await log_service.create_log_entry(log_entry)
+            if self._log_service:
+                await self._log_service.create_log_entry(log_entry)
             logger.info(
                 "Security event logged",
                 event_type=event_type,
@@ -290,22 +295,7 @@ class AuthService:
         await self.db_service.update_user_last_login(credentials.username, now)
         user.last_login = now
 
-        # Generate JWT token
-        logger.debug(
-            "Generating JWT token",
-            username=credentials.username,
-            user_id=user.id,
-        )
-        token = generate_jwt_token(
-            user, self.jwt_secret, self.jwt_algorithm, self.token_expiry_hours
-        )
-        logger.debug(
-            "JWT token generated",
-            username=credentials.username,
-            token_length=len(token) if token else 0,
-        )
-
-        # Create persistent database session
+        # Create persistent database session FIRST (so we can bind JWT to it)
         expires_at = datetime.now(UTC) + timedelta(hours=self.token_expiry_hours)
         db_session = await self.session_service.create_session(
             user_id=user.id,
@@ -314,6 +304,26 @@ class AuthService:
             user_agent=user_agent,
         )
         session_id = db_session.id
+
+        # Generate JWT token bound to the session
+        logger.debug(
+            "Generating JWT token",
+            username=credentials.username,
+            user_id=user.id,
+            session_id=session_id,
+        )
+        token = generate_jwt_token(
+            user,
+            self.jwt_secret,
+            self.jwt_algorithm,
+            self.token_expiry_hours,
+            session_id=session_id,
+        )
+        logger.debug(
+            "JWT token generated",
+            username=credentials.username,
+            token_length=len(token) if token else 0,
+        )
 
         # Also store in legacy in-memory sessions for backward compatibility
         self.sessions[session_id] = create_session_data(
@@ -485,6 +495,18 @@ class AuthService:
             payload = self._validate_jwt_token(token)
             if not payload:
                 return None
+
+            # Verify the session is still active (prevents use after logout)
+            session_id = payload.get("session_id")
+            if session_id:
+                session = await self.session_service.validate_session(session_id)
+                if not session:
+                    logger.warning(
+                        "JWT rejected: session terminated or expired",
+                        session_id=session_id,
+                    )
+                    return None
+
             user_id = payload.get("user_id")
 
         # Fetch from database

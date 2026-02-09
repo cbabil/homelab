@@ -25,7 +25,7 @@ from models.retention import (
 )
 from services.auth_service import AuthService
 from services.database_service import DatabaseService
-from services.service_log import log_service
+from services.service_log import LogService
 
 logger = structlog.get_logger("retention_service")
 
@@ -37,10 +37,12 @@ class RetentionService:
         self,
         db_service: DatabaseService | None = None,
         auth_service: AuthService | None = None,
+        log_service: LogService | None = None,
     ):
         """Initialize retention service with required dependencies."""
         self.db_service = db_service or DatabaseService()
         self.auth_service = auth_service or AuthService()
+        self._log_service = log_service
         self.max_batch_size = 10000
         self.min_batch_size = 100
         logger.info("Retention service initialized")
@@ -145,7 +147,8 @@ class RetentionService:
                 metadata=audit_entry.model_dump(),
             )
 
-            await log_service.create_log_entry(log_entry)
+            if self._log_service:
+                await self._log_service.create_log_entry(log_entry)
             logger.info(
                 "Retention operation logged",
                 operation=operation.value,

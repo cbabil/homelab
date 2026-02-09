@@ -4,6 +4,7 @@ import structlog
 from fastmcp import FastMCP
 
 from lib.config import DEFAULT_ENV_VALUES, load_config, resolve_data_directory
+from lib.log_event import init_log_event
 from lib.logging_config import setup_logging
 from lib.tool_loader import register_all_tools
 from services.factory import create_services
@@ -24,6 +25,9 @@ logger.info(
 
 # Create all services
 services = create_services(data_directory, config)
+
+# Wire log_event module to the LogService instance
+init_log_event(services["log_service"])
 
 # Create FastMCP app
 app = FastMCP(
@@ -64,6 +68,8 @@ if __name__ == "__main__":
         await database_service.initialize_agents_table()
         await database_service.initialize_installed_apps_table()
         await database_service.initialize_metrics_tables()
+        await database_service.initialize_rate_limit_events_table()
+        await database_service.initialize_csrf_tokens_table()
 
     asyncio.run(_run_migrations())
 
@@ -144,12 +150,41 @@ if __name__ == "__main__":
         logger.info("Stopping agent lifecycle manager")
         await agent_lifecycle.stop()
 
+    # Optional TLS configuration via environment variables
+    ssl_certfile = os.getenv("SSL_CERTFILE")
+    ssl_keyfile = os.getenv("SSL_KEYFILE")
+    ssl_kwargs: dict[str, str] = {}
+
+    if ssl_certfile and ssl_keyfile:
+        if not os.path.isfile(ssl_certfile):
+            logger.error("SSL_CERTFILE not found", path=ssl_certfile)
+            raise SystemExit(1)
+        if not os.path.isfile(ssl_keyfile):
+            logger.error("SSL_KEYFILE not found", path=ssl_keyfile)
+            raise SystemExit(1)
+        ssl_kwargs["ssl_certfile"] = ssl_certfile
+        ssl_kwargs["ssl_keyfile"] = ssl_keyfile
+        logger.info(
+            "TLS enabled",
+            certfile=ssl_certfile,
+            keyfile=ssl_keyfile,
+        )
+    else:
+        app_env = os.getenv("APP_ENV", "production").lower()
+        if app_env == "production":
+            logger.warning(
+                "Running without TLS in production mode. "
+                "Set SSL_CERTFILE and SSL_KEYFILE environment variables "
+                "or use a TLS-terminating reverse proxy (nginx, caddy)."
+            )
+
     logger.info(
         "FastMCP HTTP server initialized",
         version=config.get("version", DEFAULT_ENV_VALUES["VERSION"]),
         allowed_origins=allowed_origins,
         mcp_path="/mcp",
         ws_path="/ws/agent",
+        tls=bool(ssl_kwargs),
     )
 
-    uvicorn.run(starlette_app, host="0.0.0.0", port=8000)
+    uvicorn.run(starlette_app, host="0.0.0.0", port=8000, **ssl_kwargs)

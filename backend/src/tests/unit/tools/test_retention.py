@@ -118,8 +118,8 @@ class TestGetCsrfToken:
     @pytest.mark.asyncio
     async def test_get_csrf_token_success(self, tools, mock_admin_ctx):
         """Test successfully generating CSRF token."""
-        with patch("tools.retention.tools.csrf_service") as mock_csrf:
-            mock_csrf.generate_token.return_value = "csrf-token-xyz"
+        with patch.object(tools, "csrf_service") as mock_csrf:
+            mock_csrf.generate_token = AsyncMock(return_value="csrf-token-xyz")
 
             result = await tools.get_csrf_token({}, mock_admin_ctx)
 
@@ -151,8 +151,8 @@ class TestGetCsrfToken:
     @pytest.mark.asyncio
     async def test_get_csrf_token_exception(self, tools, mock_admin_ctx):
         """Test handling exceptions."""
-        with patch("tools.retention.tools.csrf_service") as mock_csrf:
-            mock_csrf.generate_token.side_effect = Exception("Token generation failed")
+        with patch.object(tools, "csrf_service") as mock_csrf:
+            mock_csrf.generate_token = AsyncMock(side_effect=Exception("Token generation failed"))
 
             result = await tools.get_csrf_token({}, mock_admin_ctx)
 
@@ -337,8 +337,8 @@ class TestPerformRetentionCleanup:
         """Test successful cleanup."""
         mock_service.perform_cleanup = AsyncMock(return_value=sample_result)
 
-        with patch("tools.retention.tools.csrf_service") as mock_csrf:
-            mock_csrf.validate_token.return_value = (True, None)
+        with patch.object(tools, "csrf_service") as mock_csrf:
+            mock_csrf.validate_token = AsyncMock(return_value=(True, None))
 
             result = await tools.perform_retention_cleanup(
                 {
@@ -387,8 +387,8 @@ class TestPerformRetentionCleanup:
     @pytest.mark.asyncio
     async def test_cleanup_invalid_csrf(self, tools, mock_admin_ctx):
         """Test with invalid CSRF token."""
-        with patch("tools.retention.tools.csrf_service") as mock_csrf:
-            mock_csrf.validate_token.return_value = (False, "Token expired")
+        with patch.object(tools, "csrf_service") as mock_csrf:
+            mock_csrf.validate_token = AsyncMock(return_value=(False, "Token expired"))
 
             result = await tools.perform_retention_cleanup(
                 {
@@ -404,8 +404,8 @@ class TestPerformRetentionCleanup:
     @pytest.mark.asyncio
     async def test_cleanup_invalid_type(self, tools, mock_admin_ctx):
         """Test with invalid retention type."""
-        with patch("tools.retention.tools.csrf_service") as mock_csrf:
-            mock_csrf.validate_token.return_value = (True, None)
+        with patch.object(tools, "csrf_service") as mock_csrf:
+            mock_csrf.validate_token = AsyncMock(return_value=(True, None))
 
             result = await tools.perform_retention_cleanup(
                 {
@@ -423,8 +423,8 @@ class TestPerformRetentionCleanup:
         """Test when cleanup returns None."""
         mock_service.perform_cleanup = AsyncMock(return_value=None)
 
-        with patch("tools.retention.tools.csrf_service") as mock_csrf:
-            mock_csrf.validate_token.return_value = (True, None)
+        with patch.object(tools, "csrf_service") as mock_csrf:
+            mock_csrf.validate_token = AsyncMock(return_value=(True, None))
 
             result = await tools.perform_retention_cleanup(
                 {
@@ -445,8 +445,8 @@ class TestPerformRetentionCleanup:
         failed_result.error_message = "Cleanup aborted"
         mock_service.perform_cleanup = AsyncMock(return_value=failed_result)
 
-        with patch("tools.retention.tools.csrf_service") as mock_csrf:
-            mock_csrf.validate_token.return_value = (True, None)
+        with patch.object(tools, "csrf_service") as mock_csrf:
+            mock_csrf.validate_token = AsyncMock(return_value=(True, None))
 
             result = await tools.perform_retention_cleanup(
                 {
@@ -466,8 +466,8 @@ class TestPerformRetentionCleanup:
             side_effect=Exception("Database error")
         )
 
-        with patch("tools.retention.tools.csrf_service") as mock_csrf:
-            mock_csrf.validate_token.return_value = (True, None)
+        with patch.object(tools, "csrf_service") as mock_csrf:
+            mock_csrf.validate_token = AsyncMock(return_value=(True, None))
 
             result = await tools.perform_retention_cleanup(
                 {

@@ -141,7 +141,7 @@ class TestTriggerAgentUpdate:
         mock_services["lifecycle"].check_version.return_value = version_info
         mock_services["lifecycle"].trigger_update = AsyncMock(return_value=True)
 
-        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
+        with patch("tools.agent.status.log_event", new_callable=AsyncMock):
             result = await agent_tools.trigger_agent_update("server-123")
 
         assert result["success"] is True
@@ -167,7 +167,7 @@ class TestTriggerAgentUpdate:
         mock_services["lifecycle"].check_version.return_value = version_info
         mock_services["lifecycle"].trigger_update = AsyncMock(return_value=True)
 
-        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
+        with patch("tools.agent.status.log_event", new_callable=AsyncMock):
             result = await agent_tools.trigger_agent_update("server-123")
 
         assert result["success"] is True
@@ -189,7 +189,7 @@ class TestTriggerAgentUpdate:
         mock_services["lifecycle"].check_version.return_value = version_info
         mock_services["lifecycle"].trigger_update = AsyncMock(return_value=True)
 
-        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
+        with patch("tools.agent.status.log_event", new_callable=AsyncMock):
             result = await agent_tools.trigger_agent_update("server-123")
 
         assert result["success"] is True
@@ -452,9 +452,9 @@ class TestResetAgentStatus:
 
         mock_agent_db = MagicMock()
         mock_agent_db.update_agent = AsyncMock()
-        mock_services["agent_service"]._get_agent_db.return_value = mock_agent_db
+        mock_services["agent_service"].get_agent_db.return_value = mock_agent_db
 
-        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
+        with patch("tools.agent.status.log_event", new_callable=AsyncMock):
             result = await agent_tools.reset_agent_status("server-123")
 
         assert result["success"] is True
@@ -468,7 +468,7 @@ class TestResetAgentStatus:
             return_value=5
         )
 
-        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
+        with patch("tools.agent.status.log_event", new_callable=AsyncMock):
             result = await agent_tools.reset_agent_status()
 
         assert result["success"] is True
@@ -481,7 +481,7 @@ class TestResetAgentStatus:
             return_value=0
         )
 
-        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
+        with patch("tools.agent.status.log_event", new_callable=AsyncMock):
             result = await agent_tools.reset_agent_status()
 
         assert result["success"] is True

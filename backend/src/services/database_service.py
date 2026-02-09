@@ -347,6 +347,12 @@ class DatabaseService:
     async def initialize_metrics_tables(self) -> bool:
         return await self._schema.initialize_metrics_tables()
 
+    async def initialize_rate_limit_events_table(self) -> bool:
+        return await self._schema.initialize_rate_limit_events_table()
+
+    async def initialize_csrf_tokens_table(self) -> bool:
+        return await self._schema.initialize_csrf_tokens_table()
+
     # ========== Account Lock Methods ==========
 
     async def is_account_locked(

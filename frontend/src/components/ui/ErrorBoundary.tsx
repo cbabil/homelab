@@ -5,63 +5,63 @@
  * a fallback UI instead of crashing the whole app.
  */
 
-import { Component, ErrorInfo, ReactNode } from 'react'
-import { AlertTriangle, RefreshCw, Home } from 'lucide-react'
-import { Box, Stack } from '@mui/material'
+import { Component, ErrorInfo, ReactNode } from 'react';
+import { AlertTriangle, RefreshCw, Home } from 'lucide-react';
+import { Box, Stack } from '@mui/material';
 
 interface ErrorBoundaryProps {
-  children: ReactNode
-  fallback?: ReactNode
-  onError?: (error: Error, errorInfo: ErrorInfo) => void
+  children: ReactNode;
+  fallback?: ReactNode;
+  onError?: (error: Error, errorInfo: ErrorInfo) => void;
 }
 
 interface ErrorBoundaryState {
-  hasError: boolean
-  error: Error | null
-  errorInfo: ErrorInfo | null
+  hasError: boolean;
+  error: Error | null;
+  errorInfo: ErrorInfo | null;
 }
 
 export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
   constructor(props: ErrorBoundaryProps) {
-    super(props)
+    super(props);
     this.state = {
       hasError: false,
       error: null,
-      errorInfo: null
-    }
+      errorInfo: null,
+    };
   }
 
   static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
-    return { hasError: true, error }
+    return { hasError: true, error };
   }
 
   componentDidCatch(error: Error, errorInfo: ErrorInfo): void {
-    this.setState({ errorInfo })
+    this.setState({ errorInfo });
 
     // Log error to console in development
     if (import.meta.env.DEV) {
-      console.error('ErrorBoundary caught an error:', error, errorInfo)
+      console.error('ErrorBoundary caught an error:', error, errorInfo);
     }
 
     // Call optional error handler
-    this.props.onError?.(error, errorInfo)
+    this.props.onError?.(error, errorInfo);
   }
 
   handleReset = (): void => {
-    this.setState({ hasError: false, error: null, errorInfo: null })
-  }
+    this.setState({ hasError: false, error: null, errorInfo: null });
+  };
 
   handleReload = (): void => {
-    window.location.reload()
-  }
+    window.location.reload();
+  };
 
   handleGoHome = (): void => {
-    window.location.href = '/'
-  }
+    window.location.href = '/';
+  };
 
   renderErrorDetails(): ReactNode {
     if (!import.meta.env.DEV || !this.state.error) {
-      return null
+      return null;
     }
 
     return (
@@ -71,7 +71,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
           borderRadius: 2,
           p: 2,
           mb: 3,
-          textAlign: 'left'
+          textAlign: 'left',
         }}
       >
         <Box
@@ -80,7 +80,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             fontSize: '0.875rem',
             fontFamily: 'monospace',
             color: 'error.main',
-            wordBreak: 'break-all'
+            wordBreak: 'break-all',
           }}
         >
           {this.state.error.message}
@@ -93,14 +93,14 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               color: 'text.secondary',
               mt: 1,
               overflow: 'auto',
-              maxHeight: 128
+              maxHeight: 128,
             }}
           >
             {this.state.errorInfo.componentStack}
           </Box>
         )}
       </Box>
-    )
+    );
   }
 
   renderActionButtons(): ReactNode {
@@ -112,6 +112,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       >
         <Box
           component="button"
+          type="button"
           onClick={this.handleReload}
           sx={{
             display: 'inline-flex',
@@ -126,7 +127,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             border: 'none',
             cursor: 'pointer',
             '&:hover': { bgcolor: 'primary.dark' },
-            transition: 'background-color 0.2s'
+            transition: 'background-color 0.2s',
           }}
         >
           <RefreshCw style={{ width: 16, height: 16 }} />
@@ -135,6 +136,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
         <Box
           component="button"
+          type="button"
           onClick={this.handleGoHome}
           sx={{
             display: 'inline-flex',
@@ -149,20 +151,20 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             border: 'none',
             cursor: 'pointer',
             '&:hover': { bgcolor: 'action.selected' },
-            transition: 'background-color 0.2s'
+            transition: 'background-color 0.2s',
           }}
         >
           <Home style={{ width: 16, height: 16 }} />
           Go Home
         </Box>
       </Stack>
-    )
+    );
   }
 
   render(): ReactNode {
     if (this.state.hasError) {
       if (this.props.fallback) {
-        return this.props.fallback
+        return this.props.fallback;
       }
 
       return (
@@ -173,7 +175,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            p: 2
+            p: 2,
           }}
         >
           <Box sx={{ maxWidth: 448, width: '100%', textAlign: 'center' }}>
@@ -184,7 +186,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                 borderColor: 'divider',
                 borderRadius: 4,
                 p: 4,
-                boxShadow: 3
+                boxShadow: 3,
               }}
             >
               <Box
@@ -198,10 +200,12 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                   alignItems: 'center',
                   justifyContent: 'center',
                   mx: 'auto',
-                  mb: 3
+                  mb: 3,
                 }}
               >
-                <AlertTriangle style={{ width: 32, height: 32, color: 'var(--mui-palette-error-main)' }} />
+                <AlertTriangle
+                  style={{ width: 32, height: 32, color: 'var(--mui-palette-error-main)' }}
+                />
               </Box>
 
               <Box
@@ -212,7 +216,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
               </Box>
 
               <Box component="p" sx={{ color: 'text.secondary', mb: 3 }}>
-                An unexpected error occurred. Please try refreshing the page or go back to the home page.
+                An unexpected error occurred. Please try refreshing the page or go back to the home
+                page.
               </Box>
 
               {this.renderErrorDetails()}
@@ -220,9 +225,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             </Box>
           </Box>
         </Box>
-      )
+      );
     }
 
-    return this.props.children
+    return this.props.children;
   }
 }

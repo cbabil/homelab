@@ -11,7 +11,7 @@ import structlog
 from fastmcp import Context
 
 from models.retention import CleanupRequest, RetentionSettings, RetentionType
-from services.csrf_service import csrf_service
+from services.csrf_service import CSRFService
 from services.retention_service import RetentionService
 
 logger = structlog.get_logger("retention_tools")
@@ -20,15 +20,22 @@ logger = structlog.get_logger("retention_tools")
 class RetentionTools:
     """Data retention management tools for the MCP server."""
 
-    def __init__(self, retention_service: RetentionService = None, auth_service=None):
+    def __init__(
+        self,
+        retention_service: RetentionService = None,
+        auth_service=None,
+        csrf_service: CSRFService = None,
+    ):
         """Initialize retention tools.
 
         Args:
             retention_service: Retention service instance.
             auth_service: Auth service for permission checks.
+            csrf_service: CSRF service for token management.
         """
         self.retention_service = retention_service or RetentionService()
         self.auth_service = auth_service
+        self.csrf_service = csrf_service or CSRFService()
         logger.info("Retention tools initialized")
 
     def _get_user_context(self, ctx: Context) -> tuple:
@@ -73,7 +80,7 @@ class RetentionTools:
                     "error": "PERMISSION_DENIED",
                 }
 
-            token = csrf_service.generate_token(user_id, session_id)
+            token = await self.csrf_service.generate_token(user_id, session_id)
 
             return {
                 "success": True,
@@ -95,7 +102,8 @@ class RetentionTools:
         """Preview cleanup operations without performing deletion (dry-run).
 
         Params:
-            retention_type: Type of data to preview (logs, user_data, metrics, audit_logs)
+            retention_type: Type of data to preview
+                (logs, user_data, metrics, audit_logs)
 
         Returns:
             Preview of records that would be deleted.
@@ -154,7 +162,10 @@ class RetentionTools:
                     "estimated_space_freed_mb": preview.estimated_space_freed_mb,
                     "cutoff_date": preview.cutoff_date,
                 },
-                "message": f"Preview: {preview.affected_records} records would be deleted",
+                "message": (
+                    f"Preview: {preview.affected_records}"
+                    " records would be deleted"
+                ),
             }
 
         except Exception as e:
@@ -204,7 +215,7 @@ class RetentionTools:
                     "error": "CSRF_REQUIRED",
                 }
 
-            is_valid, error_msg = csrf_service.validate_token(
+            is_valid, error_msg = await self.csrf_service.validate_token(
                 csrf_token, user_id, session_id, consume=True
             )
             if not is_valid:
@@ -264,7 +275,11 @@ class RetentionTools:
                     "start_time": result.start_time,
                     "end_time": result.end_time,
                 },
-                "message": f"Cleanup complete: {result.records_affected} records deleted, {result.space_freed_mb} MB freed",
+                "message": (
+                    f"Cleanup complete: {result.records_affected}"
+                    f" records deleted, "
+                    f"{result.space_freed_mb} MB freed"
+                ),
             }
 
         except Exception as e:

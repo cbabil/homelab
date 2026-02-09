@@ -6,7 +6,7 @@ Defines the users table for authentication and user management.
 
 import structlog
 
-from database.connection import DatabaseManager
+from services.database_service import DatabaseService
 
 logger = structlog.get_logger("schema_users")
 
@@ -60,18 +60,18 @@ async def _migrate_add_password_changed_at(conn) -> None:
         )
 
 
-async def initialize_users_schema(db_manager: DatabaseManager = None) -> bool:
+async def initialize_users_schema(db_manager: DatabaseService = None) -> bool:
     """Initialize the users table schema.
 
     Args:
-        db_manager: Optional DatabaseManager instance. If not provided, creates one.
+        db_manager: Optional DatabaseService instance. If not provided, creates one.
 
     Returns:
         True if successful, False otherwise.
     """
     try:
         if db_manager is None:
-            db_manager = DatabaseManager()
+            db_manager = DatabaseService()
 
         async with db_manager.get_connection() as conn:
             # Execute schema creation

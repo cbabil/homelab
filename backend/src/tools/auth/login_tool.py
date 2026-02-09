@@ -11,22 +11,33 @@ from typing import Any
 import structlog
 from fastmcp import Context
 
-from lib.rate_limiter import RateLimiter
 from models.auth import LoginCredentials
 from services.auth_service import AuthService
+from services.rate_limit_service import RateLimitService
 
 logger = structlog.get_logger("login_tool")
 
-# Rate limiter for login attempts: 5 attempts per 5 minutes per IP
-login_rate_limiter = RateLimiter(max_requests=5, window_seconds=300)
+# Rate limit configuration
+_LOGIN_MAX_REQUESTS = 5
+_LOGIN_WINDOW_SECONDS = 300  # 5 minutes
 
 
 class LoginTool:
     """Login authentication tool."""
 
-    def __init__(self, auth_service: AuthService):
-        """Initialize login tool with auth service."""
+    def __init__(
+        self,
+        auth_service: AuthService,
+        rate_limit_service: RateLimitService | None = None,
+    ):
+        """Initialize login tool with auth service.
+
+        Args:
+            auth_service: Authentication service instance.
+            rate_limit_service: Optional DB-backed rate limit service.
+        """
         self.auth_service = auth_service
+        self.rate_limit_service = rate_limit_service
 
     def _format_lock_time_remaining(self, lock_expires_at: str | None) -> str:
         """Calculate and format the remaining lock time."""
@@ -81,15 +92,23 @@ class LoginTool:
                 logger.debug("Could not extract request context", error=str(e))
 
         # Check rate limit before processing
-        if not login_rate_limiter.is_allowed(client_ip):
-            remaining_seconds = 300  # Window is 5 minutes
-            logger.warning("Rate limit exceeded for login", client_ip=client_ip)
-            return {
-                "success": False,
-                "message": "Too many login attempts. Please try again in a few minutes.",
-                "error": "RATE_LIMIT_EXCEEDED",
-                "retry_after": remaining_seconds,
-            }
+        if self.rate_limit_service:
+            allowed = await self.rate_limit_service.is_allowed(
+                "login", client_ip, _LOGIN_MAX_REQUESTS, _LOGIN_WINDOW_SECONDS
+            )
+            if not allowed:
+                logger.warning(
+                    "Rate limit exceeded for login", client_ip=client_ip
+                )
+                return {
+                    "success": False,
+                    "message": (
+                        "Too many login attempts. "
+                        "Please try again in a few minutes."
+                    ),
+                    "error": "RATE_LIMIT_EXCEEDED",
+                    "retry_after": _LOGIN_WINDOW_SECONDS,
+                }
 
         try:
             # Handle nested credentials structure from frontend

@@ -2,7 +2,7 @@
 CSRF Protection Service
 
 Provides CSRF token generation and validation for destructive operations.
-Tokens are stored server-side with user session association and expiration.
+Tokens are persisted to database so they survive server restarts.
 """
 
 import hashlib
@@ -11,11 +11,9 @@ from datetime import UTC, datetime, timedelta
 
 import structlog
 
-logger = structlog.get_logger("csrf_service")
+from services.database_service import DatabaseService
 
-# In-memory token storage (in production, use Redis or database)
-# Format: { token_hash: { user_id, session_id, expires_at, used } }
-_csrf_tokens: dict[str, dict] = {}
+logger = structlog.get_logger("csrf_service")
 
 # Token configuration
 TOKEN_LENGTH = 64  # 64 hex chars = 256 bits of entropy
@@ -24,48 +22,66 @@ MAX_TOKENS_PER_USER = 5
 
 
 class CSRFService:
-    """Service for CSRF token management."""
+    """Service for CSRF token management with database persistence."""
 
-    def __init__(self):
-        """Initialize CSRF service."""
-        logger.info("CSRF service initialized")
+    def __init__(self, db_service: DatabaseService | None = None):
+        """Initialize CSRF service.
+
+        Args:
+            db_service: Database service for persistent storage.
+        """
+        self.db_service = db_service
+        logger.info("CSRF service initialized", persistent=db_service is not None)
 
     def _hash_token(self, token: str) -> str:
         """Hash a token for storage comparison."""
         return hashlib.sha256(token.encode()).hexdigest()
 
-    def _cleanup_expired_tokens(self):
-        """Remove expired tokens from storage."""
-        now = datetime.now(UTC)
-        expired_keys = [
-            key
-            for key, data in _csrf_tokens.items()
-            if datetime.fromisoformat(data["expires_at"]) < now
-        ]
-        for key in expired_keys:
-            del _csrf_tokens[key]
+    async def _cleanup_expired_tokens(self) -> None:
+        """Remove expired tokens from database."""
+        if not self.db_service:
+            return
 
-        if expired_keys:
-            logger.debug("Cleaned up expired CSRF tokens", count=len(expired_keys))
+        now = datetime.now(UTC).isoformat()
+        async with self.db_service.get_connection() as conn:
+            cursor = await conn.execute(
+                "DELETE FROM csrf_tokens WHERE expires_at < ?", (now,)
+            )
+            await conn.commit()
+            count = cursor.rowcount
 
-    def _cleanup_user_tokens(self, user_id: str):
-        """Limit tokens per user to prevent memory exhaustion."""
-        user_tokens = [
-            (key, data)
-            for key, data in _csrf_tokens.items()
-            if data["user_id"] == user_id
-        ]
+        if count > 0:
+            logger.debug("Cleaned up expired CSRF tokens", count=count)
 
-        # Sort by creation time (newest first based on expiry)
-        user_tokens.sort(key=lambda x: x[1]["expires_at"], reverse=True)
+    async def _cleanup_user_tokens(self, user_id: str) -> None:
+        """Limit tokens per user to prevent exhaustion."""
+        if not self.db_service:
+            return
 
-        # Remove oldest tokens if over limit
-        if len(user_tokens) > MAX_TOKENS_PER_USER:
-            for key, _ in user_tokens[MAX_TOKENS_PER_USER:]:
-                del _csrf_tokens[key]
-            logger.debug("Cleaned up excess user tokens", user_id=user_id)
+        async with self.db_service.get_connection() as conn:
+            # Count tokens for user
+            cursor = await conn.execute(
+                "SELECT COUNT(*) FROM csrf_tokens WHERE user_id = ?",
+                (user_id,),
+            )
+            row = await cursor.fetchone()
+            count = row[0] if row else 0
 
-    def generate_token(self, user_id: str, session_id: str) -> str:
+            if count >= MAX_TOKENS_PER_USER:
+                # Delete oldest tokens, keeping only the newest ones
+                await conn.execute(
+                    """DELETE FROM csrf_tokens WHERE token_hash IN (
+                        SELECT token_hash FROM csrf_tokens
+                        WHERE user_id = ?
+                        ORDER BY created_at ASC
+                        LIMIT ?
+                    )""",
+                    (user_id, count - MAX_TOKENS_PER_USER + 1),
+                )
+                await conn.commit()
+                logger.debug("Cleaned up excess user tokens", user_id=user_id)
+
+    async def generate_token(self, user_id: str, session_id: str) -> str:
         """Generate a new CSRF token for a user session.
 
         Args:
@@ -75,21 +91,26 @@ class CSRFService:
         Returns:
             New CSRF token.
         """
-        self._cleanup_expired_tokens()
-        self._cleanup_user_tokens(user_id)
+        await self._cleanup_expired_tokens()
+        await self._cleanup_user_tokens(user_id)
 
         # Generate cryptographically secure token
         token = secrets.token_hex(TOKEN_LENGTH // 2)
         token_hash = self._hash_token(token)
 
-        # Store token metadata
+        # Store token in database
         expires_at = datetime.now(UTC) + timedelta(minutes=TOKEN_EXPIRY_MINUTES)
-        _csrf_tokens[token_hash] = {
-            "user_id": user_id,
-            "session_id": session_id,
-            "expires_at": expires_at.isoformat(),
-            "used": False,
-        }
+        now = datetime.now(UTC).isoformat()
+
+        if self.db_service:
+            async with self.db_service.get_connection() as conn:
+                await conn.execute(
+                    """INSERT INTO csrf_tokens
+                    (token_hash, user_id, session_id, expires_at, used, created_at)
+                    VALUES (?, ?, ?, ?, 0, ?)""",
+                    (token_hash, user_id, session_id, expires_at.isoformat(), now),
+                )
+                await conn.commit()
 
         logger.info(
             "CSRF token generated",
@@ -98,7 +119,7 @@ class CSRFService:
         )
         return token
 
-    def validate_token(
+    async def validate_token(
         self, token: str, user_id: str, session_id: str, consume: bool = True
     ) -> tuple[bool, str | None]:
         """Validate a CSRF token.
@@ -107,58 +128,81 @@ class CSRFService:
             token: CSRF token to validate.
             user_id: Expected user ID.
             session_id: Expected session ID.
-            consume: Whether to consume (invalidate) the token on successful validation.
+            consume: Whether to consume the token on successful validation.
 
         Returns:
             Tuple of (is_valid, error_message).
         """
-        self._cleanup_expired_tokens()
+        await self._cleanup_expired_tokens()
 
         if not token or len(token) < 32:
             logger.warning("Invalid CSRF token format", user_id=user_id)
             return False, "Invalid token format"
 
-        token_hash = self._hash_token(token)
-        token_data = _csrf_tokens.get(token_hash)
+        if not self.db_service:
+            logger.warning("CSRF service has no database", user_id=user_id)
+            return False, "Token storage unavailable"
 
-        if not token_data:
+        token_hash = self._hash_token(token)
+
+        async with self.db_service.get_connection() as conn:
+            cursor = await conn.execute(
+                "SELECT user_id, session_id, expires_at, used "
+                "FROM csrf_tokens WHERE token_hash = ?",
+                (token_hash,),
+            )
+            row = await cursor.fetchone()
+
+        if not row:
             logger.warning("CSRF token not found", user_id=user_id)
             return False, "Token not found or expired"
 
+        db_user_id, db_session_id, db_expires_at, db_used = row
+
         # Check expiration
-        if datetime.fromisoformat(token_data["expires_at"]) < datetime.now(UTC):
-            del _csrf_tokens[token_hash]
+        if datetime.fromisoformat(db_expires_at) < datetime.now(UTC):
+            async with self.db_service.get_connection() as conn:
+                await conn.execute(
+                    "DELETE FROM csrf_tokens WHERE token_hash = ?",
+                    (token_hash,),
+                )
+                await conn.commit()
             logger.warning("CSRF token expired", user_id=user_id)
             return False, "Token expired"
 
-        # Check if already used (for single-use tokens)
-        if token_data["used"]:
+        # Check if already used
+        if db_used:
             logger.warning("CSRF token already used", user_id=user_id)
             return False, "Token already used"
 
         # Verify user and session match
-        if token_data["user_id"] != user_id:
+        if db_user_id != user_id:
             logger.warning(
                 "CSRF token user mismatch",
-                expected=token_data["user_id"],
+                expected=db_user_id,
                 actual=user_id,
             )
             return False, "Token does not belong to this user"
 
-        if token_data["session_id"] != session_id:
+        if db_session_id != session_id:
             logger.warning("CSRF token session mismatch", user_id=user_id)
             return False, "Token does not belong to this session"
 
         # Mark as used if consuming
         if consume:
-            _csrf_tokens[token_hash]["used"] = True
+            async with self.db_service.get_connection() as conn:
+                await conn.execute(
+                    "UPDATE csrf_tokens SET used = 1 WHERE token_hash = ?",
+                    (token_hash,),
+                )
+                await conn.commit()
             logger.info("CSRF token validated and consumed", user_id=user_id)
         else:
             logger.info("CSRF token validated (not consumed)", user_id=user_id)
 
         return True, None
 
-    def revoke_user_tokens(self, user_id: str) -> int:
+    async def revoke_user_tokens(self, user_id: str) -> int:
         """Revoke all tokens for a user (e.g., on logout).
 
         Args:
@@ -167,20 +211,19 @@ class CSRFService:
         Returns:
             Number of tokens revoked.
         """
-        keys_to_delete = [
-            key for key, data in _csrf_tokens.items() if data["user_id"] == user_id
-        ]
+        if not self.db_service:
+            return 0
 
-        for key in keys_to_delete:
-            del _csrf_tokens[key]
+        async with self.db_service.get_connection() as conn:
+            cursor = await conn.execute(
+                "DELETE FROM csrf_tokens WHERE user_id = ?", (user_id,)
+            )
+            await conn.commit()
+            count = cursor.rowcount
 
-        if keys_to_delete:
+        if count > 0:
             logger.info(
-                "User CSRF tokens revoked", user_id=user_id, count=len(keys_to_delete)
+                "User CSRF tokens revoked", user_id=user_id, count=count
             )
 
-        return len(keys_to_delete)
-
-
-# Singleton instance
-csrf_service = CSRFService()
+        return count

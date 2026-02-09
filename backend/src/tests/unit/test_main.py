@@ -25,6 +25,7 @@ class TestMainModuleImport:
             "agent_lifecycle": MagicMock(),
             "database_service": MagicMock(),
             "agent_service": MagicMock(),
+            "log_service": MagicMock(),
         }
 
         with (
@@ -70,6 +71,7 @@ class TestMainModuleImport:
             "agent_lifecycle": MagicMock(),
             "database_service": MagicMock(),
             "agent_service": MagicMock(),
+            "log_service": MagicMock(),
         }
 
         with (
@@ -133,6 +135,7 @@ class TestMainModuleImport:
             "agent_lifecycle": MagicMock(),
             "database_service": MagicMock(),
             "agent_service": MagicMock(),
+            "log_service": MagicMock(),
         }
 
         with (

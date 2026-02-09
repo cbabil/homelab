@@ -7,7 +7,7 @@ import { render } from 'ink-testing-library';
 import React from 'react';
 import { DashboardView } from '../../../src/app/views/DashboardView.js';
 import type { DashboardData } from '../../../src/app/dashboard-types.js';
-import type { ActivityLogEntry } from '../../../src/components/dashboard/ActivityLog.js';
+import type { ActivityEntry } from '../../../src/app/dashboard-types.js';
 
 const mockData: DashboardData = {
   agents: [
@@ -23,7 +23,7 @@ const mockData: DashboardData = {
   lastRefresh: new Date(),
 };
 
-const mockActivityLog: ActivityLogEntry[] = [
+const mockActivityLog: ActivityEntry[] = [
   { id: '1', timestamp: new Date(), type: 'SYS', message: 'System initialized' },
 ];
 

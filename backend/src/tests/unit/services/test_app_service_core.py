@@ -4,7 +4,6 @@ Unit tests for services/app_service.py - Core functionality
 Tests initialization, fetch, filtering, and sorting.
 """
 
-from datetime import UTC, datetime
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -12,9 +11,7 @@ import pytest
 from models.app import (
     App,
     AppCategory,
-    AppCategoryTable,
     AppFilter,
-    ApplicationTable,
     AppRequirements,
     AppStatus,
 )
@@ -22,13 +19,15 @@ from services.app_service import AppService
 
 
 @pytest.fixture
-def mock_db_session():
-    """Create mock database session with async context manager."""
-    session = AsyncMock()
-    context_manager = AsyncMock()
-    context_manager.__aenter__.return_value = session
-    context_manager.__aexit__.return_value = None
-    return session, context_manager
+def mock_db_conn():
+    """Create mock DatabaseConnection with get_connection context manager."""
+    mock_aiosqlite_conn = AsyncMock()
+    mock_connection = MagicMock()
+    ctx = AsyncMock()
+    ctx.__aenter__.return_value = mock_aiosqlite_conn
+    ctx.__aexit__.return_value = None
+    mock_connection.get_connection.return_value = ctx
+    return mock_connection, mock_aiosqlite_conn
 
 
 @pytest.fixture
@@ -66,104 +65,74 @@ def sample_app(sample_category):
 
 
 @pytest.fixture
-def sample_app_table():
-    """Create mock ApplicationTable row."""
-    app = MagicMock(spec=ApplicationTable)
-    app.id = "plex"
-    app.name = "Plex"
-    app.description = "Media server"
-    app.long_description = None
-    app.version = "1.0.0"
-    app.category_id = "media"
-    app.tags = '["media", "streaming"]'
-    app.icon = None
-    app.screenshots = None
-    app.author = "Plex Inc"
-    app.repository = None
-    app.documentation = None
-    app.license = "MIT"
-    app.requirements = None
-    app.status = "available"
-    app.install_count = 100
-    app.rating = 4.5
-    app.featured = True
-    app.created_at = datetime(2024, 1, 1, tzinfo=UTC)
-    app.updated_at = datetime(2024, 6, 1, tzinfo=UTC)
-    app.connected_server_id = None
-    return app
-
-
-@pytest.fixture
-def sample_category_table():
-    """Create mock AppCategoryTable row."""
-    cat = MagicMock(spec=AppCategoryTable)
-    cat.id = "media"
-    cat.name = "Media"
-    cat.description = "Media applications"
-    cat.icon = "Video"
-    cat.color = "text-blue-500"
-    return cat
+def sample_app_row():
+    """Create dict-like row as returned by aiosqlite JOIN query."""
+    return {
+        "id": "plex",
+        "name": "Plex",
+        "description": "Media server",
+        "long_description": None,
+        "version": "1.0.0",
+        "category_id": "media",
+        "tags": '["media", "streaming"]',
+        "icon": None,
+        "screenshots": None,
+        "author": "Plex Inc",
+        "repository": None,
+        "documentation": None,
+        "license": "MIT",
+        "requirements": None,
+        "status": "available",
+        "install_count": 100,
+        "rating": 4.5,
+        "featured": 1,
+        "created_at": "2024-01-01T00:00:00",
+        "updated_at": "2024-06-01T00:00:00",
+        "connected_server_id": None,
+        "cat_id": "media",
+        "cat_name": "Media",
+        "cat_desc": "Media applications",
+        "cat_icon": "Video",
+        "cat_color": "text-blue-500",
+    }
 
 
 class TestAppServiceInit:
     """Tests for AppService initialization."""
 
-    def test_init_sets_not_initialized(self):
-        """AppService should start uninitialized."""
-        with patch("services.app_service.logger"):
-            service = AppService()
-            assert service._initialized is False
-
-    def test_init_creates_empty_installations(self):
+    def test_init_creates_empty_installations(self, mock_db_conn):
         """AppService should initialize empty installations dict."""
+        mock_conn, _ = mock_db_conn
+        mock_log = MagicMock()
         with patch("services.app_service.logger"):
-            service = AppService()
+            service = AppService(connection=mock_conn, log_service=mock_log)
             assert service.installations == {}
 
-    def test_init_logs_message(self):
+    def test_init_logs_message(self, mock_db_conn):
         """AppService should log initialization."""
+        mock_conn, _ = mock_db_conn
+        mock_log = MagicMock()
         with patch("services.app_service.logger") as mock_logger:
-            AppService()
-            mock_logger.info.assert_called_once_with("Application service initialized")
+            AppService(connection=mock_conn, log_service=mock_log)
+            mock_logger.info.assert_called_once_with(
+                "Application service initialized"
+            )
 
+    def test_init_stores_connection(self, mock_db_conn):
+        """AppService should store connection reference."""
+        mock_conn, _ = mock_db_conn
+        mock_log = MagicMock()
+        with patch("services.app_service.logger"):
+            service = AppService(connection=mock_conn, log_service=mock_log)
+            assert service._conn is mock_conn
 
-class TestEnsureInitialized:
-    """Tests for _ensure_initialized method."""
-
-    @pytest.mark.asyncio
-    async def test_ensure_initialized_calls_init_db(self):
-        """_ensure_initialized should call initialize_app_database."""
-        with (
-            patch("services.app_service.logger"),
-            patch("services.app_service.initialize_app_database") as mock_init,
-        ):
-            mock_init.return_value = None
-            service = AppService()
-            await service._ensure_initialized()
-            mock_init.assert_called_once()
-
-    @pytest.mark.asyncio
-    async def test_ensure_initialized_sets_flag(self):
-        """_ensure_initialized should set _initialized to True."""
-        with (
-            patch("services.app_service.logger"),
-            patch("services.app_service.initialize_app_database"),
-        ):
-            service = AppService()
-            await service._ensure_initialized()
-            assert service._initialized is True
-
-    @pytest.mark.asyncio
-    async def test_ensure_initialized_skips_if_already_initialized(self):
-        """_ensure_initialized should skip if already initialized."""
-        with (
-            patch("services.app_service.logger"),
-            patch("services.app_service.initialize_app_database") as mock_init,
-        ):
-            service = AppService()
-            service._initialized = True
-            await service._ensure_initialized()
-            mock_init.assert_not_called()
+    def test_init_stores_log_service(self, mock_db_conn):
+        """AppService should store log_service reference."""
+        mock_conn, _ = mock_db_conn
+        mock_log = MagicMock()
+        with patch("services.app_service.logger"):
+            service = AppService(connection=mock_conn, log_service=mock_log)
+            assert service._log_service is mock_log
 
 
 class TestFetchAllApps:
@@ -171,22 +140,17 @@ class TestFetchAllApps:
 
     @pytest.mark.asyncio
     async def test_fetch_all_apps_returns_apps(
-        self, mock_db_session, sample_app_table, sample_category_table
+        self, mock_db_conn, sample_app_row
     ):
         """_fetch_all_apps should return list of App instances."""
-        session, context_manager = mock_db_session
-        mock_result = MagicMock()
-        mock_result.all.return_value = [(sample_app_table, sample_category_table)]
-        session.execute = AsyncMock(return_value=mock_result)
+        mock_conn, mock_aiosqlite = mock_db_conn
+        mock_cursor = AsyncMock()
+        mock_cursor.fetchall.return_value = [sample_app_row]
+        mock_aiosqlite.execute.return_value = mock_cursor
 
-        with (
-            patch("services.app_service.logger"),
-            patch("services.app_service.initialize_app_database"),
-            patch("services.app_service.db_manager") as mock_db,
-        ):
-            mock_db.get_session.return_value = context_manager
-
-            service = AppService()
+        mock_log = MagicMock()
+        with patch("services.app_service.logger"):
+            service = AppService(connection=mock_conn, log_service=mock_log)
             apps = await service._fetch_all_apps()
 
             assert len(apps) == 1
@@ -195,22 +159,17 @@ class TestFetchAllApps:
 
     @pytest.mark.asyncio
     async def test_fetch_all_apps_logs_count(
-        self, mock_db_session, sample_app_table, sample_category_table
+        self, mock_db_conn, sample_app_row
     ):
         """_fetch_all_apps should log fetched count."""
-        session, context_manager = mock_db_session
-        mock_result = MagicMock()
-        mock_result.all.return_value = [(sample_app_table, sample_category_table)]
-        session.execute = AsyncMock(return_value=mock_result)
+        mock_conn, mock_aiosqlite = mock_db_conn
+        mock_cursor = AsyncMock()
+        mock_cursor.fetchall.return_value = [sample_app_row]
+        mock_aiosqlite.execute.return_value = mock_cursor
 
-        with (
-            patch("services.app_service.logger") as mock_logger,
-            patch("services.app_service.initialize_app_database"),
-            patch("services.app_service.db_manager") as mock_db,
-        ):
-            mock_db.get_session.return_value = context_manager
-
-            service = AppService()
+        mock_log = MagicMock()
+        with patch("services.app_service.logger") as mock_logger:
+            service = AppService(connection=mock_conn, log_service=mock_log)
             await service._fetch_all_apps()
 
             mock_logger.debug.assert_called_with(
@@ -300,24 +259,14 @@ class TestApplySorting:
     def test_sort_by_name_asc(self, sample_category):
         """_apply_sorting should sort by name ascending."""
         app1 = App(
-            id="a",
-            name="Zebra",
-            description="Z",
-            version="1.0",
-            category=sample_category,
-            author="test",
-            license="MIT",
+            id="a", name="Zebra", description="Z", version="1.0",
+            category=sample_category, author="test", license="MIT",
             created_at="2024-01-01T00:00:00Z",
             updated_at="2024-01-01T00:00:00Z",
         )
         app2 = App(
-            id="b",
-            name="Alpha",
-            description="A",
-            version="1.0",
-            category=sample_category,
-            author="test",
-            license="MIT",
+            id="b", name="Alpha", description="A", version="1.0",
+            category=sample_category, author="test", license="MIT",
             created_at="2024-01-01T00:00:00Z",
             updated_at="2024-01-01T00:00:00Z",
         )
@@ -330,24 +279,14 @@ class TestApplySorting:
     def test_sort_by_name_desc(self, sample_category):
         """_apply_sorting should sort by name descending."""
         app1 = App(
-            id="a",
-            name="Alpha",
-            description="A",
-            version="1.0",
-            category=sample_category,
-            author="test",
-            license="MIT",
+            id="a", name="Alpha", description="A", version="1.0",
+            category=sample_category, author="test", license="MIT",
             created_at="2024-01-01T00:00:00Z",
             updated_at="2024-01-01T00:00:00Z",
         )
         app2 = App(
-            id="b",
-            name="Zebra",
-            description="Z",
-            version="1.0",
-            category=sample_category,
-            author="test",
-            license="MIT",
+            id="b", name="Zebra", description="Z", version="1.0",
+            category=sample_category, author="test", license="MIT",
             created_at="2024-01-01T00:00:00Z",
             updated_at="2024-01-01T00:00:00Z",
         )
@@ -360,25 +299,15 @@ class TestApplySorting:
     def test_sort_by_rating(self, sample_category):
         """_apply_sorting should sort by rating."""
         app1 = App(
-            id="a",
-            name="A",
-            description="A",
-            version="1.0",
-            category=sample_category,
-            author="test",
-            license="MIT",
+            id="a", name="A", description="A", version="1.0",
+            category=sample_category, author="test", license="MIT",
             rating=3.0,
             created_at="2024-01-01T00:00:00Z",
             updated_at="2024-01-01T00:00:00Z",
         )
         app2 = App(
-            id="b",
-            name="B",
-            description="B",
-            version="1.0",
-            category=sample_category,
-            author="test",
-            license="MIT",
+            id="b", name="B", description="B", version="1.0",
+            category=sample_category, author="test", license="MIT",
             rating=5.0,
             created_at="2024-01-01T00:00:00Z",
             updated_at="2024-01-01T00:00:00Z",
@@ -391,25 +320,15 @@ class TestApplySorting:
     def test_sort_by_popularity(self, sample_category):
         """_apply_sorting should sort by install_count for popularity."""
         app1 = App(
-            id="a",
-            name="A",
-            description="A",
-            version="1.0",
-            category=sample_category,
-            author="test",
-            license="MIT",
+            id="a", name="A", description="A", version="1.0",
+            category=sample_category, author="test", license="MIT",
             install_count=10,
             created_at="2024-01-01T00:00:00Z",
             updated_at="2024-01-01T00:00:00Z",
         )
         app2 = App(
-            id="b",
-            name="B",
-            description="B",
-            version="1.0",
-            category=sample_category,
-            author="test",
-            license="MIT",
+            id="b", name="B", description="B", version="1.0",
+            category=sample_category, author="test", license="MIT",
             install_count=100,
             created_at="2024-01-01T00:00:00Z",
             updated_at="2024-01-01T00:00:00Z",
@@ -422,25 +341,15 @@ class TestApplySorting:
     def test_sort_by_install_count(self, sample_category):
         """_apply_sorting should handle install_count sort key."""
         app1 = App(
-            id="a",
-            name="A",
-            description="A",
-            version="1.0",
-            category=sample_category,
-            author="test",
-            license="MIT",
+            id="a", name="A", description="A", version="1.0",
+            category=sample_category, author="test", license="MIT",
             install_count=50,
             created_at="2024-01-01T00:00:00Z",
             updated_at="2024-01-01T00:00:00Z",
         )
         app2 = App(
-            id="b",
-            name="B",
-            description="B",
-            version="1.0",
-            category=sample_category,
-            author="test",
-            license="MIT",
+            id="b", name="B", description="B", version="1.0",
+            category=sample_category, author="test", license="MIT",
             install_count=200,
             created_at="2024-01-01T00:00:00Z",
             updated_at="2024-01-01T00:00:00Z",
@@ -453,24 +362,14 @@ class TestApplySorting:
     def test_sort_by_updated(self, sample_category):
         """_apply_sorting should sort by updated_at."""
         app1 = App(
-            id="a",
-            name="A",
-            description="A",
-            version="1.0",
-            category=sample_category,
-            author="test",
-            license="MIT",
+            id="a", name="A", description="A", version="1.0",
+            category=sample_category, author="test", license="MIT",
             created_at="2024-01-01T00:00:00Z",
             updated_at="2024-01-01T00:00:00Z",
         )
         app2 = App(
-            id="b",
-            name="B",
-            description="B",
-            version="1.0",
-            category=sample_category,
-            author="test",
-            license="MIT",
+            id="b", name="B", description="B", version="1.0",
+            category=sample_category, author="test", license="MIT",
             created_at="2024-01-01T00:00:00Z",
             updated_at="2024-06-01T00:00:00Z",
         )
@@ -482,24 +381,14 @@ class TestApplySorting:
     def test_sort_by_unknown_key(self, sample_category):
         """_apply_sorting should default to name for unknown key."""
         app1 = App(
-            id="a",
-            name="Zebra",
-            description="Z",
-            version="1.0",
-            category=sample_category,
-            author="test",
-            license="MIT",
+            id="a", name="Zebra", description="Z", version="1.0",
+            category=sample_category, author="test", license="MIT",
             created_at="2024-01-01T00:00:00Z",
             updated_at="2024-01-01T00:00:00Z",
         )
         app2 = App(
-            id="b",
-            name="Alpha",
-            description="A",
-            version="1.0",
-            category=sample_category,
-            author="test",
-            license="MIT",
+            id="b", name="Alpha", description="A", version="1.0",
+            category=sample_category, author="test", license="MIT",
             created_at="2024-01-01T00:00:00Z",
             updated_at="2024-01-01T00:00:00Z",
         )

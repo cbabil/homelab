@@ -13,7 +13,7 @@ import bcrypt
 import jwt
 import structlog
 
-from models.auth import User, UserRole
+from models.auth import User
 
 logger = structlog.get_logger("auth_helpers")
 
@@ -39,9 +39,21 @@ def verify_password(password: str, hashed: str) -> bool:
 
 
 def generate_jwt_token(
-    user: User, secret: str, algorithm: str = "HS256", expiry_hours: int = 24
+    user: User,
+    secret: str,
+    algorithm: str = "HS256",
+    expiry_hours: int = 24,
+    session_id: str | None = None,
 ) -> str:
-    """Generate JWT token for user."""
+    """Generate JWT token for user.
+
+    Args:
+        user: User object to generate token for.
+        secret: JWT secret key.
+        algorithm: JWT signing algorithm.
+        expiry_hours: Token expiry in hours.
+        session_id: Optional session ID to bind token to.
+    """
     payload = {
         "jti": str(uuid.uuid4()),
         "user_id": user.id,
@@ -51,6 +63,8 @@ def generate_jwt_token(
         "iat": datetime.now(UTC),
         "iss": "tomo",
     }
+    if session_id:
+        payload["session_id"] = session_id
 
     return jwt.encode(payload, secret, algorithm=algorithm)
 

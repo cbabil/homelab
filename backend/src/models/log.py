@@ -1,7 +1,6 @@
-"""
-Log Models
+"""Log Models.
 
-Pydantic and SQLAlchemy models for log entry storage and validation.
+Pydantic models for log entry storage and validation.
 Supports structured logging with tags, metadata, and filtering capabilities.
 """
 
@@ -9,37 +8,11 @@ import json
 from datetime import datetime
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field, field_serializer
-from sqlalchemy import Column, DateTime, Index, String, Text
-from sqlalchemy.sql import func
-
-from database.connection import Base
-
-
-class LogEntryTable(Base):
-    """SQLAlchemy table model for log entries."""
-
-    __tablename__ = "log_entries"
-
-    id = Column(String, primary_key=True)
-    timestamp = Column(DateTime, nullable=False)
-    level = Column(String, nullable=False, index=True)
-    source = Column(String, nullable=False, index=True)
-    message = Column(Text, nullable=False)
-    tags = Column(Text)  # JSON array
-    extra_data = Column(Text)  # JSON object
-    created_at = Column(DateTime, nullable=False, default=func.now(), index=True)
-
-    __table_args__ = (
-        Index("idx_logs_timestamp", "timestamp"),
-        Index("idx_logs_level_source", "level", "source"),
-    )
+from pydantic import BaseModel, Field, field_serializer
 
 
 class LogEntry(BaseModel):
     """Pydantic model for log entry validation and serialization."""
-
-    model_config = ConfigDict(from_attributes=True)
 
     id: str = Field(..., description="Unique log entry identifier")
     timestamp: datetime = Field(..., description="Log entry timestamp")
@@ -63,32 +36,30 @@ class LogEntry(BaseModel):
         return value.isoformat()
 
     @classmethod
-    def from_table_model(cls, table_model: LogEntryTable) -> "LogEntry":
-        """Convert SQLAlchemy model to Pydantic model."""
+    def from_row(cls, row: Any) -> "LogEntry":
+        """Create a LogEntry from an aiosqlite.Row (dict-like access)."""
         return cls(
-            id=table_model.id,
-            timestamp=table_model.timestamp,
-            level=table_model.level,
-            source=table_model.source,
-            message=table_model.message,
-            tags=json.loads(table_model.tags) if table_model.tags else [],
-            metadata=json.loads(table_model.extra_data)
-            if table_model.extra_data
-            else {},
-            created_at=table_model.created_at,
+            id=row["id"],
+            timestamp=row["timestamp"],
+            level=row["level"],
+            source=row["source"],
+            message=row["message"],
+            tags=json.loads(row["tags"]) if row["tags"] else [],
+            metadata=json.loads(row["extra_data"]) if row["extra_data"] else {},
+            created_at=row["created_at"],
         )
 
-    def to_table_model(self) -> LogEntryTable:
-        """Convert Pydantic model to SQLAlchemy model."""
-        return LogEntryTable(
-            id=self.id,
-            timestamp=self.timestamp,
-            level=self.level,
-            source=self.source,
-            message=self.message,
-            tags=json.dumps(self.tags) if self.tags else None,
-            extra_data=json.dumps(self.metadata) if self.metadata else None,
-        )
+    def to_insert_params(self) -> dict[str, Any]:
+        """Return a dict of column values for INSERT."""
+        return {
+            "id": self.id,
+            "timestamp": self.timestamp.isoformat(),
+            "level": self.level,
+            "source": self.source,
+            "message": self.message,
+            "tags": json.dumps(self.tags) if self.tags else None,
+            "extra_data": json.dumps(self.metadata) if self.metadata else None,
+        }
 
 
 class LogFilter(BaseModel):
