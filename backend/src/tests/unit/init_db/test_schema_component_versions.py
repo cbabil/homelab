@@ -96,7 +96,7 @@ class TestInitializeComponentVersionsSchema:
 
     @pytest.mark.asyncio
     async def test_initialize_creates_manager_if_none(self):
-        """Test that function creates DatabaseManager if none provided."""
+        """Test that function creates DatabaseService if none provided."""
         mock_conn = AsyncMock()
         mock_conn.executescript = AsyncMock()
         mock_conn.commit = AsyncMock()
@@ -111,7 +111,7 @@ class TestInitializeComponentVersionsSchema:
 
         with (
             patch(
-                "init_db.schema_component_versions.DatabaseManager",
+                "init_db.schema_component_versions.DatabaseService",
                 return_value=mock_manager,
             ),
             patch("init_db.schema_component_versions.logger"),
@@ -175,7 +175,7 @@ class TestCheckComponentVersionsExists:
 
     @pytest.mark.asyncio
     async def test_check_creates_manager_if_none(self):
-        """Test that check creates DatabaseManager if none provided."""
+        """Test that check creates DatabaseService if none provided."""
         mock_conn = AsyncMock()
         mock_cursor = AsyncMock()
         mock_cursor.fetchone = AsyncMock(return_value=("component_versions",))
@@ -191,7 +191,7 @@ class TestCheckComponentVersionsExists:
 
         with (
             patch(
-                "init_db.schema_component_versions.DatabaseManager",
+                "init_db.schema_component_versions.DatabaseService",
                 return_value=mock_manager,
             ),
             patch("init_db.schema_component_versions.logger"),

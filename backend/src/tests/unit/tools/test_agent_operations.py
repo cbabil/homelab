@@ -47,7 +47,7 @@ class TestInstallAgent:
         """Test install_agent when server not found."""
         mock_services["server_service"].get_server = AsyncMock(return_value=None)
 
-        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
+        with patch("tools.agent.lifecycle.log_event", new_callable=AsyncMock):
             result = await agent_tools.install_agent("server-123")
 
         assert result["success"] is False
@@ -62,7 +62,7 @@ class TestInstallAgent:
         server.system_info.docker_version = "not installed"
         mock_services["server_service"].get_server = AsyncMock(return_value=server)
 
-        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
+        with patch("tools.agent.lifecycle.log_event", new_callable=AsyncMock):
             result = await agent_tools.install_agent("server-123")
 
         assert result["success"] is False
@@ -77,7 +77,7 @@ class TestInstallAgent:
         server.system_info.docker_version = None
         mock_services["server_service"].get_server = AsyncMock(return_value=server)
 
-        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
+        with patch("tools.agent.lifecycle.log_event", new_callable=AsyncMock):
             result = await agent_tools.install_agent("server-123")
 
         assert result["success"] is False
@@ -91,7 +91,7 @@ class TestInstallAgent:
         server.system_info = None
         mock_services["server_service"].get_server = AsyncMock(return_value=server)
 
-        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
+        with patch("tools.agent.lifecycle.log_event", new_callable=AsyncMock):
             result = await agent_tools.install_agent("server-123")
 
         assert result["success"] is False
@@ -109,7 +109,7 @@ class TestInstallAgent:
         mock_services["server_service"].get_server = AsyncMock(return_value=server)
         mock_services["server_service"].get_credentials = AsyncMock(return_value=None)
 
-        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
+        with patch("tools.agent.lifecycle.log_event", new_callable=AsyncMock):
             result = await agent_tools.install_agent("server-123")
 
         assert result["success"] is False
@@ -143,7 +143,7 @@ class TestInstallAgent:
             return_value=(False, "Connection refused")
         )
 
-        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
+        with patch("tools.agent.lifecycle.log_event", new_callable=AsyncMock):
             result = await agent_tools.install_agent("server-123")
 
         assert result["success"] is False
@@ -179,7 +179,7 @@ class TestInstallAgent:
             return_value=(True, "Agent installed!")
         )
 
-        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
+        with patch("tools.agent.lifecycle.log_event", new_callable=AsyncMock):
             result = await agent_tools.install_agent("server-123")
 
         assert result["success"] is True
@@ -193,7 +193,7 @@ class TestInstallAgent:
             side_effect=Exception("Database error")
         )
 
-        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
+        with patch("tools.agent.lifecycle.log_event", new_callable=AsyncMock):
             result = await agent_tools.install_agent("server-123")
 
         assert result["success"] is False
@@ -345,7 +345,7 @@ class TestRevokeAgentToken:
         mock_services["agent_manager"].unregister_connection = AsyncMock()
         mock_services["agent_service"].revoke_agent_token = AsyncMock(return_value=True)
 
-        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
+        with patch("tools.agent.lifecycle.log_event", new_callable=AsyncMock):
             result = await agent_tools.revoke_agent_token("server-123")
 
         assert result["success"] is True
@@ -366,7 +366,7 @@ class TestRevokeAgentToken:
         mock_services["agent_manager"].is_connected.return_value = False
         mock_services["agent_service"].revoke_agent_token = AsyncMock(return_value=True)
 
-        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
+        with patch("tools.agent.lifecycle.log_event", new_callable=AsyncMock):
             result = await agent_tools.revoke_agent_token("server-123")
 
         assert result["success"] is True
@@ -398,7 +398,7 @@ class TestRevokeAgentToken:
             side_effect=Exception("DB error")
         )
 
-        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
+        with patch("tools.agent.lifecycle.log_event", new_callable=AsyncMock):
             result = await agent_tools.revoke_agent_token("server-123")
 
         assert result["success"] is False
@@ -437,7 +437,7 @@ class TestUninstallAgent:
         )
         mock_services["server_service"].get_server = AsyncMock(return_value=None)
 
-        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
+        with patch("tools.agent.lifecycle.log_event", new_callable=AsyncMock):
             result = await agent_tools.uninstall_agent("server-123")
 
         assert result["success"] is False
@@ -460,7 +460,7 @@ class TestUninstallAgent:
         mock_services["server_service"].get_server = AsyncMock(return_value=server)
         mock_services["server_service"].get_credentials = AsyncMock(return_value=None)
 
-        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
+        with patch("tools.agent.lifecycle.log_event", new_callable=AsyncMock):
             result = await agent_tools.uninstall_agent("server-123")
 
         assert result["success"] is False
@@ -493,7 +493,7 @@ class TestUninstallAgent:
         )
         mock_services["agent_service"].delete_agent = AsyncMock(return_value=True)
 
-        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
+        with patch("tools.agent.lifecycle.log_event", new_callable=AsyncMock):
             result = await agent_tools.uninstall_agent("server-123")
 
         assert result["success"] is True
@@ -519,7 +519,7 @@ class TestUninstallAgent:
             return_value=(True, "OK")
         )
 
-        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
+        with patch("tools.agent.lifecycle.log_event", new_callable=AsyncMock):
             result = await agent_tools.uninstall_agent("server-123")
 
         assert result["success"] is True
@@ -551,7 +551,7 @@ class TestUninstallAgent:
         )
         mock_services["agent_service"].delete_agent = AsyncMock(return_value=True)
 
-        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
+        with patch("tools.agent.lifecycle.log_event", new_callable=AsyncMock):
             result = await agent_tools.uninstall_agent("server-123")
 
         assert result["success"] is True
@@ -582,8 +582,8 @@ class TestUninstallAgent:
         )
         mock_services["agent_service"].delete_agent = AsyncMock(return_value=False)
 
-        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
-            with patch("tools.agent.tools.logger") as mock_logger:
+        with patch("tools.agent.lifecycle.log_event", new_callable=AsyncMock):
+            with patch("tools.agent.lifecycle.logger") as mock_logger:
                 result = await agent_tools.uninstall_agent("server-123")
 
         assert result["success"] is True
@@ -596,7 +596,7 @@ class TestUninstallAgent:
             side_effect=Exception("DB error")
         )
 
-        with patch("tools.agent.tools.log_event", new_callable=AsyncMock):
+        with patch("tools.agent.lifecycle.log_event", new_callable=AsyncMock):
             result = await agent_tools.uninstall_agent("server-123")
 
         assert result["success"] is False

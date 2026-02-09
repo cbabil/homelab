@@ -6,9 +6,9 @@ import { describe, it, expect } from 'vitest';
 import { render } from 'ink-testing-library';
 import React from 'react';
 import { LogsView } from '../../../src/app/views/LogsView.js';
-import type { ActivityLogEntry } from '../../../src/components/dashboard/ActivityLog.js';
+import type { ActivityEntry } from '../../../src/app/dashboard-types.js';
 
-const mockEntries: ActivityLogEntry[] = [
+const mockEntries: ActivityEntry[] = [
   { id: '1', timestamp: new Date('2025-01-01T12:00:00'), type: 'CMD', message: '/help' },
   { id: '2', timestamp: new Date('2025-01-01T12:00:05'), type: 'OK', message: 'Help displayed' },
 ];

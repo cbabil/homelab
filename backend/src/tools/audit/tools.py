@@ -6,7 +6,7 @@ import structlog
 from fastmcp import Context
 
 from models.log import LogFilter
-from services.service_log import log_service
+from services.service_log import LogService
 from services.settings_service import SettingsService
 from tools.common import log_event
 
@@ -18,7 +18,11 @@ AUDIT_TAGS = ["audit", "compliance"]
 class AuditTools:
     """Exposes audit operations as FastMCP tools."""
 
-    def __init__(self, settings_service: SettingsService) -> None:
+    def __init__(
+        self,
+        settings_service: SettingsService,
+        log_service: LogService | None = None,
+    ) -> None:
         self._settings_service = settings_service
         self._log_service = log_service
 

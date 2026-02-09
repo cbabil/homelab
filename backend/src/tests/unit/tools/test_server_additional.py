@@ -358,8 +358,8 @@ class TestTestConnectionAdvanced:
         agent.id = "agent-123"
         agent.status = AgentStatusEnum.CONNECTED
         mock_services["agent"].get_agent_by_server = AsyncMock(return_value=agent)
-        mock_services["agent"]._get_agent_db = MagicMock()
-        mock_services["agent"]._get_agent_db().update_agent = AsyncMock()
+        mock_services["agent"].get_agent_db = MagicMock()
+        mock_services["agent"].get_agent_db().update_agent = AsyncMock()
 
         with patch("tools.server.tools.log_event", new_callable=AsyncMock):
             result = await server_tools.test_connection("server-123")

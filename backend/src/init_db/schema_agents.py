@@ -7,7 +7,7 @@ agent management. Agents replace SSH for server communication.
 
 import structlog
 
-from database.connection import DatabaseManager
+from services.database_service import DatabaseService
 
 logger = structlog.get_logger("schema_agents")
 
@@ -51,7 +51,7 @@ CREATE INDEX IF NOT EXISTS idx_agent_registration_codes_agent_id
 """
 
 
-async def migrate_token_rotation_fields(db_manager: DatabaseManager) -> bool:
+async def migrate_token_rotation_fields(db_manager: DatabaseService) -> bool:
     """Add token rotation fields to agents table.
 
     Migration adds:
@@ -60,7 +60,7 @@ async def migrate_token_rotation_fields(db_manager: DatabaseManager) -> bool:
     - token_expires_at: When token should be rotated
 
     Args:
-        db_manager: DatabaseManager instance.
+        db_manager: DatabaseService instance.
 
     Returns:
         True if successful, False otherwise.
@@ -101,18 +101,18 @@ async def migrate_token_rotation_fields(db_manager: DatabaseManager) -> bool:
         return False
 
 
-async def initialize_agents_schema(db_manager: DatabaseManager = None) -> bool:
+async def initialize_agents_schema(db_manager: DatabaseService = None) -> bool:
     """Initialize the agents and agent_registration_codes table schemas.
 
     Args:
-        db_manager: Optional DatabaseManager instance. If not provided, creates one.
+        db_manager: Optional DatabaseService instance. If not provided, creates one.
 
     Returns:
         True if successful, False otherwise.
     """
     try:
         if db_manager is None:
-            db_manager = DatabaseManager()
+            db_manager = DatabaseService()
 
         async with db_manager.get_connection() as conn:
             await conn.executescript(AGENTS_SCHEMA)

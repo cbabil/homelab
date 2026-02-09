@@ -6,7 +6,7 @@ Defines the notifications table for persistent notification storage.
 
 import structlog
 
-from database.connection import DatabaseManager
+from services.database_service import DatabaseService
 
 logger = structlog.get_logger("schema_notifications")
 
@@ -38,18 +38,18 @@ CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id,
 """
 
 
-async def initialize_notifications_schema(db_manager: DatabaseManager = None) -> bool:
+async def initialize_notifications_schema(db_manager: DatabaseService = None) -> bool:
     """Initialize the notifications table schema.
 
     Args:
-        db_manager: Optional DatabaseManager instance. If not provided, creates one.
+        db_manager: Optional DatabaseService instance. If not provided, creates one.
 
     Returns:
         True if successful, False otherwise.
     """
     try:
         if db_manager is None:
-            db_manager = DatabaseManager()
+            db_manager = DatabaseService()
 
         async with db_manager.get_connection() as conn:
             await conn.executescript(NOTIFICATIONS_SCHEMA)

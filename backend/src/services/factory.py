@@ -5,7 +5,6 @@ from typing import Any
 
 import structlog
 
-from database.connection import db_manager
 from services.activity_service import ActivityService
 from services.agent_lifecycle import AgentLifecycleManager
 from services.agent_manager import AgentManager
@@ -15,6 +14,7 @@ from services.app_service import AppService
 from services.auth_service import AuthService
 from services.backup_service import BackupService
 from services.command_router import CommandRouter
+from services.csrf_service import CSRFService
 from services.dashboard_service import DashboardService
 from services.database import AgentDatabaseService, DatabaseConnection
 from services.database_service import DatabaseService
@@ -24,8 +24,10 @@ from services.marketplace_service import MarketplaceService
 from services.metrics_service import MetricsService
 from services.monitoring_service import MonitoringService
 from services.notification_service import NotificationService
+from services.rate_limit_service import RateLimitService
 from services.retention_service import RetentionService
 from services.server_service import ServerService
+from services.service_log import LogService
 from services.session_service import SessionService
 from services.settings_service import SettingsService
 from services.ssh_service import SSHService
@@ -43,24 +45,32 @@ def create_services(data_directory: Path, config: dict[str, Any]) -> dict[str, A
     Returns:
         Dictionary of service name to service instance.
     """
-    # Ensure shared database components use the resolved configuration
-    db_manager.set_data_directory(data_directory)
     database_service = DatabaseService(data_directory=data_directory)
 
+    # Shared database connection for all raw-aiosqlite services
+    db_connection = DatabaseConnection(data_directory=data_directory)
+
+    # Log service (used by auth, monitoring, retention, audit, app)
+    log_service = LogService(connection=db_connection)
+
     # Core services
-    app_service = AppService()
-    auth_service = AuthService(db_service=database_service)
+    app_service = AppService(connection=db_connection, log_service=log_service)
+    auth_service = AuthService(db_service=database_service, log_service=log_service)
     session_service = SessionService(db_service=database_service)
+    rate_limit_service = RateLimitService(db_service=database_service)
+    csrf_service = CSRFService(db_service=database_service)
     ssh_service = SSHService()
-    monitoring_service = MonitoringService()
+    monitoring_service = MonitoringService(log_service=log_service)
     server_service = ServerService(db_service=database_service)
     settings_service = SettingsService(db_service=database_service)
-    marketplace_service = MarketplaceService()
+    marketplace_service = MarketplaceService(connection=db_connection)
     backup_service = BackupService(db_service=database_service)
     activity_service = ActivityService(db_service=database_service)
     notification_service = NotificationService(db_service=database_service)
     retention_service = RetentionService(
-        db_service=database_service, auth_service=auth_service
+        db_service=database_service,
+        auth_service=auth_service,
+        log_service=log_service,
     )
 
     metrics_service = MetricsService(
@@ -70,7 +80,6 @@ def create_services(data_directory: Path, config: dict[str, Any]) -> dict[str, A
     )
 
     # Agent services for WebSocket-based agent communication
-    db_connection = DatabaseConnection(data_directory=data_directory)
     agent_db_service = AgentDatabaseService(db_connection)
     agent_service = AgentService(
         db_service=database_service,
@@ -119,14 +128,17 @@ def create_services(data_directory: Path, config: dict[str, Any]) -> dict[str, A
         activity_service=activity_service,
     )
 
-    logger.info("All services created", service_count=22)
+    logger.info("All services created", service_count=24)
 
     return {
         "config": config,
         "database_service": database_service,
+        "log_service": log_service,
         "app_service": app_service,
         "auth_service": auth_service,
         "session_service": session_service,
+        "rate_limit_service": rate_limit_service,
+        "csrf_service": csrf_service,
         "ssh_service": ssh_service,
         "monitoring_service": monitoring_service,
         "server_service": server_service,

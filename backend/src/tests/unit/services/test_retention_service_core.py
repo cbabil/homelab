@@ -41,7 +41,17 @@ def mock_connection():
 
 
 @pytest.fixture
-def retention_service(mock_db_service, mock_auth_service, mock_connection):
+def mock_log_service():
+    """Create mock log service."""
+    svc = MagicMock()
+    svc.create_log_entry = AsyncMock()
+    return svc
+
+
+@pytest.fixture
+def retention_service(
+    mock_db_service, mock_auth_service, mock_connection, mock_log_service
+):
     """Create RetentionService with mocked dependencies."""
     mock_db_service.get_connection = MagicMock()
     mock_db_service.get_connection.return_value.__aenter__ = AsyncMock(
@@ -50,7 +60,9 @@ def retention_service(mock_db_service, mock_auth_service, mock_connection):
     mock_db_service.get_connection.return_value.__aexit__ = AsyncMock()
 
     with patch("services.retention_service.logger"):
-        return RetentionService(mock_db_service, mock_auth_service)
+        return RetentionService(
+            mock_db_service, mock_auth_service, log_service=mock_log_service
+        )
 
 
 @pytest.fixture
@@ -260,12 +272,9 @@ class TestLogRetentionOperation:
     @pytest.mark.asyncio
     async def test_log_retention_operation_success(self, retention_service):
         """_log_retention_operation should log successful operations."""
-        with (
-            patch("services.retention_service.logger") as mock_logger,
-            patch("services.retention_service.log_service") as mock_log_svc,
-        ):
-            mock_log_svc.create_log_entry = AsyncMock()
+        retention_service._log_service.create_log_entry = AsyncMock()
 
+        with patch("services.retention_service.logger") as mock_logger:
             await retention_service._log_retention_operation(
                 RetentionOperation.CLEANUP,
                 RetentionType.AUDIT_LOGS,
@@ -274,18 +283,15 @@ class TestLogRetentionOperation:
                 records_affected=100,
             )
 
-            mock_log_svc.create_log_entry.assert_called_once()
+            retention_service._log_service.create_log_entry.assert_called_once()
             mock_logger.info.assert_called()
 
     @pytest.mark.asyncio
     async def test_log_retention_operation_failure(self, retention_service):
         """_log_retention_operation should log failed operations."""
-        with (
-            patch("services.retention_service.logger"),
-            patch("services.retention_service.log_service") as mock_log_svc,
-        ):
-            mock_log_svc.create_log_entry = AsyncMock()
+        retention_service._log_service.create_log_entry = AsyncMock()
 
+        with patch("services.retention_service.logger"):
             await retention_service._log_retention_operation(
                 RetentionOperation.CLEANUP,
                 RetentionType.AUDIT_LOGS,
@@ -294,19 +300,16 @@ class TestLogRetentionOperation:
                 error_message="Cleanup failed",
             )
 
-            mock_log_svc.create_log_entry.assert_called_once()
-            call_args = mock_log_svc.create_log_entry.call_args[0][0]
+            retention_service._log_service.create_log_entry.assert_called_once()
+            call_args = retention_service._log_service.create_log_entry.call_args[0][0]
             assert call_args.level == "ERROR"
 
     @pytest.mark.asyncio
     async def test_log_retention_operation_with_metadata(self, retention_service):
         """_log_retention_operation should include metadata."""
-        with (
-            patch("services.retention_service.logger"),
-            patch("services.retention_service.log_service") as mock_log_svc,
-        ):
-            mock_log_svc.create_log_entry = AsyncMock()
+        retention_service._log_service.create_log_entry = AsyncMock()
 
+        with patch("services.retention_service.logger"):
             await retention_service._log_retention_operation(
                 RetentionOperation.SETTINGS_UPDATE,
                 None,
@@ -315,20 +318,17 @@ class TestLogRetentionOperation:
                 metadata={"settings": {"log_retention": 30}},
             )
 
-            call_args = mock_log_svc.create_log_entry.call_args[0][0]
+            call_args = retention_service._log_service.create_log_entry.call_args[0][0]
             assert "retention" in call_args.tags
 
     @pytest.mark.asyncio
     async def test_log_retention_operation_handles_log_error(self, retention_service):
         """_log_retention_operation should handle logging errors."""
-        with (
-            patch("services.retention_service.logger") as mock_logger,
-            patch("services.retention_service.log_service") as mock_log_svc,
-        ):
-            mock_log_svc.create_log_entry = AsyncMock(
-                side_effect=Exception("Log error")
-            )
+        retention_service._log_service.create_log_entry = AsyncMock(
+            side_effect=Exception("Log error")
+        )
 
+        with patch("services.retention_service.logger") as mock_logger:
             # Should not raise
             await retention_service._log_retention_operation(
                 RetentionOperation.CLEANUP,
@@ -477,12 +477,13 @@ class TestUpdateRetentionSettings:
 
         settings = RetentionSettings(log_retention=45, data_retention=120)
 
-        with (
-            patch("services.retention_service.logger") as mock_logger,
-            patch("services.retention_service.log_service") as mock_log_svc,
-        ):
-            mock_log_svc.create_log_entry = AsyncMock()
-            service = RetentionService(mock_db_svc, mock_auth_service)
+        mock_log_svc = MagicMock()
+        mock_log_svc.create_log_entry = AsyncMock()
+
+        with patch("services.retention_service.logger") as mock_logger:
+            service = RetentionService(
+                mock_db_svc, mock_auth_service, log_service=mock_log_svc
+            )
             result = await service.update_retention_settings("admin-123", settings)
 
         assert result is False

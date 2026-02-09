@@ -7,7 +7,7 @@ setup status, and installation information.
 
 import structlog
 
-from database.connection import DatabaseManager
+from services.database_service import DatabaseService
 
 logger = structlog.get_logger("schema_system_info")
 
@@ -45,18 +45,18 @@ CREATE INDEX IF NOT EXISTS idx_system_info_is_setup ON system_info(is_setup);
 """
 
 
-async def initialize_system_info_schema(db_manager: DatabaseManager = None) -> bool:
+async def initialize_system_info_schema(db_manager: DatabaseService = None) -> bool:
     """Initialize the system_info table schema.
 
     Args:
-        db_manager: Optional DatabaseManager instance. If not provided, creates one.
+        db_manager: Optional DatabaseService instance. If not provided, creates one.
 
     Returns:
         True if successful, False otherwise.
     """
     try:
         if db_manager is None:
-            db_manager = DatabaseManager()
+            db_manager = DatabaseService()
 
         async with db_manager.get_connection() as conn:
             # Execute schema creation
@@ -71,18 +71,18 @@ async def initialize_system_info_schema(db_manager: DatabaseManager = None) -> b
         return False
 
 
-async def check_system_info_exists(db_manager: DatabaseManager = None) -> bool:
+async def check_system_info_exists(db_manager: DatabaseService = None) -> bool:
     """Check if system_info table exists and has data.
 
     Args:
-        db_manager: Optional DatabaseManager instance.
+        db_manager: Optional DatabaseService instance.
 
     Returns:
         True if table exists and has data, False otherwise.
     """
     try:
         if db_manager is None:
-            db_manager = DatabaseManager()
+            db_manager = DatabaseService()
 
         async with db_manager.get_connection() as conn:
             cursor = await conn.execute(

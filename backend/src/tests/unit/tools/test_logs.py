@@ -20,26 +20,28 @@ class TestLogsToolsInit:
     def test_initialization(self):
         """Test LogsTools is initialized correctly."""
         mock_activity_service = MagicMock()
+        mock_log_service = MagicMock()
 
         with patch("tools.logs.tools.logger"):
-            tools = LogsTools(mock_activity_service)
+            tools = LogsTools(mock_activity_service, log_service=mock_log_service)
 
         assert tools.activity_service == mock_activity_service
+        assert tools.log_service == mock_log_service
 
 
 class TestGetLogs:
     """Tests for the get_logs tool."""
 
     @pytest.fixture
-    def mock_activity_service(self):
-        """Create mock activity service."""
+    def mock_log_service(self):
+        """Create mock log service."""
         return MagicMock()
 
     @pytest.fixture
-    def logs_tools(self, mock_activity_service):
+    def logs_tools(self, mock_log_service):
         """Create LogsTools instance."""
         with patch("tools.logs.tools.logger"):
-            return LogsTools(mock_activity_service)
+            return LogsTools(MagicMock(), log_service=mock_log_service)
 
     @pytest.fixture
     def sample_logs(self):
@@ -70,10 +72,9 @@ class TestGetLogs:
     @pytest.mark.asyncio
     async def test_get_logs_success(self, logs_tools, sample_logs):
         """Test successfully getting logs."""
-        with patch("tools.logs.tools.log_service") as mock_log_service:
-            mock_log_service.get_logs = AsyncMock(return_value=sample_logs)
+        logs_tools.log_service.get_logs = AsyncMock(return_value=sample_logs)
 
-            result = await logs_tools.get_logs()
+        result = await logs_tools.get_logs()
 
         assert result["success"] is True
         assert len(result["data"]["logs"]) == 2
@@ -84,10 +85,9 @@ class TestGetLogs:
     @pytest.mark.asyncio
     async def test_get_logs_with_level_filter(self, logs_tools, sample_logs):
         """Test getting logs with level filter."""
-        with patch("tools.logs.tools.log_service") as mock_log_service:
-            mock_log_service.get_logs = AsyncMock(return_value=[sample_logs[1]])
+        logs_tools.log_service.get_logs = AsyncMock(return_value=[sample_logs[1]])
 
-            result = await logs_tools.get_logs(level="ERROR")
+        result = await logs_tools.get_logs(level="ERROR")
 
         assert result["success"] is True
         assert result["data"]["filtered"] is True
@@ -95,10 +95,9 @@ class TestGetLogs:
     @pytest.mark.asyncio
     async def test_get_logs_with_source_filter(self, logs_tools, sample_logs):
         """Test getting logs with source filter."""
-        with patch("tools.logs.tools.log_service") as mock_log_service:
-            mock_log_service.get_logs = AsyncMock(return_value=[sample_logs[0]])
+        logs_tools.log_service.get_logs = AsyncMock(return_value=[sample_logs[0]])
 
-            result = await logs_tools.get_logs(source="system")
+        result = await logs_tools.get_logs(source="system")
 
         assert result["success"] is True
         assert result["data"]["filtered"] is True
@@ -106,10 +105,9 @@ class TestGetLogs:
     @pytest.mark.asyncio
     async def test_get_logs_with_limit(self, logs_tools, sample_logs):
         """Test getting logs with limit."""
-        with patch("tools.logs.tools.log_service") as mock_log_service:
-            mock_log_service.get_logs = AsyncMock(return_value=[sample_logs[0]])
+        logs_tools.log_service.get_logs = AsyncMock(return_value=[sample_logs[0]])
 
-            result = await logs_tools.get_logs(limit=1)
+        result = await logs_tools.get_logs(limit=1)
 
         assert result["success"] is True
         assert result["data"]["filtered"] is True
@@ -117,10 +115,9 @@ class TestGetLogs:
     @pytest.mark.asyncio
     async def test_get_logs_with_pagination(self, logs_tools, sample_logs):
         """Test getting logs with pagination."""
-        with patch("tools.logs.tools.log_service") as mock_log_service:
-            mock_log_service.get_logs = AsyncMock(return_value=[sample_logs[1]])
+        logs_tools.log_service.get_logs = AsyncMock(return_value=[sample_logs[1]])
 
-            result = await logs_tools.get_logs(limit=1, page=2)
+        result = await logs_tools.get_logs(limit=1, page=2)
 
         assert result["success"] is True
         assert result["data"]["filtered"] is True
@@ -128,10 +125,9 @@ class TestGetLogs:
     @pytest.mark.asyncio
     async def test_get_logs_empty_result(self, logs_tools):
         """Test getting logs when no logs exist."""
-        with patch("tools.logs.tools.log_service") as mock_log_service:
-            mock_log_service.get_logs = AsyncMock(return_value=[])
+        logs_tools.log_service.get_logs = AsyncMock(return_value=[])
 
-            result = await logs_tools.get_logs()
+        result = await logs_tools.get_logs()
 
         assert result["success"] is True
         assert result["data"]["logs"] == []
@@ -140,10 +136,9 @@ class TestGetLogs:
     @pytest.mark.asyncio
     async def test_get_logs_log_format(self, logs_tools, sample_logs):
         """Test log entry format in response."""
-        with patch("tools.logs.tools.log_service") as mock_log_service:
-            mock_log_service.get_logs = AsyncMock(return_value=[sample_logs[0]])
+        logs_tools.log_service.get_logs = AsyncMock(return_value=[sample_logs[0]])
 
-            result = await logs_tools.get_logs()
+        result = await logs_tools.get_logs()
 
         log = result["data"]["logs"][0]
         assert log["id"] == "log-001"
@@ -169,10 +164,11 @@ class TestGetLogs:
             created_at=None,
         )
 
-        with patch("tools.logs.tools.log_service") as mock_log_service:
-            mock_log_service.get_logs = AsyncMock(return_value=[log_without_metadata])
+        logs_tools.log_service.get_logs = AsyncMock(
+            return_value=[log_without_metadata]
+        )
 
-            result = await logs_tools.get_logs()
+        result = await logs_tools.get_logs()
 
         log = result["data"]["logs"][0]
         assert log["session_id"] is None
@@ -181,12 +177,11 @@ class TestGetLogs:
     @pytest.mark.asyncio
     async def test_get_logs_exception(self, logs_tools):
         """Test get_logs handles exceptions."""
-        with patch("tools.logs.tools.log_service") as mock_log_service:
-            mock_log_service.get_logs = AsyncMock(
-                side_effect=Exception("Database error")
-            )
+        logs_tools.log_service.get_logs = AsyncMock(
+            side_effect=Exception("Database error")
+        )
 
-            result = await logs_tools.get_logs()
+        result = await logs_tools.get_logs()
 
         assert result["success"] is False
         assert result["error"] == "LOGS_ERROR"
@@ -197,38 +192,36 @@ class TestPurgeLogs:
     """Tests for the purge_logs tool."""
 
     @pytest.fixture
-    def mock_activity_service(self):
-        """Create mock activity service."""
+    def mock_log_service(self):
+        """Create mock log service."""
         return MagicMock()
 
     @pytest.fixture
-    def logs_tools(self, mock_activity_service):
+    def logs_tools(self, mock_log_service):
         """Create LogsTools instance."""
         with patch("tools.logs.tools.logger"):
-            return LogsTools(mock_activity_service)
+            return LogsTools(MagicMock(), log_service=mock_log_service)
 
     @pytest.mark.asyncio
     async def test_purge_logs_success(self, logs_tools):
         """Test successful log purge."""
-        with patch("tools.logs.tools.log_service") as mock_log_service:
-            mock_log_service.purge_logs = AsyncMock(return_value=100)
-            mock_log_service.create_log_entry = AsyncMock()
+        logs_tools.log_service.purge_logs = AsyncMock(return_value=100)
+        logs_tools.log_service.create_log_entry = AsyncMock()
 
-            result = await logs_tools.purge_logs()
+        result = await logs_tools.purge_logs()
 
         assert result["success"] is True
         assert result["deleted"] == 100
         assert "Purged 100 log entries" in result["message"]
-        mock_log_service.create_log_entry.assert_called_once()
+        logs_tools.log_service.create_log_entry.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_purge_logs_zero_deleted(self, logs_tools):
         """Test purge when no logs to delete."""
-        with patch("tools.logs.tools.log_service") as mock_log_service:
-            mock_log_service.purge_logs = AsyncMock(return_value=0)
-            mock_log_service.create_log_entry = AsyncMock()
+        logs_tools.log_service.purge_logs = AsyncMock(return_value=0)
+        logs_tools.log_service.create_log_entry = AsyncMock()
 
-            result = await logs_tools.purge_logs()
+        result = await logs_tools.purge_logs()
 
         assert result["success"] is True
         assert result["deleted"] == 0
@@ -236,13 +229,12 @@ class TestPurgeLogs:
     @pytest.mark.asyncio
     async def test_purge_logs_log_entry_fails(self, logs_tools):
         """Test purge succeeds even if logging the action fails."""
-        with patch("tools.logs.tools.log_service") as mock_log_service:
-            mock_log_service.purge_logs = AsyncMock(return_value=50)
-            mock_log_service.create_log_entry = AsyncMock(
-                side_effect=Exception("Log write error")
-            )
+        logs_tools.log_service.purge_logs = AsyncMock(return_value=50)
+        logs_tools.log_service.create_log_entry = AsyncMock(
+            side_effect=Exception("Log write error")
+        )
 
-            result = await logs_tools.purge_logs()
+        result = await logs_tools.purge_logs()
 
         # Should still succeed - logging failure is not critical
         assert result["success"] is True
@@ -251,12 +243,11 @@ class TestPurgeLogs:
     @pytest.mark.asyncio
     async def test_purge_logs_exception(self, logs_tools):
         """Test purge_logs handles exceptions."""
-        with patch("tools.logs.tools.log_service") as mock_log_service:
-            mock_log_service.purge_logs = AsyncMock(
-                side_effect=Exception("Purge failed")
-            )
+        logs_tools.log_service.purge_logs = AsyncMock(
+            side_effect=Exception("Purge failed")
+        )
 
-            result = await logs_tools.purge_logs()
+        result = await logs_tools.purge_logs()
 
         assert result["success"] is False
         assert result["error"] == "PURGE_LOGS_ERROR"
@@ -278,7 +269,7 @@ class TestGetAuditLogs:
     def logs_tools(self, mock_activity_service):
         """Create LogsTools instance."""
         with patch("tools.logs.tools.logger"):
-            return LogsTools(mock_activity_service)
+            return LogsTools(mock_activity_service, log_service=MagicMock())
 
     @pytest.fixture
     def sample_activity(self):
@@ -325,7 +316,6 @@ class TestGetAuditLogs:
         )
 
         assert result["success"] is True
-        # Verify the types were converted to enum
         call_args = mock_activity_service.get_activities.call_args
         assert call_args.kwargs["activity_types"] == [
             ActivityType.USER_LOGIN,

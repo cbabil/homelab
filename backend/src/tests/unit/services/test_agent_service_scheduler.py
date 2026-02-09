@@ -80,7 +80,7 @@ class TestRotationScheduler:
         """Test that starting scheduler twice logs warning."""
         await agent_service.start_rotation_scheduler(check_interval=1)
 
-        with patch("services.agent_service.logger") as mock_logger:
+        with patch("services.agent_rotation.logger") as mock_logger:
             await agent_service.start_rotation_scheduler(check_interval=1)
             mock_logger.warning.assert_called_once()
 

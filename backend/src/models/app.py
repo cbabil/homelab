@@ -1,4 +1,4 @@
-"""Application data models and database mappings for the Tomo marketplace."""
+"""Application data models for the Tomo marketplace."""
 
 from __future__ import annotations
 
@@ -9,68 +9,6 @@ from typing import Any
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic.alias_generators import to_camel
-from sqlalchemy import (
-    Boolean,
-    Column,
-    DateTime,
-    Float,
-    ForeignKey,
-    Index,
-    Integer,
-    String,
-    Text,
-)
-from sqlalchemy.sql import func
-
-from database.connection import Base
-
-
-class AppCategoryTable(Base):
-    """SQLAlchemy table for application categories."""
-
-    __tablename__ = "app_categories"
-
-    id = Column(String, primary_key=True)
-    name = Column(String, nullable=False)
-    description = Column(Text, nullable=False)
-    icon = Column(String, nullable=False)
-    color = Column(String, nullable=False)
-
-
-class ApplicationTable(Base):
-    """SQLAlchemy table for applications."""
-
-    __tablename__ = "applications"
-
-    id = Column(String, primary_key=True)
-    name = Column(String, nullable=False)
-    description = Column(Text, nullable=False)
-    long_description = Column(Text)
-    version = Column(String, nullable=False)
-    category_id = Column(
-        String, ForeignKey("app_categories.id"), nullable=False, index=True
-    )
-    tags = Column(Text)
-    icon = Column(String)
-    screenshots = Column(Text)
-    author = Column(String, nullable=False)
-    repository = Column(String)
-    documentation = Column(String)
-    license = Column(String, nullable=False)
-    requirements = Column(Text)
-    status = Column(String, nullable=False, index=True)
-    install_count = Column(Integer)
-    rating = Column(Float)
-    featured = Column(Boolean, default=False)
-    created_at = Column(DateTime, nullable=False, default=func.now())
-    updated_at = Column(
-        DateTime, nullable=False, default=func.now(), onupdate=func.now()
-    )
-    connected_server_id = Column(String, nullable=True, index=True)
-
-    __table_args__ = (
-        Index("idx_applications_category_status", "category_id", "status"),
-    )
 
 
 class AppStatus(str, Enum):
@@ -115,27 +53,35 @@ class AppCategory(BaseModel):
     color: str = Field(..., description="Category color theme classes")
 
     @staticmethod
-    def from_table(table: AppCategoryTable) -> AppCategory:
-        """Create a Pydantic model from a database row."""
+    def from_row(row: Any) -> AppCategory:
+        """Create from an aiosqlite.Row with cat_ prefixed columns or plain."""
+        # Support both aliased (JOIN) and plain column access
+        try:
+            return AppCategory(
+                id=row["cat_id"],
+                name=row["cat_name"],
+                description=row["cat_desc"],
+                icon=row["cat_icon"],
+                color=row["cat_color"],
+            )
+        except (IndexError, KeyError):
+            return AppCategory(
+                id=row["id"],
+                name=row["name"],
+                description=row["description"],
+                icon=row["icon"],
+                color=row["color"],
+            )
 
-        return AppCategory(
-            id=table.id,
-            name=table.name,
-            description=table.description,
-            icon=table.icon,
-            color=table.color,
-        )
-
-    def to_table_model(self) -> AppCategoryTable:
-        """Convert model to SQLAlchemy table instance."""
-
-        return AppCategoryTable(
-            id=self.id,
-            name=self.name,
-            description=self.description,
-            icon=self.icon,
-            color=self.color,
-        )
+    def to_insert_params(self) -> dict[str, Any]:
+        """Return a dict of column values for INSERT."""
+        return {
+            "id": self.id,
+            "name": self.name,
+            "description": self.description,
+            "icon": self.icon,
+            "color": self.color,
+        }
 
 
 class App(BaseModel):
@@ -178,90 +124,96 @@ class App(BaseModel):
     )
 
     @staticmethod
-    def from_table(app_row: ApplicationTable, category_row: AppCategoryTable) -> App:
-        """Create an App model from database rows."""
-
-        tags = json.loads(app_row.tags) if app_row.tags else []
-        screenshots = json.loads(app_row.screenshots) if app_row.screenshots else []
+    def from_row(row: Any) -> App:
+        """Create an App model from a JOIN result row with aliased category columns."""
+        tags = json.loads(row["tags"]) if row["tags"] else []
+        screenshots = json.loads(row["screenshots"]) if row["screenshots"] else []
         requirements_data = (
-            json.loads(app_row.requirements) if app_row.requirements else {}
+            json.loads(row["requirements"]) if row["requirements"] else {}
+        )
+
+        category = AppCategory(
+            id=row["cat_id"],
+            name=row["cat_name"],
+            description=row["cat_desc"],
+            icon=row["cat_icon"],
+            color=row["cat_color"],
         )
 
         return App(
-            id=app_row.id,
-            name=app_row.name,
-            description=app_row.description,
-            long_description=app_row.long_description,
-            version=app_row.version,
-            category=AppCategory.from_table(category_row),
+            id=row["id"],
+            name=row["name"],
+            description=row["description"],
+            long_description=row["long_description"],
+            version=row["version"],
+            category=category,
             tags=tags,
-            icon=app_row.icon,
+            icon=row["icon"],
             screenshots=screenshots or None,
-            author=app_row.author,
-            repository=app_row.repository,
-            documentation=app_row.documentation,
-            license=app_row.license,
+            author=row["author"],
+            repository=row["repository"],
+            documentation=row["documentation"],
+            license=row["license"],
             requirements=AppRequirements(**requirements_data)
             if requirements_data
             else AppRequirements(),
-            status=AppStatus(app_row.status),
-            install_count=app_row.install_count,
-            rating=app_row.rating,
-            featured=app_row.featured,
-            created_at=App._serialize_datetime(app_row.created_at),
-            updated_at=App._serialize_datetime(app_row.updated_at),
-            connected_server_id=app_row.connected_server_id,
+            status=AppStatus(row["status"]),
+            install_count=row["install_count"],
+            rating=row["rating"],
+            featured=bool(row["featured"]),
+            created_at=App._serialize_datetime_str(row["created_at"]),
+            updated_at=App._serialize_datetime_str(row["updated_at"]),
+            connected_server_id=row["connected_server_id"],
         )
 
-    def to_table_model(self) -> ApplicationTable:
-        """Convert the App model into an ApplicationTable instance."""
-
+    def to_insert_params(self) -> dict[str, Any]:
+        """Return a dict of column values for INSERT."""
         requirements_payload = (
             self.requirements.model_dump(exclude_none=True, by_alias=False)
             if self.requirements
             else {}
         )
 
-        return ApplicationTable(
-            id=self.id,
-            name=self.name,
-            description=self.description,
-            long_description=self.long_description,
-            version=self.version,
-            category_id=self.category.id,
-            tags=json.dumps(self.tags) if self.tags else None,
-            icon=self.icon,
-            screenshots=json.dumps(self.screenshots) if self.screenshots else None,
-            author=self.author,
-            repository=self.repository,
-            documentation=self.documentation,
-            license=self.license,
-            requirements=json.dumps(requirements_payload)
+        return {
+            "id": self.id,
+            "name": self.name,
+            "description": self.description,
+            "long_description": self.long_description,
+            "version": self.version,
+            "category_id": self.category.id,
+            "tags": json.dumps(self.tags) if self.tags else None,
+            "icon": self.icon,
+            "screenshots": json.dumps(self.screenshots) if self.screenshots else None,
+            "author": self.author,
+            "repository": self.repository,
+            "documentation": self.documentation,
+            "license": self.license,
+            "requirements": json.dumps(requirements_payload)
             if requirements_payload
             else None,
-            status=self.status.value
+            "status": self.status.value
             if isinstance(self.status, AppStatus)
             else str(self.status),
-            install_count=self.install_count,
-            rating=self.rating,
-            featured=self.featured,
-            created_at=self._parse_datetime(self.created_at),
-            updated_at=self._parse_datetime(self.updated_at),
-            connected_server_id=self.connected_server_id,
-        )
+            "install_count": self.install_count,
+            "rating": self.rating,
+            "featured": 1 if self.featured else 0,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
+            "connected_server_id": self.connected_server_id,
+        }
 
     @staticmethod
-    def _serialize_datetime(value: datetime | None) -> str:
-        """Serialize datetime to ISO 8601 string."""
-
+    def _serialize_datetime_str(value: str | datetime | None) -> str:
+        """Serialize a datetime or string to ISO 8601."""
         if value is None:
             return datetime.now(UTC).isoformat()
-        return value.replace(microsecond=0).isoformat()
+        if isinstance(value, datetime):
+            return value.replace(microsecond=0).isoformat()
+        return str(value)
 
     @staticmethod
     def _parse_datetime(value: str) -> datetime:
         """Parse ISO 8601 string into datetime object."""
-
         if value.lower().endswith("z"):
             value = value[:-1] + "+00:00"
         return datetime.fromisoformat(value)

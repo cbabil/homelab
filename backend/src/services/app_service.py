@@ -1,72 +1,66 @@
-"""Application Service
+"""Application Service.
 
 Provides data access and business logic for the application marketplace."""
 
 from __future__ import annotations
 
+import json
 from datetime import UTC, datetime
 from typing import Any
 
 import structlog
-from sqlalchemy import select
 
-from database.connection import db_manager
 from exceptions import ApplicationLogWriteError
-from init_db.schema_apps import initialize_app_database
 from logs import build_empty_search_log
 from models.app import (
     App,
     AppCategory,
-    AppCategoryTable,
     AppFilter,
     AppInstallation,
-    ApplicationTable,
     AppRequirements,
     AppSearchResult,
     AppStatus,
 )
-from services.service_log import log_service
+from services.database.base import DatabaseConnection
+from services.service_log import LogService
 
 logger = structlog.get_logger("app_service")
+
+# SQL for fetching apps with their categories via JOIN
+_APP_JOIN_SQL = """
+    SELECT a.*, c.id AS cat_id, c.name AS cat_name, c.description AS cat_desc,
+           c.icon AS cat_icon, c.color AS cat_color
+    FROM applications a
+    JOIN app_categories c ON a.category_id = c.id
+"""
 
 
 class AppService:
     """Service for managing applications and installations."""
 
-    def __init__(self) -> None:
-        self._initialized = False
+    def __init__(
+        self,
+        connection: DatabaseConnection,
+        log_service: LogService,
+    ) -> None:
+        self._conn = connection
+        self._log_service = log_service
         self.installations: dict[str, AppInstallation] = {}
         logger.info("Application service initialized")
 
-    async def _ensure_initialized(self) -> None:
-        if not self._initialized:
-            await initialize_app_database()
-            self._initialized = True
-
     async def _fetch_all_apps(self) -> list[App]:
         """Fetch all applications with their categories from the database."""
+        async with self._conn.get_connection() as conn:
+            cursor = await conn.execute(_APP_JOIN_SQL)
+            rows = await cursor.fetchall()
 
-        await self._ensure_initialized()
-
-        async with db_manager.get_session() as session:
-            result = await session.execute(
-                select(ApplicationTable, AppCategoryTable).join(
-                    AppCategoryTable,
-                    ApplicationTable.category_id == AppCategoryTable.id,
-                )
-            )
-            rows = result.all()
-
-        apps: list[App] = [
-            App.from_table(app_row, category_row) for app_row, category_row in rows
-        ]
+        apps = [App.from_row(row) for row in rows]
         logger.debug("Fetched applications from database", count=len(apps))
         return apps
 
     @staticmethod
     def _apply_filters(apps: list[App], filters: AppFilter) -> list[App]:
         """Apply in-memory filtering to the application list."""
-
         filtered: list[App] = []
         search_term = filters.search.lower() if filters.search else None
         required_tags = set(tag.lower() for tag in filters.tags or [])
@@ -74,25 +68,20 @@ class AppService:
         for app in apps:
             if filters.category and app.category.id != filters.category:
                 continue
-
             if filters.status and app.status != filters.status:
                 continue
-
             if filters.featured is not None and bool(app.featured) != filters.featured:
                 continue
-
             if required_tags and not required_tags.issubset(
                 {tag.lower() for tag in app.tags}
             ):
                 continue
-
             if (
                 search_term
                 and search_term not in app.name.lower()
                 and search_term not in app.description.lower()
             ):
                 continue
-
             filtered.append(app)
 
         return filtered
@@ -100,7 +89,6 @@ class AppService:
     @staticmethod
     def _apply_sorting(apps: list[App], filters: AppFilter) -> None:
         """Sort applications in-place based on filter configuration."""
-
         reverse = (filters.sort_order or "asc").lower() == "desc"
         sort_key = (filters.sort_by or "name").lower()
 
@@ -122,14 +110,12 @@ class AppService:
     @staticmethod
     def _iso_to_datetime(value: str) -> datetime:
         """Convert ISO formatted string to datetime for sorting."""
-
         if value.lower().endswith("z"):
             value = value[:-1] + "+00:00"
         return datetime.fromisoformat(value)
 
     async def search_apps(self, filters: AppFilter) -> AppSearchResult:
         """Search applications with filters and return a result set."""
-
         apps = await self._fetch_all_apps()
         filtered_apps = self._apply_filters(apps, filters)
         self._apply_sorting(filtered_apps, filters)
@@ -139,7 +125,7 @@ class AppService:
         if total == 0:
             metadata_filters = filters.model_dump(exclude_none=True, mode="json")
             try:
-                await log_service.create_log_entry(
+                await self._log_service.create_log_entry(
                     build_empty_search_log(metadata_filters)
                 )
             except Exception as exc:  # pylint: disable=broad-except
@@ -158,72 +144,57 @@ class AppService:
 
     async def get_app_by_id(self, app_id: str) -> App | None:
         """Retrieve a single application by identifier."""
-
-        await self._ensure_initialized()
-
-        async with db_manager.get_session() as session:
-            result = await session.execute(
-                select(ApplicationTable, AppCategoryTable)
-                .join(
-                    AppCategoryTable,
-                    ApplicationTable.category_id == AppCategoryTable.id,
-                )
-                .where(ApplicationTable.id == app_id)
+        async with self._conn.get_connection() as conn:
+            cursor = await conn.execute(
+                _APP_JOIN_SQL + " WHERE a.id = ?", (app_id,)
             )
-            row = result.first()
+            row = await cursor.fetchone()
 
         if not row:
             logger.warning("Application not found", app_id=app_id)
             return None
 
-        app = App.from_table(row[0], row[1])
+        app = App.from_row(row)
         logger.debug("Retrieved application", app_id=app_id)
         return app
 
     async def add_app(self, app_data: dict[str, Any]) -> App:
-        """Add an application to the catalog from marketplace import.
-
-        Args:
-            app_data: Dictionary with app fields (from marketplace import)
-
-        Returns:
-            Created App instance
-        """
-        await self._ensure_initialized()
-
-        # Get or create category
+        """Add an application to the catalog from marketplace import."""
         category_id = app_data.get("category_id") or app_data.get("category")
 
-        async with db_manager.get_session() as session:
+        async with self._conn.get_connection() as conn:
             # Check if app already exists
-            existing = await session.execute(
-                select(ApplicationTable).where(ApplicationTable.id == app_data["id"])
+            cursor = await conn.execute(
+                "SELECT id FROM applications WHERE id = ?", (app_data["id"],)
             )
-            if existing.first():
+            if await cursor.fetchone():
                 raise ValueError(f"Application {app_data['id']} already exists")
 
-            # Get the category
-            cat_result = await session.execute(
-                select(AppCategoryTable).where(AppCategoryTable.id == category_id)
+            # Get or create category
+            cursor = await conn.execute(
+                "SELECT * FROM app_categories WHERE id = ?", (category_id,)
             )
-            cat_row = cat_result.first()
+            cat_row = await cursor.fetchone()
 
             if not cat_row:
-                # Create a simple category if it doesn't exist
-                new_cat = AppCategoryTable(
-                    id=category_id,
-                    name=category_id.title(),
-                    description=f"Applications in the {category_id} category",
-                    icon="Package",
-                    color="text-primary",
+                await conn.execute(
+                    """INSERT INTO app_categories (id, name, description, icon, color)
+                       VALUES (?, ?, ?, ?, ?)""",
+                    (
+                        category_id,
+                        category_id.title(),
+                        f"Applications in the {category_id} category",
+                        "Package",
+                        "text-primary",
+                    ),
                 )
-                session.add(new_cat)
-                await session.flush()
-                cat_row = (new_cat,)
+                cursor = await conn.execute(
+                    "SELECT * FROM app_categories WHERE id = ?", (category_id,)
+                )
+                cat_row = await cursor.fetchone()
 
-            category = AppCategory.from_table(cat_row[0])
+            category = AppCategory.from_row(cat_row)
 
-            # Build requirements
             req_data = app_data.get("requirements", {})
             requirements = AppRequirements(
                 min_ram=req_data.get("min_ram"),
@@ -256,63 +227,42 @@ class AppService:
                 updated_at=now,
             )
 
-            session.add(app.to_table_model())
+            params = app.to_insert_params()
+            cols = ", ".join(params.keys())
+            placeholders = ", ".join(["?"] * len(params))
+            await conn.execute(
+                f"INSERT INTO applications ({cols}) VALUES ({placeholders})",
+                tuple(params.values()),
+            )
+            await conn.commit()
             logger.info("Application created from import", app_id=app.id, name=app.name)
 
         return app
 
     async def remove_app(self, app_id: str) -> bool:
-        """Remove an application from the catalog.
-
-        Only allows removing apps that are not installed.
-
-        Args:
-            app_id: Application ID to remove
-
-        Returns:
-            True if removed, False if not found
-
-        Raises:
-            ValueError: If app is installed
-        """
-        await self._ensure_initialized()
-
-        async with db_manager.get_session() as session:
-            # Check if app exists and get its status
-            result = await session.execute(
-                select(ApplicationTable).where(ApplicationTable.id == app_id)
+        """Remove an application from the catalog."""
+        async with self._conn.get_connection() as conn:
+            cursor = await conn.execute(
+                "SELECT status FROM applications WHERE id = ?", (app_id,)
             )
-            app_row = result.first()
+            row = await cursor.fetchone()
 
-            if not app_row:
+            if not row:
                 return False
 
-            app = app_row[0]
-            if app.status == "installed":
+            if row["status"] == "installed":
                 raise ValueError(
                     f"Cannot remove installed app '{app_id}'. Uninstall it first."
                 )
 
-            await session.execute(
-                ApplicationTable.__table__.delete().where(ApplicationTable.id == app_id)
-            )
+            await conn.execute("DELETE FROM applications WHERE id = ?", (app_id,))
+            await conn.commit()
             logger.info("Application removed from catalog", app_id=app_id)
 
         return True
 
     async def remove_apps_bulk(self, app_ids: list[str]) -> dict[str, Any]:
-        """Remove multiple applications from the catalog.
-
-        Only removes apps that are not installed. Skips installed apps.
-
-        Args:
-            app_ids: List of application IDs to remove
-
-        Returns:
-            Dict with removed count, skipped count, and details
-        """
-        await self._ensure_initialized()
-
+        """Remove multiple applications from the catalog."""
         removed = []
         skipped = []
 
@@ -334,95 +284,67 @@ class AppService:
         }
 
     async def get_app_ids(self) -> list[str]:
-        """Get all application IDs in the catalog.
-
-        Returns:
-            List of application IDs
-        """
-        await self._ensure_initialized()
-
-        async with db_manager.get_session() as session:
-            result = await session.execute(select(ApplicationTable.id))
-            return [row[0] for row in result.all()]
+        """Get all application IDs in the catalog."""
+        async with self._conn.get_connection() as conn:
+            cursor = await conn.execute("SELECT id FROM applications")
+            rows = await cursor.fetchall()
+            return [row["id"] for row in rows]
 
     async def mark_app_uninstalled(self, app_id: str) -> bool:
-        """Mark an application as uninstalled (update status to available).
-
-        Args:
-            app_id: Application ID to update
-
-        Returns:
-            True if updated, False if not found
-        """
-        await self._ensure_initialized()
-
-        async with db_manager.get_session() as session:
-            result = await session.execute(
-                select(ApplicationTable).where(ApplicationTable.id == app_id)
+        """Mark an application as uninstalled (update status to available)."""
+        async with self._conn.get_connection() as conn:
+            cursor = await conn.execute(
+                "SELECT id FROM applications WHERE id = ?", (app_id,)
             )
-            app_row = result.first()
-
-            if not app_row:
+            if not await cursor.fetchone():
                 return False
 
-            app = app_row[0]
-            app.status = "available"
-            app.connected_server_id = None
+            await conn.execute(
+                "UPDATE applications SET status = ?, connected_server_id = NULL WHERE id = ?",
+                ("available", app_id),
+            )
+            await conn.commit()
             logger.info("Application marked as uninstalled", app_id=app_id)
 
         return True
 
     async def mark_app_installed(self, app_id: str, server_id: str) -> bool:
-        """Mark an application as installed on a server.
-
-        Args:
-            app_id: Application ID to update (may be prefixed with 'casaos-')
-            server_id: Server ID where the app is installed
-
-        Returns:
-            True if updated, False if not found
-        """
-        await self._ensure_initialized()
-
-        async with db_manager.get_session() as session:
-            # Try finding by exact ID first
-            result = await session.execute(
-                select(ApplicationTable).where(ApplicationTable.id == app_id)
+        """Mark an application as installed on a server."""
+        async with self._conn.get_connection() as conn:
+            cursor = await conn.execute(
+                "SELECT id FROM applications WHERE id = ?", (app_id,)
             )
-            app_row = result.first()
+            row = await cursor.fetchone()
 
-            # If not found and ID has prefix, try without prefix
-            if not app_row and app_id.startswith("casaos-"):
-                base_id = app_id[7:]  # Remove 'casaos-' prefix
-                result = await session.execute(
-                    select(ApplicationTable).where(ApplicationTable.id == base_id)
+            if not row and app_id.startswith("casaos-"):
+                base_id = app_id[7:]
+                cursor = await conn.execute(
+                    "SELECT id FROM applications WHERE id = ?", (base_id,)
                 )
-                app_row = result.first()
+                row = await cursor.fetchone()
 
-            if not app_row:
+            if not row:
                 logger.warning(
                     "Application not found for marking installed", app_id=app_id
                 )
                 return False
 
-            app = app_row[0]
-            app.status = "installed"
-            app.connected_server_id = server_id
+            actual_id = row["id"]
+            await conn.execute(
+                "UPDATE applications SET status = ?, connected_server_id = ? WHERE id = ?",
+                ("installed", server_id, actual_id),
+            )
+            await conn.commit()
             logger.info(
-                "Application marked as installed", app_id=app.id, server_id=server_id
+                "Application marked as installed",
+                app_id=actual_id,
+                server_id=server_id,
             )
 
         return True
 
     async def mark_apps_uninstalled_bulk(self, app_ids: list[str]) -> dict[str, Any]:
-        """Mark multiple applications as uninstalled.
-
-        Args:
-            app_ids: List of application IDs to uninstall
-
-        Returns:
-            Dict with uninstalled count and details
-        """
+        """Mark multiple applications as uninstalled."""
         uninstalled = []
         skipped = []
 
@@ -447,7 +369,6 @@ class AppService:
         self, app_id: str, config: dict[str, Any] | None = None
     ) -> AppInstallation:
         """Simulate application installation and track status in memory."""
-
         app = await self.get_app_by_id(app_id)
         if not app:
             raise ValueError(f"Application {app_id} not found")
@@ -460,6 +381,6 @@ class AppService:
             config=config or {},
         )
 
-        self.installations[app_id] = installation
+        self.installations = {**self.installations, app_id: installation}
         logger.info("Application marked as installing", app_id=app_id)
         return installation

@@ -5,88 +5,89 @@
  * Shows countdown and allows session extension or logout.
  */
 
-import Box from '@mui/material/Box'
-import Paper from '@mui/material/Paper'
-import Typography from '@mui/material/Typography'
-import Button from '@mui/material/Button'
-import IconButton from '@mui/material/IconButton'
-import { Warning, Schedule, Close } from '@mui/icons-material'
-import { SessionWarning as SessionWarningType } from '@/types/auth'
+import Box from '@mui/material/Box';
+import Paper from '@mui/material/Paper';
+import Typography from '@mui/material/Typography';
+import Button from '@mui/material/Button';
+import IconButton from '@mui/material/IconButton';
+import { Warning, Schedule, Close } from '@mui/icons-material';
+import type { Theme } from '@mui/material/styles';
+import { SessionWarning as SessionWarningType } from '@/types/auth';
 
-type WarningLevel = SessionWarningType['warningLevel']
+type WarningLevel = SessionWarningType['warningLevel'];
 
 interface SeverityStyle {
-  bgcolor: (theme: any) => string
-  borderColor: (theme: any) => string
-  iconColor: string
-  textColor: (theme: any) => string
-  buttonColor: 'error' | 'warning' | 'info'
+  bgcolor: (theme: Theme) => string;
+  borderColor: (theme: Theme) => string;
+  iconColor: string;
+  textColor: (theme: Theme) => string;
+  buttonColor: 'error' | 'warning' | 'info';
 }
 
 function getSeverityStyle(warningLevel: WarningLevel): SeverityStyle {
   switch (warningLevel) {
     case 'critical':
       return {
-        bgcolor: (theme: any) =>
+        bgcolor: (theme: Theme) =>
           theme.palette.mode === 'dark' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(254, 226, 226, 1)',
-        borderColor: (theme: any) =>
+        borderColor: (theme: Theme) =>
           theme.palette.mode === 'dark' ? 'rgba(239, 68, 68, 0.5)' : 'rgba(252, 165, 165, 1)',
         iconColor: 'error.main',
-        textColor: (theme: any) => (theme.palette.mode === 'dark' ? 'error.light' : 'error.dark'),
+        textColor: (theme: Theme) => (theme.palette.mode === 'dark' ? 'error.light' : 'error.dark'),
         buttonColor: 'error',
-      }
+      };
     case 'warning':
       return {
-        bgcolor: (theme: any) =>
+        bgcolor: (theme: Theme) =>
           theme.palette.mode === 'dark' ? 'rgba(245, 158, 11, 0.1)' : 'rgba(254, 243, 199, 1)',
-        borderColor: (theme: any) =>
+        borderColor: (theme: Theme) =>
           theme.palette.mode === 'dark' ? 'rgba(245, 158, 11, 0.5)' : 'rgba(252, 211, 77, 1)',
         iconColor: 'warning.main',
-        textColor: (theme: any) =>
+        textColor: (theme: Theme) =>
           theme.palette.mode === 'dark' ? 'warning.light' : 'warning.dark',
         buttonColor: 'warning',
-      }
+      };
     default:
       return {
-        bgcolor: (theme: any) =>
+        bgcolor: (theme: Theme) =>
           theme.palette.mode === 'dark' ? 'rgba(59, 130, 246, 0.1)' : 'rgba(219, 234, 254, 1)',
-        borderColor: (theme: any) =>
+        borderColor: (theme: Theme) =>
           theme.palette.mode === 'dark' ? 'rgba(59, 130, 246, 0.5)' : 'rgba(147, 197, 253, 1)',
         iconColor: 'info.main',
-        textColor: (theme: any) => (theme.palette.mode === 'dark' ? 'info.light' : 'info.dark'),
+        textColor: (theme: Theme) => (theme.palette.mode === 'dark' ? 'info.light' : 'info.dark'),
         buttonColor: 'info',
-      }
+      };
   }
 }
 
 function formatTimeRemaining(minutesRemaining: number): string {
   if (minutesRemaining <= 0) {
-    return 'Session has expired'
+    return 'Session has expired';
   } else if (minutesRemaining === 1) {
-    return '1 minute remaining'
+    return '1 minute remaining';
   }
-  return `${minutesRemaining} minutes remaining`
+  return `${minutesRemaining} minutes remaining`;
 }
 
 interface SessionWarningProps {
-  warning: SessionWarningType
-  onExtendSession?: () => void
-  onLogout?: () => void
-  onDismiss?: () => void
+  warning: SessionWarningType;
+  onExtendSession?: () => void;
+  onLogout?: () => void;
+  onDismiss?: () => void;
 }
 
 export function SessionWarning({
   warning,
   onExtendSession,
   onLogout,
-  onDismiss
+  onDismiss,
 }: SessionWarningProps) {
   if (!warning.isShowing) {
-    return null
+    return null;
   }
 
-  const severity = getSeverityStyle(warning.warningLevel)
-  const isUrgent = warning.minutesRemaining <= 1
+  const severity = getSeverityStyle(warning.warningLevel);
+  const isUrgent = warning.minutesRemaining <= 1;
 
   return (
     <Paper
@@ -128,7 +129,10 @@ export function SessionWarning({
           <Typography variant="body2" fontWeight={600} sx={{ color: severity.textColor }}>
             {isUrgent ? 'Session Expired' : 'Session Expiring Soon'}
           </Typography>
-          <Typography variant="caption" sx={{ color: severity.textColor, mt: 0.5, display: 'block' }}>
+          <Typography
+            variant="caption"
+            sx={{ color: severity.textColor, mt: 0.5, display: 'block' }}
+          >
             {formatTimeRemaining(warning.minutesRemaining)}
           </Typography>
 
@@ -186,5 +190,5 @@ export function SessionWarning({
         )}
       </Box>
     </Paper>
-  )
+  );
 }

@@ -7,7 +7,7 @@ backend, frontend, and mcp components.
 
 import structlog
 
-from database.connection import DatabaseManager
+from services.database_service import DatabaseService
 
 logger = structlog.get_logger("schema_component_versions")
 
@@ -37,19 +37,19 @@ END;
 
 
 async def initialize_component_versions_schema(
-    db_manager: DatabaseManager = None,
+    db_manager: DatabaseService = None,
 ) -> bool:
     """Initialize the component_versions table schema.
 
     Args:
-        db_manager: Optional DatabaseManager instance. If not provided, creates one.
+        db_manager: Optional DatabaseService instance. If not provided, creates one.
 
     Returns:
         True if successful, False otherwise.
     """
     try:
         if db_manager is None:
-            db_manager = DatabaseManager()
+            db_manager = DatabaseService()
 
         async with db_manager.get_connection() as conn:
             await conn.executescript(COMPONENT_VERSIONS_SCHEMA)
@@ -63,18 +63,18 @@ async def initialize_component_versions_schema(
         return False
 
 
-async def check_component_versions_exists(db_manager: DatabaseManager = None) -> bool:
+async def check_component_versions_exists(db_manager: DatabaseService = None) -> bool:
     """Check if component_versions table exists.
 
     Args:
-        db_manager: Optional DatabaseManager instance.
+        db_manager: Optional DatabaseService instance.
 
     Returns:
         True if table exists, False otherwise.
     """
     try:
         if db_manager is None:
-            db_manager = DatabaseManager()
+            db_manager = DatabaseService()
 
         async with db_manager.get_connection() as conn:
             cursor = await conn.execute(

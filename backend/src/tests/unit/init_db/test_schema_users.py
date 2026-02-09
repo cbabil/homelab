@@ -158,7 +158,7 @@ class TestInitializeUsersSchema:
 
     @pytest.mark.asyncio
     async def test_initialize_creates_manager_if_none(self):
-        """Test that function creates DatabaseManager if none provided."""
+        """Test that function creates DatabaseService if none provided."""
         mock_conn = AsyncMock()
         mock_conn.executescript = AsyncMock()
         mock_conn.commit = AsyncMock()
@@ -179,7 +179,7 @@ class TestInitializeUsersSchema:
         )
 
         with (
-            patch("init_db.schema_users.DatabaseManager", return_value=mock_manager),
+            patch("init_db.schema_users.DatabaseService", return_value=mock_manager),
             patch("init_db.schema_users.logger"),
         ):
             result = await initialize_users_schema(None)

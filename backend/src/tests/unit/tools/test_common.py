@@ -18,7 +18,7 @@ class TestLogEvent:
     @pytest.mark.asyncio
     async def test_log_event_success(self):
         """Test successful log event creation."""
-        with patch("lib.log_event.log_service") as mock_log_service:
+        with patch("lib.log_event._log_service") as mock_log_service:
             mock_log_service.create_log_entry = AsyncMock()
 
             await log_event(
@@ -43,7 +43,7 @@ class TestLogEvent:
     @pytest.mark.asyncio
     async def test_log_event_without_metadata(self):
         """Test log event creation without metadata."""
-        with patch("lib.log_event.log_service") as mock_log_service:
+        with patch("lib.log_event._log_service") as mock_log_service:
             mock_log_service.create_log_entry = AsyncMock()
 
             await log_event(
@@ -63,7 +63,7 @@ class TestLogEvent:
     async def test_log_event_handles_exception(self):
         """Test log event handles exceptions gracefully."""
         with (
-            patch("lib.log_event.log_service") as mock_log_service,
+            patch("lib.log_event._log_service") as mock_log_service,
             patch("lib.log_event.logger") as mock_logger,
         ):
             mock_log_service.create_log_entry = AsyncMock(
@@ -83,7 +83,7 @@ class TestLogEvent:
     @pytest.mark.asyncio
     async def test_log_event_entry_has_timestamp(self):
         """Test log entry has a timestamp."""
-        with patch("lib.log_event.log_service") as mock_log_service:
+        with patch("lib.log_event._log_service") as mock_log_service:
             mock_log_service.create_log_entry = AsyncMock()
 
             await log_event(source="app", level="INFO", message="Test", tags=[])

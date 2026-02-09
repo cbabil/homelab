@@ -6,15 +6,16 @@
  */
 
 import type { AppState, CommandResult } from './types.js';
+import { VALID_VIEWS } from './dashboard-types.js';
 import { SIGNALS } from './signals.js';
 import { getMCPClient } from '../lib/mcp-client.js';
-import type { AgentInfo } from '../lib/agent.js';
 import { handleAgentCommand } from './handlers/agent-handlers.js';
-import { handleServerCommand, type ServerInfo } from './handlers/server-handlers.js';
+import { handleServerCommand } from './handlers/server-handlers.js';
 import { handleUpdateCommand } from './handlers/update-handlers.js';
 import { handleSecurityCommand } from './handlers/security-handlers.js';
 import { handleBackupCommand } from './handlers/backup-handlers.js';
 import { handleUserCommand } from './handlers/user-handlers.js';
+import { getHelpText } from './handlers/help-handler.js';
 import { sanitizeForDisplay } from '../lib/validation.js';
 
 /**
@@ -43,88 +44,7 @@ const slashCommands: SlashCommand[] = [
     name: 'help',
     aliases: ['h', '?'],
     description: 'Show available commands',
-    handler: async () => [
-      {
-        type: 'info',
-        content: 'Available Commands:',
-      },
-      {
-        type: 'system',
-        content: '  /help, /h, /?          - Show this help message',
-      },
-      {
-        type: 'system',
-        content: '  /clear, /cls           - Clear output history',
-      },
-      {
-        type: 'system',
-        content: '  /quit, /exit, /q       - Exit the CLI',
-      },
-      {
-        type: 'system',
-        content: '  /status                - Show connection status',
-      },
-      {
-        type: 'system',
-        content: '  /servers               - List all servers',
-      },
-      {
-        type: 'system',
-        content: '  /agents                - List all agents',
-      },
-      {
-        type: 'system',
-        content: '  /login                 - Authenticate as admin',
-      },
-      {
-        type: 'system',
-        content: '  /logout                - Clear authentication',
-      },
-      {
-        type: 'system',
-        content: '  /view <tab>            - Switch view (dashboard|agents|logs|settings)',
-      },
-      {
-        type: 'system',
-        content: '  /refresh               - Force data refresh',
-      },
-      {
-        type: 'info',
-        content: '',
-      },
-      {
-        type: 'info',
-        content: 'Management Commands:',
-      },
-      {
-        type: 'system',
-        content: '  /agent <sub> [args]    - Agent management (list|status|ping|rotate|install)',
-      },
-      {
-        type: 'system',
-        content: '  /server <sub>          - Server management (list)',
-      },
-      {
-        type: 'system',
-        content: '  /update                - Check for updates',
-      },
-      {
-        type: 'system',
-        content: '  /security <sub> [args] - Security (list-locked|unlock)',
-      },
-      {
-        type: 'system',
-        content: '  /backup <sub> [args]   - Backup (export|import)',
-      },
-      {
-        type: 'system',
-        content: '  /user <sub> <args>     - User management (reset-password)',
-      },
-      {
-        type: 'system',
-        content: '  /admin create          - Initial admin setup',
-      },
-    ],
+    handler: async () => getHelpText(),
   },
   {
     name: 'clear',
@@ -142,139 +62,39 @@ const slashCommands: SlashCommand[] = [
     name: 'status',
     aliases: [],
     description: 'Show connection status',
-    handler: async (_args, state) => {
-      const results: CommandResult[] = [];
-
-      results.push({
-        type: 'info',
-        content: 'Connection Status:',
-      });
-
-      results.push({
+    handler: async (_args, state) => [
+      { type: 'info', content: 'Connection Status:' },
+      {
         type: state.mcpConnected ? 'success' : 'error',
         content: `  MCP: ${state.mcpConnected ? 'Connected' : 'Disconnected'}`,
-      });
-
-      results.push({
-        type: 'info',
-        content: `  URL: ${state.mcpUrl}`,
-      });
-
-      results.push({
+      },
+      { type: 'info', content: `  URL: ${state.mcpUrl}` },
+      {
         type: state.authenticated ? 'success' : 'info',
         content: `  Auth: ${state.authenticated ? `Authenticated as ${state.username}` : 'Not authenticated'}`,
-      });
-
-      return results;
-    },
+      },
+    ],
   },
   {
     name: 'servers',
     aliases: [],
     description: 'List all servers',
-
     handler: async (_args, state) => {
       const authError = requireAuth(state);
       if (authError) return authError;
-
-      try {
-        const client = getMCPClient();
-        const response = await client.callTool<{ servers: ServerInfo[] }>(
-          'list_servers',
-          {}
-        );
-
-        if (!response.success) {
-          return [
-            { type: 'error', content: response.error || 'Failed to list servers' },
-          ];
-        }
-
-        const servers = response.data?.servers || [];
-
-        if (servers.length === 0) {
-          return [{ type: 'info', content: 'No servers found.' }];
-        }
-
-        const results: CommandResult[] = [
-          { type: 'info', content: `Found ${servers.length} server(s):` },
-        ];
-
-        for (const server of servers) {
-          const statusColor = server.status === 'online' ? 'success' : 'info';
-          results.push({
-            type: statusColor,
-            content: `  [${server.id}] ${server.name} (${server.hostname}) - ${server.status}`,
-          });
-        }
-
-        return results;
-      } catch (err) {
-        return [
-          {
-            type: 'error',
-            content: err instanceof Error ? err.message : 'Failed to list servers',
-          },
-        ];
-      }
+      const client = getMCPClient();
+      return handleServerCommand(client, 'list', []);
     },
   },
   {
     name: 'agents',
     aliases: [],
     description: 'List all agents',
-
     handler: async (_args, state) => {
       const authError = requireAuth(state);
       if (authError) return authError;
-
-      try {
-        const client = getMCPClient();
-        const response = await client.callTool<{ agents: AgentInfo[] }>(
-          'list_agents',
-          {}
-        );
-
-        if (!response.success) {
-          return [
-            { type: 'error', content: response.error || 'Failed to list agents' },
-          ];
-        }
-
-        const agents = response.data?.agents || [];
-
-        if (agents.length === 0) {
-          return [{ type: 'info', content: 'No agents found.' }];
-        }
-
-        const results: CommandResult[] = [
-          { type: 'info', content: `Found ${agents.length} agent(s):` },
-        ];
-
-        for (const agent of agents) {
-          const statusType =
-            agent.status === 'connected' ? 'success' : 'info';
-          results.push({
-            type: statusType,
-            content: `  [${agent.id}] Server: ${agent.server_id} - ${agent.status.toUpperCase()}`,
-          });
-          if (agent.version) {
-            results.push({
-              type: 'system',
-              content: `       Version: ${agent.version}`,
-            });
-          }
-        }
-
-        return results;
-      } catch (err) {
-        return [
-          {
-            type: 'error',
-            content: err instanceof Error ? err.message : 'Failed to list agents',
-          },
-        ];
-      }
+      const client = getMCPClient();
+      return handleAgentCommand(client, 'list', []);
     },
   },
   {
@@ -297,12 +117,11 @@ const slashCommands: SlashCommand[] = [
     aliases: [],
     description: 'Switch dashboard view',
     handler: async (args) => {
-      const validViews = ['dashboard', 'agents', 'logs', 'settings'];
       const target = args[0]?.toLowerCase();
 
-      if (!target || !validViews.includes(target)) {
+      if (!target || !VALID_VIEWS.includes(target as never)) {
         return [
-          { type: 'error', content: `Usage: /view <${validViews.join('|')}>` },
+          { type: 'error', content: `Usage: /view <${VALID_VIEWS.join('|')}>` },
         ];
       }
 
@@ -319,7 +138,6 @@ const slashCommands: SlashCommand[] = [
     name: 'agent',
     aliases: [],
     description: 'Agent management',
-
     handler: async (args, state) => {
       const authError = requireAuth(state);
       if (authError) return authError;
@@ -333,7 +151,6 @@ const slashCommands: SlashCommand[] = [
     name: 'server',
     aliases: [],
     description: 'Server management',
-
     handler: async (args, state) => {
       const authError = requireAuth(state);
       if (authError) return authError;
@@ -347,7 +164,6 @@ const slashCommands: SlashCommand[] = [
     name: 'update',
     aliases: [],
     description: 'Check for updates',
-
     handler: async (_args, state) => {
       const authError = requireAuth(state);
       if (authError) return authError;
@@ -359,7 +175,6 @@ const slashCommands: SlashCommand[] = [
     name: 'security',
     aliases: [],
     description: 'Security management',
-
     handler: async (args, state) => {
       const authError = requireAuth(state);
       if (authError) return authError;
@@ -372,7 +187,6 @@ const slashCommands: SlashCommand[] = [
     name: 'backup',
     aliases: [],
     description: 'Backup and restore',
-
     handler: async (args, state) => {
       const authError = requireAuth(state);
       if (authError) return authError;
@@ -385,7 +199,6 @@ const slashCommands: SlashCommand[] = [
     name: 'user',
     aliases: [],
     description: 'User management',
-
     handler: async (args, state) => {
       const authError = requireAuth(state);
       if (authError) return authError;

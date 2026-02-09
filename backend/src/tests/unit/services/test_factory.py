@@ -19,11 +19,12 @@ class TestCreateServices:
     def mock_services(self):
         """Create patches for all service imports."""
         patches = {
-            "db_manager": patch("services.factory.db_manager"),
             "DatabaseService": patch("services.factory.DatabaseService"),
             "AppService": patch("services.factory.AppService"),
             "AuthService": patch("services.factory.AuthService"),
             "SessionService": patch("services.factory.SessionService"),
+            "RateLimitService": patch("services.factory.RateLimitService"),
+            "CSRFService": patch("services.factory.CSRFService"),
             "SSHService": patch("services.factory.SSHService"),
             "MonitoringService": patch("services.factory.MonitoringService"),
             "ServerService": patch("services.factory.ServerService"),
@@ -44,6 +45,7 @@ class TestCreateServices:
             "AgentExecutor": patch("services.factory.AgentExecutor"),
             "DeploymentService": patch("services.factory.DeploymentService"),
             "DashboardService": patch("services.factory.DashboardService"),
+            "LogService": patch("services.factory.LogService"),
             "logger": patch("services.factory.logger"),
         }
         return patches
@@ -65,9 +67,12 @@ class TestCreateServices:
         expected_keys = {
             "config",
             "database_service",
+            "log_service",
             "app_service",
             "auth_service",
             "session_service",
+            "rate_limit_service",
+            "csrf_service",
             "ssh_service",
             "monitoring_service",
             "server_service",
@@ -111,17 +116,6 @@ class TestCreateServices:
         for mock in mock_services.values():
             mock.stop()
 
-    def test_create_services_sets_db_directory(self, mock_services, tmp_path):
-        """create_services should set db_manager data directory."""
-        mocks = {name: mock.start() for name, mock in mock_services.items()}
-
-        with patch.multiple("services.factory", **mocks):
-            create_services(tmp_path, {})
-            mocks["db_manager"].set_data_directory.assert_called_once_with(tmp_path)
-
-        for mock in mock_services.values():
-            mock.stop()
-
     def test_create_services_creates_database_service(self, mock_services, tmp_path):
         """create_services should create DatabaseService with data directory."""
         mocks = {name: mock.start() for name, mock in mock_services.items()}
@@ -147,14 +141,18 @@ class TestCreateServices:
             mock.stop()
 
     def test_create_services_wires_auth_service(self, mock_services, tmp_path):
-        """create_services should wire AuthService with db_service."""
+        """create_services should wire AuthService with db_service and log_service."""
         mocks = {name: mock.start() for name, mock in mock_services.items()}
         mock_db_service = MagicMock()
+        mock_log_service = MagicMock()
         mocks["DatabaseService"].return_value = mock_db_service
+        mocks["LogService"].return_value = mock_log_service
 
         with patch.multiple("services.factory", **mocks):
             create_services(tmp_path, {})
-            mocks["AuthService"].assert_called_once_with(db_service=mock_db_service)
+            mocks["AuthService"].assert_called_once_with(
+                db_service=mock_db_service, log_service=mock_log_service
+            )
 
         for mock in mock_services.values():
             mock.stop()
@@ -193,18 +191,21 @@ class TestCreateServices:
             mock.stop()
 
     def test_create_services_wires_retention_service(self, mock_services, tmp_path):
-        """create_services should wire RetentionService with db and auth."""
+        """create_services should wire RetentionService with db, auth, and log."""
         mocks = {name: mock.start() for name, mock in mock_services.items()}
         mock_db = MagicMock()
         mock_auth = MagicMock()
+        mock_log = MagicMock()
         mocks["DatabaseService"].return_value = mock_db
         mocks["AuthService"].return_value = mock_auth
+        mocks["LogService"].return_value = mock_log
 
         with patch.multiple("services.factory", **mocks):
             create_services(tmp_path, {})
             mocks["RetentionService"].assert_called_once_with(
                 db_service=mock_db,
                 auth_service=mock_auth,
+                log_service=mock_log,
             )
 
         for mock in mock_services.values():

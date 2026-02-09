@@ -283,7 +283,7 @@ class TestGetSettingsAudit:
         """get_settings_audit should handle errors gracefully."""
         mock_db_service.get_user_by_id = AsyncMock(return_value=admin_user)
         mock_connection.execute = AsyncMock(side_effect=Exception("DB error"))
-        with patch("services.settings_service.logger") as mock_logger:
+        with patch("services.settings_audit.logger") as mock_logger:
             result = await settings_service.get_settings_audit("admin-123")
         assert result.success is False
         assert result.error == "AUDIT_ERROR"

@@ -1,12 +1,11 @@
 """
 Unit tests for models/app.py
 
-Tests Pydantic models, SQLAlchemy tables, and conversion methods.
+Tests Pydantic models and row-based conversion methods.
 """
 
 import json
 from datetime import UTC, datetime
-from unittest.mock import MagicMock
 
 import pytest
 from pydantic import ValidationError
@@ -14,10 +13,8 @@ from pydantic import ValidationError
 from models.app import (
     App,
     AppCategory,
-    AppCategoryTable,
     AppFilter,
     AppInstallation,
-    ApplicationTable,
     AppRequirements,
     AppSearchResult,
     AppStatus,
@@ -99,24 +96,42 @@ class TestAppCategory:
         with pytest.raises(ValidationError):
             AppCategory(id="media")
 
-    def test_from_table(self):
-        """Test conversion from database table."""
-        table = MagicMock(spec=AppCategoryTable)
-        table.id = "utilities"
-        table.name = "Utilities"
-        table.description = "Utility applications"
-        table.icon = "wrench"
-        table.color = "gray"
+    def test_from_row_aliased(self):
+        """Test from_row with cat_ prefixed columns from JOIN."""
+        row = {
+            "cat_id": "utilities",
+            "cat_name": "Utilities",
+            "cat_desc": "Utility applications",
+            "cat_icon": "wrench",
+            "cat_color": "gray",
+        }
 
-        category = AppCategory.from_table(table)
+        category = AppCategory.from_row(row)
         assert category.id == "utilities"
         assert category.name == "Utilities"
         assert category.description == "Utility applications"
         assert category.icon == "wrench"
         assert category.color == "gray"
 
-    def test_to_table_model(self):
-        """Test conversion to database table."""
+    def test_from_row_plain(self):
+        """Test from_row with plain column names."""
+        row = {
+            "id": "network",
+            "name": "Network",
+            "description": "Network tools",
+            "icon": "wifi",
+            "color": "green",
+        }
+
+        category = AppCategory.from_row(row)
+        assert category.id == "network"
+        assert category.name == "Network"
+        assert category.description == "Network tools"
+        assert category.icon == "wifi"
+        assert category.color == "green"
+
+    def test_to_insert_params(self):
+        """Test conversion to insert parameters dict."""
         category = AppCategory(
             id="network",
             name="Network",
@@ -124,12 +139,12 @@ class TestAppCategory:
             icon="wifi",
             color="green",
         )
-        table = category.to_table_model()
-        assert table.id == "network"
-        assert table.name == "Network"
-        assert table.description == "Network tools"
-        assert table.icon == "wifi"
-        assert table.color == "green"
+        params = category.to_insert_params()
+        assert params["id"] == "network"
+        assert params["name"] == "Network"
+        assert params["description"] == "Network tools"
+        assert params["icon"] == "wifi"
+        assert params["color"] == "green"
 
 
 class TestApp:
@@ -274,40 +289,37 @@ class TestApp:
                 rating=6.0,
             )
 
-    def test_from_table(self):
-        """Test conversion from database tables."""
-        # Mock category table
-        category_row = MagicMock(spec=AppCategoryTable)
-        category_row.id = "media"
-        category_row.name = "Media"
-        category_row.description = "Media apps"
-        category_row.icon = "play"
-        category_row.color = "blue"
+    def test_from_row(self):
+        """Test creation from a JOIN result row with aliased category columns."""
+        row = {
+            "id": "plex",
+            "name": "Plex",
+            "description": "Media server",
+            "long_description": "Full description",
+            "version": "1.0.0",
+            "tags": json.dumps(["media", "streaming"]),
+            "icon": "plex-icon.png",
+            "screenshots": json.dumps(["screen1.png", "screen2.png"]),
+            "author": "Plex Inc",
+            "repository": "https://github.com/plex",
+            "documentation": "https://docs.plex.tv",
+            "license": "MIT",
+            "requirements": json.dumps({"min_ram": "2GB"}),
+            "status": "available",
+            "install_count": 1000,
+            "rating": 4.5,
+            "featured": 1,
+            "created_at": "2024-01-01T12:00:00",
+            "updated_at": "2024-01-02T12:00:00",
+            "connected_server_id": "server-123",
+            "cat_id": "media",
+            "cat_name": "Media",
+            "cat_desc": "Media apps",
+            "cat_icon": "play",
+            "cat_color": "blue",
+        }
 
-        # Mock app table
-        app_row = MagicMock(spec=ApplicationTable)
-        app_row.id = "plex"
-        app_row.name = "Plex"
-        app_row.description = "Media server"
-        app_row.long_description = "Full description"
-        app_row.version = "1.0.0"
-        app_row.tags = json.dumps(["media", "streaming"])
-        app_row.icon = "plex-icon.png"
-        app_row.screenshots = json.dumps(["screen1.png", "screen2.png"])
-        app_row.author = "Plex Inc"
-        app_row.repository = "https://github.com/plex"
-        app_row.documentation = "https://docs.plex.tv"
-        app_row.license = "MIT"
-        app_row.requirements = json.dumps({"min_ram": "2GB"})
-        app_row.status = "available"
-        app_row.install_count = 1000
-        app_row.rating = 4.5
-        app_row.featured = True
-        app_row.created_at = datetime(2024, 1, 1, 12, 0, 0)
-        app_row.updated_at = datetime(2024, 1, 2, 12, 0, 0)
-        app_row.connected_server_id = "server-123"
-
-        app = App.from_table(app_row, category_row)
+        app = App.from_row(row)
         assert app.id == "plex"
         assert app.name == "Plex"
         assert app.description == "Media server"
@@ -320,57 +332,60 @@ class TestApp:
         assert app.rating == 4.5
         assert app.featured is True
         assert app.connected_server_id == "server-123"
+        assert app.category.id == "media"
+        assert app.category.name == "Media"
 
-    def test_from_table_empty_json_fields(self):
-        """Test conversion handles empty JSON fields."""
-        category_row = MagicMock(spec=AppCategoryTable)
-        category_row.id = "media"
-        category_row.name = "Media"
-        category_row.description = "Media apps"
-        category_row.icon = "play"
-        category_row.color = "blue"
+    def test_from_row_empty_json_fields(self):
+        """Test from_row handles None JSON fields."""
+        row = {
+            "id": "app-123",
+            "name": "Test",
+            "description": "Test app",
+            "long_description": None,
+            "version": "1.0.0",
+            "tags": None,
+            "icon": None,
+            "screenshots": None,
+            "author": "Author",
+            "repository": None,
+            "documentation": None,
+            "license": "MIT",
+            "requirements": None,
+            "status": "available",
+            "install_count": None,
+            "rating": None,
+            "featured": 0,
+            "created_at": "2024-01-01T00:00:00",
+            "updated_at": "2024-01-01T00:00:00",
+            "connected_server_id": None,
+            "cat_id": "media",
+            "cat_name": "Media",
+            "cat_desc": "Media apps",
+            "cat_icon": "play",
+            "cat_color": "blue",
+        }
 
-        app_row = MagicMock(spec=ApplicationTable)
-        app_row.id = "app-123"
-        app_row.name = "Test"
-        app_row.description = "Test app"
-        app_row.long_description = None
-        app_row.version = "1.0.0"
-        app_row.tags = None
-        app_row.icon = None
-        app_row.screenshots = None
-        app_row.author = "Author"
-        app_row.repository = None
-        app_row.documentation = None
-        app_row.license = "MIT"
-        app_row.requirements = None
-        app_row.status = "available"
-        app_row.install_count = None
-        app_row.rating = None
-        app_row.featured = False
-        app_row.created_at = datetime(2024, 1, 1)
-        app_row.updated_at = datetime(2024, 1, 1)
-        app_row.connected_server_id = None
-
-        app = App.from_table(app_row, category_row)
+        app = App.from_row(row)
         assert app.tags == []
         assert app.screenshots is None
         assert app.requirements.min_ram is None
 
-    def test_to_table_model(self, sample_app):
-        """Test conversion to database table."""
-        table = sample_app.to_table_model()
-        assert table.id == "plex"
-        assert table.name == "Plex"
-        assert table.description == "Media server"
-        assert table.version == "1.0.0"
-        assert table.category_id == "media"
-        assert table.author == "Plex Inc"
-        assert table.license == "MIT"
-        assert table.status == "available"
+    def test_to_insert_params(self, sample_app):
+        """Test conversion to insert parameters dict."""
+        params = sample_app.to_insert_params()
+        assert params["id"] == "plex"
+        assert params["name"] == "Plex"
+        assert params["description"] == "Media server"
+        assert params["version"] == "1.0.0"
+        assert params["category_id"] == "media"
+        assert params["author"] == "Plex Inc"
+        assert params["license"] == "MIT"
+        assert params["status"] == "available"
+        # featured should be 0 or 1 integer
+        assert params["featured"] in (0, 1)
 
-    def test_to_table_model_with_json_fields(self, sample_category):
-        """Test JSON field serialization."""
+    def test_to_insert_params_with_json_fields(self, sample_category):
+        """Test JSON field serialization in to_insert_params."""
         now = datetime.now(UTC).isoformat()
         app = App(
             id="app-123",
@@ -386,20 +401,39 @@ class TestApp:
             screenshots=["screen1.png"],
             requirements=AppRequirements(min_ram="4GB"),
         )
-        table = app.to_table_model()
-        assert json.loads(table.tags) == ["tag1", "tag2"]
-        assert json.loads(table.screenshots) == ["screen1.png"]
-        assert json.loads(table.requirements)["min_ram"] == "4GB"
+        params = app.to_insert_params()
+        assert json.loads(params["tags"]) == ["tag1", "tag2"]
+        assert json.loads(params["screenshots"]) == ["screen1.png"]
+        assert json.loads(params["requirements"])["min_ram"] == "4GB"
+        assert params["featured"] == 0
 
-    def test_serialize_datetime(self):
-        """Test datetime serialization."""
+    def test_to_insert_params_featured_true(self, sample_category):
+        """Test that featured=True becomes integer 1."""
+        now = datetime.now(UTC).isoformat()
+        app = App(
+            id="app-123",
+            name="Test App",
+            description="A test application",
+            version="1.0.0",
+            category=sample_category,
+            author="Test Author",
+            license="MIT",
+            created_at=now,
+            updated_at=now,
+            featured=True,
+        )
+        params = app.to_insert_params()
+        assert params["featured"] == 1
+
+    def test_serialize_datetime_str(self):
+        """Test datetime string serialization."""
         dt = datetime(2024, 1, 15, 10, 30, 45, 123456)
-        result = App._serialize_datetime(dt)
+        result = App._serialize_datetime_str(dt)
         assert result == "2024-01-15T10:30:45"  # microseconds removed
 
-    def test_serialize_datetime_none(self):
-        """Test datetime serialization with None."""
-        result = App._serialize_datetime(None)
+    def test_serialize_datetime_str_none(self):
+        """Test datetime string serialization with None."""
+        result = App._serialize_datetime_str(None)
         # Should return current time
         assert "T" in result
 

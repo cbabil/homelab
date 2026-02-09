@@ -4,6 +4,8 @@
 
 export type ViewMode = 'dashboard' | 'agents' | 'logs' | 'settings';
 
+export const VALID_VIEWS: ViewMode[] = ['dashboard', 'agents', 'logs', 'settings'];
+
 export interface DashboardAgentInfo {
   id: string;
   server_id: string;

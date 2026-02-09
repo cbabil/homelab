@@ -13,10 +13,19 @@ from services.monitoring_service import MonitoringService
 
 
 @pytest.fixture
-def monitoring_service():
+def mock_log_service():
+    """Create mock log service."""
+    svc = MagicMock()
+    svc.create_log_entry = AsyncMock()
+    svc.get_logs = AsyncMock(return_value=[])
+    return svc
+
+
+@pytest.fixture
+def monitoring_service(mock_log_service):
     """Create MonitoringService instance."""
     with patch("services.monitoring_service.logger"):
-        return MonitoringService()
+        return MonitoringService(log_service=mock_log_service)
 
 
 class TestMonitoringServiceInit:
@@ -116,50 +125,44 @@ class TestInitializeLogs:
     @pytest.mark.asyncio
     async def test_initialize_logs_creates_entries(self, monitoring_service):
         """_initialize_logs should create log entries."""
-        with patch("services.monitoring_service.log_service") as mock_log_service:
-            mock_log_service.create_log_entry = AsyncMock()
+        monitoring_service._log_service.create_log_entry = AsyncMock()
 
-            await monitoring_service._initialize_logs()
+        await monitoring_service._initialize_logs()
 
-            # Should create multiple log entries (system, app, docker, security, network)
-            assert mock_log_service.create_log_entry.call_count >= 10
+        # Should create multiple log entries (system, app, docker, security, network)
+        assert monitoring_service._log_service.create_log_entry.call_count >= 10
 
     @pytest.mark.asyncio
     async def test_initialize_logs_creates_system_logs(self, monitoring_service):
         """_initialize_logs should create system log entries."""
-        with patch("services.monitoring_service.log_service") as mock_log_service:
-            mock_log_service.create_log_entry = AsyncMock()
+        monitoring_service._log_service.create_log_entry = AsyncMock()
 
-            await monitoring_service._initialize_logs()
+        await monitoring_service._initialize_logs()
 
-            # Check that at least one call has source="systemd"
-            calls = mock_log_service.create_log_entry.call_args_list
-            sources = [call[0][0].source for call in calls]
-            assert "systemd" in sources
+        # Check that at least one call has source="systemd"
+        calls = monitoring_service._log_service.create_log_entry.call_args_list
+        sources = [call[0][0].source for call in calls]
+        assert "systemd" in sources
 
     @pytest.mark.asyncio
     async def test_initialize_logs_creates_docker_logs(self, monitoring_service):
         """_initialize_logs should create Docker log entries."""
-        with patch("services.monitoring_service.log_service") as mock_log_service:
-            mock_log_service.create_log_entry = AsyncMock()
+        monitoring_service._log_service.create_log_entry = AsyncMock()
 
-            await monitoring_service._initialize_logs()
+        await monitoring_service._initialize_logs()
 
-            calls = mock_log_service.create_log_entry.call_args_list
-            sources = [call[0][0].source for call in calls]
-            assert "docker" in sources
+        calls = monitoring_service._log_service.create_log_entry.call_args_list
+        sources = [call[0][0].source for call in calls]
+        assert "docker" in sources
 
     @pytest.mark.asyncio
     async def test_initialize_logs_handles_error(self, monitoring_service):
         """_initialize_logs should handle errors gracefully."""
-        with (
-            patch("services.monitoring_service.log_service") as mock_log_service,
-            patch("services.monitoring_service.logger") as mock_logger,
-        ):
-            mock_log_service.create_log_entry = AsyncMock(
-                side_effect=Exception("DB error")
-            )
+        monitoring_service._log_service.create_log_entry = AsyncMock(
+            side_effect=Exception("DB error")
+        )
 
+        with patch("services.monitoring_service.logger") as mock_logger:
             # Should not raise
             await monitoring_service._initialize_logs()
 
@@ -213,75 +216,61 @@ class TestGetFilteredLogs:
         mock_log_entry.message = "Test message"
         mock_log_entry.tags = ["test"]
 
-        with (
-            patch("services.monitoring_service.log_service") as mock_log_service,
-            patch("services.monitoring_service.logger"),
-        ):
-            mock_log_service.get_logs = AsyncMock(return_value=[mock_log_entry])
+        monitoring_service._log_service.get_logs = AsyncMock(
+            return_value=[mock_log_entry]
+        )
 
+        with patch("services.monitoring_service.logger"):
             result = await monitoring_service.get_filtered_logs()
 
-            assert len(result) == 1
-            assert result[0]["id"] == "log-1"
-            assert result[0]["level"] == "INFO"
-            assert result[0]["source"] == "test"
+        assert len(result) == 1
+        assert result[0]["id"] == "log-1"
+        assert result[0]["level"] == "INFO"
+        assert result[0]["source"] == "test"
 
     @pytest.mark.asyncio
     async def test_get_filtered_logs_with_level_filter(self, monitoring_service):
         """get_filtered_logs should apply level filter."""
-        with (
-            patch("services.monitoring_service.log_service") as mock_log_service,
-            patch("services.monitoring_service.logger"),
-        ):
-            mock_log_service.get_logs = AsyncMock(return_value=[])
+        monitoring_service._log_service.get_logs = AsyncMock(return_value=[])
 
+        with patch("services.monitoring_service.logger"):
             await monitoring_service.get_filtered_logs({"level": "ERROR"})
 
-            # Check that LogFilter was created with correct level
-            call_args = mock_log_service.get_logs.call_args[0][0]
-            assert call_args.level == "ERROR"
+        call_args = monitoring_service._log_service.get_logs.call_args[0][0]
+        assert call_args.level == "ERROR"
 
     @pytest.mark.asyncio
     async def test_get_filtered_logs_with_source_filter(self, monitoring_service):
         """get_filtered_logs should apply source filter."""
-        with (
-            patch("services.monitoring_service.log_service") as mock_log_service,
-            patch("services.monitoring_service.logger"),
-        ):
-            mock_log_service.get_logs = AsyncMock(return_value=[])
+        monitoring_service._log_service.get_logs = AsyncMock(return_value=[])
 
+        with patch("services.monitoring_service.logger"):
             await monitoring_service.get_filtered_logs({"source": "docker"})
 
-            call_args = mock_log_service.get_logs.call_args[0][0]
-            assert call_args.source == "docker"
+        call_args = monitoring_service._log_service.get_logs.call_args[0][0]
+        assert call_args.source == "docker"
 
     @pytest.mark.asyncio
     async def test_get_filtered_logs_with_limit(self, monitoring_service):
         """get_filtered_logs should apply limit."""
-        with (
-            patch("services.monitoring_service.log_service") as mock_log_service,
-            patch("services.monitoring_service.logger"),
-        ):
-            mock_log_service.get_logs = AsyncMock(return_value=[])
+        monitoring_service._log_service.get_logs = AsyncMock(return_value=[])
 
+        with patch("services.monitoring_service.logger"):
             await monitoring_service.get_filtered_logs({"limit": 50})
 
-            call_args = mock_log_service.get_logs.call_args[0][0]
-            assert call_args.limit == 50
+        call_args = monitoring_service._log_service.get_logs.call_args[0][0]
+        assert call_args.limit == 50
 
     @pytest.mark.asyncio
     async def test_get_filtered_logs_limit_max(self, monitoring_service):
         """get_filtered_logs should cap limit at 1000."""
-        with (
-            patch("services.monitoring_service.log_service") as mock_log_service,
-            patch("services.monitoring_service.logger"),
-        ):
-            mock_log_service.get_logs = AsyncMock(return_value=[])
+        monitoring_service._log_service.get_logs = AsyncMock(return_value=[])
 
+        with patch("services.monitoring_service.logger"):
             await monitoring_service.get_filtered_logs({"limit": 5000})
 
-            call_args = mock_log_service.get_logs.call_args[0][0]
-            assert call_args.limit == 1000
+        call_args = monitoring_service._log_service.get_logs.call_args[0][0]
+        assert call_args.limit == 1000
 
     @pytest.mark.asyncio
     async def test_get_filtered_logs_initializes_when_empty(self, monitoring_service):
@@ -294,20 +283,19 @@ class TestGetFilteredLogs:
         mock_log_entry.message = "Test"
         mock_log_entry.tags = []
 
-        with (
-            patch("services.monitoring_service.log_service") as mock_log_service,
-            patch("services.monitoring_service.logger"),
-        ):
-            # First call returns empty, second returns data
-            mock_log_service.get_logs = AsyncMock(side_effect=[[], [mock_log_entry]])
-            mock_log_service.create_log_entry = AsyncMock()
+        # First call returns empty, second returns data
+        monitoring_service._log_service.get_logs = AsyncMock(
+            side_effect=[[], [mock_log_entry]]
+        )
+        monitoring_service._log_service.create_log_entry = AsyncMock()
 
+        with patch("services.monitoring_service.logger"):
             await monitoring_service.get_filtered_logs()
 
-            # Should have called get_logs twice (once empty, once after init)
-            assert mock_log_service.get_logs.call_count == 2
-            # Should have created sample log entries
-            assert mock_log_service.create_log_entry.called
+        # Should have called get_logs twice (once empty, once after init)
+        assert monitoring_service._log_service.get_logs.call_count == 2
+        # Should have created sample log entries
+        assert monitoring_service._log_service.create_log_entry.called
 
     @pytest.mark.asyncio
     async def test_get_filtered_logs_converts_to_dict(self, monitoring_service):
@@ -320,36 +308,34 @@ class TestGetFilteredLogs:
         mock_log_entry.message = "Container high memory"
         mock_log_entry.tags = ["docker", "memory"]
 
-        with (
-            patch("services.monitoring_service.log_service") as mock_log_service,
-            patch("services.monitoring_service.logger"),
-        ):
-            mock_log_service.get_logs = AsyncMock(return_value=[mock_log_entry])
+        monitoring_service._log_service.get_logs = AsyncMock(
+            return_value=[mock_log_entry]
+        )
 
+        with patch("services.monitoring_service.logger"):
             result = await monitoring_service.get_filtered_logs()
 
-            assert len(result) == 1
-            log_dict = result[0]
-            assert log_dict["id"] == "log-123"
-            assert log_dict["level"] == "WARN"
-            assert log_dict["source"] == "docker"
-            assert log_dict["message"] == "Container high memory"
-            assert log_dict["tags"] == ["docker", "memory"]
-            assert "2024-01-15" in log_dict["timestamp"]
+        assert len(result) == 1
+        log_dict = result[0]
+        assert log_dict["id"] == "log-123"
+        assert log_dict["level"] == "WARN"
+        assert log_dict["source"] == "docker"
+        assert log_dict["message"] == "Container high memory"
+        assert log_dict["tags"] == ["docker", "memory"]
+        assert "2024-01-15" in log_dict["timestamp"]
 
     @pytest.mark.asyncio
     async def test_get_filtered_logs_handles_error(self, monitoring_service):
         """get_filtered_logs should return empty list on error."""
-        with (
-            patch("services.monitoring_service.log_service") as mock_log_service,
-            patch("services.monitoring_service.logger") as mock_logger,
-        ):
-            mock_log_service.get_logs = AsyncMock(side_effect=Exception("DB error"))
+        monitoring_service._log_service.get_logs = AsyncMock(
+            side_effect=Exception("DB error")
+        )
 
+        with patch("services.monitoring_service.logger") as mock_logger:
             result = await monitoring_service.get_filtered_logs()
 
-            assert result == []
-            mock_logger.error.assert_called_once()
+        assert result == []
+        mock_logger.error.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_get_filtered_logs_logs_count(self, monitoring_service):
@@ -362,17 +348,14 @@ class TestGetFilteredLogs:
         mock_log_entry.message = "Test"
         mock_log_entry.tags = []
 
-        with (
-            patch("services.monitoring_service.log_service") as mock_log_service,
-            patch("services.monitoring_service.logger") as mock_logger,
-        ):
-            mock_log_service.get_logs = AsyncMock(
-                return_value=[mock_log_entry, mock_log_entry]
-            )
+        monitoring_service._log_service.get_logs = AsyncMock(
+            return_value=[mock_log_entry, mock_log_entry]
+        )
 
+        with patch("services.monitoring_service.logger") as mock_logger:
             await monitoring_service.get_filtered_logs()
 
-            # Check logger.info was called with count
-            mock_logger.info.assert_called()
-            call_kwargs = mock_logger.info.call_args.kwargs
-            assert call_kwargs["count"] == 2
+        # Check logger.info was called with count
+        mock_logger.info.assert_called()
+        call_kwargs = mock_logger.info.call_args.kwargs
+        assert call_kwargs["count"] == 2

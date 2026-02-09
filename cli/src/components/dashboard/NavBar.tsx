@@ -12,7 +12,7 @@ export interface NavItem {
 }
 
 interface NavBarProps {
-  items: NavItem[];
+  items: readonly NavItem[];
   activeTab: string;
 }
 

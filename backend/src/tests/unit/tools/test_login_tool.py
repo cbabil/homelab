@@ -126,12 +126,9 @@ class TestLogin:
             session_id="session-123",
         )
 
-        with patch("tools.auth.login_tool.login_rate_limiter") as mock_limiter:
-            mock_limiter.is_allowed.return_value = True
-
-            result = await login_tool.login(
-                {"username": "testuser", "password": "password123"}, ctx=mock_context
-            )
+        result = await login_tool.login(
+            {"username": "testuser", "password": "password123"}, ctx=mock_context
+        )
 
         assert result["success"] is True
         assert result["data"]["token"] == "test-token"
@@ -150,24 +147,23 @@ class TestLogin:
             session_id="session-123",
         )
 
-        with patch("tools.auth.login_tool.login_rate_limiter") as mock_limiter:
-            mock_limiter.is_allowed.return_value = True
-
-            result = await login_tool.login(
-                {"credentials": {"username": "testuser", "password": "password123"}}
-            )
+        result = await login_tool.login(
+            {"credentials": {"username": "testuser", "password": "password123"}}
+        )
 
         assert result["success"] is True
 
     @pytest.mark.asyncio
-    async def test_login_rate_limit_exceeded(self, login_tool):
+    async def test_login_rate_limit_exceeded(self, mock_auth_service):
         """Test login when rate limit is exceeded."""
-        with patch("tools.auth.login_tool.login_rate_limiter") as mock_limiter:
-            mock_limiter.is_allowed.return_value = False
+        mock_rate_limit = MagicMock()
+        mock_rate_limit.is_allowed = AsyncMock(return_value=False)
 
-            result = await login_tool.login(
-                {"username": "testuser", "password": "password123"}
-            )
+        tool = LoginTool(mock_auth_service, rate_limit_service=mock_rate_limit)
+
+        result = await tool.login(
+            {"username": "testuser", "password": "password123"}
+        )
 
         assert result["success"] is False
         assert result["error"] == "RATE_LIMIT_EXCEEDED"
@@ -181,12 +177,9 @@ class TestLogin:
             {"lock_expires_at": "2024-01-15T12:00:00Z"},
         )
 
-        with patch("tools.auth.login_tool.login_rate_limiter") as mock_limiter:
-            mock_limiter.is_allowed.return_value = True
-
-            result = await login_tool.login(
-                {"username": "lockeduser", "password": "password123"}
-            )
+        result = await login_tool.login(
+            {"username": "lockeduser", "password": "password123"}
+        )
 
         assert result["success"] is False
         assert result["error"] == "ACCOUNT_LOCKED"
@@ -201,12 +194,9 @@ class TestLogin:
             (True, {"lock_expires_at": "2024-01-15T12:00:00Z"}),
         ]
 
-        with patch("tools.auth.login_tool.login_rate_limiter") as mock_limiter:
-            mock_limiter.is_allowed.return_value = True
-
-            result = await login_tool.login(
-                {"username": "testuser", "password": "password123"}, ctx=mock_context
-            )
+        result = await login_tool.login(
+            {"username": "testuser", "password": "password123"}, ctx=mock_context
+        )
 
         assert result["success"] is False
         assert result["error"] == "IP_LOCKED"
@@ -216,12 +206,9 @@ class TestLogin:
         """Test login with invalid credentials."""
         mock_auth_service.authenticate_user.return_value = None
 
-        with patch("tools.auth.login_tool.login_rate_limiter") as mock_limiter:
-            mock_limiter.is_allowed.return_value = True
-
-            result = await login_tool.login(
-                {"username": "testuser", "password": "wrongpassword"}
-            )
+        result = await login_tool.login(
+            {"username": "testuser", "password": "wrongpassword"}
+        )
 
         assert result["success"] is False
         assert result["error"] == "INVALID_CREDENTIALS"
@@ -233,12 +220,9 @@ class TestLogin:
             "Database error"
         )
 
-        with patch("tools.auth.login_tool.login_rate_limiter") as mock_limiter:
-            mock_limiter.is_allowed.return_value = True
-
-            result = await login_tool.login(
-                {"username": "testuser", "password": "password123"}
-            )
+        result = await login_tool.login(
+            {"username": "testuser", "password": "password123"}
+        )
 
         assert result["success"] is False
         assert result["error"] == "LOGIN_ERROR"
@@ -262,12 +246,9 @@ class TestLogin:
         ctx = MagicMock()
         ctx.get_http_request.side_effect = Exception("No HTTP context")
 
-        with patch("tools.auth.login_tool.login_rate_limiter") as mock_limiter:
-            mock_limiter.is_allowed.return_value = True
-
-            result = await login_tool.login(
-                {"username": "testuser", "password": "password123"}, ctx=ctx
-            )
+        result = await login_tool.login(
+            {"username": "testuser", "password": "password123"}, ctx=ctx
+        )
 
         # Should still succeed, just use default client_ip
         assert result["success"] is True
@@ -292,12 +273,9 @@ class TestLogin:
             session_id="session-123",
         )
 
-        with patch("tools.auth.login_tool.login_rate_limiter") as mock_limiter:
-            mock_limiter.is_allowed.return_value = True
-
-            result = await login_tool.login(
-                {"username": "admin", "password": "password123"}
-            )
+        result = await login_tool.login(
+            {"username": "admin", "password": "password123"}
+        )
 
         assert result["success"] is True
         assert result["data"]["user"]["role"] == "admin"
@@ -315,11 +293,8 @@ class TestLogin:
             session_id="session-123",
         )
 
-        with patch("tools.auth.login_tool.login_rate_limiter") as mock_limiter:
-            mock_limiter.is_allowed.return_value = True
-
-            result = await login_tool.login(
-                {"username": "testuser", "password": "password123"}, ctx=None
-            )
+        result = await login_tool.login(
+            {"username": "testuser", "password": "password123"}, ctx=None
+        )
 
         assert result["success"] is True

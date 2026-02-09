@@ -39,12 +39,18 @@ class SchemaInitializer:
         success = success and await self.initialize_agents_table()
         success = success and await self.initialize_installed_apps_table()
         success = success and await self.initialize_metrics_tables()
+        success = success and await self.initialize_rate_limit_events_table()
+        success = success and await self.initialize_csrf_tokens_table()
+        success = success and await self.initialize_log_entries_table()
+        success = success and await self.initialize_applications_tables()
+        success = success and await self.initialize_marketplace_tables()
         return success
 
     async def run_all_migrations(self) -> None:
         """Run all pending migrations."""
         await self.run_users_migrations()
         await self.run_installed_apps_migrations()
+        await self.run_marketplace_migrations()
 
     # ========== Table Initialization Methods ==========
 
@@ -590,6 +596,76 @@ class SchemaInitializer:
             logger.error("Failed to initialize metrics tables", error=str(e))
             return False
 
+    async def initialize_rate_limit_events_table(self) -> bool:
+        """Initialize the rate_limit_events table if it doesn't exist.
+
+        Stores rate-limited events persistently so limits survive restarts.
+
+        Returns:
+            True if successful, False otherwise.
+        """
+        try:
+            async with self._conn.get_connection() as conn:
+                await conn.executescript("""
+                    CREATE TABLE IF NOT EXISTS rate_limit_events (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        category TEXT NOT NULL,
+                        key TEXT NOT NULL,
+                        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+                    );
+
+                    CREATE INDEX IF NOT EXISTS idx_rle_cat_key
+                        ON rate_limit_events(category, key);
+                    CREATE INDEX IF NOT EXISTS idx_rle_created
+                        ON rate_limit_events(created_at);
+                """)
+                await conn.commit()
+
+            logger.info("Rate limit events table initialized successfully")
+            return True
+
+        except Exception as e:
+            logger.error(
+                "Failed to initialize rate limit events table", error=str(e)
+            )
+            return False
+
+    async def initialize_csrf_tokens_table(self) -> bool:
+        """Initialize the csrf_tokens table if it doesn't exist.
+
+        Persists CSRF tokens so they survive server restarts.
+
+        Returns:
+            True if successful, False otherwise.
+        """
+        try:
+            async with self._conn.get_connection() as conn:
+                await conn.executescript("""
+                    CREATE TABLE IF NOT EXISTS csrf_tokens (
+                        token_hash TEXT PRIMARY KEY,
+                        user_id TEXT NOT NULL,
+                        session_id TEXT NOT NULL,
+                        expires_at TEXT NOT NULL,
+                        used INTEGER NOT NULL DEFAULT 0,
+                        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+                    );
+
+                    CREATE INDEX IF NOT EXISTS idx_csrf_user
+                        ON csrf_tokens(user_id);
+                    CREATE INDEX IF NOT EXISTS idx_csrf_expires
+                        ON csrf_tokens(expires_at);
+                """)
+                await conn.commit()
+
+            logger.info("CSRF tokens table initialized successfully")
+            return True
+
+        except Exception as e:
+            logger.error(
+                "Failed to initialize CSRF tokens table", error=str(e)
+            )
+            return False
+
     # ========== Migration Methods ==========
 
     async def run_installed_apps_migrations(self) -> None:
@@ -654,3 +730,209 @@ class SchemaInitializer:
                             )
         except Exception as e:
             logger.error("Failed to run users migrations", error=str(e))
+
+    async def initialize_log_entries_table(self) -> bool:
+        """Initialize the log_entries table if it doesn't exist.
+
+        Returns:
+            True if successful, False otherwise.
+        """
+        try:
+            async with self._conn.get_connection() as conn:
+                await conn.executescript("""
+                    CREATE TABLE IF NOT EXISTS log_entries (
+                        id TEXT PRIMARY KEY,
+                        timestamp TEXT NOT NULL,
+                        level TEXT NOT NULL,
+                        source TEXT NOT NULL,
+                        message TEXT NOT NULL,
+                        tags TEXT,
+                        extra_data TEXT,
+                        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+                    );
+
+                    CREATE INDEX IF NOT EXISTS idx_logs_timestamp
+                        ON log_entries(timestamp);
+                    CREATE INDEX IF NOT EXISTS idx_logs_level
+                        ON log_entries(level);
+                    CREATE INDEX IF NOT EXISTS idx_logs_source
+                        ON log_entries(source);
+                    CREATE INDEX IF NOT EXISTS idx_logs_created_at
+                        ON log_entries(created_at);
+                    CREATE INDEX IF NOT EXISTS idx_logs_level_source
+                        ON log_entries(level, source);
+                """)
+                await conn.commit()
+
+            logger.info("Log entries table initialized successfully")
+            return True
+
+        except Exception as e:
+            logger.error("Failed to initialize log entries table", error=str(e))
+            return False
+
+    async def initialize_applications_tables(self) -> bool:
+        """Initialize the app_categories and applications tables.
+
+        Returns:
+            True if successful, False otherwise.
+        """
+        try:
+            async with self._conn.get_connection() as conn:
+                await conn.executescript("""
+                    CREATE TABLE IF NOT EXISTS app_categories (
+                        id TEXT PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        icon TEXT NOT NULL,
+                        color TEXT NOT NULL
+                    );
+
+                    CREATE TABLE IF NOT EXISTS applications (
+                        id TEXT PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        long_description TEXT,
+                        version TEXT NOT NULL,
+                        category_id TEXT NOT NULL,
+                        tags TEXT,
+                        icon TEXT,
+                        screenshots TEXT,
+                        author TEXT NOT NULL,
+                        repository TEXT,
+                        documentation TEXT,
+                        license TEXT NOT NULL,
+                        requirements TEXT,
+                        status TEXT NOT NULL,
+                        install_count INTEGER,
+                        rating REAL,
+                        featured INTEGER DEFAULT 0,
+                        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+                        connected_server_id TEXT,
+                        FOREIGN KEY (category_id) REFERENCES app_categories(id)
+                    );
+
+                    CREATE INDEX IF NOT EXISTS idx_applications_category_id
+                        ON applications(category_id);
+                    CREATE INDEX IF NOT EXISTS idx_applications_status
+                        ON applications(status);
+                    CREATE INDEX IF NOT EXISTS idx_applications_category_status
+                        ON applications(category_id, status);
+                    CREATE INDEX IF NOT EXISTS idx_applications_connected_server
+                        ON applications(connected_server_id);
+                """)
+                await conn.commit()
+
+            logger.info("Applications tables initialized successfully")
+            return True
+
+        except Exception as e:
+            logger.error("Failed to initialize applications tables", error=str(e))
+            return False
+
+    async def initialize_marketplace_tables(self) -> bool:
+        """Initialize marketplace_repos, marketplace_apps, and app_ratings tables.
+
+        Returns:
+            True if successful, False otherwise.
+        """
+        try:
+            async with self._conn.get_connection() as conn:
+                await conn.executescript("""
+                    CREATE TABLE IF NOT EXISTS marketplace_repos (
+                        id TEXT PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        url TEXT NOT NULL,
+                        branch TEXT NOT NULL DEFAULT 'main',
+                        repo_type TEXT NOT NULL DEFAULT 'community',
+                        enabled INTEGER NOT NULL DEFAULT 1,
+                        status TEXT NOT NULL DEFAULT 'active',
+                        last_synced TEXT,
+                        app_count INTEGER NOT NULL DEFAULT 0,
+                        error_message TEXT,
+                        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                        updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+                    );
+
+                    CREATE TABLE IF NOT EXISTS marketplace_apps (
+                        id TEXT PRIMARY KEY,
+                        name TEXT NOT NULL,
+                        description TEXT NOT NULL,
+                        long_description TEXT,
+                        version TEXT NOT NULL,
+                        category TEXT NOT NULL,
+                        tags TEXT,
+                        icon TEXT,
+                        author TEXT NOT NULL,
+                        license TEXT NOT NULL,
+                        maintainers TEXT,
+                        repository TEXT,
+                        documentation TEXT,
+                        repo_id TEXT NOT NULL,
+                        docker_config TEXT NOT NULL,
+                        requirements TEXT,
+                        install_count INTEGER NOT NULL DEFAULT 0,
+                        avg_rating REAL,
+                        rating_count INTEGER NOT NULL DEFAULT 0,
+                        featured INTEGER NOT NULL DEFAULT 0,
+                        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+                        FOREIGN KEY (repo_id) REFERENCES marketplace_repos(id)
+                    );
+
+                    CREATE TABLE IF NOT EXISTS app_ratings (
+                        id TEXT PRIMARY KEY,
+                        app_id TEXT NOT NULL,
+                        user_id TEXT NOT NULL,
+                        rating INTEGER NOT NULL,
+                        created_at TEXT NOT NULL DEFAULT (datetime('now')),
+                        updated_at TEXT NOT NULL DEFAULT (datetime('now')),
+                        FOREIGN KEY (app_id) REFERENCES marketplace_apps(id)
+                    );
+
+                    CREATE INDEX IF NOT EXISTS idx_marketplace_apps_category
+                        ON marketplace_apps(category);
+                    CREATE INDEX IF NOT EXISTS idx_marketplace_apps_repo_id
+                        ON marketplace_apps(repo_id);
+                    CREATE INDEX IF NOT EXISTS idx_app_ratings_app_id
+                        ON app_ratings(app_id);
+                    CREATE INDEX IF NOT EXISTS idx_app_ratings_user_id
+                        ON app_ratings(user_id);
+                    CREATE UNIQUE INDEX IF NOT EXISTS idx_app_ratings_unique
+                        ON app_ratings(app_id, user_id);
+                """)
+                await conn.commit()
+
+            logger.info("Marketplace tables initialized successfully")
+            return True
+
+        except Exception as e:
+            logger.error("Failed to initialize marketplace tables", error=str(e))
+            return False
+
+    async def run_marketplace_migrations(self) -> None:
+        """Run migrations for marketplace_apps table."""
+        try:
+            async with self._conn.get_connection() as conn:
+                cursor = await conn.execute("PRAGMA table_info(marketplace_apps)")
+                rows = await cursor.fetchall()
+                existing_columns = {row[1] for row in rows}
+
+                if "maintainers" not in existing_columns:
+                    try:
+                        await conn.execute(
+                            "ALTER TABLE marketplace_apps ADD COLUMN maintainers TEXT"
+                        )
+                        await conn.commit()
+                        logger.info("Added maintainers column to marketplace_apps")
+                    except Exception as e:
+                        logger.debug(
+                            "Migration skipped",
+                            column="maintainers",
+                            error=str(e),
+                        )
+        except Exception as e:
+            logger.error(
+                "Failed to run marketplace migrations", error=str(e)
+            )

@@ -7,7 +7,7 @@ and locking accounts/IPs to prevent brute force attacks.
 
 import structlog
 
-from database.connection import DatabaseManager
+from services.database_service import DatabaseService
 
 logger = structlog.get_logger("schema_account_locks")
 
@@ -41,18 +41,18 @@ CREATE INDEX IF NOT EXISTS idx_account_locks_ip_address ON account_locks(ip_addr
 """
 
 
-async def initialize_account_locks_schema(db_manager: DatabaseManager = None) -> bool:
+async def initialize_account_locks_schema(db_manager: DatabaseService = None) -> bool:
     """Initialize the account_locks table schema.
 
     Args:
-        db_manager: Optional DatabaseManager instance. If not provided, creates one.
+        db_manager: Optional DatabaseService instance. If not provided, creates one.
 
     Returns:
         True if successful, False otherwise.
     """
     try:
         if db_manager is None:
-            db_manager = DatabaseManager()
+            db_manager = DatabaseService()
 
         async with db_manager.get_connection() as conn:
             await conn.executescript(ACCOUNT_LOCKS_SCHEMA)

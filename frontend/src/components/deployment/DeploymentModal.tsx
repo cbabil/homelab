@@ -5,13 +5,13 @@
  * Configuration happens post-deployment via app management.
  */
 
-import { useMemo } from "react";
-import { Dialog } from "@mui/material";
-import { DeploymentModalProps } from "./types";
-import { ModalHeader } from "./ModalHeader";
-import { ModalContent } from "./ModalContent";
-import { ModalActions } from "./ModalActions";
-import { useTargetServers } from "./useTargetServers";
+import { useMemo } from 'react';
+import { Dialog } from '@mui/material';
+import { DeploymentModalProps } from './types';
+import { ModalHeader } from './ModalHeader';
+import { ModalContent } from './ModalContent';
+import { ModalActions } from './ModalActions';
+import { useTargetServers } from './useTargetServers';
 
 export function DeploymentModal({
   isOpen,
@@ -33,29 +33,18 @@ export function DeploymentModal({
 }: DeploymentModalProps) {
   const selectedServers = useMemo(
     () => servers.filter((s) => selectedServerIds.includes(s.id)),
-    [servers, selectedServerIds],
+    [servers, selectedServerIds]
   );
 
-  const targetServers = useTargetServers(
-    targetServerStatuses,
-    selectedServers,
-    installationStatus,
-  );
+  const targetServers = useTargetServers(targetServerStatuses, selectedServers, installationStatus);
 
   const hasRequiredConfig = false;
 
   const canDeploy =
     selectedServerIds.length > 0 &&
-    selectedServers.every(
-      (s) => s.status === "connected" && s.docker_installed,
-    );
+    selectedServers.every((s) => s.status === 'connected' && s.docker_installed);
 
   const handleDeploy = async () => {
-    console.log("[DeploymentModal] Deploy button clicked", {
-      selectedServerIds,
-      canDeploy,
-      app: app?.name,
-    });
     await onDeploy();
   };
 
@@ -63,7 +52,7 @@ export function DeploymentModal({
     if (onRetry) {
       await onRetry();
     } else {
-      setStep("select");
+      setStep('select');
     }
   };
 
@@ -72,16 +61,16 @@ export function DeploymentModal({
   return (
     <Dialog
       open={isOpen}
-      onClose={step !== "deploying" ? onClose : undefined}
+      onClose={step !== 'deploying' ? onClose : undefined}
       maxWidth="md"
       fullWidth
       PaperProps={{
         sx: {
           maxWidth: 896,
-          height: "80vh",
+          height: '80vh',
           maxHeight: 700,
-          display: "flex",
-          flexDirection: "column",
+          display: 'flex',
+          flexDirection: 'column',
         },
       }}
     >

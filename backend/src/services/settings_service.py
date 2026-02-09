@@ -29,6 +29,8 @@ from models.settings import (
     UserSetting,
 )
 from services.database_service import DatabaseService
+from services.settings_audit import SettingsAuditService
+from services.settings_schema import SettingsSchemaService
 
 logger = structlog.get_logger("settings_service")
 
@@ -39,6 +41,8 @@ class SettingsService:
     def __init__(self, db_service: DatabaseService | None = None):
         """Initialize settings service with database dependency."""
         self.db_service = db_service or DatabaseService()
+        self._audit_service = SettingsAuditService(self.db_service)
+        self._schema_service = SettingsSchemaService(self.db_service)
         logger.info("Settings service initialized with security controls")
 
     @asynccontextmanager
@@ -703,91 +707,15 @@ class SettingsService:
     ) -> SettingsResponse:
         """Get settings audit trail with admin verification.
 
-        Args:
-            user_id: Authenticated user ID (for admin verification)
-            setting_key: Filter by specific setting key
-            filter_user_id: Filter by user who made the changes
-            limit: Maximum entries to return
-            offset: Number of entries to skip (for pagination)
+        Delegates to SettingsAuditService.
         """
-        try:
-            # Verify admin access for audit logs
-            is_admin = await self.verify_admin_access(user_id)
-            if not is_admin:
-                return SettingsResponse(
-                    success=False,
-                    message="Admin privileges required to access audit logs",
-                    error="ADMIN_REQUIRED",
-                )
-
-            async with self.get_connection() as conn:
-                query_parts = [
-                    "SELECT id, table_name, record_id, user_id, setting_key,",
-                    "old_value, new_value, change_type, change_reason,",
-                    "client_ip, user_agent, created_at, checksum",
-                    "FROM settings_audit",
-                    "WHERE 1=1",
-                ]
-                params = []
-
-                if setting_key:
-                    query_parts.append("AND setting_key = ?")
-                    params.append(setting_key)
-
-                if filter_user_id:
-                    query_parts.append("AND user_id = ?")
-                    params.append(filter_user_id)
-
-                query_parts.extend(["ORDER BY created_at DESC", "LIMIT ? OFFSET ?"])
-                params.extend([limit, offset])
-
-                query = " ".join(query_parts)
-
-                # SECURE: Use parameterized query
-                cursor = await conn.execute(query, params)
-                rows = await cursor.fetchall()
-
-                audit_entries = []
-                for row in rows:
-                    audit_entries.append(
-                        {
-                            "id": row["id"],
-                            "table_name": row["table_name"],
-                            "record_id": row["record_id"],
-                            "user_id": row["user_id"],
-                            "setting_key": row["setting_key"],
-                            "old_value": row["old_value"],
-                            "new_value": row["new_value"],
-                            "change_type": row["change_type"],
-                            "change_reason": row["change_reason"],
-                            "client_ip": row["client_ip"],
-                            "user_agent": row["user_agent"],
-                            "created_at": row["created_at"],
-                            "checksum": row["checksum"],
-                        }
-                    )
-
-            response = SettingsResponse(
-                success=True,
-                message=f"Retrieved {len(audit_entries)} audit entries",
-                data={"audit_entries": audit_entries},
-            )
-
-            logger.info(
-                "Settings audit retrieved successfully",
-                user_id=user_id,
-                count=len(audit_entries),
-            )
-
-            return response
-
-        except Exception as e:
-            logger.error("Failed to get settings audit", user_id=user_id, error=str(e))
-            return SettingsResponse(
-                success=False,
-                message=f"Failed to get settings audit: {str(e)}",
-                error="AUDIT_ERROR",
-            )
+        return await self._audit_service.get_settings_audit(
+            user_id=user_id,
+            setting_key=setting_key,
+            filter_user_id=filter_user_id,
+            limit=limit,
+            offset=offset,
+        )
 
     async def reset_user_settings(
         self,
@@ -796,99 +724,13 @@ class SettingsService:
         client_ip: str | None = None,
         user_agent: str | None = None,
     ) -> SettingsResponse:
-        """Reset user settings by deleting overrides, falling back to system defaults."""
-        try:
-            logger.info("Resetting user settings", user_id=user_id, category=category)
-
-            async with self.get_connection() as conn:
-                await conn.execute("BEGIN IMMEDIATE")
-
-                try:
-                    # Build query based on category filter
-                    if category:
-                        # Get settings to be deleted for audit
-                        cursor = await conn.execute(
-                            """
-                            SELECT id, setting_key, setting_value
-                            FROM user_settings
-                            WHERE user_id = ? AND category = ?
-                            """,
-                            (user_id, category.value),
-                        )
-                    else:
-                        cursor = await conn.execute(
-                            """
-                            SELECT id, setting_key, setting_value
-                            FROM user_settings
-                            WHERE user_id = ?
-                            """,
-                            (user_id,),
-                        )
-
-                    rows = await cursor.fetchall()
-                    deleted_count = 0
-
-                    # Create audit entries for each deletion
-                    for row in rows:
-                        await self._create_audit_entry(
-                            conn,
-                            "user_settings",
-                            row["id"],
-                            user_id,
-                            row["setting_key"],
-                            row["setting_value"],
-                            '""',
-                            ChangeType.DELETE,
-                            "User settings reset to defaults",
-                            client_ip,
-                            user_agent,
-                        )
-                        deleted_count += 1
-
-                    # Delete user settings
-                    if category:
-                        await conn.execute(
-                            "DELETE FROM user_settings WHERE user_id = ? AND category = ?",
-                            (user_id, category.value),
-                        )
-                    else:
-                        await conn.execute(
-                            "DELETE FROM user_settings WHERE user_id = ?", (user_id,)
-                        )
-
-                    await conn.commit()
-
-                    response = SettingsResponse(
-                        success=True,
-                        message=f"Reset {deleted_count} user settings to defaults",
-                        data={"deleted_count": deleted_count, "user_id": user_id},
-                    )
-                    response.checksum = response.generate_checksum()
-
-                    logger.info(
-                        "User settings reset successfully",
-                        user_id=user_id,
-                        deleted_count=deleted_count,
-                    )
-
-                    return response
-
-                except Exception as e:
-                    await conn.rollback()
-                    logger.error(
-                        "User settings reset failed, rolled back",
-                        user_id=user_id,
-                        error=str(e),
-                    )
-                    raise
-
-        except Exception as e:
-            logger.error("Failed to reset user settings", user_id=user_id, error=str(e))
-            return SettingsResponse(
-                success=False,
-                message=f"Failed to reset user settings: {str(e)}",
-                error="RESET_USER_SETTINGS_ERROR",
-            )
+        """Reset user settings by deleting overrides. Delegates to SettingsAuditService."""
+        return await self._audit_service.reset_user_settings(
+            user_id=user_id,
+            category=category,
+            client_ip=client_ip,
+            user_agent=user_agent,
+        )
 
     async def reset_system_settings(
         self,
@@ -897,222 +739,20 @@ class SettingsService:
         client_ip: str | None = None,
         user_agent: str | None = None,
     ) -> SettingsResponse:
-        """Reset system settings to factory defaults (admin only).
-
-        Copies default_value to setting_value for all matching settings.
-        """
-        try:
-            # Verify admin access
-            is_admin = await self.verify_admin_access(user_id)
-            if not is_admin:
-                return SettingsResponse(
-                    success=False,
-                    message="Admin privileges required to reset system settings",
-                    error="ADMIN_REQUIRED",
-                )
-
-            logger.info(
-                "Resetting system settings to defaults",
-                user_id=user_id,
-                category=category,
-            )
-
-            async with self.get_connection() as conn:
-                await conn.execute("BEGIN IMMEDIATE")
-
-                try:
-                    # Get settings to be reset
-                    if category:
-                        cursor = await conn.execute(
-                            """
-                            SELECT id, setting_key, setting_value, default_value
-                            FROM system_settings
-                            WHERE category = ? AND setting_value != default_value
-                            """,
-                            (category.value,),
-                        )
-                    else:
-                        cursor = await conn.execute(
-                            """
-                            SELECT id, setting_key, setting_value, default_value
-                            FROM system_settings
-                            WHERE setting_value != default_value
-                            """
-                        )
-
-                    rows = await cursor.fetchall()
-                    reset_count = 0
-                    now = datetime.now(UTC).isoformat()
-
-                    for row in rows:
-                        # Create audit entry
-                        await self._create_audit_entry(
-                            conn,
-                            "system_settings",
-                            row["id"],
-                            user_id,
-                            row["setting_key"],
-                            row["setting_value"],
-                            row["default_value"],
-                            ChangeType.UPDATE,
-                            "System setting reset to factory default",
-                            client_ip,
-                            user_agent,
-                        )
-
-                        # Reset setting_value to default_value
-                        await conn.execute(
-                            """
-                            UPDATE system_settings
-                            SET setting_value = default_value,
-                                updated_at = ?,
-                                updated_by = ?,
-                                version = version + 1
-                            WHERE id = ?
-                            """,
-                            (now, user_id, row["id"]),
-                        )
-                        reset_count += 1
-
-                    await conn.commit()
-
-                    response = SettingsResponse(
-                        success=True,
-                        message=f"Reset {reset_count} system settings to factory defaults",
-                        data={"reset_count": reset_count},
-                    )
-                    response.checksum = response.generate_checksum()
-
-                    logger.info(
-                        "System settings reset successfully",
-                        user_id=user_id,
-                        reset_count=reset_count,
-                    )
-
-                    return response
-
-                except Exception as e:
-                    await conn.rollback()
-                    logger.error(
-                        "System settings reset failed, rolled back",
-                        user_id=user_id,
-                        error=str(e),
-                    )
-                    raise
-
-        except Exception as e:
-            logger.error(
-                "Failed to reset system settings", user_id=user_id, error=str(e)
-            )
-            return SettingsResponse(
-                success=False,
-                message=f"Failed to reset system settings: {str(e)}",
-                error="RESET_SYSTEM_SETTINGS_ERROR",
-            )
+        """Reset system settings to factory defaults. Delegates to SettingsAuditService."""
+        return await self._audit_service.reset_system_settings(
+            user_id=user_id,
+            category=category,
+            client_ip=client_ip,
+            user_agent=user_agent,
+        )
 
     async def get_default_settings(
         self, category: SettingCategory | None = None
     ) -> SettingsResponse:
-        """Get factory default settings values."""
-        try:
-            async with self.get_connection() as conn:
-                if category:
-                    cursor = await conn.execute(
-                        """
-                        SELECT setting_key, default_value, category, data_type, description
-                        FROM system_settings
-                        WHERE category = ?
-                        ORDER BY setting_key
-                        """,
-                        (category.value,),
-                    )
-                else:
-                    cursor = await conn.execute(
-                        """
-                        SELECT setting_key, default_value, category, data_type, description
-                        FROM system_settings
-                        ORDER BY category, setting_key
-                        """
-                    )
-
-                rows = await cursor.fetchall()
-                defaults = {}
-
-                for row in rows:
-                    try:
-                        setting_value = SettingValue(
-                            raw_value=row["default_value"],
-                            data_type=SettingDataType(row["data_type"]),
-                        )
-                        defaults[row["setting_key"]] = {
-                            "value": setting_value.get_parsed_value(),
-                            "category": row["category"],
-                            "data_type": row["data_type"],
-                            "description": row["description"],
-                        }
-                    except Exception as e:
-                        logger.warning(
-                            "Invalid default value",
-                            setting_key=row["setting_key"],
-                            error=str(e),
-                        )
-
-            response = SettingsResponse(
-                success=True,
-                message=f"Retrieved {len(defaults)} default settings",
-                data={"defaults": defaults},
-            )
-
-            return response
-
-        except Exception as e:
-            logger.error("Failed to get default settings", error=str(e))
-            return SettingsResponse(
-                success=False,
-                message=f"Failed to get default settings: {str(e)}",
-                error="GET_DEFAULTS_ERROR",
-            )
+        """Get factory default settings values. Delegates to SettingsSchemaService."""
+        return await self._schema_service.get_default_settings(category=category)
 
     async def get_settings_schema(self) -> SettingsResponse:
-        """Get settings schema for frontend validation."""
-        try:
-            async with self.get_connection() as conn:
-                # SECURE: Use parameterized query
-                cursor = await conn.execute(
-                    """
-                    SELECT setting_key, category, scope, data_type, is_admin_only,
-                           description, validation_rules
-                    FROM system_settings
-                    ORDER BY category, setting_key
-                    """
-                )
-                rows = await cursor.fetchall()
-
-                schema = {}
-                for row in rows:
-                    schema[row["setting_key"]] = {
-                        "category": row["category"],
-                        "scope": row["scope"],
-                        "data_type": row["data_type"],
-                        "is_admin_only": bool(row["is_admin_only"]),
-                        "description": row["description"],
-                        "validation_rules": json.loads(row["validation_rules"])
-                        if row["validation_rules"]
-                        else None,
-                    }
-
-            response = SettingsResponse(
-                success=True,
-                message=f"Retrieved schema for {len(schema)} settings",
-                data={"schema": schema},
-            )
-
-            return response
-
-        except Exception as e:
-            logger.error("Failed to get settings schema", error=str(e))
-            return SettingsResponse(
-                success=False,
-                message=f"Failed to get settings schema: {str(e)}",
-                error="SCHEMA_ERROR",
-            )
+        """Get settings schema for frontend validation. Delegates to SettingsSchemaService."""
+        return await self._schema_service.get_settings_schema()

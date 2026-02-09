@@ -33,9 +33,11 @@ export function useSetupFlow({
   const [setupUsername, setSetupUsername] = useState('');
   const setupPasswordRef = useRef('');
   const [setupError, setSetupError] = useState<string | null>(null);
-  const timeoutRef = useRef<ReturnType<typeof setTimeout>>();
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  useEffect(() => () => clearTimeout(timeoutRef.current), []);
+  useEffect(() => () => {
+    if (timeoutRef.current !== null) clearTimeout(timeoutRef.current);
+  }, []);
 
   const startSetup = useCallback(() => {
     setSetupStep('username');

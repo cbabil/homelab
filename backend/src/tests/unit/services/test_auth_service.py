@@ -25,13 +25,20 @@ def mock_session_service():
 
 
 @pytest.fixture
-def auth_service(mock_db_service, mock_session_service):
+def mock_log_service():
+    """Create mock log service."""
+    return MagicMock()
+
+
+@pytest.fixture
+def auth_service(mock_db_service, mock_session_service, mock_log_service):
     """Create AuthService instance with mocked dependencies."""
     with patch("services.auth_service.logger"):
         service = AuthService(
             jwt_secret="test-secret-key",
             db_service=mock_db_service,
             session_service=mock_session_service,
+            log_service=mock_log_service,
         )
         return service
 
@@ -152,36 +159,29 @@ class TestLogSecurityEvent:
     @pytest.mark.asyncio
     async def test_log_security_event_success(self, auth_service):
         """_log_security_event should log event successfully."""
-        with (
-            patch("services.auth_service.log_service") as mock_log,
-            patch("services.auth_service.logger"),
-        ):
-            mock_log.create_log_entry = AsyncMock()
+        auth_service._log_service.create_log_entry = AsyncMock()
+        with patch("services.auth_service.logger"):
             await auth_service._log_security_event(
                 "LOGIN", "testuser", True, "192.168.1.1", "Mozilla/5.0"
             )
-            mock_log.create_log_entry.assert_called_once()
+            auth_service._log_service.create_log_entry.assert_called_once()
 
     @pytest.mark.asyncio
     async def test_log_security_event_failed_login(self, auth_service):
         """_log_security_event should log failed event with WARNING level."""
-        with (
-            patch("services.auth_service.log_service") as mock_log,
-            patch("services.auth_service.logger"),
-        ):
-            mock_log.create_log_entry = AsyncMock()
+        auth_service._log_service.create_log_entry = AsyncMock()
+        with patch("services.auth_service.logger"):
             await auth_service._log_security_event("LOGIN", "testuser", False)
-            call_args = mock_log.create_log_entry.call_args[0][0]
+            call_args = auth_service._log_service.create_log_entry.call_args[0][0]
             assert call_args.level == "WARNING"
 
     @pytest.mark.asyncio
     async def test_log_security_event_handles_error(self, auth_service):
         """_log_security_event should handle errors gracefully."""
-        with (
-            patch("services.auth_service.log_service") as mock_log,
-            patch("services.auth_service.logger"),
-        ):
-            mock_log.create_log_entry = AsyncMock(side_effect=Exception("Log error"))
+        auth_service._log_service.create_log_entry = AsyncMock(
+            side_effect=Exception("Log error")
+        )
+        with patch("services.auth_service.logger"):
             # Should not raise
             await auth_service._log_security_event("LOGIN", "testuser", True)
 

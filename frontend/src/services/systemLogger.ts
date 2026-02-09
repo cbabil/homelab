@@ -1,160 +1,187 @@
 /**
  * System Logger Service
- * 
+ *
  * Centralized logging system for application events that can be viewed
  * in the system logs interface. Stores logs in memory and localStorage
  * for persistence across sessions.
  */
 
+import { cryptoRandomString } from '@/utils/jwtUtils';
+
 export interface SystemLogEntry {
-  id: string
-  timestamp: Date
-  level: 'info' | 'warn' | 'error'
-  category: string
-  message: string
-  data?: unknown
+  id: string;
+  timestamp: Date;
+  level: 'info' | 'warn' | 'error';
+  category: string;
+  message: string;
+  data?: unknown;
 }
 
 // Parsed log entry from localStorage
 interface StoredLogEntry extends Omit<SystemLogEntry, 'timestamp'> {
-  timestamp: string
+  timestamp: string;
 }
 
 class SystemLogger {
-  private logs: SystemLogEntry[] = []
-  private maxLogs = 1000
-  private storageKey = 'tomo-system-logs'
+  private logs: SystemLogEntry[] = [];
+  private maxLogs = 1000;
+  private storageKey = 'tomo-system-logs';
+  private saveTimer: ReturnType<typeof setTimeout> | null = null;
+  private saveDebounceMs = 300;
 
   constructor() {
-    this.loadLogsFromStorage()
+    this.loadLogsFromStorage();
   }
 
   private loadLogsFromStorage() {
     try {
-      const stored = localStorage.getItem(this.storageKey)
+      const stored = localStorage.getItem(this.storageKey);
       if (stored) {
-        const parsedLogs = JSON.parse(stored) as StoredLogEntry[]
+        const parsedLogs = JSON.parse(stored) as StoredLogEntry[];
         this.logs = parsedLogs.map((log: StoredLogEntry) => ({
           ...log,
-          timestamp: new Date(log.timestamp)
-        }))
+          timestamp: new Date(log.timestamp),
+        }));
       }
     } catch (error) {
-      console.warn('Failed to load system logs from localStorage:', error)
+      console.warn('Failed to load system logs from localStorage:', error);
     }
   }
 
   private saveLogsToStorage() {
+    if (this.saveTimer) {
+      clearTimeout(this.saveTimer);
+    }
+    this.saveTimer = setTimeout(() => {
+      try {
+        localStorage.setItem(this.storageKey, JSON.stringify(this.logs));
+      } catch (error) {
+        console.warn('Failed to save system logs to localStorage:', error);
+      }
+      this.saveTimer = null;
+    }, this.saveDebounceMs);
+  }
+
+  private saveLogsToStorageSync() {
+    if (this.saveTimer) {
+      clearTimeout(this.saveTimer);
+      this.saveTimer = null;
+    }
     try {
-      localStorage.setItem(this.storageKey, JSON.stringify(this.logs))
+      localStorage.setItem(this.storageKey, JSON.stringify(this.logs));
     } catch (error) {
-      console.warn('Failed to save system logs to localStorage:', error)
+      console.warn('Failed to save system logs to localStorage:', error);
     }
   }
 
-  private addLog(level: SystemLogEntry['level'], category: string, message: string, data?: unknown) {
+  private addLog(
+    level: SystemLogEntry['level'],
+    category: string,
+    message: string,
+    data?: unknown
+  ) {
     const entry: SystemLogEntry = {
-      id: `log_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      id: `log_${Date.now()}_${cryptoRandomString(6)}`,
       timestamp: new Date(),
       level,
       category,
       message,
-      data
-    }
+      data,
+    };
 
-    this.logs.unshift(entry)
+    this.logs.unshift(entry);
 
     // Keep only the most recent logs
     if (this.logs.length > this.maxLogs) {
-      this.logs = this.logs.slice(0, this.maxLogs)
+      this.logs = this.logs.slice(0, this.maxLogs);
     }
 
-    this.saveLogsToStorage()
+    this.saveLogsToStorage();
 
     // Also log to console for debugging
-    const consoleMessage = `[${category}] ${message}`
+    const consoleMessage = `[${category}] ${message}`;
     switch (level) {
       case 'error':
-        console.error(consoleMessage, data || '')
-        break
+        console.error(consoleMessage, data || '');
+        break;
       case 'warn':
-        console.warn(consoleMessage, data || '')
-        break
+        console.warn(consoleMessage, data || '');
+        break;
       default:
-        console.info(consoleMessage, data || '')
+        console.info(consoleMessage, data || '');
     }
   }
 
   info(category: string, message: string, data?: unknown) {
-    this.addLog('info', category, message, data)
+    this.addLog('info', category, message, data);
   }
 
   warn(category: string, message: string, data?: unknown) {
-    this.addLog('warn', category, message, data)
+    this.addLog('warn', category, message, data);
   }
 
   error(category: string, message: string, data?: unknown) {
-    this.addLog('error', category, message, data)
+    this.addLog('error', category, message, data);
   }
 
   getLogs(): SystemLogEntry[] {
-    return [...this.logs]
+    return [...this.logs];
   }
 
   getLogsByCategory(category: string): SystemLogEntry[] {
-    return this.logs.filter(log => log.category === category)
+    return this.logs.filter((log) => log.category === category);
   }
 
   getLogsByLevel(level: SystemLogEntry['level']): SystemLogEntry[] {
-    return this.logs.filter(log => log.level === level)
+    return this.logs.filter((log) => log.level === level);
   }
 
   clearLogs() {
-    this.logs = []
-    this.saveLogsToStorage()
+    this.logs = [];
+    this.saveLogsToStorageSync();
   }
 
   exportLogs(): string {
-    return JSON.stringify(this.logs, null, 2)
+    return JSON.stringify(this.logs, null, 2);
   }
 }
 
 // Export singleton instance
-export const systemLogger = new SystemLogger()
+export const systemLogger = new SystemLogger();
 
 // Convenience functions for common categories
 export const mcpLogger = {
   info: (message: string, data?: unknown) => systemLogger.info('MCP', message, data),
   warn: (message: string, data?: unknown) => systemLogger.warn('MCP', message, data),
-  error: (message: string, data?: unknown) => systemLogger.error('MCP', message, data)
-}
+  error: (message: string, data?: unknown) => systemLogger.error('MCP', message, data),
+};
 
 export const settingsLogger = {
   info: (message: string, data?: unknown) => systemLogger.info('Settings', message, data),
   warn: (message: string, data?: unknown) => systemLogger.warn('Settings', message, data),
-  error: (message: string, data?: unknown) => systemLogger.error('Settings', message, data)
-}
+  error: (message: string, data?: unknown) => systemLogger.error('Settings', message, data),
+};
 
 export const applicationLogger = {
   info: (message: string, data?: unknown) => systemLogger.info('application', message, data),
   warn: (message: string, data?: unknown) => systemLogger.warn('application', message, data),
-  error: (message: string, data?: unknown) => systemLogger.error('application', message, data)
-}
+  error: (message: string, data?: unknown) => systemLogger.error('application', message, data),
+};
 
 export const securityLogger = {
   info: (message: string, data?: unknown) => systemLogger.info('Security', message, data),
   warn: (message: string, data?: unknown) => systemLogger.warn('Security', message, data),
-  error: (message: string, data?: unknown) => systemLogger.error('Security', message, data)
-}
+  error: (message: string, data?: unknown) => systemLogger.error('Security', message, data),
+};
 
 export const marketplaceLogger = {
   info: (message: string, data?: unknown) => systemLogger.info('Marketplace', message, data),
   warn: (message: string, data?: unknown) => systemLogger.warn('Marketplace', message, data),
-  error: (message: string, data?: unknown) => systemLogger.error('Marketplace', message, data)
-}
+  error: (message: string, data?: unknown) => systemLogger.error('Marketplace', message, data),
+};
 
 export const deploymentLogger = {
   info: (message: string, data?: unknown) => systemLogger.info('Deployment', message, data),
   warn: (message: string, data?: unknown) => systemLogger.warn('Deployment', message, data),
-  error: (message: string, data?: unknown) => systemLogger.error('Deployment', message, data)
-}
+  error: (message: string, data?: unknown) => systemLogger.error('Deployment', message, data),
+};

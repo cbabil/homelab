@@ -373,7 +373,7 @@ class TestGetDefaultSettings:
             ]
         )
         mock_connection.execute = AsyncMock(return_value=mock_cursor)
-        with patch("services.settings_service.logger") as mock_logger:
+        with patch("services.settings_schema.logger") as mock_logger:
             result = await settings_service.get_default_settings()
         assert result.success is True
         assert len(result.data["defaults"]) == 0
@@ -385,7 +385,7 @@ class TestGetDefaultSettings:
     ):
         """get_default_settings should handle errors gracefully."""
         mock_connection.execute = AsyncMock(side_effect=Exception("DB error"))
-        with patch("services.settings_service.logger") as mock_logger:
+        with patch("services.settings_schema.logger") as mock_logger:
             result = await settings_service.get_default_settings()
         assert result.success is False
         assert result.error == "GET_DEFAULTS_ERROR"
@@ -453,7 +453,7 @@ class TestGetSettingsSchema:
     ):
         """get_settings_schema should handle errors gracefully."""
         mock_connection.execute = AsyncMock(side_effect=Exception("DB error"))
-        with patch("services.settings_service.logger") as mock_logger:
+        with patch("services.settings_schema.logger") as mock_logger:
             result = await settings_service.get_settings_schema()
         assert result.success is False
         assert result.error == "SCHEMA_ERROR"

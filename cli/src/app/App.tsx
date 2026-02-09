@@ -6,7 +6,7 @@ import { createMessage, initialAppState } from './types.js';
 import type { AppState, OutputMessage } from './types.js';
 import type { ActivityEntry, ViewMode } from './dashboard-types.js';
 import { createActivityEntry, NAV_ITEMS } from './dashboard-types.js';
-import { SIGNALS, parseSignal } from './signals.js';
+import { classifySignal } from './signal-processor.js';
 import { initMCPClient, closeMCPClient, getMCPClient } from '../lib/mcp-client.js';
 import { checkSystemSetup, clearAuth, getAuthToken, revokeToken, refreshAuthToken } from '../lib/auth.js';
 import { useDashboardData } from '../hooks/useDashboardData.js';
@@ -49,6 +49,9 @@ export function App({ mcpUrl }: AppProps) {
 
   const stateRef = useRef(state);
   stateRef.current = state;
+
+  const exitRef = useRef(exit);
+  exitRef.current = exit;
 
   const lastActivityRef = useRef(Date.now());
   const forceLogoutFired = useRef(false);
@@ -114,6 +117,22 @@ export function App({ mcpUrl }: AppProps) {
     enabled: state.mcpConnected,
   });
 
+  // Refs for flow objects so useCallback/useEffect have stable references
+  const loginFlowRef = useRef(loginFlow);
+  loginFlowRef.current = loginFlow;
+
+  const setupFlowRef = useRef(setupFlow);
+  setupFlowRef.current = setupFlow;
+
+  const resetPasswordFlowRef = useRef(resetPasswordFlow);
+  resetPasswordFlowRef.current = resetPasswordFlow;
+
+  const backupFlowRef = useRef(backupFlow);
+  backupFlowRef.current = backupFlow;
+
+  const dashboardDataRef = useRef(dashboardData);
+  dashboardDataRef.current = dashboardData;
+
   // Auto-connect to MCP server on mount
   useEffect(() => {
     const url = mcpUrl || DEFAULT_MCP_URL;
@@ -129,7 +148,7 @@ export function App({ mcpUrl }: AppProps) {
           forceLogoutFired.current = true;
           clearAuth();
           setState((prev) => ({ ...prev, authenticated: false, username: null }));
-          loginFlow.startLogin();
+          loginFlowRef.current.startLogin();
           addActivity('SYS', 'Session expired. Please log in again.');
         });
         setState((prev) => ({
@@ -143,13 +162,13 @@ export function App({ mcpUrl }: AppProps) {
         try {
           const needsSetup = await checkSystemSetup();
           if (needsSetup) {
-            setupFlow.startSetup();
+            setupFlowRef.current.startSetup();
             addActivity('SYS', 'System requires initial setup');
           } else {
-            loginFlow.startLogin();
+            loginFlowRef.current.startLogin();
           }
         } catch {
-          loginFlow.startLogin();
+          loginFlowRef.current.startLogin();
         }
       } catch (err) {
         const error = err instanceof Error ? err.message : 'Connection failed';
@@ -166,8 +185,7 @@ export function App({ mcpUrl }: AppProps) {
     return () => {
       closeMCPClient();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [addActivity]);
 
   useEffect(() => {
     addActivity('SYS', 'Welcome to Tomo CLI');
@@ -184,13 +202,12 @@ export function App({ mcpUrl }: AppProps) {
         forceLogoutFired.current = true;
         revokeToken().catch(() => {});
         setState((prev) => ({ ...prev, authenticated: false, username: null }));
-        loginFlow.startLogin();
+        loginFlowRef.current.startLogin();
         addActivity('SYS', 'Session expired due to inactivity');
       }
     }, 30_000);
     return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [addActivity]);
 
   const handleInputChange = useCallback((value: string) => {
     setState((prev) => ({ ...prev, inputValue: value }));
@@ -224,88 +241,62 @@ export function App({ mcpUrl }: AppProps) {
         const results = await routeCommand(input, stateRef.current);
 
         for (const result of results) {
-          if (result.content === SIGNALS.CLEAR) {
-            setState((prev) => ({ ...prev, history: [] }));
-            addActivity('OK', 'Screen cleared');
-            continue;
-          }
+          const action = classifySignal(result);
 
-          if (result.content === SIGNALS.LOGOUT) {
-            await revokeToken();
-            setState((prev) => ({ ...prev, authenticated: false, username: null }));
-            loginFlow.startLogin();
-            addActivity('SYS', 'Logged out');
-            continue;
-          }
-
-          if (result.content === SIGNALS.LOGIN) {
-            loginFlow.startLogin();
-            addActivity('SYS', 'Enter credentials to authenticate');
-            continue;
-          }
-
-          if (result.content === SIGNALS.REFRESH) {
-            dashboardData.refresh();
-            addActivity('OK', 'Data refreshed');
-            continue;
-          }
-
-          if (result.content === SIGNALS.SETUP) {
-            setupFlow.startSetup();
-            addActivity('SYS', 'Starting admin setup');
-            continue;
-          }
-
-          const resetUsername = parseSignal(result.content, SIGNALS.RESET_PASSWORD);
-          if (resetUsername !== null) {
-            resetPasswordFlow.startReset(resetUsername);
-            addActivity('SYS', `Resetting password for ${resetUsername}`);
-            continue;
-          }
-
-          const exportPath = parseSignal(result.content, SIGNALS.BACKUP_EXPORT);
-          if (exportPath !== null) {
-            backupFlow.startExport(exportPath);
-            addActivity('SYS', `Exporting backup to ${exportPath}`);
-            continue;
-          }
-
-          const overwritePath = parseSignal(result.content, SIGNALS.BACKUP_IMPORT_OVERWRITE);
-          if (overwritePath !== null) {
-            backupFlow.startImport(overwritePath, true);
-            addActivity('SYS', `Importing backup from ${overwritePath} (overwrite)`);
-            continue;
-          }
-
-          const importPath = parseSignal(result.content, SIGNALS.BACKUP_IMPORT);
-          if (importPath !== null) {
-            backupFlow.startImport(importPath, false);
-            addActivity('SYS', `Importing backup from ${importPath}`);
-            continue;
-          }
-
-          const viewTarget = parseSignal(result.content, SIGNALS.VIEW);
-          const validViews: ViewMode[] = ['dashboard', 'agents', 'logs', 'settings'];
-          if (viewTarget !== null && validViews.includes(viewTarget as ViewMode)) {
-            setActiveView(viewTarget as ViewMode);
-            addActivity('OK', `Switched to ${viewTarget} view`);
-            continue;
-          }
-
-          addMessage(result.type, result.content);
-
-          const activityType: ActivityEntry['type'] =
-            result.type === 'error' ? 'ERR'
-            : result.type === 'success' ? 'OK'
-            : result.type === 'system' ? 'SYS'
-            : 'SYS';
-          if (result.content) {
-            addActivity(activityType, result.content);
-          }
-
-          if (result.exit) {
-            setTimeout(() => exit(), 100);
-            return;
+          switch (action.kind) {
+            case 'clear':
+              setState((prev) => ({ ...prev, history: [] }));
+              addActivity('OK', 'Screen cleared');
+              break;
+            case 'logout':
+              await revokeToken();
+              setState((prev) => ({ ...prev, authenticated: false, username: null }));
+              loginFlowRef.current.startLogin();
+              addActivity('SYS', 'Logged out');
+              break;
+            case 'login':
+              loginFlowRef.current.startLogin();
+              addActivity('SYS', 'Enter credentials to authenticate');
+              break;
+            case 'refresh':
+              dashboardDataRef.current.refresh();
+              addActivity('OK', 'Data refreshed');
+              break;
+            case 'setup':
+              setupFlowRef.current.startSetup();
+              addActivity('SYS', 'Starting admin setup');
+              break;
+            case 'reset_password':
+              resetPasswordFlowRef.current.startReset(action.username);
+              addActivity('SYS', `Resetting password for ${action.username}`);
+              break;
+            case 'backup_export':
+              backupFlowRef.current.startExport(action.path);
+              addActivity('SYS', `Exporting backup to ${action.path}`);
+              break;
+            case 'backup_import':
+              backupFlowRef.current.startImport(action.path, action.overwrite);
+              addActivity('SYS', `Importing backup from ${action.path}${action.overwrite ? ' (overwrite)' : ''}`);
+              break;
+            case 'view':
+              setActiveView(action.target);
+              addActivity('OK', `Switched to ${action.target} view`);
+              break;
+            case 'message': {
+              addMessage(action.result.type, action.result.content);
+              const activityType: ActivityEntry['type'] =
+                action.result.type === 'error' ? 'ERR'
+                : action.result.type === 'success' ? 'OK'
+                : 'SYS';
+              if (action.result.content) {
+                addActivity(activityType, action.result.content);
+              }
+              if (action.result.exit) {
+                setTimeout(() => exitRef.current(), 100);
+                return;
+              }
+              break;
+            }
           }
         }
       } catch (err) {
@@ -316,7 +307,7 @@ export function App({ mcpUrl }: AppProps) {
         setState((prev) => ({ ...prev, isRunningCommand: false }));
       }
     },
-    [addMessage, addActivity, exit, dashboardData, loginFlow, setupFlow, resetPasswordFlow, backupFlow]
+    [addMessage, addActivity]
   );
 
   useInput((input, key) => {
@@ -335,8 +326,6 @@ export function App({ mcpUrl }: AppProps) {
     }
   });
 
-  const activityLogEntries: ActivityEntry[] = activityLog;
-
   const connectionStatus = state.mcpConnected
     ? 'connected' as const
     : state.mcpConnecting
@@ -349,14 +338,14 @@ export function App({ mcpUrl }: AppProps) {
         return (
           <DashboardView
             data={dashboardData}
-            activityLog={activityLogEntries}
+            activityLog={activityLog}
             mcpConnected={state.mcpConnected}
           />
         );
       case 'agents':
         return <AgentsView agents={dashboardData.agents} />;
       case 'logs':
-        return <LogsView entries={activityLogEntries} />;
+        return <LogsView entries={activityLog} />;
       case 'settings':
         return (
           <SettingsView
@@ -435,7 +424,7 @@ export function App({ mcpUrl }: AppProps) {
 
       {!setupFlow.isActive ? (
         <NavBar
-          items={[...NAV_ITEMS]}
+          items={NAV_ITEMS}
           activeTab={activeView}
         />
       ) : null}

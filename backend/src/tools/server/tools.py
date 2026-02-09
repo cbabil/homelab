@@ -377,7 +377,7 @@ class ServerTools:
                             agent_id=agent.id,
                             server_id=server_id,
                         )
-                        agent_db = self.agent_service._get_agent_db()
+                        agent_db = self.agent_service.get_agent_db()
                         await agent_db.update_agent(
                             agent.id, AgentUpdate(status=AgentStatusEnum.DISCONNECTED)
                         )
