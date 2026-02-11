@@ -127,12 +127,6 @@ clean-all: clean ## Clean everything including dependencies
 	@echo "All dependencies removed. Run 'make setup' to reinstall."
 
 # Docker
-docker-dev: ## Run development environment with Docker
-	docker compose -f docker-compose.dev.yml up --build
-
-docker-dev-down: ## Stop Docker development environment
-	docker compose -f docker-compose.dev.yml down
-
 docker-prod: ## Build and run production Docker environment
 	docker compose up --build -d
 
