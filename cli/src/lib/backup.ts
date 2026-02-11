@@ -5,6 +5,7 @@
  */
 
 import { getMCPClient } from './mcp-client.js';
+import { t } from '../i18n/index.js';
 
 export interface ExportResult {
   success: boolean;
@@ -55,7 +56,7 @@ export async function exportBackup(
 
   return {
     success: false,
-    error: response.error || response.message || 'Failed to export backup',
+    error: response.error || response.message || t('errors.failedToExportBackup'),
   };
 }
 
@@ -85,6 +86,6 @@ export async function importBackup(
 
   return {
     success: false,
-    error: response.error || response.message || 'Failed to import backup',
+    error: response.error || response.message || t('errors.failedToImportBackup'),
   };
 }

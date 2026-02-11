@@ -6,6 +6,7 @@ import type { CommandResult } from '../types.js';
 import type { MCPClient } from '../../lib/mcp-client.js';
 import type { ServerInfo } from '../../lib/server.js';
 import { sanitizeForDisplay } from '../../lib/validation.js';
+import { t } from '../../i18n/index.js';
 
 export async function handleServerCommand(
   client: MCPClient,
@@ -21,23 +22,28 @@ export async function handleServerCommand(
         );
 
         if (!response.success) {
-          return [{ type: 'error', content: response.error || 'Failed to list servers' }];
+          return [{ type: 'error', content: response.error || t('servers.failedToList') }];
         }
 
         const servers = response.data?.servers || [];
 
         if (servers.length === 0) {
-          return [{ type: 'info', content: 'No servers found.' }];
+          return [{ type: 'info', content: t('servers.noServersFound') }];
         }
 
         const results: CommandResult[] = [
-          { type: 'info', content: `Found ${servers.length} server(s):` },
+          { type: 'info', content: t('servers.foundServers', { count: servers.length }) },
         ];
 
         for (const server of servers) {
           results.push({
             type: server.status === 'online' ? 'success' : 'info',
-            content: `  [${server.id}] ${server.name} (${server.hostname}) - ${server.status}`,
+            content: t('servers.serverEntry', {
+              id: server.id,
+              name: server.name,
+              hostname: server.hostname,
+              status: server.status,
+            }),
           });
         }
 
@@ -46,7 +52,7 @@ export async function handleServerCommand(
         return [
           {
             type: 'error',
-            content: err instanceof Error ? err.message : 'Failed to list servers',
+            content: err instanceof Error ? err.message : t('servers.failedToList'),
           },
         ];
       }
@@ -57,8 +63,8 @@ export async function handleServerCommand(
         {
           type: 'error',
           content: subcommand
-            ? `Unknown server subcommand: ${sanitizeForDisplay(subcommand)}`
-            : 'Usage: server <list>',
+            ? t('commands.server.unknownSubcommand', { subcommand: sanitizeForDisplay(subcommand) })
+            : t('commands.server.usage'),
         },
       ];
   }

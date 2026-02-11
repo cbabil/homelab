@@ -6,6 +6,7 @@ import { useState, useCallback } from 'react';
 import { exportBackup, importBackup } from '../lib/backup.js';
 import type { ActivityEntry } from '../app/dashboard-types.js';
 import { validatePassword } from '../lib/validation.js';
+import { t } from '../i18n/index.js';
 
 type BackupStep = 'export-password' | 'import-password' | null;
 
@@ -39,7 +40,7 @@ export function useBackupFlow({
     async (input: string) => {
       const validation = validatePassword(input);
       if (!validation.valid) {
-        addActivity('ERR', validation.error || 'Invalid password');
+        addActivity('ERR', validation.error || t('validation.invalidPassword'));
         setInputValue('');
         return;
       }
@@ -48,19 +49,19 @@ export function useBackupFlow({
       setRunning(true);
 
       if (step === 'export-password') {
-        addActivity('SYS', `Exporting backup to ${path}...`);
+        addActivity('SYS', t('backup.exportingTo', { path }));
         try {
           const result = await exportBackup(path, input);
           if (result.success) {
-            addActivity('OK', `Backup exported to ${result.path || path}`);
+            addActivity('OK', t('backup.exportSuccess', { path: result.path || path }));
             if (result.checksum) {
-              addActivity('SYS', `Checksum: ${result.checksum}`);
+              addActivity('SYS', t('backup.checksumLabel', { checksum: result.checksum }));
             }
           } else {
-            addActivity('ERR', result.error || 'Failed to export backup');
+            addActivity('ERR', result.error || t('backup.failedToExport'));
           }
         } catch (err) {
-          const msg = err instanceof Error ? err.message : 'Failed to export backup';
+          const msg = err instanceof Error ? err.message : t('backup.failedToExport');
           addActivity('ERR', msg);
         } finally {
           setRunning(false);
@@ -71,19 +72,19 @@ export function useBackupFlow({
       }
 
       if (step === 'import-password') {
-        addActivity('SYS', `Importing backup from ${path}...`);
+        addActivity('SYS', t('backup.importingFrom', { path }));
         try {
           const result = await importBackup(path, input, overwrite);
           if (result.success) {
-            addActivity('OK', `Backup imported from ${path}`);
+            addActivity('OK', t('backup.importSuccess', { path }));
             if (result.users_imported !== undefined) {
-              addActivity('SYS', `Users: ${result.users_imported}, Servers: ${result.servers_imported}`);
+              addActivity('SYS', t('backup.importStats', { users: result.users_imported, servers: result.servers_imported }));
             }
           } else {
-            addActivity('ERR', result.error || 'Failed to import backup');
+            addActivity('ERR', result.error || t('backup.failedToImport'));
           }
         } catch (err) {
-          const msg = err instanceof Error ? err.message : 'Failed to import backup';
+          const msg = err instanceof Error ? err.message : t('backup.failedToImport');
           addActivity('ERR', msg);
         } finally {
           setRunning(false);
@@ -96,8 +97,8 @@ export function useBackupFlow({
     [step, path, overwrite, addActivity, setInputValue, setRunning]
   );
 
-  const promptLabel = step === 'export-password' ? 'Encryption password: '
-    : step === 'import-password' ? 'Decryption password: '
+  const promptLabel = step === 'export-password' ? t('prompts.encryptionPassword')
+    : step === 'import-password' ? t('prompts.decryptionPassword')
     : undefined;
 
   return {

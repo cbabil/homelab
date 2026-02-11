@@ -1,0 +1,317 @@
+{
+  "common": {
+    "goodbye": "再见！",
+    "processing": "处理中...",
+    "unknown": "未知",
+    "never": "从未",
+    "on": "开启",
+    "off": "关闭",
+    "online": "在线",
+    "offline": "离线",
+    "connected": "已连接",
+    "disconnected": "已断开",
+    "connecting": "连接中",
+    "version": "版本",
+    "mcp": "MCP",
+    "status": "状态",
+    "typeHelpForCommands": "输入 /help 查看可用命令",
+    "noDataAvailable": "暂无数据",
+    "somethingWentWrong": "出现错误",
+    "unknownError": "未知错误",
+    "connectionFailed": "连接失败",
+    "commandFailed": "命令执行失败",
+    "typeCommandOrHelp": "输入命令或 /help",
+    "navigate": "导航"
+  },
+  "commands": {
+    "help": {
+      "description": "显示可用命令",
+      "title": "可用命令：",
+      "managementTitle": "管理命令：",
+      "helpLine": "  /help, /h, /?          - 显示帮助信息",
+      "clearLine": "  /clear, /cls           - 清除输出历史",
+      "quitLine": "  /quit, /exit, /q       - 退出 CLI",
+      "statusLine": "  /status                - 显示连接状态",
+      "serversLine": "  /servers               - 列出所有服务器",
+      "agentsLine": "  /agents                - 列出所有代理",
+      "loginLine": "  /login                 - 以管理员身份登录",
+      "logoutLine": "  /logout                - 清除认证信息",
+      "viewLine": "  /view <标签>           - 切换视图 (dashboard|agents|logs|settings)",
+      "refreshLine": "  /refresh               - 强制刷新数据",
+      "agentMgmtLine": "  /agent <子命令> [参数] - 代理管理 (list|status|ping|rotate|install)",
+      "serverMgmtLine": "  /server <子命令>       - 服务器管理 (list)",
+      "updateLine": "  /update                - 检查更新",
+      "securityLine": "  /security <子命令> [参数] - 安全管理 (list-locked|unlock)",
+      "backupLine": "  /backup <子命令> [参数] - 备份 (export|import)",
+      "userLine": "  /user <子命令> <参数>  - 用户管理 (reset-password)",
+      "adminLine": "  /admin create          - 初始管理员设置"
+    },
+    "clear": {
+      "description": "清除输出历史"
+    },
+    "quit": {
+      "description": "退出 CLI"
+    },
+    "status": {
+      "description": "显示连接状态",
+      "title": "连接状态：",
+      "mcpConnected": "  MCP：已连接",
+      "mcpDisconnected": "  MCP：已断开",
+      "urlPrefix": "  URL：{{url}}",
+      "authenticated": "  认证：已认证为 {{username}}",
+      "notAuthenticated": "  认证：未认证"
+    },
+    "servers": {
+      "description": "列出所有服务器"
+    },
+    "agents": {
+      "description": "列出所有代理"
+    },
+    "login": {
+      "description": "以管理员身份登录"
+    },
+    "logout": {
+      "description": "清除认证信息",
+      "success": "已成功退出登录"
+    },
+    "view": {
+      "description": "切换仪表板视图",
+      "usage": "用法：/view <{{views}}>"
+    },
+    "refresh": {
+      "description": "强制刷新数据"
+    },
+    "agent": {
+      "description": "代理管理",
+      "usage": "用法：agent <list|status|ping|rotate|install> [参数]",
+      "unknownSubcommand": "未知的代理子命令：{{subcommand}}"
+    },
+    "server": {
+      "description": "服务器管理",
+      "usage": "用法：server <list>",
+      "unknownSubcommand": "未知的服务器子命令：{{subcommand}}"
+    },
+    "update": {
+      "description": "检查更新"
+    },
+    "security": {
+      "description": "安全管理",
+      "usage": "用法：/security <list-locked|unlock> [参数]",
+      "unknownSubcommand": "未知的安全子命令：{{subcommand}}"
+    },
+    "backup": {
+      "description": "备份与恢复",
+      "usage": "用法：/backup <export|import> [参数]",
+      "unknownSubcommand": "未知的备份子命令：{{subcommand}}"
+    },
+    "user": {
+      "description": "用户管理",
+      "usage": "用法：/user <reset-password> <用户名>",
+      "unknownSubcommand": "未知的用户子命令：{{subcommand}}"
+    },
+    "admin": {
+      "description": "管理员设置",
+      "usage": "用法：/admin <create>",
+      "unknownSubcommand": "未知的管理员子命令：{{subcommand}}"
+    },
+    "unknownCommand": "未知命令：/{{command}}",
+    "unknownInput": "未知输入：{{input}}"
+  },
+  "auth": {
+    "notConnected": "未连接到 MCP 服务器",
+    "authRequired": "需要认证。请先使用 /login。",
+    "invalidToken": "从服务器收到无效的令牌",
+    "adminOnly": "只有管理员可以执行 CLI 命令",
+    "invalidCredentials": "凭据无效",
+    "mustBeLoggedIn": "解锁账户需要先登录",
+    "sessionExpired": "会话已过期。请重新登录。",
+    "sessionInactivity": "由于不活跃，会话已过期",
+    "authenticating": "正在认证 {{username}}...",
+    "authenticated": "已认证为 {{username}}",
+    "authenticationFailed": "认证失败",
+    "loggedOut": "已退出登录",
+    "enterCredentials": "请输入您的凭据进行认证"
+  },
+  "prompts": {
+    "username": "用户名：",
+    "password": "密码：",
+    "confirmPassword": "确认密码：",
+    "newPassword": "新密码：",
+    "confirmNewPassword": "确认密码：",
+    "encryptionPassword": "加密密码：",
+    "decryptionPassword": "解密密码："
+  },
+  "dashboard": {
+    "welcomeToTomo": "欢迎使用 Tomo CLI",
+    "connectedTo": "已连接到 {{url}}",
+    "failedToConnect": "连接失败：{{error}}",
+    "systemRequiresSetup": "系统需要初始设置",
+    "screenCleared": "屏幕已清除",
+    "dataRefreshed": "数据已刷新",
+    "startingAdminSetup": "开始管理员设置",
+    "switchedToView": "已切换到 {{view}} 视图",
+    "resettingPassword": "正在重置 {{username}} 的密码",
+    "exportingBackup": "正在导出备份到 {{path}}",
+    "importingBackup": "正在从 {{path}} 导入备份",
+    "importingBackupOverwrite": "正在从 {{path}} 导入备份（覆盖）",
+    "failedToFetchData": "获取数据失败",
+    "systemStatus": "系统状态",
+    "activeAgents": "活跃代理",
+    "activeServers": "活跃服务器",
+    "recentActivity": "最近活动",
+    "noRecentActivity": "暂无活动",
+    "noAgentsRegistered": "暂无注册的代理",
+    "noServersRegistered": "暂无注册的服务器",
+    "staleLabel": "过期：{{count}}",
+    "updatesLabel": "更新：{{count}}",
+    "viewRenderingFailed": "视图渲染失败"
+  },
+  "agents": {
+    "title": "代理管理",
+    "noAgentsFound": "未找到代理。",
+    "foundAgents": "找到 {{count}} 个代理：",
+    "agentEntry": "  [{{id}}] 服务器：{{serverId}} - {{status}}",
+    "versionLabel": "       版本：{{version}}",
+    "statusTitle": "服务器 {{serverId}} 的代理状态：",
+    "statusLabel": "  状态：{{status}}",
+    "versionInfo": "  版本：{{version}}",
+    "lastSeen": "  最后活跃：{{lastSeen}}",
+    "agentNotFound": "未找到代理",
+    "failedToList": "获取代理列表失败",
+    "failedToGetStatus": "获取代理状态失败",
+    "failedToPing": "代理 ping 失败",
+    "pingFailed": "Ping 失败：{{error}}",
+    "pingSuccess": "Pong！服务器 {{serverId}} 上的代理在 {{latency}}ms 内响应",
+    "rotateSuccess": "令牌轮换已成功启动！",
+    "agentIdLabel": "  代理 ID：{{agentId}}",
+    "gracePeriodLabel": "  宽限期：{{seconds}} 秒",
+    "tokenExpiresLabel": "  令牌过期时间：{{expiresAt}}",
+    "rotateWebSocketNote": "代理将通过 WebSocket 接收新令牌。",
+    "failedToRotate": "代理令牌轮换失败",
+    "noRotationData": "未收到轮换数据",
+    "installSuccess": "已在服务器 {{serverId}} 上安装代理",
+    "failedToInstall": "代理安装失败",
+    "usageStatus": "用法：agent status <server-id>",
+    "usagePing": "用法：agent ping <server-id>",
+    "usageRotate": "用法：agent rotate <server-id>",
+    "usageInstall": "用法：agent install <server-id>",
+    "columnId": "ID",
+    "columnServer": "服务器",
+    "columnStatus": "状态",
+    "columnVersion": "版本",
+    "columnLastSeen": "最后活跃"
+  },
+  "servers": {
+    "noServersFound": "未找到服务器。",
+    "foundServers": "找到 {{count}} 个服务器：",
+    "serverEntry": "  [{{id}}] {{name}} ({{hostname}}) - {{status}}",
+    "failedToList": "获取服务器列表失败",
+    "columnId": "ID",
+    "columnName": "名称",
+    "columnHostname": "主机名",
+    "columnStatus": "状态"
+  },
+  "settings": {
+    "title": "设置",
+    "connectionTab": "连接",
+    "preferencesTab": "偏好设置",
+    "aboutTab": "关于",
+    "mcpServerUrl": "MCP 服务器 URL",
+    "mcpUrlHint": "设置环境变量 MCP_SERVER_URL 以更改。",
+    "refreshInterval": "刷新间隔",
+    "autoRefresh": "自动刷新",
+    "cliVersion": "CLI 版本",
+    "envVarHint": "使用环境变量来配置设置。"
+  },
+  "setup": {
+    "title": "初始设置",
+    "welcomeToTomo": "欢迎使用 Tomo",
+    "noAdminFound": "未找到管理员账户。请创建一个以开始使用。",
+    "step1Username": "步骤 1/3：输入管理员用户名（至少3个字符，字母数字）",
+    "step2Password": "步骤 2/3：输入 \"{{username}}\" 的密码",
+    "step3Confirm": "步骤 3/3：确认密码",
+    "creatingAdmin": "正在创建管理员账户...",
+    "adminCreated": "管理员 \"{{username}}\" 已创建。您已登录。",
+    "setupFailed": "设置失败：{{error}}",
+    "creatingAdminActivity": "正在创建管理员 \"{{username}}\"...",
+    "adminCreatedSuccess": "管理员 \"{{username}}\" 创建成功",
+    "failedToCreateAdmin": "创建管理员失败",
+    "setupFailedGeneric": "设置失败",
+    "passwordRequirements": "密码要求：",
+    "passwordMinLength": "  - 至少12个字符",
+    "passwordUppercase": "  - 一个大写字母",
+    "passwordLowercase": "  - 一个小写字母",
+    "passwordNumber": "  - 一个数字",
+    "passwordSpecialChar": "  - 一个特殊字符"
+  },
+  "security": {
+    "usageUnlock": "用法：/security unlock <lock-id> [备注]",
+    "noLockedAccounts": "未找到锁定的账户。",
+    "foundLockedAccounts": "找到 {{count}} 个锁定的账户：",
+    "lockedAccountEntry": "  [{{id}}] {{identifier}} ({{type}}) - {{attempts}} 次尝试 - 锁定于 {{lockedAt}}",
+    "unlockSuccess": "账户锁定 {{lockId}} 已成功解锁",
+    "failedToListLocked": "获取锁定账户列表失败",
+    "failedToUnlock": "解锁账户失败",
+    "unlockedViaCli": "{{username}} 通过 CLI 解锁"
+  },
+  "updates": {
+    "failedToCheck": "检查更新失败",
+    "noInfoAvailable": "没有可用的更新信息",
+    "currentVersion": "当前版本：{{version}}",
+    "updateAvailable": "有可用更新：{{version}}",
+    "latestVersion": "您正在使用最新版本：{{version}}"
+  },
+  "backup": {
+    "usageImport": "用法：/backup import <路径> [--overwrite]",
+    "pathRequired": "路径为必填项",
+    "pathInvalidChars": "路径包含无效字符",
+    "pathNoParentDir": "路径不能包含 \"..\"",
+    "exportingTo": "正在导出备份到 {{path}}...",
+    "exportSuccess": "备份已导出到 {{path}}",
+    "checksumLabel": "校验和：{{checksum}}",
+    "failedToExport": "备份导出失败",
+    "importingFrom": "正在从 {{path}} 导入备份...",
+    "importSuccess": "已从 {{path}} 导入备份",
+    "importStats": "用户：{{users}}，服务器：{{servers}}",
+    "failedToImport": "备份导入失败"
+  },
+  "users": {
+    "usageResetPassword": "用法：/user reset-password <用户名>",
+    "usernameValidation": "用户名必须为3-50个字符（字母、数字、_ 或 -）",
+    "passwordResetSuccess": "已重置 {{username}} 的密码",
+    "failedToResetPassword": "密码重置失败",
+    "resettingPassword": "正在重置 {{username}} 的密码..."
+  },
+  "validation": {
+    "usernameRequired": "用户名为必填项",
+    "usernameMinLength": "用户名至少需要3个字符",
+    "usernameMaxLength": "用户名不能超过50个字符",
+    "usernameInvalidChars": "用户名只能包含字母、数字、连字符和下划线",
+    "passwordRequired": "密码为必填项",
+    "passwordMinLength": "密码至少需要12个字符",
+    "passwordMaxLength": "密码不能超过128个字符",
+    "passwordUppercase": "密码必须包含一个大写字母",
+    "passwordLowercase": "密码必须包含一个小写字母",
+    "passwordNumber": "密码必须包含一个数字",
+    "passwordSpecialChar": "密码必须包含一个特殊字符",
+    "mcpUrlProtocol": "MCP URL 必须使用 http 或 https 协议",
+    "invalidUrlFormat": "无效的 URL 格式",
+    "passwordsDoNotMatch": "密码不匹配",
+    "invalidUsername": "无效的用户名",
+    "invalidPassword": "无效的密码"
+  },
+  "errors": {
+    "notConnected": "未连接到 MCP 服务器",
+    "connectionFailed": "连接失败",
+    "failedToListServers": "获取服务器列表失败",
+    "failedToInstallAgent": "代理安装失败",
+    "failedToCreateAdmin": "创建管理员失败",
+    "failedToResetPassword": "密码重置失败",
+    "failedToUnlockAccount": "解锁账户失败",
+    "failedToExportBackup": "备份导出失败",
+    "failedToImportBackup": "备份导入失败"
+  },
+  "logs": {
+    "title": "最近活动"
+  }
+}

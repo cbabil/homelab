@@ -9,6 +9,7 @@ import { Box, Text } from 'ink';
 import React from 'react';
 import { COLORS } from '../theme.js';
 import { Panel } from '../../components/dashboard/Panel.js';
+import { t } from '../../i18n/index.js';
 
 type SetupStep = 'username' | 'password' | 'confirmPassword' | 'creating' | 'done' | 'error';
 
@@ -21,38 +22,38 @@ interface SetupViewProps {
 function PasswordRequirements() {
   return (
     <Box flexDirection="column" marginTop={1}>
-      <Text color={COLORS.dim}>{'Password requirements:'}</Text>
-      <Text color={COLORS.dim}>{'  - At least 12 characters'}</Text>
-      <Text color={COLORS.dim}>{'  - One uppercase letter'}</Text>
-      <Text color={COLORS.dim}>{'  - One lowercase letter'}</Text>
-      <Text color={COLORS.dim}>{'  - One number'}</Text>
-      <Text color={COLORS.dim}>{'  - One special character'}</Text>
+      <Text color={COLORS.dim}>{t('setup.passwordRequirements')}</Text>
+      <Text color={COLORS.dim}>{t('setup.passwordMinLength')}</Text>
+      <Text color={COLORS.dim}>{t('setup.passwordUppercase')}</Text>
+      <Text color={COLORS.dim}>{t('setup.passwordLowercase')}</Text>
+      <Text color={COLORS.dim}>{t('setup.passwordNumber')}</Text>
+      <Text color={COLORS.dim}>{t('setup.passwordSpecialChar')}</Text>
     </Box>
   );
 }
 
 export function SetupView({ step, username, error }: SetupViewProps) {
   return (
-    <Panel title="INITIAL_SETUP">
+    <Panel title={t('setup.title')}>
       <Box flexDirection="column">
         <Text color={COLORS.bright} bold>
-          {'Welcome to Tomo'}
+          {t('setup.welcomeToTomo')}
         </Text>
         <Text color={COLORS.primary}>
-          {'No admin account found. Create one to get started.'}
+          {t('setup.noAdminFound')}
         </Text>
 
         <Box marginTop={1} flexDirection="column">
           {step === 'username' && (
             <Text color={COLORS.bright}>
-              {'Step 1/3: Enter admin username (min 3 chars, alphanumeric)'}
+              {t('setup.step1Username')}
             </Text>
           )}
 
           {step === 'password' && (
             <Box flexDirection="column">
               <Text color={COLORS.bright}>
-                {`Step 2/3: Enter password for "${username}"`}
+                {t('setup.step2Password', { username })}
               </Text>
               <PasswordRequirements />
             </Box>
@@ -60,25 +61,25 @@ export function SetupView({ step, username, error }: SetupViewProps) {
 
           {step === 'confirmPassword' && (
             <Text color={COLORS.bright}>
-              {'Step 3/3: Confirm password'}
+              {t('setup.step3Confirm')}
             </Text>
           )}
 
           {step === 'creating' && (
             <Text color={COLORS.dim}>
-              {'Creating admin account...'}
+              {t('setup.creatingAdmin')}
             </Text>
           )}
 
           {step === 'done' && (
             <Text color={COLORS.bright} bold>
-              {`Admin "${username}" created. You are now logged in.`}
+              {t('setup.adminCreated', { username })}
             </Text>
           )}
 
           {step === 'error' && (
             <Text color={COLORS.error}>
-              {`Setup failed: ${error || 'Unknown error'}`}
+              {t('setup.setupFailed', { error: error || t('common.unknownError') })}
             </Text>
           )}
         </Box>

@@ -1,0 +1,317 @@
+{
+  "common": {
+    "goodbye": "Hasta luego!",
+    "processing": "Procesando...",
+    "unknown": "desconocido",
+    "never": "nunca",
+    "on": "ACTIVO",
+    "off": "INACTIVO",
+    "online": "EN LINEA",
+    "offline": "DESCONECTADO",
+    "connected": "Conectado",
+    "disconnected": "Desconectado",
+    "connecting": "Conectando",
+    "version": "VERSION",
+    "mcp": "MCP",
+    "status": "ESTADO",
+    "typeHelpForCommands": "Escriba /help para ver los comandos disponibles",
+    "noDataAvailable": "No hay datos disponibles",
+    "somethingWentWrong": "Algo salió mal",
+    "unknownError": "Error desconocido",
+    "connectionFailed": "Error de conexión",
+    "commandFailed": "Error en el comando",
+    "typeCommandOrHelp": "Escriba un comando o /help",
+    "navigate": "navegar"
+  },
+  "commands": {
+    "help": {
+      "description": "Mostrar comandos disponibles",
+      "title": "Comandos disponibles:",
+      "managementTitle": "Comandos de gestión:",
+      "helpLine": "  /help, /h, /?          - Mostrar este mensaje de ayuda",
+      "clearLine": "  /clear, /cls           - Limpiar historial de salida",
+      "quitLine": "  /quit, /exit, /q       - Salir del CLI",
+      "statusLine": "  /status                - Mostrar estado de conexión",
+      "serversLine": "  /servers               - Listar todos los servidores",
+      "agentsLine": "  /agents                - Listar todos los agentes",
+      "loginLine": "  /login                 - Autenticarse como admin",
+      "logoutLine": "  /logout                - Cerrar sesión",
+      "viewLine": "  /view <pestaña>        - Cambiar vista (dashboard|agents|logs|settings)",
+      "refreshLine": "  /refresh               - Forzar actualización de datos",
+      "agentMgmtLine": "  /agent <sub> [args]    - Gestión de agentes (list|status|ping|rotate|install)",
+      "serverMgmtLine": "  /server <sub>          - Gestión de servidores (list)",
+      "updateLine": "  /update                - Buscar actualizaciones",
+      "securityLine": "  /security <sub> [args] - Seguridad (list-locked|unlock)",
+      "backupLine": "  /backup <sub> [args]   - Respaldo (export|import)",
+      "userLine": "  /user <sub> <args>     - Gestión de usuarios (reset-password)",
+      "adminLine": "  /admin create          - Configuración inicial del admin"
+    },
+    "clear": {
+      "description": "Limpiar historial de salida"
+    },
+    "quit": {
+      "description": "Salir del CLI"
+    },
+    "status": {
+      "description": "Mostrar estado de conexión",
+      "title": "Estado de conexión:",
+      "mcpConnected": "  MCP: Conectado",
+      "mcpDisconnected": "  MCP: Desconectado",
+      "urlPrefix": "  URL: {{url}}",
+      "authenticated": "  Auth: Autenticado como {{username}}",
+      "notAuthenticated": "  Auth: No autenticado"
+    },
+    "servers": {
+      "description": "Listar todos los servidores"
+    },
+    "agents": {
+      "description": "Listar todos los agentes"
+    },
+    "login": {
+      "description": "Autenticarse como admin"
+    },
+    "logout": {
+      "description": "Cerrar sesión",
+      "success": "Sesión cerrada exitosamente"
+    },
+    "view": {
+      "description": "Cambiar vista del panel",
+      "usage": "Uso: /view <{{views}}>"
+    },
+    "refresh": {
+      "description": "Forzar actualización de datos"
+    },
+    "agent": {
+      "description": "Gestión de agentes",
+      "usage": "Uso: agent <list|status|ping|rotate|install> [args]",
+      "unknownSubcommand": "Subcomando de agente desconocido: {{subcommand}}"
+    },
+    "server": {
+      "description": "Gestión de servidores",
+      "usage": "Uso: server <list>",
+      "unknownSubcommand": "Subcomando de servidor desconocido: {{subcommand}}"
+    },
+    "update": {
+      "description": "Buscar actualizaciones"
+    },
+    "security": {
+      "description": "Gestión de seguridad",
+      "usage": "Uso: /security <list-locked|unlock> [args]",
+      "unknownSubcommand": "Subcomando de seguridad desconocido: {{subcommand}}"
+    },
+    "backup": {
+      "description": "Respaldo y restauración",
+      "usage": "Uso: /backup <export|import> [args]",
+      "unknownSubcommand": "Subcomando de respaldo desconocido: {{subcommand}}"
+    },
+    "user": {
+      "description": "Gestión de usuarios",
+      "usage": "Uso: /user <reset-password> <username>",
+      "unknownSubcommand": "Subcomando de usuario desconocido: {{subcommand}}"
+    },
+    "admin": {
+      "description": "Gestión de administración",
+      "usage": "Uso: /admin <create>",
+      "unknownSubcommand": "Subcomando de admin desconocido: {{subcommand}}"
+    },
+    "unknownCommand": "Comando desconocido: /{{command}}",
+    "unknownInput": "Entrada desconocida: {{input}}"
+  },
+  "auth": {
+    "notConnected": "No conectado al servidor MCP",
+    "authRequired": "Autenticación requerida. Use /login primero.",
+    "invalidToken": "Token inválido recibido del servidor",
+    "adminOnly": "Solo los administradores pueden ejecutar comandos CLI",
+    "invalidCredentials": "Credenciales inválidas",
+    "mustBeLoggedIn": "Debe estar autenticado para desbloquear cuentas",
+    "sessionExpired": "Sesión expirada. Inicie sesión nuevamente.",
+    "sessionInactivity": "Sesión expirada por inactividad",
+    "authenticating": "Autenticando a {{username}}...",
+    "authenticated": "Autenticado como {{username}}",
+    "authenticationFailed": "Error de autenticación",
+    "loggedOut": "Sesión cerrada",
+    "enterCredentials": "Ingrese sus credenciales para autenticarse"
+  },
+  "prompts": {
+    "username": "Nombre de usuario: ",
+    "password": "Contraseña: ",
+    "confirmPassword": "Confirmar contraseña: ",
+    "newPassword": "Nueva contraseña: ",
+    "confirmNewPassword": "Confirmar contraseña: ",
+    "encryptionPassword": "Contraseña de cifrado: ",
+    "decryptionPassword": "Contraseña de descifrado: "
+  },
+  "dashboard": {
+    "welcomeToTomo": "Bienvenido a Tomo CLI",
+    "connectedTo": "Conectado a {{url}}",
+    "failedToConnect": "Error de conexión: {{error}}",
+    "systemRequiresSetup": "El sistema requiere configuración inicial",
+    "screenCleared": "Pantalla limpiada",
+    "dataRefreshed": "Datos actualizados",
+    "startingAdminSetup": "Iniciando configuración de admin",
+    "switchedToView": "Vista cambiada a {{view}}",
+    "resettingPassword": "Restableciendo contraseña para {{username}}",
+    "exportingBackup": "Exportando respaldo a {{path}}",
+    "importingBackup": "Importando respaldo desde {{path}}",
+    "importingBackupOverwrite": "Importando respaldo desde {{path}} (sobrescribir)",
+    "failedToFetchData": "Error al obtener datos",
+    "systemStatus": "ESTADO_SISTEMA",
+    "activeAgents": "AGENTES_ACTIVOS",
+    "activeServers": "SERVIDORES_ACTIVOS",
+    "recentActivity": "ACTIVIDAD_RECIENTE",
+    "noRecentActivity": "Sin actividad reciente",
+    "noAgentsRegistered": "No hay agentes registrados",
+    "noServersRegistered": "No hay servidores registrados",
+    "staleLabel": "OBSOLETOS: {{count}}",
+    "updatesLabel": "ACTUALIZACIONES: {{count}}",
+    "viewRenderingFailed": "Error al renderizar la vista"
+  },
+  "agents": {
+    "title": "GESTION_AGENTES",
+    "noAgentsFound": "No se encontraron agentes.",
+    "foundAgents": "{{count}} agente(s) encontrado(s):",
+    "agentEntry": "  [{{id}}] Servidor: {{serverId}} - {{status}}",
+    "versionLabel": "       Versión: {{version}}",
+    "statusTitle": "Estado del agente para servidor {{serverId}}:",
+    "statusLabel": "  Estado: {{status}}",
+    "versionInfo": "  Versión: {{version}}",
+    "lastSeen": "  Última actividad: {{lastSeen}}",
+    "agentNotFound": "Agente no encontrado",
+    "failedToList": "Error al listar agentes",
+    "failedToGetStatus": "Error al obtener estado del agente",
+    "failedToPing": "Error al hacer ping al agente",
+    "pingFailed": "Ping fallido: {{error}}",
+    "pingSuccess": "Pong! El agente en servidor {{serverId}} respondió en {{latency}}ms",
+    "rotateSuccess": "Rotación de token iniciada exitosamente!",
+    "agentIdLabel": "  ID de Agente: {{agentId}}",
+    "gracePeriodLabel": "  Período de gracia: {{seconds}} segundos",
+    "tokenExpiresLabel": "  Token expira: {{expiresAt}}",
+    "rotateWebSocketNote": "El agente recibirá el nuevo token vía WebSocket.",
+    "failedToRotate": "Error en la rotación del token del agente",
+    "noRotationData": "No se recibieron datos de rotación",
+    "installSuccess": "Agente instalado en servidor {{serverId}}",
+    "failedToInstall": "Error al instalar agente",
+    "usageStatus": "Uso: agent status <server-id>",
+    "usagePing": "Uso: agent ping <server-id>",
+    "usageRotate": "Uso: agent rotate <server-id>",
+    "usageInstall": "Uso: agent install <server-id>",
+    "columnId": "ID",
+    "columnServer": "Servidor",
+    "columnStatus": "Estado",
+    "columnVersion": "Versión",
+    "columnLastSeen": "Última actividad"
+  },
+  "servers": {
+    "noServersFound": "No se encontraron servidores.",
+    "foundServers": "{{count}} servidor(es) encontrado(s):",
+    "serverEntry": "  [{{id}}] {{name}} ({{hostname}}) - {{status}}",
+    "failedToList": "Error al listar servidores",
+    "columnId": "ID",
+    "columnName": "Nombre",
+    "columnHostname": "Hostname",
+    "columnStatus": "Estado"
+  },
+  "settings": {
+    "title": "CONFIGURACION",
+    "connectionTab": "CONEXION",
+    "preferencesTab": "PREFERENCIAS",
+    "aboutTab": "ACERCA DE",
+    "mcpServerUrl": "URL del servidor MCP",
+    "mcpUrlHint": "Configure la variable de entorno MCP_SERVER_URL para cambiar.",
+    "refreshInterval": "Intervalo de actualización",
+    "autoRefresh": "Actualización automática",
+    "cliVersion": "Versión CLI",
+    "envVarHint": "Use variables de entorno para configurar los ajustes."
+  },
+  "setup": {
+    "title": "CONFIGURACION_INICIAL",
+    "welcomeToTomo": "Bienvenido a Tomo",
+    "noAdminFound": "No se encontró cuenta de admin. Cree una para comenzar.",
+    "step1Username": "Paso 1/3: Ingrese nombre de usuario admin (mín 3 car., alfanumérico)",
+    "step2Password": "Paso 2/3: Ingrese contraseña para \"{{username}}\"",
+    "step3Confirm": "Paso 3/3: Confirme la contraseña",
+    "creatingAdmin": "Creando cuenta de administrador...",
+    "adminCreated": "Admin \"{{username}}\" creado. Ya está autenticado.",
+    "setupFailed": "Configuración fallida: {{error}}",
+    "creatingAdminActivity": "Creando admin \"{{username}}\"...",
+    "adminCreatedSuccess": "Admin \"{{username}}\" creado exitosamente",
+    "failedToCreateAdmin": "Error al crear admin",
+    "setupFailedGeneric": "Configuración fallida",
+    "passwordRequirements": "Requisitos de contraseña:",
+    "passwordMinLength": "  - Al menos 12 caracteres",
+    "passwordUppercase": "  - Una letra mayúscula",
+    "passwordLowercase": "  - Una letra minúscula",
+    "passwordNumber": "  - Un número",
+    "passwordSpecialChar": "  - Un carácter especial"
+  },
+  "security": {
+    "usageUnlock": "Uso: /security unlock <lock-id> [notas]",
+    "noLockedAccounts": "No se encontraron cuentas bloqueadas.",
+    "foundLockedAccounts": "{{count}} cuenta(s) bloqueada(s) encontrada(s):",
+    "lockedAccountEntry": "  [{{id}}] {{identifier}} ({{type}}) - {{attempts}} intentos - bloqueada {{lockedAt}}",
+    "unlockSuccess": "Bloqueo de cuenta {{lockId}} desbloqueado exitosamente",
+    "failedToListLocked": "Error al listar cuentas bloqueadas",
+    "failedToUnlock": "Error al desbloquear cuenta",
+    "unlockedViaCli": "Desbloqueado vía CLI por {{username}}"
+  },
+  "updates": {
+    "failedToCheck": "Error al verificar actualizaciones",
+    "noInfoAvailable": "No hay información de actualización disponible",
+    "currentVersion": "Versión actual: {{version}}",
+    "updateAvailable": "Actualización disponible: {{version}}",
+    "latestVersion": "Está usando la última versión: {{version}}"
+  },
+  "backup": {
+    "usageImport": "Uso: /backup import <ruta> [--overwrite]",
+    "pathRequired": "La ruta es requerida",
+    "pathInvalidChars": "La ruta contiene caracteres inválidos",
+    "pathNoParentDir": "La ruta no debe contener \"..\"",
+    "exportingTo": "Exportando respaldo a {{path}}...",
+    "exportSuccess": "Respaldo exportado a {{path}}",
+    "checksumLabel": "Suma de verificación: {{checksum}}",
+    "failedToExport": "Error al exportar respaldo",
+    "importingFrom": "Importando respaldo desde {{path}}...",
+    "importSuccess": "Respaldo importado desde {{path}}",
+    "importStats": "Usuarios: {{users}}, Servidores: {{servers}}",
+    "failedToImport": "Error al importar respaldo"
+  },
+  "users": {
+    "usageResetPassword": "Uso: /user reset-password <username>",
+    "usernameValidation": "El nombre de usuario debe tener 3-50 caracteres (letras, números, _ o -)",
+    "passwordResetSuccess": "Contraseña restablecida para {{username}}",
+    "failedToResetPassword": "Error al restablecer contraseña",
+    "resettingPassword": "Restableciendo contraseña para {{username}}..."
+  },
+  "validation": {
+    "usernameRequired": "El nombre de usuario es requerido",
+    "usernameMinLength": "El nombre de usuario debe tener al menos 3 caracteres",
+    "usernameMaxLength": "El nombre de usuario debe tener menos de 50 caracteres",
+    "usernameInvalidChars": "El nombre de usuario solo puede contener letras, números, guiones y guiones bajos",
+    "passwordRequired": "La contraseña es requerida",
+    "passwordMinLength": "La contraseña debe tener al menos 12 caracteres",
+    "passwordMaxLength": "La contraseña debe tener menos de 128 caracteres",
+    "passwordUppercase": "La contraseña debe contener una letra mayúscula",
+    "passwordLowercase": "La contraseña debe contener una letra minúscula",
+    "passwordNumber": "La contraseña debe contener un número",
+    "passwordSpecialChar": "La contraseña debe contener un carácter especial",
+    "mcpUrlProtocol": "La URL MCP debe usar protocolo http o https",
+    "invalidUrlFormat": "Formato de URL inválido",
+    "passwordsDoNotMatch": "Las contraseñas no coinciden",
+    "invalidUsername": "Nombre de usuario inválido",
+    "invalidPassword": "Contraseña inválida"
+  },
+  "errors": {
+    "notConnected": "No conectado al servidor MCP",
+    "connectionFailed": "Error de conexión",
+    "failedToListServers": "Error al listar servidores",
+    "failedToInstallAgent": "Error al instalar agente",
+    "failedToCreateAdmin": "Error al crear admin",
+    "failedToResetPassword": "Error al restablecer contraseña",
+    "failedToUnlockAccount": "Error al desbloquear cuenta",
+    "failedToExportBackup": "Error al exportar respaldo",
+    "failedToImportBackup": "Error al importar respaldo"
+  },
+  "logs": {
+    "title": "ACTIVIDAD_RECIENTE"
+  }
+}

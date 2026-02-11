@@ -5,6 +5,7 @@
 import type { CommandResult, AppState } from '../types.js';
 import { getLockedAccounts, unlockAccount } from '../../lib/security.js';
 import { sanitizeForDisplay } from '../../lib/validation.js';
+import { t } from '../../i18n/index.js';
 
 export async function handleSecurityCommand(
   subcommand: string,
@@ -17,10 +18,10 @@ export async function handleSecurityCommand(
 
     case 'unlock': {
       if (!args[0]) {
-        return [{ type: 'error', content: 'Usage: /security unlock <lock-id> [notes]' }];
+        return [{ type: 'error', content: t('security.usageUnlock') }];
       }
       if (!state.username) {
-        return [{ type: 'error', content: 'You must be logged in to unlock accounts' }];
+        return [{ type: 'error', content: t('auth.mustBeLoggedIn') }];
       }
       const notes = args.slice(1).join(' ') || undefined;
       return executeUnlock(args[0], state.username, notes);
@@ -31,8 +32,8 @@ export async function handleSecurityCommand(
         {
           type: 'error',
           content: subcommand
-            ? `Unknown security subcommand: ${sanitizeForDisplay(subcommand)}`
-            : 'Usage: /security <list-locked|unlock> [args]',
+            ? t('commands.security.unknownSubcommand', { subcommand: sanitizeForDisplay(subcommand) })
+            : t('commands.security.usage'),
         },
       ];
   }
@@ -43,17 +44,23 @@ async function executeListLocked(): Promise<CommandResult[]> {
     const accounts = await getLockedAccounts();
 
     if (accounts.length === 0) {
-      return [{ type: 'info', content: 'No locked accounts found.' }];
+      return [{ type: 'info', content: t('security.noLockedAccounts') }];
     }
 
     const results: CommandResult[] = [
-      { type: 'info', content: `Found ${accounts.length} locked account(s):` },
+      { type: 'info', content: t('security.foundLockedAccounts', { count: accounts.length }) },
     ];
 
     for (const account of accounts) {
       results.push({
         type: 'error',
-        content: `  [${account.id}] ${account.identifier} (${account.identifier_type}) - ${account.attempt_count} attempts - locked ${account.locked_at}`,
+        content: t('security.lockedAccountEntry', {
+          id: account.id,
+          identifier: account.identifier,
+          type: account.identifier_type,
+          attempts: account.attempt_count,
+          lockedAt: account.locked_at,
+        }),
       });
     }
 
@@ -62,7 +69,7 @@ async function executeListLocked(): Promise<CommandResult[]> {
     return [
       {
         type: 'error',
-        content: err instanceof Error ? err.message : 'Failed to list locked accounts',
+        content: err instanceof Error ? err.message : t('security.failedToListLocked'),
       },
     ];
   }
@@ -77,15 +84,15 @@ async function executeUnlock(
     const result = await unlockAccount(lockId, adminUsername, notes);
 
     if (result.success) {
-      return [{ type: 'success', content: `Account lock ${lockId} unlocked successfully` }];
+      return [{ type: 'success', content: t('security.unlockSuccess', { lockId }) }];
     }
 
-    return [{ type: 'error', content: result.error || 'Failed to unlock account' }];
+    return [{ type: 'error', content: result.error || t('security.failedToUnlock') }];
   } catch (err) {
     return [
       {
         type: 'error',
-        content: err instanceof Error ? err.message : 'Failed to unlock account',
+        content: err instanceof Error ? err.message : t('security.failedToUnlock'),
       },
     ];
   }

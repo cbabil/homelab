@@ -7,6 +7,7 @@ import type { MCPClient } from '../../lib/mcp-client.js';
 import type { AgentInfo, RotateTokenData } from '../../lib/agent.js';
 import { installAgent } from '../../lib/agent.js';
 import { sanitizeForDisplay } from '../../lib/validation.js';
+import { t } from '../../i18n/index.js';
 
 export async function handleAgentCommand(
   client: MCPClient,
@@ -19,25 +20,25 @@ export async function handleAgentCommand(
 
     case 'status':
       if (!args[0]) {
-        return [{ type: 'error', content: 'Usage: agent status <server-id>' }];
+        return [{ type: 'error', content: t('agents.usageStatus') }];
       }
       return executeAgentStatus(client, args[0]);
 
     case 'ping':
       if (!args[0]) {
-        return [{ type: 'error', content: 'Usage: agent ping <server-id>' }];
+        return [{ type: 'error', content: t('agents.usagePing') }];
       }
       return executeAgentPing(client, args[0]);
 
     case 'rotate':
       if (!args[0]) {
-        return [{ type: 'error', content: 'Usage: agent rotate <server-id>' }];
+        return [{ type: 'error', content: t('agents.usageRotate') }];
       }
       return executeAgentRotate(client, args[0]);
 
     case 'install':
       if (!args[0]) {
-        return [{ type: 'error', content: 'Usage: agent install <server-id>' }];
+        return [{ type: 'error', content: t('agents.usageInstall') }];
       }
       return executeAgentInstall(args[0]);
 
@@ -46,8 +47,8 @@ export async function handleAgentCommand(
         {
           type: 'error',
           content: subcommand
-            ? `Unknown agent subcommand: ${sanitizeForDisplay(subcommand)}`
-            : 'Usage: agent <list|status|ping|rotate|install> [args]',
+            ? t('commands.agent.unknownSubcommand', { subcommand: sanitizeForDisplay(subcommand) })
+            : t('commands.agent.usage'),
         },
       ];
   }
@@ -60,28 +61,28 @@ async function executeAgentList(
     const response = await client.callTool<{ agents: AgentInfo[] }>('list_agents', {});
 
     if (!response.success) {
-      return [{ type: 'error', content: response.error || 'Failed to list agents' }];
+      return [{ type: 'error', content: response.error || t('agents.failedToList') }];
     }
 
     const agents = response.data?.agents || [];
 
     if (agents.length === 0) {
-      return [{ type: 'info', content: 'No agents found.' }];
+      return [{ type: 'info', content: t('agents.noAgentsFound') }];
     }
 
     const results: CommandResult[] = [
-      { type: 'info', content: `Found ${agents.length} agent(s):` },
+      { type: 'info', content: t('agents.foundAgents', { count: agents.length }) },
     ];
 
     for (const agent of agents) {
       results.push({
         type: agent.status === 'connected' ? 'success' : 'info',
-        content: `  [${agent.id}] Server: ${agent.server_id} - ${agent.status.toUpperCase()}`,
+        content: t('agents.agentEntry', { id: agent.id, serverId: agent.server_id, status: agent.status.toUpperCase() }),
       });
       if (agent.version) {
         results.push({
           type: 'system',
-          content: `       Version: ${agent.version}`,
+          content: t('agents.versionLabel', { version: agent.version }),
         });
       }
     }
@@ -91,7 +92,7 @@ async function executeAgentList(
     return [
       {
         type: 'error',
-        content: err instanceof Error ? err.message : 'Failed to list agents',
+        content: err instanceof Error ? err.message : t('agents.failedToList'),
       },
     ];
   }
@@ -107,28 +108,28 @@ async function executeAgentStatus(
     });
 
     if (!response.success) {
-      return [{ type: 'error', content: response.error || 'Failed to get agent status' }];
+      return [{ type: 'error', content: response.error || t('agents.failedToGetStatus') }];
     }
 
     const agent = response.data;
     if (!agent) {
-      return [{ type: 'error', content: 'Agent not found' }];
+      return [{ type: 'error', content: t('agents.agentNotFound') }];
     }
 
     return [
-      { type: 'info', content: `Agent Status for server ${serverId}:` },
+      { type: 'info', content: t('agents.statusTitle', { serverId }) },
       {
         type: agent.status === 'connected' ? 'success' : 'info',
-        content: `  Status: ${agent.status}`,
+        content: t('agents.statusLabel', { status: agent.status }),
       },
-      { type: 'info', content: `  Version: ${agent.version || 'unknown'}` },
-      { type: 'info', content: `  Last seen: ${agent.last_seen || 'never'}` },
+      { type: 'info', content: t('agents.versionInfo', { version: agent.version || t('common.unknown') }) },
+      { type: 'info', content: t('agents.lastSeen', { lastSeen: agent.last_seen || t('common.never') }) },
     ];
   } catch (err) {
     return [
       {
         type: 'error',
-        content: err instanceof Error ? err.message : 'Failed to get agent status',
+        content: err instanceof Error ? err.message : t('agents.failedToGetStatus'),
       },
     ];
   }
@@ -150,7 +151,7 @@ async function executeAgentPing(
 
     if (!response.success) {
       return [
-        { type: 'error', content: `Ping failed: ${response.error || 'No response'}` },
+        { type: 'error', content: t('agents.pingFailed', { error: response.error || 'No response' }) },
       ];
     }
 
@@ -159,14 +160,14 @@ async function executeAgentPing(
     return [
       {
         type: 'success',
-        content: `Pong! Agent on server ${serverId} responded in ${latency}ms`,
+        content: t('agents.pingSuccess', { serverId, latency }),
       },
     ];
   } catch (err) {
     return [
       {
         type: 'error',
-        content: err instanceof Error ? err.message : 'Failed to ping agent',
+        content: err instanceof Error ? err.message : t('agents.failedToPing'),
       },
     ];
   }
@@ -184,27 +185,27 @@ async function executeAgentRotate(
 
     if (!response.success) {
       return [
-        { type: 'error', content: response.error || 'Failed to rotate agent token' },
+        { type: 'error', content: response.error || t('agents.failedToRotate') },
       ];
     }
 
     const data = response.data;
     if (!data) {
-      return [{ type: 'error', content: 'No rotation data received' }];
+      return [{ type: 'error', content: t('agents.noRotationData') }];
     }
 
     return [
-      { type: 'success', content: 'Token rotation initiated successfully!' },
-      { type: 'info', content: `  Agent ID: ${data.agent_id}` },
-      { type: 'info', content: `  Grace Period: ${data.grace_period_seconds} seconds` },
-      { type: 'info', content: `  Token Expires: ${data.token_expires_at}` },
-      { type: 'system', content: 'The agent will receive the new token via WebSocket.' },
+      { type: 'success', content: t('agents.rotateSuccess') },
+      { type: 'info', content: t('agents.agentIdLabel', { agentId: data.agent_id }) },
+      { type: 'info', content: t('agents.gracePeriodLabel', { seconds: data.grace_period_seconds }) },
+      { type: 'info', content: t('agents.tokenExpiresLabel', { expiresAt: data.token_expires_at }) },
+      { type: 'system', content: t('agents.rotateWebSocketNote') },
     ];
   } catch (err) {
     return [
       {
         type: 'error',
-        content: err instanceof Error ? err.message : 'Failed to rotate agent token',
+        content: err instanceof Error ? err.message : t('agents.failedToRotate'),
       },
     ];
   }
@@ -217,22 +218,22 @@ async function executeAgentInstall(
     const result = await installAgent(serverId);
 
     if (!result.success) {
-      return [{ type: 'error', content: result.error || 'Failed to install agent' }];
+      return [{ type: 'error', content: result.error || t('agents.failedToInstall') }];
     }
 
-    const agentId = result.data?.agent_id || 'unknown';
-    const version = result.data?.version || 'unknown';
+    const agentId = result.data?.agent_id || t('common.unknown');
+    const version = result.data?.version || t('common.unknown');
 
     return [
-      { type: 'success', content: `Agent installed on server ${serverId}` },
-      { type: 'info', content: `  Agent ID: ${agentId}` },
-      { type: 'info', content: `  Version: ${version}` },
+      { type: 'success', content: t('agents.installSuccess', { serverId }) },
+      { type: 'info', content: t('agents.agentIdLabel', { agentId }) },
+      { type: 'info', content: t('agents.versionInfo', { version }) },
     ];
   } catch (err) {
     return [
       {
         type: 'error',
-        content: err instanceof Error ? err.message : 'Failed to install agent',
+        content: err instanceof Error ? err.message : t('agents.failedToInstall'),
       },
     ];
   }

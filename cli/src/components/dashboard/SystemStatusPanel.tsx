@@ -7,6 +7,7 @@ import React from 'react';
 import { COLORS } from '../../app/theme.js';
 import { Panel } from './Panel.js';
 import { ProgressBar } from './ProgressBar.js';
+import { t } from '../../i18n/index.js';
 
 interface SystemStatusPanelProps {
   mcpConnected: boolean;
@@ -28,12 +29,12 @@ export function SystemStatusPanel({
   pendingUpdates = 0,
 }: SystemStatusPanelProps) {
   return (
-    <Panel title="SYSTEM_STATUS">
+    <Panel title={t('dashboard.systemStatus')}>
       <Box flexDirection="column">
         <Box marginBottom={0}>
-          <Text color={COLORS.primary}>{'MCP         '}</Text>
+          <Text color={COLORS.primary}>{`${t('common.mcp')}         `}</Text>
           <Text color={mcpConnected ? COLORS.bright : COLORS.error}>
-            {mcpConnected ? '[ONLINE]' : '[OFFLINE]'}
+            {mcpConnected ? `[${t('common.online')}]` : `[${t('common.offline')}]`}
           </Text>
         </Box>
         <ProgressBar
@@ -50,7 +51,7 @@ export function SystemStatusPanel({
         />
         <Box marginTop={1}>
           <Text color={COLORS.dim}>
-            {`STALE: ${staleCount}  UPDATES: ${pendingUpdates}`}
+            {`${t('dashboard.staleLabel', { count: staleCount })}  ${t('dashboard.updatesLabel', { count: pendingUpdates })}`}
           </Text>
         </Box>
       </Box>

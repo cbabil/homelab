@@ -4,6 +4,7 @@
 
 import type { CommandResult } from '../types.js';
 import type { MCPClient } from '../../lib/mcp-client.js';
+import { t } from '../../i18n/index.js';
 
 export async function handleUpdateCommand(
   client: MCPClient
@@ -15,25 +16,25 @@ export async function handleUpdateCommand(
   }>('check_updates', {});
 
   if (!response.success) {
-    return [{ type: 'error', content: response.error || 'Failed to check updates' }];
+    return [{ type: 'error', content: response.error || t('updates.failedToCheck') }];
   }
 
   const data = response.data;
   if (!data) {
-    return [{ type: 'error', content: 'No update information available' }];
+    return [{ type: 'error', content: t('updates.noInfoAvailable') }];
   }
 
   if (data.update_available) {
     return [
-      { type: 'info', content: `Current version: ${data.current_version}` },
+      { type: 'info', content: t('updates.currentVersion', { version: data.current_version }) },
       {
         type: 'success',
-        content: `Update available: ${data.latest_version}`,
+        content: t('updates.updateAvailable', { version: data.latest_version }),
       },
     ];
   }
 
   return [
-    { type: 'success', content: `You are running the latest version: ${data.current_version}` },
+    { type: 'success', content: t('updates.latestVersion', { version: data.current_version }) },
   ];
 }

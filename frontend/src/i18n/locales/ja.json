@@ -27,6 +27,7 @@
     "description": "説明",
     "error": "エラー",
     "success": "成功",
+    "failed": "失敗",
     "warning": "警告",
     "info": "情報",
     "required": "必須",
@@ -292,6 +293,22 @@
       "title": "サーバーがありません",
       "description": "サーバーを追加して開始しましょう"
     },
+    "provisioning": {
+      "title": "サーバーをセットアップ中",
+      "testingConnection": "接続をテスト中",
+      "checkingDocker": "Dockerを確認中",
+      "installingDocker": "Dockerをインストール中",
+      "installingAgent": "エージェントをインストール中",
+      "dockerNotInstalled": "Dockerがインストールされていません",
+      "dockerDescription": "このサーバーでアプリケーションを実行するにはDockerが必要です。",
+      "installDocker": "Dockerをインストール",
+      "agentPrompt": "Tomoエージェントをインストールしますか？",
+      "agentDescription": "エージェントにより高度な監視とコンテナ管理が可能になります。",
+      "installAgent": "エージェントをインストール",
+      "skip": "スキップ",
+      "dockerProgress": "数分かかる場合があります",
+      "retry": "再試行"
+    },
     "deletion": {
       "confirmTitle": "サーバーを削除",
       "confirmMessage": "「{{name}}」を削除してもよろしいですか？",
@@ -435,7 +452,8 @@
       "loginRequired": "アプリをデプロイするにはログインしてください",
       "loadFailed": "リポジトリの読み込みに失敗しました",
       "addFailed": "リポジトリの追加に失敗しました",
-      "syncFailed": "リポジトリの同期に失敗しました"
+      "syncFailed": "リポジトリの同期に失敗しました",
+      "toggleFailed": "リポジトリの切り替えに失敗しました"
     },
     "addRepository": "リポジトリを追加",
     "repoName": "リポジトリ名",
@@ -445,6 +463,8 @@
     "branch": "ブランチ",
     "syncRepository": "リポジトリを同期",
     "removeRepository": "リポジトリを削除",
+    "enableRepository": "リポジトリを有効化",
+    "disableRepository": "リポジトリを無効化",
     "confirmRemoveRepo": "\"{{name}}\"を削除してもよろしいですか？このリポジトリのすべてのアプリが削除されます。",
     "repositoryCount": "{{count}} リポジトリ",
     "repositoryCountFiltered": "{{total}} 中 {{filtered}} リポジトリ",
@@ -947,6 +967,9 @@
       "copied": "クリップボードにコピーしました",
       "copyCommand": "コマンドをコピー"
     },
+    "uninstallConfirmTitle": "エージェントをアンインストール",
+    "uninstallConfirmMessage": "{{name}}からエージェントをアンインストールしてもよろしいですか？",
+    "uninstallConfirmHint": "エージェントコンテナは停止され、サーバーから削除されます。必要に応じて後で再インストールできます。",
     "actions": {
       "installAgent": "エージェントをインストール",
       "viewStatus": "ステータスを表示",
@@ -983,7 +1006,6 @@
       "serverNotFound": "サーバーが見つかりません",
       "dockerNotInstalled": "Dockerが必要ですが、このサーバーにインストールされていません",
       "credentialsNotFound": "サーバー認証情報が見つかりません",
-      "marketplaceAppNotFound": "マーケットプレイスにエージェントアプリが見つかりません。Tomo Marketplaceリポジトリを同期してください。",
       "deployFailed": "エージェントコンテナのデプロイに失敗しました",
       "statusFailed": "エージェントステータスの取得に失敗しました",
       "revokeTokenFailed": "エージェントトークンの取り消しに失敗しました",
@@ -1026,6 +1048,63 @@
       "updateComplete": "更新完了",
       "updateSummary": "更新済み: {{updated}}、失敗: {{failed}}",
       "updateFailed": "更新に失敗しました"
+    }
+  },
+  "audit": {
+    "agentActivity": "エージェントアクティビティ",
+    "agentActivityDescription": "エージェントのライフサイクルイベントと接続履歴",
+    "server": "サーバー",
+    "eventType": "イベントタイプ",
+    "level": "レベル",
+    "status": "ステータス",
+    "timestamp": "タイムスタンプ",
+    "event": "イベント",
+    "message": "メッセージ",
+    "noEntries": "監査エントリが見つかりません",
+    "noEntriesDescription": "エージェントイベントが発生するとここに表示されます",
+    "viewAll": "すべてのエージェントアクティビティを表示",
+    "filters": {
+      "allServers": "すべてのサーバー",
+      "allEvents": "すべてのイベント",
+      "allLevels": "すべてのレベル",
+      "allStatuses": "すべてのステータス",
+      "allResults": "すべての結果",
+      "successOnly": "成功のみ",
+      "failureOnly": "失敗のみ"
+    },
+    "empty": {
+      "title": "監査エントリがありません",
+      "message": "エージェントイベントが発生するとここに表示されます"
+    },
+    "error": {
+      "title": "監査データの読み込みエラー"
+    },
+    "details": "詳細",
+    "tags": "タグ",
+    "events": {
+      "AGENT_INSTALLED": "エージェントインストール",
+      "AGENT_REGISTERED": "エージェント登録",
+      "AGENT_CONNECTED": "エージェント接続",
+      "AGENT_DISCONNECTED": "エージェント切断",
+      "AGENT_REVOKED": "エージェント取り消し",
+      "AGENT_UNINSTALLED": "エージェントアンインストール",
+      "AGENT_UPDATED": "エージェント更新",
+      "AGENT_ERROR": "エージェントエラー"
+    },
+    "levels": {
+      "INFO": "情報",
+      "WARNING": "警告",
+      "ERROR": "エラー"
+    },
+    "loadingError": "監査エントリの読み込みに失敗しました",
+    "refreshError": "監査データの更新に失敗しました",
+    "columns": {
+      "timestamp": "タイムスタンプ",
+      "server": "サーバー",
+      "event": "イベント",
+      "level": "レベル",
+      "message": "メッセージ",
+      "status": "ステータス"
     }
   },
   "command": {

@@ -5,6 +5,7 @@
  */
 
 import { getMCPClient, MCPResponse } from './mcp-client.js';
+import { t } from '../i18n/index.js';
 
 export interface LockedAccount {
   id: string;
@@ -68,7 +69,7 @@ export async function unlockAccount(
       lock_id: lockId,
       action: 'unlock',
       admin_username: adminUsername,
-      notes: notes || `Unlocked via CLI by ${adminUsername}`,
+      notes: notes || t('security.unlockedViaCli', { username: adminUsername }),
     }
   );
 
@@ -81,6 +82,6 @@ export async function unlockAccount(
 
   return {
     success: false,
-    error: response.error || response.message || 'Failed to unlock account',
+    error: response.error || response.message || t('errors.failedToUnlockAccount'),
   };
 }

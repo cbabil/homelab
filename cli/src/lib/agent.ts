@@ -5,6 +5,7 @@
  */
 
 import { getMCPClient } from './mcp-client.js';
+import { t } from '../i18n/index.js';
 
 export interface AgentInfo {
   id: string;
@@ -69,6 +70,6 @@ export async function installAgent(serverId: string): Promise<AgentResult> {
 
   return {
     success: false,
-    error: response.error || response.message || 'Failed to install agent',
+    error: response.error || response.message || t('errors.failedToInstallAgent'),
   };
 }

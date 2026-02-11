@@ -1,0 +1,317 @@
+{
+  "common": {
+    "goodbye": "!إلى اللقاء",
+    "processing": "جاري المعالجة...",
+    "unknown": "غير معروف",
+    "never": "أبداً",
+    "on": "مفعّل",
+    "off": "معطّل",
+    "online": "متصل",
+    "offline": "غير متصل",
+    "connected": "متصل",
+    "disconnected": "غير متصل",
+    "connecting": "جاري الاتصال",
+    "version": "الإصدار",
+    "mcp": "MCP",
+    "status": "الحالة",
+    "typeHelpForCommands": "اكتب /help لعرض الأوامر المتاحة",
+    "noDataAvailable": "لا تتوفر بيانات",
+    "somethingWentWrong": "حدث خطأ ما",
+    "unknownError": "خطأ غير معروف",
+    "connectionFailed": "فشل الاتصال",
+    "commandFailed": "فشل الأمر",
+    "typeCommandOrHelp": "اكتب أمراً أو /help",
+    "navigate": "تنقّل"
+  },
+  "commands": {
+    "help": {
+      "description": "عرض الأوامر المتاحة",
+      "title": "الأوامر المتاحة:",
+      "managementTitle": "أوامر الإدارة:",
+      "helpLine": "  /help, /h, /?          - عرض رسالة المساعدة هذه",
+      "clearLine": "  /clear, /cls           - مسح سجل المخرجات",
+      "quitLine": "  /quit, /exit, /q       - الخروج من CLI",
+      "statusLine": "  /status                - عرض حالة الاتصال",
+      "serversLine": "  /servers               - عرض جميع الخوادم",
+      "agentsLine": "  /agents                - عرض جميع الوكلاء",
+      "loginLine": "  /login                 - المصادقة كمسؤول",
+      "logoutLine": "  /logout                - مسح المصادقة",
+      "viewLine": "  /view <علامة>          - تبديل العرض (dashboard|agents|logs|settings)",
+      "refreshLine": "  /refresh               - فرض تحديث البيانات",
+      "agentMgmtLine": "  /agent <فرعي> [وسائط] - إدارة الوكلاء (list|status|ping|rotate|install)",
+      "serverMgmtLine": "  /server <فرعي>        - إدارة الخوادم (list)",
+      "updateLine": "  /update                - التحقق من التحديثات",
+      "securityLine": "  /security <فرعي> [وسائط] - الأمان (list-locked|unlock)",
+      "backupLine": "  /backup <فرعي> [وسائط] - النسخ الاحتياطي (export|import)",
+      "userLine": "  /user <فرعي> <وسائط>  - إدارة المستخدمين (reset-password)",
+      "adminLine": "  /admin create          - إعداد المسؤول الأولي"
+    },
+    "clear": {
+      "description": "مسح سجل المخرجات"
+    },
+    "quit": {
+      "description": "الخروج من CLI"
+    },
+    "status": {
+      "description": "عرض حالة الاتصال",
+      "title": "حالة الاتصال:",
+      "mcpConnected": "  MCP: متصل",
+      "mcpDisconnected": "  MCP: غير متصل",
+      "urlPrefix": "  URL: {{url}}",
+      "authenticated": "  المصادقة: مصادق كـ {{username}}",
+      "notAuthenticated": "  المصادقة: غير مصادق"
+    },
+    "servers": {
+      "description": "عرض جميع الخوادم"
+    },
+    "agents": {
+      "description": "عرض جميع الوكلاء"
+    },
+    "login": {
+      "description": "المصادقة كمسؤول"
+    },
+    "logout": {
+      "description": "مسح المصادقة",
+      "success": "تم تسجيل الخروج بنجاح"
+    },
+    "view": {
+      "description": "تبديل عرض لوحة التحكم",
+      "usage": "الاستخدام: /view <{{views}}>"
+    },
+    "refresh": {
+      "description": "فرض تحديث البيانات"
+    },
+    "agent": {
+      "description": "إدارة الوكلاء",
+      "usage": "الاستخدام: agent <list|status|ping|rotate|install> [وسائط]",
+      "unknownSubcommand": "أمر فرعي غير معروف للوكيل: {{subcommand}}"
+    },
+    "server": {
+      "description": "إدارة الخوادم",
+      "usage": "الاستخدام: server <list>",
+      "unknownSubcommand": "أمر فرعي غير معروف للخادم: {{subcommand}}"
+    },
+    "update": {
+      "description": "التحقق من التحديثات"
+    },
+    "security": {
+      "description": "إدارة الأمان",
+      "usage": "الاستخدام: /security <list-locked|unlock> [وسائط]",
+      "unknownSubcommand": "أمر فرعي غير معروف للأمان: {{subcommand}}"
+    },
+    "backup": {
+      "description": "النسخ الاحتياطي والاستعادة",
+      "usage": "الاستخدام: /backup <export|import> [وسائط]",
+      "unknownSubcommand": "أمر فرعي غير معروف للنسخ الاحتياطي: {{subcommand}}"
+    },
+    "user": {
+      "description": "إدارة المستخدمين",
+      "usage": "الاستخدام: /user <reset-password> <username>",
+      "unknownSubcommand": "أمر فرعي غير معروف للمستخدم: {{subcommand}}"
+    },
+    "admin": {
+      "description": "إدارة المسؤول",
+      "usage": "الاستخدام: /admin <create>",
+      "unknownSubcommand": "أمر فرعي غير معروف للمسؤول: {{subcommand}}"
+    },
+    "unknownCommand": "أمر غير معروف: /{{command}}",
+    "unknownInput": "إدخال غير معروف: {{input}}"
+  },
+  "auth": {
+    "notConnected": "غير متصل بخادم MCP",
+    "authRequired": "المصادقة مطلوبة. استخدم /login أولاً.",
+    "invalidToken": "تم استلام رمز غير صالح من الخادم",
+    "adminOnly": "فقط المسؤولون يمكنهم تنفيذ أوامر CLI",
+    "invalidCredentials": "بيانات اعتماد غير صالحة",
+    "mustBeLoggedIn": "يجب تسجيل الدخول لفتح قفل الحسابات",
+    "sessionExpired": "انتهت صلاحية الجلسة. يرجى تسجيل الدخول مرة أخرى.",
+    "sessionInactivity": "انتهت صلاحية الجلسة بسبب عدم النشاط",
+    "authenticating": "جاري مصادقة {{username}}...",
+    "authenticated": "تمت المصادقة كـ {{username}}",
+    "authenticationFailed": "فشلت المصادقة",
+    "loggedOut": "تم تسجيل الخروج",
+    "enterCredentials": "أدخل بيانات الاعتماد للمصادقة"
+  },
+  "prompts": {
+    "username": "اسم المستخدم: ",
+    "password": "كلمة المرور: ",
+    "confirmPassword": "تأكيد كلمة المرور: ",
+    "newPassword": "كلمة المرور الجديدة: ",
+    "confirmNewPassword": "تأكيد كلمة المرور: ",
+    "encryptionPassword": "كلمة مرور التشفير: ",
+    "decryptionPassword": "كلمة مرور فك التشفير: "
+  },
+  "dashboard": {
+    "welcomeToTomo": "مرحباً بك في Tomo CLI",
+    "connectedTo": "متصل بـ {{url}}",
+    "failedToConnect": "فشل الاتصال: {{error}}",
+    "systemRequiresSetup": "النظام يتطلب إعداداً أولياً",
+    "screenCleared": "تم مسح الشاشة",
+    "dataRefreshed": "تم تحديث البيانات",
+    "startingAdminSetup": "بدء إعداد المسؤول",
+    "switchedToView": "تم التبديل إلى عرض {{view}}",
+    "resettingPassword": "جاري إعادة تعيين كلمة مرور {{username}}",
+    "exportingBackup": "جاري تصدير النسخة الاحتياطية إلى {{path}}",
+    "importingBackup": "جاري استيراد النسخة الاحتياطية من {{path}}",
+    "importingBackupOverwrite": "جاري استيراد النسخة الاحتياطية من {{path}} (مع الكتابة فوق)",
+    "failedToFetchData": "فشل جلب البيانات",
+    "systemStatus": "حالة_النظام",
+    "activeAgents": "الوكلاء_النشطون",
+    "activeServers": "الخوادم_النشطة",
+    "recentActivity": "النشاط_الأخير",
+    "noRecentActivity": "لا يوجد نشاط حديث",
+    "noAgentsRegistered": "لا يوجد وكلاء مسجلون",
+    "noServersRegistered": "لا يوجد خوادم مسجلة",
+    "staleLabel": "غير نشط: {{count}}",
+    "updatesLabel": "تحديثات: {{count}}",
+    "viewRenderingFailed": "فشل عرض الواجهة"
+  },
+  "agents": {
+    "title": "إدارة_الوكلاء",
+    "noAgentsFound": "لم يتم العثور على وكلاء.",
+    "foundAgents": "تم العثور على {{count}} وكيل/وكلاء:",
+    "agentEntry": "  [{{id}}] الخادم: {{serverId}} - {{status}}",
+    "versionLabel": "       الإصدار: {{version}}",
+    "statusTitle": "حالة الوكيل للخادم {{serverId}}:",
+    "statusLabel": "  الحالة: {{status}}",
+    "versionInfo": "  الإصدار: {{version}}",
+    "lastSeen": "  آخر ظهور: {{lastSeen}}",
+    "agentNotFound": "الوكيل غير موجود",
+    "failedToList": "فشل عرض قائمة الوكلاء",
+    "failedToGetStatus": "فشل الحصول على حالة الوكيل",
+    "failedToPing": "فشل اختبار اتصال الوكيل",
+    "pingFailed": "فشل الاختبار: {{error}}",
+    "pingSuccess": "Pong! استجاب الوكيل على الخادم {{serverId}} خلال {{latency}} مللي ثانية",
+    "rotateSuccess": "تم بدء تدوير الرمز المميز بنجاح!",
+    "agentIdLabel": "  معرّف الوكيل: {{agentId}}",
+    "gracePeriodLabel": "  فترة السماح: {{seconds}} ثانية",
+    "tokenExpiresLabel": "  انتهاء صلاحية الرمز: {{expiresAt}}",
+    "rotateWebSocketNote": "سيستلم الوكيل الرمز الجديد عبر WebSocket.",
+    "failedToRotate": "فشل تدوير رمز الوكيل",
+    "noRotationData": "لم يتم استلام بيانات التدوير",
+    "installSuccess": "تم تثبيت الوكيل على الخادم {{serverId}}",
+    "failedToInstall": "فشل تثبيت الوكيل",
+    "usageStatus": "الاستخدام: agent status <server-id>",
+    "usagePing": "الاستخدام: agent ping <server-id>",
+    "usageRotate": "الاستخدام: agent rotate <server-id>",
+    "usageInstall": "الاستخدام: agent install <server-id>",
+    "columnId": "المعرّف",
+    "columnServer": "الخادم",
+    "columnStatus": "الحالة",
+    "columnVersion": "الإصدار",
+    "columnLastSeen": "آخر ظهور"
+  },
+  "servers": {
+    "noServersFound": "لم يتم العثور على خوادم.",
+    "foundServers": "تم العثور على {{count}} خادم/خوادم:",
+    "serverEntry": "  [{{id}}] {{name}} ({{hostname}}) - {{status}}",
+    "failedToList": "فشل عرض قائمة الخوادم",
+    "columnId": "المعرّف",
+    "columnName": "الاسم",
+    "columnHostname": "اسم المضيف",
+    "columnStatus": "الحالة"
+  },
+  "settings": {
+    "title": "الإعدادات",
+    "connectionTab": "الاتصال",
+    "preferencesTab": "التفضيلات",
+    "aboutTab": "حول",
+    "mcpServerUrl": "عنوان خادم MCP",
+    "mcpUrlHint": "عيّن متغير البيئة MCP_SERVER_URL للتغيير.",
+    "refreshInterval": "فاصل التحديث",
+    "autoRefresh": "التحديث التلقائي",
+    "cliVersion": "إصدار CLI",
+    "envVarHint": "استخدم متغيرات البيئة لتكوين الإعدادات."
+  },
+  "setup": {
+    "title": "الإعداد_الأولي",
+    "welcomeToTomo": "مرحباً بك في Tomo",
+    "noAdminFound": "لم يتم العثور على حساب مسؤول. أنشئ حساباً للبدء.",
+    "step1Username": "الخطوة 1/3: أدخل اسم مستخدم المسؤول (3 أحرف كحد أدنى، أبجدي رقمي)",
+    "step2Password": "الخطوة 2/3: أدخل كلمة المرور لـ \"{{username}}\"",
+    "step3Confirm": "الخطوة 3/3: أكد كلمة المرور",
+    "creatingAdmin": "جاري إنشاء حساب المسؤول...",
+    "adminCreated": "تم إنشاء المسؤول \"{{username}}\". أنت الآن مسجل الدخول.",
+    "setupFailed": "فشل الإعداد: {{error}}",
+    "creatingAdminActivity": "جاري إنشاء المسؤول \"{{username}}\"...",
+    "adminCreatedSuccess": "تم إنشاء المسؤول \"{{username}}\" بنجاح",
+    "failedToCreateAdmin": "فشل إنشاء المسؤول",
+    "setupFailedGeneric": "فشل الإعداد",
+    "passwordRequirements": "متطلبات كلمة المرور:",
+    "passwordMinLength": "  - 12 حرفاً على الأقل",
+    "passwordUppercase": "  - حرف كبير واحد",
+    "passwordLowercase": "  - حرف صغير واحد",
+    "passwordNumber": "  - رقم واحد",
+    "passwordSpecialChar": "  - رمز خاص واحد"
+  },
+  "security": {
+    "usageUnlock": "الاستخدام: /security unlock <lock-id> [ملاحظات]",
+    "noLockedAccounts": "لم يتم العثور على حسابات مقفلة.",
+    "foundLockedAccounts": "تم العثور على {{count}} حساب/حسابات مقفلة:",
+    "lockedAccountEntry": "  [{{id}}] {{identifier}} ({{type}}) - {{attempts}} محاولات - مقفل {{lockedAt}}",
+    "unlockSuccess": "تم فتح قفل الحساب {{lockId}} بنجاح",
+    "failedToListLocked": "فشل عرض الحسابات المقفلة",
+    "failedToUnlock": "فشل فتح قفل الحساب",
+    "unlockedViaCli": "تم فتح القفل عبر CLI بواسطة {{username}}"
+  },
+  "updates": {
+    "failedToCheck": "فشل التحقق من التحديثات",
+    "noInfoAvailable": "لا تتوفر معلومات عن التحديثات",
+    "currentVersion": "الإصدار الحالي: {{version}}",
+    "updateAvailable": "يتوفر تحديث: {{version}}",
+    "latestVersion": "أنت تستخدم أحدث إصدار: {{version}}"
+  },
+  "backup": {
+    "usageImport": "الاستخدام: /backup import <المسار> [--overwrite]",
+    "pathRequired": "المسار مطلوب",
+    "pathInvalidChars": "المسار يحتوي على أحرف غير صالحة",
+    "pathNoParentDir": "يجب ألا يحتوي المسار على \"..\"",
+    "exportingTo": "جاري تصدير النسخة الاحتياطية إلى {{path}}...",
+    "exportSuccess": "تم تصدير النسخة الاحتياطية إلى {{path}}",
+    "checksumLabel": "المجموع الاختباري: {{checksum}}",
+    "failedToExport": "فشل تصدير النسخة الاحتياطية",
+    "importingFrom": "جاري استيراد النسخة الاحتياطية من {{path}}...",
+    "importSuccess": "تم استيراد النسخة الاحتياطية من {{path}}",
+    "importStats": "المستخدمون: {{users}}، الخوادم: {{servers}}",
+    "failedToImport": "فشل استيراد النسخة الاحتياطية"
+  },
+  "users": {
+    "usageResetPassword": "الاستخدام: /user reset-password <username>",
+    "usernameValidation": "يجب أن يكون اسم المستخدم من 3 إلى 50 حرفاً (أحرف، أرقام، _ أو -)",
+    "passwordResetSuccess": "تم إعادة تعيين كلمة مرور {{username}}",
+    "failedToResetPassword": "فشل إعادة تعيين كلمة المرور",
+    "resettingPassword": "جاري إعادة تعيين كلمة مرور {{username}}..."
+  },
+  "validation": {
+    "usernameRequired": "اسم المستخدم مطلوب",
+    "usernameMinLength": "يجب أن يكون اسم المستخدم 3 أحرف على الأقل",
+    "usernameMaxLength": "يجب أن يكون اسم المستخدم أقل من 50 حرفاً",
+    "usernameInvalidChars": "يمكن أن يحتوي اسم المستخدم فقط على أحرف وأرقام وشرطات وشرطات سفلية",
+    "passwordRequired": "كلمة المرور مطلوبة",
+    "passwordMinLength": "يجب أن تكون كلمة المرور 12 حرفاً على الأقل",
+    "passwordMaxLength": "يجب أن تكون كلمة المرور أقل من 128 حرفاً",
+    "passwordUppercase": "يجب أن تحتوي كلمة المرور على حرف كبير",
+    "passwordLowercase": "يجب أن تحتوي كلمة المرور على حرف صغير",
+    "passwordNumber": "يجب أن تحتوي كلمة المرور على رقم",
+    "passwordSpecialChar": "يجب أن تحتوي كلمة المرور على رمز خاص",
+    "mcpUrlProtocol": "يجب أن يستخدم عنوان MCP بروتوكول http أو https",
+    "invalidUrlFormat": "تنسيق عنوان URL غير صالح",
+    "passwordsDoNotMatch": "كلمتا المرور غير متطابقتين",
+    "invalidUsername": "اسم مستخدم غير صالح",
+    "invalidPassword": "كلمة مرور غير صالحة"
+  },
+  "errors": {
+    "notConnected": "غير متصل بخادم MCP",
+    "connectionFailed": "فشل الاتصال",
+    "failedToListServers": "فشل عرض قائمة الخوادم",
+    "failedToInstallAgent": "فشل تثبيت الوكيل",
+    "failedToCreateAdmin": "فشل إنشاء المسؤول",
+    "failedToResetPassword": "فشل إعادة تعيين كلمة المرور",
+    "failedToUnlockAccount": "فشل فتح قفل الحساب",
+    "failedToExportBackup": "فشل تصدير النسخة الاحتياطية",
+    "failedToImportBackup": "فشل استيراد النسخة الاحتياطية"
+  },
+  "logs": {
+    "title": "النشاط_الأخير"
+  }
+}

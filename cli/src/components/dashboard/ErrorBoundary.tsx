@@ -5,6 +5,7 @@
 import { Box, Text } from 'ink';
 import React, { Component, type ErrorInfo, type ReactNode } from 'react';
 import { COLORS } from '../../app/theme.js';
+import { t } from '../../i18n/index.js';
 
 interface ErrorBoundaryProps {
   children: ReactNode;
@@ -38,10 +39,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
       return (
         <Box flexDirection="column" paddingX={1}>
           <Text color={COLORS.error} bold>
-            {this.props.fallbackMessage ?? 'Something went wrong'}
+            {this.props.fallbackMessage ?? t('common.somethingWentWrong')}
           </Text>
           <Text color={COLORS.dim}>
-            {this.state.error?.message ?? 'Unknown error'}
+            {this.state.error?.message ?? t('common.unknownError')}
           </Text>
         </Box>
       );

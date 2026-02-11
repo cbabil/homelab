@@ -5,6 +5,7 @@
 import { Box, Text } from 'ink';
 import React from 'react';
 import { COLORS } from '../../app/theme.js';
+import { t } from '../../i18n/index.js';
 
 export interface DataColumn<T> {
   key: string;
@@ -39,7 +40,7 @@ function getColumnValue<T>(row: T, key: string): string {
 export function DataTable<T>({
   columns,
   data,
-  emptyMessage = 'No data available',
+  emptyMessage = t('common.noDataAvailable'),
   rowKey,
 }: DataTableProps<T>) {
   if (data.length === 0) {

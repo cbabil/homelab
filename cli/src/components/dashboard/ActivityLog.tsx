@@ -7,6 +7,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { COLORS, formatTimestamp } from '../../app/theme.js';
 import { Panel } from './Panel.js';
 import type { ActivityEntry } from '../../app/dashboard-types.js';
+import { t } from '../../i18n/index.js';
 
 function getTypeColor(type: ActivityEntry['type']): string {
   switch (type) {
@@ -91,9 +92,9 @@ export function ActivityLog({
   const showScrollbar = entries.length > height;
 
   return (
-    <Panel title="RECENT_ACTIVITY" height={height + 4}>
+    <Panel title={t('dashboard.recentActivity')} height={height + 4}>
       {entries.length === 0 ? (
-        <Text color={COLORS.dim}>No recent activity</Text>
+        <Text color={COLORS.dim}>{t('dashboard.noRecentActivity')}</Text>
       ) : (
         <Box height={height}>
           {/* Log content */}

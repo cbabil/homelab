@@ -7,6 +7,7 @@ import { Panel } from './Panel.js';
 import { DataTable, type DataColumn } from './DataTable.js';
 import { StatusBadge } from './StatusBadge.js';
 import type { BadgeStatus } from '../../app/theme.js';
+import { t } from '../../i18n/index.js';
 
 export interface AgentRow {
   id: string;
@@ -28,11 +29,11 @@ function mapAgentStatus(status: string): BadgeStatus {
 }
 
 const AGENT_COLUMNS: DataColumn<AgentRow>[] = [
-  { key: 'id', header: 'ID', width: 14 },
-  { key: 'server_id', header: 'Server', width: 14 },
+  { key: 'id', header: t('agents.columnId'), width: 14 },
+  { key: 'server_id', header: t('agents.columnServer'), width: 14 },
   {
     key: 'status',
-    header: 'Status',
+    header: t('agents.columnStatus'),
     width: 12,
     render: (row: AgentRow) => (
       <StatusBadge status={mapAgentStatus(row.status)} />
@@ -46,11 +47,11 @@ interface ActiveAgentsPanelProps {
 
 export function ActiveAgentsPanel({ agents }: ActiveAgentsPanelProps) {
   return (
-    <Panel title="ACTIVE_AGENTS">
+    <Panel title={t('dashboard.activeAgents')}>
       <DataTable
         columns={AGENT_COLUMNS}
         data={agents}
-        emptyMessage="No agents registered"
+        emptyMessage={t('dashboard.noAgentsRegistered')}
       />
     </Panel>
   );
