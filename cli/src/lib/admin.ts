@@ -6,6 +6,7 @@
  */
 
 import { getMCPClient } from './mcp-client.js';
+import { t } from '../i18n/index.js';
 
 interface AdminResult {
   success: boolean;
@@ -35,7 +36,7 @@ export async function createAdmin(
 
   return {
     success: false,
-    error: response.error || response.message || 'Failed to create admin'
+    error: response.error || response.message || t('errors.failedToCreateAdmin')
   };
 }
 
@@ -58,6 +59,6 @@ export async function resetPassword(
 
   return {
     success: false,
-    error: response.error || response.message || 'Failed to reset password'
+    error: response.error || response.message || t('errors.failedToResetPassword')
   };
 }

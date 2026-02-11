@@ -6,6 +6,7 @@ import { useState, useEffect, useCallback, useRef } from 'react';
 import { listAgents } from '../lib/agent.js';
 import { listServers } from '../lib/server.js';
 import type { DashboardData } from '../app/dashboard-types.js';
+import { t } from '../i18n/index.js';
 
 interface UseDashboardDataOptions {
   refreshInterval?: number;
@@ -61,7 +62,7 @@ export function useDashboardData({
       setData((prev) => ({
         ...prev,
         loading: false,
-        error: err instanceof Error ? err.message : 'Failed to fetch data',
+        error: err instanceof Error ? err.message : t('dashboard.failedToFetchData'),
       }));
     }
   }, []);

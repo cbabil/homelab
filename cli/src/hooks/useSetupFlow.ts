@@ -6,6 +6,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { createAdmin } from '../lib/admin.js';
 import { validateUsername, validatePassword } from '../lib/validation.js';
 import type { ActivityEntry } from '../app/dashboard-types.js';
+import { t } from '../i18n/index.js';
 
 export type SetupStep =
   | 'username'
@@ -48,7 +49,7 @@ export function useSetupFlow({
       if (setupStep === 'username') {
         const result = validateUsername(input);
         if (!result.valid) {
-          addActivity('ERR', result.error || 'Invalid username');
+          addActivity('ERR', result.error || t('validation.invalidUsername'));
           return;
         }
         setSetupUsername(input.trim());
@@ -60,7 +61,7 @@ export function useSetupFlow({
       if (setupStep === 'password') {
         const result = validatePassword(input);
         if (!result.valid) {
-          addActivity('ERR', result.error || 'Invalid password');
+          addActivity('ERR', result.error || t('validation.invalidPassword'));
           return;
         }
         setupPasswordRef.current = input;
@@ -71,7 +72,7 @@ export function useSetupFlow({
 
       if (setupStep === 'confirmPassword') {
         if (input !== setupPasswordRef.current) {
-          addActivity('ERR', 'Passwords do not match');
+          addActivity('ERR', t('validation.passwordsDoNotMatch'));
           setSetupStep('password');
           setupPasswordRef.current = '';
           setInputValue('');
@@ -81,7 +82,7 @@ export function useSetupFlow({
         setSetupStep('creating');
         setInputValue('');
         setRunning(true);
-        addActivity('SYS', `Creating admin "${setupUsername}"...`);
+        addActivity('SYS', t('setup.creatingAdminActivity', { username: setupUsername }));
 
         // Copy password to local var and clear ref immediately
         const passwordCopy = setupPasswordRef.current;
@@ -93,17 +94,17 @@ export function useSetupFlow({
             setSetupStep('done');
             setRunning(false);
             onAuthenticated(setupUsername);
-            addActivity('OK', `Admin "${setupUsername}" created successfully`);
-            addActivity('OK', `Authenticated as ${setupUsername}`);
+            addActivity('OK', t('setup.adminCreatedSuccess', { username: setupUsername }));
+            addActivity('OK', t('auth.authenticated', { username: setupUsername }));
             timeoutRef.current = setTimeout(() => {
               setSetupStep(null);
               setSetupUsername('');
             }, 2000);
           } else {
-            setSetupError(result.error || 'Failed to create admin');
+            setSetupError(result.error || t('setup.failedToCreateAdmin'));
             setSetupStep('error');
             setRunning(false);
-            addActivity('ERR', result.error || 'Failed to create admin');
+            addActivity('ERR', result.error || t('setup.failedToCreateAdmin'));
             timeoutRef.current = setTimeout(() => {
               setSetupStep('username');
               setSetupUsername('');
@@ -111,7 +112,7 @@ export function useSetupFlow({
             }, 3000);
           }
         } catch (err) {
-          const msg = err instanceof Error ? err.message : 'Setup failed';
+          const msg = err instanceof Error ? err.message : t('setup.setupFailedGeneric');
           setSetupError(msg);
           setSetupStep('error');
           setRunning(false);
@@ -127,9 +128,9 @@ export function useSetupFlow({
     [setupStep, setupUsername, addActivity, onAuthenticated, setInputValue, setRunning]
   );
 
-  const promptLabel = setupStep === 'username' ? 'Username: '
-    : setupStep === 'password' ? 'Password: '
-    : setupStep === 'confirmPassword' ? 'Confirm Password: '
+  const promptLabel = setupStep === 'username' ? t('prompts.username')
+    : setupStep === 'password' ? t('prompts.password')
+    : setupStep === 'confirmPassword' ? t('prompts.confirmPassword')
     : undefined;
 
   const promptMask = setupStep === 'password' || setupStep === 'confirmPassword';

@@ -6,6 +6,7 @@ import { Box, Text, useInput } from 'ink';
 import React, { useState } from 'react';
 import { COLORS } from '../theme.js';
 import { Panel } from '../../components/dashboard/Panel.js';
+import { t } from '../../i18n/index.js';
 
 interface SettingsViewProps {
   mcpUrl: string;
@@ -17,9 +18,9 @@ interface SettingsViewProps {
 type SettingsTab = 'connection' | 'preferences' | 'about';
 
 const TABS: { key: SettingsTab; label: string }[] = [
-  { key: 'connection', label: 'CONNECTION' },
-  { key: 'preferences', label: 'PREFERENCES' },
-  { key: 'about', label: 'ABOUT' },
+  { key: 'connection', label: t('settings.connectionTab') },
+  { key: 'preferences', label: t('settings.preferencesTab') },
+  { key: 'about', label: t('settings.aboutTab') },
 ];
 
 function SettingRow({ label, value }: { label: string; value: string }) {
@@ -52,7 +53,7 @@ function SettingsTabBar({ activeTab }: { activeTab: SettingsTab }) {
           </Box>
         );
       })}
-      <Text color={COLORS.dim}>{'  \u2190\u2192 navigate'}</Text>
+      <Text color={COLORS.dim}>{`  \u2190\u2192 ${t('common.navigate')}`}</Text>
     </Box>
   );
 }
@@ -67,11 +68,11 @@ export function SettingsView({
 
   useInput((_input, key) => {
     if (key.leftArrow) {
-      const idx = TABS.findIndex((t) => t.key === activeTab);
+      const idx = TABS.findIndex((tab) => tab.key === activeTab);
       const prev = (idx - 1 + TABS.length) % TABS.length;
       setActiveTab(TABS[prev]!.key);
     } else if (key.rightArrow) {
-      const idx = TABS.findIndex((t) => t.key === activeTab);
+      const idx = TABS.findIndex((tab) => tab.key === activeTab);
       const next = (idx + 1) % TABS.length;
       setActiveTab(TABS[next]!.key);
     }
@@ -82,10 +83,10 @@ export function SettingsView({
       case 'connection':
         return (
           <Box flexDirection="column">
-            <SettingRow label="MCP Server URL" value={mcpUrl} />
+            <SettingRow label={t('settings.mcpServerUrl')} value={mcpUrl} />
             <Box marginTop={1}>
               <Text color={COLORS.dim}>
-                {'Set MCP_SERVER_URL environment variable to change.'}
+                {t('settings.mcpUrlHint')}
               </Text>
             </Box>
           </Box>
@@ -94,22 +95,22 @@ export function SettingsView({
         return (
           <Box flexDirection="column">
             <SettingRow
-              label="Refresh Interval"
+              label={t('settings.refreshInterval')}
               value={`${refreshInterval / 1000}s`}
             />
             <SettingRow
-              label="Auto Refresh"
-              value={autoRefresh ? 'ON' : 'OFF'}
+              label={t('settings.autoRefresh')}
+              value={autoRefresh ? t('common.on') : t('common.off')}
             />
           </Box>
         );
       case 'about':
         return (
           <Box flexDirection="column">
-            <SettingRow label="CLI Version" value={version} />
+            <SettingRow label={t('settings.cliVersion')} value={version} />
             <Box marginTop={1}>
               <Text color={COLORS.dim}>
-                {'Use environment variables to configure settings.'}
+                {t('settings.envVarHint')}
               </Text>
             </Box>
           </Box>
@@ -118,7 +119,7 @@ export function SettingsView({
   };
 
   return (
-    <Panel title="SETTINGS">
+    <Panel title={t('settings.title')}>
       <Box flexDirection="column">
         <SettingsTabBar activeTab={activeTab} />
         {renderTab()}

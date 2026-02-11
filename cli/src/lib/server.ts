@@ -5,6 +5,7 @@
  */
 
 import { getMCPClient } from './mcp-client.js';
+import { t } from '../i18n/index.js';
 
 export interface ServerInfo {
   id: string;
@@ -28,7 +29,7 @@ export async function listServers(): Promise<ServerInfo[]> {
   );
 
   if (!response.success) {
-    throw new Error(response.error || 'Failed to list servers');
+    throw new Error(response.error || t('errors.failedToListServers'));
   }
 
   return response.data?.servers ?? [];

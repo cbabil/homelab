@@ -1,0 +1,317 @@
+{
+  "common": {
+    "goodbye": "안녕히 가세요!",
+    "processing": "처리 중...",
+    "unknown": "알 수 없음",
+    "never": "없음",
+    "on": "켜짐",
+    "off": "꺼짐",
+    "online": "온라인",
+    "offline": "오프라인",
+    "connected": "연결됨",
+    "disconnected": "연결 해제됨",
+    "connecting": "연결 중",
+    "version": "버전",
+    "mcp": "MCP",
+    "status": "상태",
+    "typeHelpForCommands": "/help를 입력하여 사용 가능한 명령어를 확인하세요",
+    "noDataAvailable": "사용 가능한 데이터 없음",
+    "somethingWentWrong": "문제가 발생했습니다",
+    "unknownError": "알 수 없는 오류",
+    "connectionFailed": "연결 실패",
+    "commandFailed": "명령 실패",
+    "typeCommandOrHelp": "명령어 또는 /help를 입력하세요",
+    "navigate": "탐색"
+  },
+  "commands": {
+    "help": {
+      "description": "사용 가능한 명령어 표시",
+      "title": "사용 가능한 명령어:",
+      "managementTitle": "관리 명령어:",
+      "helpLine": "  /help, /h, /?          - 이 도움말 메시지 표시",
+      "clearLine": "  /clear, /cls           - 출력 기록 지우기",
+      "quitLine": "  /quit, /exit, /q       - CLI 종료",
+      "statusLine": "  /status                - 연결 상태 표시",
+      "serversLine": "  /servers               - 모든 서버 목록",
+      "agentsLine": "  /agents                - 모든 에이전트 목록",
+      "loginLine": "  /login                 - 관리자로 인증",
+      "logoutLine": "  /logout                - 인증 해제",
+      "viewLine": "  /view <탭>             - 뷰 전환 (dashboard|agents|logs|settings)",
+      "refreshLine": "  /refresh               - 데이터 강제 새로고침",
+      "agentMgmtLine": "  /agent <하위> [인수]   - 에이전트 관리 (list|status|ping|rotate|install)",
+      "serverMgmtLine": "  /server <하위>         - 서버 관리 (list)",
+      "updateLine": "  /update                - 업데이트 확인",
+      "securityLine": "  /security <하위> [인수] - 보안 (list-locked|unlock)",
+      "backupLine": "  /backup <하위> [인수]   - 백업 (export|import)",
+      "userLine": "  /user <하위> <인수>     - 사용자 관리 (reset-password)",
+      "adminLine": "  /admin create          - 초기 관리자 설정"
+    },
+    "clear": {
+      "description": "출력 기록 지우기"
+    },
+    "quit": {
+      "description": "CLI 종료"
+    },
+    "status": {
+      "description": "연결 상태 표시",
+      "title": "연결 상태:",
+      "mcpConnected": "  MCP: 연결됨",
+      "mcpDisconnected": "  MCP: 연결 해제됨",
+      "urlPrefix": "  URL: {{url}}",
+      "authenticated": "  인증: {{username}}으로 인증됨",
+      "notAuthenticated": "  인증: 인증되지 않음"
+    },
+    "servers": {
+      "description": "모든 서버 목록"
+    },
+    "agents": {
+      "description": "모든 에이전트 목록"
+    },
+    "login": {
+      "description": "관리자로 인증"
+    },
+    "logout": {
+      "description": "인증 해제",
+      "success": "로그아웃 완료"
+    },
+    "view": {
+      "description": "대시보드 뷰 전환",
+      "usage": "사용법: /view <{{views}}>"
+    },
+    "refresh": {
+      "description": "데이터 강제 새로고침"
+    },
+    "agent": {
+      "description": "에이전트 관리",
+      "usage": "사용법: agent <list|status|ping|rotate|install> [인수]",
+      "unknownSubcommand": "알 수 없는 에이전트 하위 명령: {{subcommand}}"
+    },
+    "server": {
+      "description": "서버 관리",
+      "usage": "사용법: server <list>",
+      "unknownSubcommand": "알 수 없는 서버 하위 명령: {{subcommand}}"
+    },
+    "update": {
+      "description": "업데이트 확인"
+    },
+    "security": {
+      "description": "보안 관리",
+      "usage": "사용법: /security <list-locked|unlock> [인수]",
+      "unknownSubcommand": "알 수 없는 보안 하위 명령: {{subcommand}}"
+    },
+    "backup": {
+      "description": "백업 및 복원",
+      "usage": "사용법: /backup <export|import> [인수]",
+      "unknownSubcommand": "알 수 없는 백업 하위 명령: {{subcommand}}"
+    },
+    "user": {
+      "description": "사용자 관리",
+      "usage": "사용법: /user <reset-password> <username>",
+      "unknownSubcommand": "알 수 없는 사용자 하위 명령: {{subcommand}}"
+    },
+    "admin": {
+      "description": "관리자 관리",
+      "usage": "사용법: /admin <create>",
+      "unknownSubcommand": "알 수 없는 관리자 하위 명령: {{subcommand}}"
+    },
+    "unknownCommand": "알 수 없는 명령어: /{{command}}",
+    "unknownInput": "알 수 없는 입력: {{input}}"
+  },
+  "auth": {
+    "notConnected": "MCP 서버에 연결되지 않음",
+    "authRequired": "인증이 필요합니다. 먼저 /login을 사용하세요.",
+    "invalidToken": "서버에서 잘못된 토큰을 수신했습니다",
+    "adminOnly": "관리자만 CLI 명령을 실행할 수 있습니다",
+    "invalidCredentials": "잘못된 자격 증명",
+    "mustBeLoggedIn": "계정 잠금을 해제하려면 로그인해야 합니다",
+    "sessionExpired": "세션이 만료되었습니다. 다시 로그인해 주세요.",
+    "sessionInactivity": "비활동으로 인해 세션이 만료되었습니다",
+    "authenticating": "{{username}} 인증 중...",
+    "authenticated": "{{username}}으로 인증됨",
+    "authenticationFailed": "인증 실패",
+    "loggedOut": "로그아웃됨",
+    "enterCredentials": "인증할 자격 증명을 입력하세요"
+  },
+  "prompts": {
+    "username": "사용자 이름: ",
+    "password": "비밀번호: ",
+    "confirmPassword": "비밀번호 확인: ",
+    "newPassword": "새 비밀번호: ",
+    "confirmNewPassword": "비밀번호 확인: ",
+    "encryptionPassword": "암호화 비밀번호: ",
+    "decryptionPassword": "복호화 비밀번호: "
+  },
+  "dashboard": {
+    "welcomeToTomo": "Tomo CLI에 오신 것을 환영합니다",
+    "connectedTo": "{{url}}에 연결됨",
+    "failedToConnect": "연결 실패: {{error}}",
+    "systemRequiresSetup": "시스템에 초기 설정이 필요합니다",
+    "screenCleared": "화면 지워짐",
+    "dataRefreshed": "데이터 새로고침됨",
+    "startingAdminSetup": "관리자 설정 시작",
+    "switchedToView": "{{view}} 뷰로 전환됨",
+    "resettingPassword": "{{username}}의 비밀번호 재설정 중",
+    "exportingBackup": "{{path}}로 백업 내보내기 중",
+    "importingBackup": "{{path}}에서 백업 가져오기 중",
+    "importingBackupOverwrite": "{{path}}에서 백업 가져오기 중 (덮어쓰기)",
+    "failedToFetchData": "데이터를 가져오지 못했습니다",
+    "systemStatus": "시스템_상태",
+    "activeAgents": "활성_에이전트",
+    "activeServers": "활성_서버",
+    "recentActivity": "최근_활동",
+    "noRecentActivity": "최근 활동 없음",
+    "noAgentsRegistered": "등록된 에이전트 없음",
+    "noServersRegistered": "등록된 서버 없음",
+    "staleLabel": "비활성: {{count}}",
+    "updatesLabel": "업데이트: {{count}}",
+    "viewRenderingFailed": "뷰 렌더링 실패"
+  },
+  "agents": {
+    "title": "에이전트_관리",
+    "noAgentsFound": "에이전트를 찾을 수 없습니다.",
+    "foundAgents": "{{count}}개 에이전트 발견:",
+    "agentEntry": "  [{{id}}] 서버: {{serverId}} - {{status}}",
+    "versionLabel": "       버전: {{version}}",
+    "statusTitle": "서버 {{serverId}}의 에이전트 상태:",
+    "statusLabel": "  상태: {{status}}",
+    "versionInfo": "  버전: {{version}}",
+    "lastSeen": "  마지막 확인: {{lastSeen}}",
+    "agentNotFound": "에이전트를 찾을 수 없음",
+    "failedToList": "에이전트 목록 조회 실패",
+    "failedToGetStatus": "에이전트 상태 조회 실패",
+    "failedToPing": "에이전트 핑 실패",
+    "pingFailed": "핑 실패: {{error}}",
+    "pingSuccess": "Pong! 서버 {{serverId}}의 에이전트가 {{latency}}ms에 응답했습니다",
+    "rotateSuccess": "토큰 교체가 성공적으로 시작되었습니다!",
+    "agentIdLabel": "  에이전트 ID: {{agentId}}",
+    "gracePeriodLabel": "  유예 기간: {{seconds}}초",
+    "tokenExpiresLabel": "  토큰 만료: {{expiresAt}}",
+    "rotateWebSocketNote": "에이전트가 WebSocket을 통해 새 토큰을 받습니다.",
+    "failedToRotate": "에이전트 토큰 교체 실패",
+    "noRotationData": "교체 데이터를 받지 못했습니다",
+    "installSuccess": "서버 {{serverId}}에 에이전트 설치됨",
+    "failedToInstall": "에이전트 설치 실패",
+    "usageStatus": "사용법: agent status <server-id>",
+    "usagePing": "사용법: agent ping <server-id>",
+    "usageRotate": "사용법: agent rotate <server-id>",
+    "usageInstall": "사용법: agent install <server-id>",
+    "columnId": "ID",
+    "columnServer": "서버",
+    "columnStatus": "상태",
+    "columnVersion": "버전",
+    "columnLastSeen": "마지막 확인"
+  },
+  "servers": {
+    "noServersFound": "서버를 찾을 수 없습니다.",
+    "foundServers": "{{count}}개 서버 발견:",
+    "serverEntry": "  [{{id}}] {{name}} ({{hostname}}) - {{status}}",
+    "failedToList": "서버 목록 조회 실패",
+    "columnId": "ID",
+    "columnName": "이름",
+    "columnHostname": "호스트 이름",
+    "columnStatus": "상태"
+  },
+  "settings": {
+    "title": "설정",
+    "connectionTab": "연결",
+    "preferencesTab": "환경설정",
+    "aboutTab": "정보",
+    "mcpServerUrl": "MCP 서버 URL",
+    "mcpUrlHint": "변경하려면 MCP_SERVER_URL 환경 변수를 설정하세요.",
+    "refreshInterval": "새로고침 간격",
+    "autoRefresh": "자동 새로고침",
+    "cliVersion": "CLI 버전",
+    "envVarHint": "환경 변수를 사용하여 설정을 구성하세요."
+  },
+  "setup": {
+    "title": "초기_설정",
+    "welcomeToTomo": "Tomo에 오신 것을 환영합니다",
+    "noAdminFound": "관리자 계정이 없습니다. 시작하려면 계정을 만드세요.",
+    "step1Username": "1/3단계: 관리자 사용자 이름 입력 (최소 3자, 영숫자)",
+    "step2Password": "2/3단계: \"{{username}}\"의 비밀번호 입력",
+    "step3Confirm": "3/3단계: 비밀번호 확인",
+    "creatingAdmin": "관리자 계정 생성 중...",
+    "adminCreated": "관리자 \"{{username}}\"이(가) 생성되었습니다. 로그인되었습니다.",
+    "setupFailed": "설정 실패: {{error}}",
+    "creatingAdminActivity": "관리자 \"{{username}}\" 생성 중...",
+    "adminCreatedSuccess": "관리자 \"{{username}}\"이(가) 성공적으로 생성되었습니다",
+    "failedToCreateAdmin": "관리자 생성 실패",
+    "setupFailedGeneric": "설정 실패",
+    "passwordRequirements": "비밀번호 요구사항:",
+    "passwordMinLength": "  - 최소 12자",
+    "passwordUppercase": "  - 대문자 1개",
+    "passwordLowercase": "  - 소문자 1개",
+    "passwordNumber": "  - 숫자 1개",
+    "passwordSpecialChar": "  - 특수 문자 1개"
+  },
+  "security": {
+    "usageUnlock": "사용법: /security unlock <lock-id> [메모]",
+    "noLockedAccounts": "잠긴 계정이 없습니다.",
+    "foundLockedAccounts": "{{count}}개 잠긴 계정 발견:",
+    "lockedAccountEntry": "  [{{id}}] {{identifier}} ({{type}}) - {{attempts}}회 시도 - {{lockedAt}}에 잠김",
+    "unlockSuccess": "계정 잠금 {{lockId}}이(가) 성공적으로 해제되었습니다",
+    "failedToListLocked": "잠긴 계정 목록 조회 실패",
+    "failedToUnlock": "계정 잠금 해제 실패",
+    "unlockedViaCli": "{{username}}이(가) CLI를 통해 잠금 해제함"
+  },
+  "updates": {
+    "failedToCheck": "업데이트 확인 실패",
+    "noInfoAvailable": "업데이트 정보를 사용할 수 없습니다",
+    "currentVersion": "현재 버전: {{version}}",
+    "updateAvailable": "업데이트 가능: {{version}}",
+    "latestVersion": "최신 버전을 사용 중입니다: {{version}}"
+  },
+  "backup": {
+    "usageImport": "사용법: /backup import <경로> [--overwrite]",
+    "pathRequired": "경로가 필요합니다",
+    "pathInvalidChars": "경로에 잘못된 문자가 포함되어 있습니다",
+    "pathNoParentDir": "경로에 \"..\"를 포함할 수 없습니다",
+    "exportingTo": "{{path}}로 백업 내보내기 중...",
+    "exportSuccess": "{{path}}로 백업 내보내기 완료",
+    "checksumLabel": "체크섬: {{checksum}}",
+    "failedToExport": "백업 내보내기 실패",
+    "importingFrom": "{{path}}에서 백업 가져오기 중...",
+    "importSuccess": "{{path}}에서 백업 가져오기 완료",
+    "importStats": "사용자: {{users}}, 서버: {{servers}}",
+    "failedToImport": "백업 가져오기 실패"
+  },
+  "users": {
+    "usageResetPassword": "사용법: /user reset-password <username>",
+    "usernameValidation": "사용자 이름은 3~50자여야 합니다 (문자, 숫자, _ 또는 -)",
+    "passwordResetSuccess": "{{username}}의 비밀번호가 재설정되었습니다",
+    "failedToResetPassword": "비밀번호 재설정 실패",
+    "resettingPassword": "{{username}}의 비밀번호 재설정 중..."
+  },
+  "validation": {
+    "usernameRequired": "사용자 이름은 필수입니다",
+    "usernameMinLength": "사용자 이름은 최소 3자여야 합니다",
+    "usernameMaxLength": "사용자 이름은 50자 미만이어야 합니다",
+    "usernameInvalidChars": "사용자 이름에는 문자, 숫자, 하이픈, 밑줄만 사용할 수 있습니다",
+    "passwordRequired": "비밀번호는 필수입니다",
+    "passwordMinLength": "비밀번호는 최소 12자여야 합니다",
+    "passwordMaxLength": "비밀번호는 128자 미만이어야 합니다",
+    "passwordUppercase": "비밀번호에 대문자가 포함되어야 합니다",
+    "passwordLowercase": "비밀번호에 소문자가 포함되어야 합니다",
+    "passwordNumber": "비밀번호에 숫자가 포함되어야 합니다",
+    "passwordSpecialChar": "비밀번호에 특수 문자가 포함되어야 합니다",
+    "mcpUrlProtocol": "MCP URL은 http 또는 https 프로토콜을 사용해야 합니다",
+    "invalidUrlFormat": "잘못된 URL 형식",
+    "passwordsDoNotMatch": "비밀번호가 일치하지 않습니다",
+    "invalidUsername": "잘못된 사용자 이름",
+    "invalidPassword": "잘못된 비밀번호"
+  },
+  "errors": {
+    "notConnected": "MCP 서버에 연결되지 않음",
+    "connectionFailed": "연결 실패",
+    "failedToListServers": "서버 목록 조회 실패",
+    "failedToInstallAgent": "에이전트 설치 실패",
+    "failedToCreateAdmin": "관리자 생성 실패",
+    "failedToResetPassword": "비밀번호 재설정 실패",
+    "failedToUnlockAccount": "계정 잠금 해제 실패",
+    "failedToExportBackup": "백업 내보내기 실패",
+    "failedToImportBackup": "백업 가져오기 실패"
+  },
+  "logs": {
+    "title": "최근_활동"
+  }
+}

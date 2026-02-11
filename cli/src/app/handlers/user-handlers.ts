@@ -8,6 +8,7 @@
 import type { CommandResult } from '../types.js';
 import { SIGNALS } from '../signals.js';
 import { sanitizeForDisplay } from '../../lib/validation.js';
+import { t } from '../../i18n/index.js';
 
 export async function handleUserCommand(
   subcommand: string,
@@ -17,10 +18,10 @@ export async function handleUserCommand(
     case 'reset-password': {
       const username = args[0]?.trim();
       if (!username) {
-        return [{ type: 'error', content: 'Usage: /user reset-password <username>' }];
+        return [{ type: 'error', content: t('users.usageResetPassword') }];
       }
       if (username.length < 3 || username.length > 50 || !/^[a-zA-Z0-9_-]+$/.test(username)) {
-        return [{ type: 'error', content: 'Username must be 3-50 characters (letters, numbers, _ or -)' }];
+        return [{ type: 'error', content: t('users.usernameValidation') }];
       }
       return [{ type: 'system', content: `${SIGNALS.RESET_PASSWORD}${username}` }];
     }
@@ -30,8 +31,8 @@ export async function handleUserCommand(
         {
           type: 'error',
           content: subcommand
-            ? `Unknown user subcommand: ${sanitizeForDisplay(subcommand)}`
-            : 'Usage: /user <reset-password> <username>',
+            ? t('commands.user.unknownSubcommand', { subcommand: sanitizeForDisplay(subcommand) })
+            : t('commands.user.usage'),
         },
       ];
   }

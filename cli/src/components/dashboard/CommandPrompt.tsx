@@ -6,6 +6,7 @@ import { Box, Text, useInput } from 'ink';
 import InkTextInput from 'ink-text-input';
 import React, { useState, useCallback } from 'react';
 import { COLORS, formatPrompt } from '../../app/theme.js';
+import { t } from '../../i18n/index.js';
 
 interface CommandPromptProps {
   username: string;
@@ -84,19 +85,19 @@ export function CommandPrompt({
   return (
     <Box>
       {showOfflineBadge ? (
-        <Text bold color={COLORS.error}>{'[ OFFLINE ] '}</Text>
+        <Text bold color={COLORS.error}>{`[ ${t('common.offline')} ] `}</Text>
       ) : null}
       <Text bold color={COLORS.bright}>
         {prompt}
       </Text>
       {disabled ? (
-        <Text color={COLORS.dim}>{value || 'Processing...'}</Text>
+        <Text color={COLORS.dim}>{value || t('common.processing')}</Text>
       ) : (
         <InkTextInput
           value={value}
           onChange={onChange}
           onSubmit={handleSubmit}
-          placeholder={promptLabel ? '' : 'Type a command or /help'}
+          placeholder={promptLabel ? '' : t('common.typeCommandOrHelp')}
           mask={mask ? '*' : undefined}
         />
       )}

@@ -27,6 +27,7 @@
     "description": "Beschreibung",
     "error": "Fehler",
     "success": "Erfolg",
+    "failed": "Fehlgeschlagen",
     "warning": "Warnung",
     "info": "Info",
     "required": "Erforderlich",
@@ -292,6 +293,22 @@
       "title": "Keine Server",
       "description": "Fügen Sie einen Server hinzu, um zu beginnen"
     },
+    "provisioning": {
+      "title": "Server einrichten",
+      "testingConnection": "Verbindung wird getestet",
+      "checkingDocker": "Docker wird geprüft",
+      "installingDocker": "Docker wird installiert",
+      "installingAgent": "Agent wird installiert",
+      "dockerNotInstalled": "Docker ist nicht installiert",
+      "dockerDescription": "Docker wird benötigt, um Anwendungen auf diesem Server auszuführen.",
+      "installDocker": "Docker installieren",
+      "agentPrompt": "Tomo Agent installieren?",
+      "agentDescription": "Der Agent ermöglicht erweiterte Überwachung und Container-Verwaltung.",
+      "installAgent": "Agent installieren",
+      "skip": "Überspringen",
+      "dockerProgress": "Dies kann einige Minuten dauern",
+      "retry": "Wiederholen"
+    },
     "deletion": {
       "confirmTitle": "Server löschen",
       "confirmMessage": "Sind Sie sicher, dass Sie \"{{name}}\" löschen möchten?",
@@ -435,7 +452,8 @@
       "loginRequired": "Bitte melden Sie sich an, um Apps bereitzustellen",
       "loadFailed": "Repositories konnten nicht geladen werden",
       "addFailed": "Repository konnte nicht hinzugefügt werden",
-      "syncFailed": "Repository konnte nicht synchronisiert werden"
+      "syncFailed": "Repository konnte nicht synchronisiert werden",
+      "toggleFailed": "Repository konnte nicht umgeschaltet werden"
     },
     "addRepository": "Repository hinzufügen",
     "repoName": "Repository-Name",
@@ -445,6 +463,8 @@
     "branch": "Branch",
     "syncRepository": "Repository synchronisieren",
     "removeRepository": "Repository entfernen",
+    "enableRepository": "Repository aktivieren",
+    "disableRepository": "Repository deaktivieren",
     "confirmRemoveRepo": "Sind Sie sicher, dass Sie \"{{name}}\" entfernen möchten? Dies löscht alle Apps aus diesem Repository.",
     "repositoryCount": "{{count}} Repositories",
     "repositoryCountFiltered": "{{filtered}} von {{total}} Repositories",
@@ -947,6 +967,9 @@
       "copied": "In Zwischenablage kopiert",
       "copyCommand": "Befehl kopieren"
     },
+    "uninstallConfirmTitle": "Agent deinstallieren",
+    "uninstallConfirmMessage": "Sind Sie sicher, dass Sie den Agent von {{name}} deinstallieren möchten?",
+    "uninstallConfirmHint": "Der Agent-Container wird gestoppt und vom Server entfernt. Sie können ihn bei Bedarf später neu installieren.",
     "actions": {
       "installAgent": "Agent installieren",
       "viewStatus": "Status anzeigen",
@@ -983,7 +1006,6 @@
       "serverNotFound": "Server nicht gefunden",
       "dockerNotInstalled": "Docker ist erforderlich, aber nicht auf diesem Server installiert",
       "credentialsNotFound": "Server-Anmeldedaten nicht gefunden",
-      "marketplaceAppNotFound": "Agent-App nicht im Marketplace gefunden. Bitte synchronisieren Sie das Tomo Marketplace Repository.",
       "deployFailed": "Agent-Container konnte nicht bereitgestellt werden",
       "statusFailed": "Agent-Status konnte nicht abgerufen werden",
       "revokeTokenFailed": "Agent-Token konnte nicht widerrufen werden",
@@ -1026,6 +1048,63 @@
       "updateComplete": "Update abgeschlossen",
       "updateSummary": "Aktualisiert: {{updated}}, Fehlgeschlagen: {{failed}}",
       "updateFailed": "Update fehlgeschlagen"
+    }
+  },
+  "audit": {
+    "agentActivity": "Agent-Aktivität",
+    "agentActivityDescription": "Agent-Lebenszyklusereignisse und Verbindungsverlauf",
+    "server": "Server",
+    "eventType": "Ereignistyp",
+    "level": "Level",
+    "status": "Status",
+    "timestamp": "Zeitstempel",
+    "event": "Ereignis",
+    "message": "Nachricht",
+    "noEntries": "Keine Audit-Einträge gefunden",
+    "noEntriesDescription": "Agent-Ereignisse werden hier angezeigt, wenn sie auftreten",
+    "viewAll": "Alle Agent-Aktivitäten anzeigen",
+    "filters": {
+      "allServers": "Alle Server",
+      "allEvents": "Alle Ereignisse",
+      "allLevels": "Alle Level",
+      "allStatuses": "Alle Status",
+      "allResults": "Alle Ergebnisse",
+      "successOnly": "Nur Erfolge",
+      "failureOnly": "Nur Fehler"
+    },
+    "empty": {
+      "title": "Keine Audit-Einträge",
+      "message": "Agent-Ereignisse werden hier angezeigt, wenn sie auftreten"
+    },
+    "error": {
+      "title": "Fehler beim Laden der Audit-Daten"
+    },
+    "details": "Details",
+    "tags": "Tags",
+    "events": {
+      "AGENT_INSTALLED": "Agent installiert",
+      "AGENT_REGISTERED": "Agent registriert",
+      "AGENT_CONNECTED": "Agent verbunden",
+      "AGENT_DISCONNECTED": "Agent getrennt",
+      "AGENT_REVOKED": "Agent widerrufen",
+      "AGENT_UNINSTALLED": "Agent deinstalliert",
+      "AGENT_UPDATED": "Agent aktualisiert",
+      "AGENT_ERROR": "Agent-Fehler"
+    },
+    "levels": {
+      "INFO": "Info",
+      "WARNING": "Warnung",
+      "ERROR": "Fehler"
+    },
+    "loadingError": "Audit-Einträge konnten nicht geladen werden",
+    "refreshError": "Audit-Daten konnten nicht aktualisiert werden",
+    "columns": {
+      "timestamp": "Zeitstempel",
+      "server": "Server",
+      "event": "Ereignis",
+      "level": "Level",
+      "message": "Nachricht",
+      "status": "Status"
     }
   },
   "command": {

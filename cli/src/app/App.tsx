@@ -14,6 +14,7 @@ import { useLoginFlow } from '../hooks/useLoginFlow.js';
 import { useSetupFlow } from '../hooks/useSetupFlow.js';
 import { useResetPasswordFlow } from '../hooks/useResetPasswordFlow.js';
 import { useBackupFlow } from '../hooks/useBackupFlow.js';
+import { t } from '../i18n/index.js';
 
 import { AsciiHeader } from '../components/dashboard/AsciiHeader.js';
 import { NavBar } from '../components/dashboard/NavBar.js';
@@ -149,7 +150,7 @@ export function App({ mcpUrl }: AppProps) {
           clearAuth();
           setState((prev) => ({ ...prev, authenticated: false, username: null }));
           loginFlowRef.current.startLogin();
-          addActivity('SYS', 'Session expired. Please log in again.');
+          addActivity('SYS', t('auth.sessionExpired'));
         });
         setState((prev) => ({
           ...prev,
@@ -157,13 +158,13 @@ export function App({ mcpUrl }: AppProps) {
           mcpConnecting: false,
           mcpError: null,
         }));
-        addActivity('SYS', `Connected to ${url}`);
+        addActivity('SYS', t('dashboard.connectedTo', { url }));
 
         try {
           const needsSetup = await checkSystemSetup();
           if (needsSetup) {
             setupFlowRef.current.startSetup();
-            addActivity('SYS', 'System requires initial setup');
+            addActivity('SYS', t('dashboard.systemRequiresSetup'));
           } else {
             loginFlowRef.current.startLogin();
           }
@@ -171,14 +172,14 @@ export function App({ mcpUrl }: AppProps) {
           loginFlowRef.current.startLogin();
         }
       } catch (err) {
-        const error = err instanceof Error ? err.message : 'Connection failed';
+        const error = err instanceof Error ? err.message : t('common.connectionFailed');
         setState((prev) => ({
           ...prev,
           mcpConnected: false,
           mcpConnecting: false,
           mcpError: error,
         }));
-        addActivity('ERR', `Failed to connect: ${error}`);
+        addActivity('ERR', t('dashboard.failedToConnect', { error }));
       }
     })();
 
@@ -188,7 +189,7 @@ export function App({ mcpUrl }: AppProps) {
   }, [addActivity]);
 
   useEffect(() => {
-    addActivity('SYS', 'Welcome to Tomo CLI');
+    addActivity('SYS', t('dashboard.welcomeToTomo'));
   }, [addActivity]);
 
   // Session inactivity timeout
@@ -203,7 +204,7 @@ export function App({ mcpUrl }: AppProps) {
         revokeToken().catch(() => {});
         setState((prev) => ({ ...prev, authenticated: false, username: null }));
         loginFlowRef.current.startLogin();
-        addActivity('SYS', 'Session expired due to inactivity');
+        addActivity('SYS', t('auth.sessionInactivity'));
       }
     }, 30_000);
     return () => clearInterval(interval);
@@ -246,41 +247,43 @@ export function App({ mcpUrl }: AppProps) {
           switch (action.kind) {
             case 'clear':
               setState((prev) => ({ ...prev, history: [] }));
-              addActivity('OK', 'Screen cleared');
+              addActivity('OK', t('dashboard.screenCleared'));
               break;
             case 'logout':
               await revokeToken();
               setState((prev) => ({ ...prev, authenticated: false, username: null }));
               loginFlowRef.current.startLogin();
-              addActivity('SYS', 'Logged out');
+              addActivity('SYS', t('auth.loggedOut'));
               break;
             case 'login':
               loginFlowRef.current.startLogin();
-              addActivity('SYS', 'Enter credentials to authenticate');
+              addActivity('SYS', t('auth.enterCredentials'));
               break;
             case 'refresh':
               dashboardDataRef.current.refresh();
-              addActivity('OK', 'Data refreshed');
+              addActivity('OK', t('dashboard.dataRefreshed'));
               break;
             case 'setup':
               setupFlowRef.current.startSetup();
-              addActivity('SYS', 'Starting admin setup');
+              addActivity('SYS', t('dashboard.startingAdminSetup'));
               break;
             case 'reset_password':
               resetPasswordFlowRef.current.startReset(action.username);
-              addActivity('SYS', `Resetting password for ${action.username}`);
+              addActivity('SYS', t('dashboard.resettingPassword', { username: action.username }));
               break;
             case 'backup_export':
               backupFlowRef.current.startExport(action.path);
-              addActivity('SYS', `Exporting backup to ${action.path}`);
+              addActivity('SYS', t('dashboard.exportingBackup', { path: action.path }));
               break;
             case 'backup_import':
               backupFlowRef.current.startImport(action.path, action.overwrite);
-              addActivity('SYS', `Importing backup from ${action.path}${action.overwrite ? ' (overwrite)' : ''}`);
+              addActivity('SYS', action.overwrite
+                ? t('dashboard.importingBackupOverwrite', { path: action.path })
+                : t('dashboard.importingBackup', { path: action.path }));
               break;
             case 'view':
               setActiveView(action.target);
-              addActivity('OK', `Switched to ${action.target} view`);
+              addActivity('OK', t('dashboard.switchedToView', { view: action.target }));
               break;
             case 'message': {
               addMessage(action.result.type, action.result.content);
@@ -300,7 +303,7 @@ export function App({ mcpUrl }: AppProps) {
           }
         }
       } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Command failed';
+        const msg = err instanceof Error ? err.message : t('common.commandFailed');
         addMessage('error', msg);
         addActivity('ERR', msg);
       } finally {
@@ -390,7 +393,7 @@ export function App({ mcpUrl }: AppProps) {
 
       <AsciiHeader />
 
-      <ErrorBoundary fallbackMessage="View rendering failed">
+      <ErrorBoundary fallbackMessage={t('dashboard.viewRenderingFailed')}>
         {setupFlow.isActive ? (
           <Box flexDirection="column" flexGrow={1}>
             <SetupView

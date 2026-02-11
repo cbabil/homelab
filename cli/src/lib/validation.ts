@@ -3,6 +3,8 @@
  * Rules match the frontend validation in registrationValidation.ts.
  */
 
+import { t } from '../i18n/index.js';
+
 export interface ValidationResult {
   valid: boolean;
   error?: string;
@@ -12,21 +14,21 @@ export function validateUsername(value: string): ValidationResult {
   const trimmed = value.trim();
 
   if (!trimmed) {
-    return { valid: false, error: 'Username is required' };
+    return { valid: false, error: t('validation.usernameRequired') };
   }
 
   if (trimmed.length < 3) {
-    return { valid: false, error: 'Username must be at least 3 characters' };
+    return { valid: false, error: t('validation.usernameMinLength') };
   }
 
   if (trimmed.length > 50) {
-    return { valid: false, error: 'Username must be less than 50 characters' };
+    return { valid: false, error: t('validation.usernameMaxLength') };
   }
 
   if (!/^[a-zA-Z0-9_-]+$/.test(trimmed)) {
     return {
       valid: false,
-      error: 'Username can only contain letters, numbers, hyphens, and underscores',
+      error: t('validation.usernameInvalidChars'),
     };
   }
 
@@ -35,31 +37,31 @@ export function validateUsername(value: string): ValidationResult {
 
 export function validatePassword(value: string): ValidationResult {
   if (!value) {
-    return { valid: false, error: 'Password is required' };
+    return { valid: false, error: t('validation.passwordRequired') };
   }
 
   if (value.length < 12) {
-    return { valid: false, error: 'Password must be at least 12 characters' };
+    return { valid: false, error: t('validation.passwordMinLength') };
   }
 
   if (value.length > 128) {
-    return { valid: false, error: 'Password must be less than 128 characters' };
+    return { valid: false, error: t('validation.passwordMaxLength') };
   }
 
   if (!/[A-Z]/.test(value)) {
-    return { valid: false, error: 'Password must contain an uppercase letter' };
+    return { valid: false, error: t('validation.passwordUppercase') };
   }
 
   if (!/[a-z]/.test(value)) {
-    return { valid: false, error: 'Password must contain a lowercase letter' };
+    return { valid: false, error: t('validation.passwordLowercase') };
   }
 
   if (!/\d/.test(value)) {
-    return { valid: false, error: 'Password must contain a number' };
+    return { valid: false, error: t('validation.passwordNumber') };
   }
 
   if (!/[!@#$%^&*(),.?"':{}|<>]/.test(value)) {
-    return { valid: false, error: 'Password must contain a special character' };
+    return { valid: false, error: t('validation.passwordSpecialChar') };
   }
 
   return { valid: true };
@@ -69,11 +71,11 @@ export function validateMcpUrl(url: string): ValidationResult {
   try {
     const parsed = new URL(url);
     if (!['http:', 'https:'].includes(parsed.protocol)) {
-      return { valid: false, error: 'MCP URL must use http or https protocol' };
+      return { valid: false, error: t('validation.mcpUrlProtocol') };
     }
     return { valid: true };
   } catch {
-    return { valid: false, error: 'Invalid URL format' };
+    return { valid: false, error: t('validation.invalidUrlFormat') };
   }
 }
 

@@ -6,6 +6,7 @@ import { useState, useCallback, useRef } from 'react';
 import { resetPassword } from '../lib/admin.js';
 import { validatePassword } from '../lib/validation.js';
 import type { ActivityEntry } from '../app/dashboard-types.js';
+import { t } from '../i18n/index.js';
 
 type ResetPwStep = 'password' | 'confirm' | null;
 
@@ -34,7 +35,7 @@ export function useResetPasswordFlow({
       if (step === 'password') {
         const validation = validatePassword(input);
         if (!validation.valid) {
-          addActivity('ERR', validation.error || 'Invalid password');
+          addActivity('ERR', validation.error || t('validation.invalidPassword'));
           setInputValue('');
           return;
         }
@@ -46,7 +47,7 @@ export function useResetPasswordFlow({
 
       if (step === 'confirm') {
         if (input !== passwordRef.current) {
-          addActivity('ERR', 'Passwords do not match');
+          addActivity('ERR', t('validation.passwordsDoNotMatch'));
           setStep('password');
           passwordRef.current = '';
           setInputValue('');
@@ -59,17 +60,17 @@ export function useResetPasswordFlow({
 
         setInputValue('');
         setRunning(true);
-        addActivity('SYS', `Resetting password for ${username}...`);
+        addActivity('SYS', t('users.resettingPassword', { username }));
 
         try {
           const result = await resetPassword(username, passwordCopy);
           if (result.success) {
-            addActivity('OK', `Password reset for ${username}`);
+            addActivity('OK', t('users.passwordResetSuccess', { username }));
           } else {
-            addActivity('ERR', result.error || 'Failed to reset password');
+            addActivity('ERR', result.error || t('users.failedToResetPassword'));
           }
         } catch (err) {
-          const msg = err instanceof Error ? err.message : 'Failed to reset password';
+          const msg = err instanceof Error ? err.message : t('users.failedToResetPassword');
           addActivity('ERR', msg);
         } finally {
           setRunning(false);
@@ -81,8 +82,8 @@ export function useResetPasswordFlow({
     [step, username, addActivity, setInputValue, setRunning]
   );
 
-  const promptLabel = step === 'password' ? 'New password: '
-    : step === 'confirm' ? 'Confirm password: '
+  const promptLabel = step === 'password' ? t('prompts.newPassword')
+    : step === 'confirm' ? t('prompts.confirmNewPassword')
     : undefined;
 
   return {

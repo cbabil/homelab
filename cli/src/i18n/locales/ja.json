@@ -1,0 +1,317 @@
+{
+  "common": {
+    "goodbye": "さようなら！",
+    "processing": "処理中...",
+    "unknown": "不明",
+    "never": "なし",
+    "on": "オン",
+    "off": "オフ",
+    "online": "オンライン",
+    "offline": "オフライン",
+    "connected": "接続済み",
+    "disconnected": "切断",
+    "connecting": "接続中",
+    "version": "バージョン",
+    "mcp": "MCP",
+    "status": "ステータス",
+    "typeHelpForCommands": "/help で利用可能なコマンドを表示",
+    "noDataAvailable": "データがありません",
+    "somethingWentWrong": "エラーが発生しました",
+    "unknownError": "不明なエラー",
+    "connectionFailed": "接続に失敗しました",
+    "commandFailed": "コマンドが失敗しました",
+    "typeCommandOrHelp": "コマンドまたは /help を入力",
+    "navigate": "移動"
+  },
+  "commands": {
+    "help": {
+      "description": "利用可能なコマンドを表示",
+      "title": "利用可能なコマンド：",
+      "managementTitle": "管理コマンド：",
+      "helpLine": "  /help, /h, /?          - このヘルプを表示",
+      "clearLine": "  /clear, /cls           - 出力履歴をクリア",
+      "quitLine": "  /quit, /exit, /q       - CLIを終了",
+      "statusLine": "  /status                - 接続状態を表示",
+      "serversLine": "  /servers               - 全サーバーを一覧表示",
+      "agentsLine": "  /agents                - 全エージェントを一覧表示",
+      "loginLine": "  /login                 - 管理者として認証",
+      "logoutLine": "  /logout                - 認証をクリア",
+      "viewLine": "  /view <タブ>           - ビューを切替 (dashboard|agents|logs|settings)",
+      "refreshLine": "  /refresh               - データを強制更新",
+      "agentMgmtLine": "  /agent <sub> [args]    - エージェント管理 (list|status|ping|rotate|install)",
+      "serverMgmtLine": "  /server <sub>          - サーバー管理 (list)",
+      "updateLine": "  /update                - アップデートを確認",
+      "securityLine": "  /security <sub> [args] - セキュリティ (list-locked|unlock)",
+      "backupLine": "  /backup <sub> [args]   - バックアップ (export|import)",
+      "userLine": "  /user <sub> <args>     - ユーザー管理 (reset-password)",
+      "adminLine": "  /admin create          - 管理者の初期設定"
+    },
+    "clear": {
+      "description": "出力履歴をクリア"
+    },
+    "quit": {
+      "description": "CLIを終了"
+    },
+    "status": {
+      "description": "接続状態を表示",
+      "title": "接続状態：",
+      "mcpConnected": "  MCP：接続済み",
+      "mcpDisconnected": "  MCP：切断",
+      "urlPrefix": "  URL：{{url}}",
+      "authenticated": "  認証：{{username}} として認証済み",
+      "notAuthenticated": "  認証：未認証"
+    },
+    "servers": {
+      "description": "全サーバーを一覧表示"
+    },
+    "agents": {
+      "description": "全エージェントを一覧表示"
+    },
+    "login": {
+      "description": "管理者として認証"
+    },
+    "logout": {
+      "description": "認証をクリア",
+      "success": "ログアウトしました"
+    },
+    "view": {
+      "description": "ダッシュボードビューを切替",
+      "usage": "使用法：/view <{{views}}>"
+    },
+    "refresh": {
+      "description": "データを強制更新"
+    },
+    "agent": {
+      "description": "エージェント管理",
+      "usage": "使用法：agent <list|status|ping|rotate|install> [args]",
+      "unknownSubcommand": "不明なエージェントサブコマンド：{{subcommand}}"
+    },
+    "server": {
+      "description": "サーバー管理",
+      "usage": "使用法：server <list>",
+      "unknownSubcommand": "不明なサーバーサブコマンド：{{subcommand}}"
+    },
+    "update": {
+      "description": "アップデートを確認"
+    },
+    "security": {
+      "description": "セキュリティ管理",
+      "usage": "使用法：/security <list-locked|unlock> [args]",
+      "unknownSubcommand": "不明なセキュリティサブコマンド：{{subcommand}}"
+    },
+    "backup": {
+      "description": "バックアップと復元",
+      "usage": "使用法：/backup <export|import> [args]",
+      "unknownSubcommand": "不明なバックアップサブコマンド：{{subcommand}}"
+    },
+    "user": {
+      "description": "ユーザー管理",
+      "usage": "使用法：/user <reset-password> <username>",
+      "unknownSubcommand": "不明なユーザーサブコマンド：{{subcommand}}"
+    },
+    "admin": {
+      "description": "管理者設定",
+      "usage": "使用法：/admin <create>",
+      "unknownSubcommand": "不明な管理者サブコマンド：{{subcommand}}"
+    },
+    "unknownCommand": "不明なコマンド：/{{command}}",
+    "unknownInput": "不明な入力：{{input}}"
+  },
+  "auth": {
+    "notConnected": "MCPサーバーに接続されていません",
+    "authRequired": "認証が必要です。先に /login を使用してください。",
+    "invalidToken": "サーバーから無効なトークンを受信しました",
+    "adminOnly": "管理者のみCLIコマンドを実行できます",
+    "invalidCredentials": "認証情報が無効です",
+    "mustBeLoggedIn": "アカウントのロック解除にはログインが必要です",
+    "sessionExpired": "セッションが期限切れです。再度ログインしてください。",
+    "sessionInactivity": "非アクティブのためセッションが期限切れになりました",
+    "authenticating": "{{username}} を認証中...",
+    "authenticated": "{{username}} として認証済み",
+    "authenticationFailed": "認証に失敗しました",
+    "loggedOut": "ログアウトしました",
+    "enterCredentials": "認証情報を入力してください"
+  },
+  "prompts": {
+    "username": "ユーザー名：",
+    "password": "パスワード：",
+    "confirmPassword": "パスワード確認：",
+    "newPassword": "新しいパスワード：",
+    "confirmNewPassword": "パスワード確認：",
+    "encryptionPassword": "暗号化パスワード：",
+    "decryptionPassword": "復号パスワード："
+  },
+  "dashboard": {
+    "welcomeToTomo": "Tomo CLI へようこそ",
+    "connectedTo": "{{url}} に接続しました",
+    "failedToConnect": "接続に失敗しました：{{error}}",
+    "systemRequiresSetup": "システムの初期設定が必要です",
+    "screenCleared": "画面をクリアしました",
+    "dataRefreshed": "データを更新しました",
+    "startingAdminSetup": "管理者の設定を開始します",
+    "switchedToView": "{{view}} ビューに切り替えました",
+    "resettingPassword": "{{username}} のパスワードをリセット中",
+    "exportingBackup": "{{path}} にバックアップをエクスポート中",
+    "importingBackup": "{{path}} からバックアップをインポート中",
+    "importingBackupOverwrite": "{{path}} からバックアップをインポート中（上書き）",
+    "failedToFetchData": "データの取得に失敗しました",
+    "systemStatus": "システム状態",
+    "activeAgents": "アクティブエージェント",
+    "activeServers": "アクティブサーバー",
+    "recentActivity": "最近のアクティビティ",
+    "noRecentActivity": "最近のアクティビティはありません",
+    "noAgentsRegistered": "登録されたエージェントはありません",
+    "noServersRegistered": "登録されたサーバーはありません",
+    "staleLabel": "古い：{{count}}",
+    "updatesLabel": "更新：{{count}}",
+    "viewRenderingFailed": "ビューの表示に失敗しました"
+  },
+  "agents": {
+    "title": "エージェント管理",
+    "noAgentsFound": "エージェントが見つかりません。",
+    "foundAgents": "{{count}} 件のエージェントが見つかりました：",
+    "agentEntry": "  [{{id}}] サーバー：{{serverId}} - {{status}}",
+    "versionLabel": "       バージョン：{{version}}",
+    "statusTitle": "サーバー {{serverId}} のエージェント状態：",
+    "statusLabel": "  状態：{{status}}",
+    "versionInfo": "  バージョン：{{version}}",
+    "lastSeen": "  最終確認：{{lastSeen}}",
+    "agentNotFound": "エージェントが見つかりません",
+    "failedToList": "エージェント一覧の取得に失敗しました",
+    "failedToGetStatus": "エージェントの状態取得に失敗しました",
+    "failedToPing": "エージェントのpingに失敗しました",
+    "pingFailed": "ping失敗：{{error}}",
+    "pingSuccess": "Pong！サーバー {{serverId}} のエージェントが {{latency}}ms で応答しました",
+    "rotateSuccess": "トークンのローテーションを開始しました！",
+    "agentIdLabel": "  エージェントID：{{agentId}}",
+    "gracePeriodLabel": "  猶予期間：{{seconds}} 秒",
+    "tokenExpiresLabel": "  トークン有効期限：{{expiresAt}}",
+    "rotateWebSocketNote": "エージェントはWebSocket経由で新しいトークンを受信します。",
+    "failedToRotate": "エージェントトークンのローテーションに失敗しました",
+    "noRotationData": "ローテーションデータを受信できませんでした",
+    "installSuccess": "サーバー {{serverId}} にエージェントをインストールしました",
+    "failedToInstall": "エージェントのインストールに失敗しました",
+    "usageStatus": "使用法：agent status <server-id>",
+    "usagePing": "使用法：agent ping <server-id>",
+    "usageRotate": "使用法：agent rotate <server-id>",
+    "usageInstall": "使用法：agent install <server-id>",
+    "columnId": "ID",
+    "columnServer": "サーバー",
+    "columnStatus": "ステータス",
+    "columnVersion": "バージョン",
+    "columnLastSeen": "最終確認"
+  },
+  "servers": {
+    "noServersFound": "サーバーが見つかりません。",
+    "foundServers": "{{count}} 件のサーバーが見つかりました：",
+    "serverEntry": "  [{{id}}] {{name}} ({{hostname}}) - {{status}}",
+    "failedToList": "サーバー一覧の取得に失敗しました",
+    "columnId": "ID",
+    "columnName": "名前",
+    "columnHostname": "ホスト名",
+    "columnStatus": "ステータス"
+  },
+  "settings": {
+    "title": "設定",
+    "connectionTab": "接続",
+    "preferencesTab": "環境設定",
+    "aboutTab": "情報",
+    "mcpServerUrl": "MCPサーバーURL",
+    "mcpUrlHint": "変更するには環境変数 MCP_SERVER_URL を設定してください。",
+    "refreshInterval": "更新間隔",
+    "autoRefresh": "自動更新",
+    "cliVersion": "CLIバージョン",
+    "envVarHint": "設定の変更には環境変数を使用してください。"
+  },
+  "setup": {
+    "title": "初期設定",
+    "welcomeToTomo": "Tomo へようこそ",
+    "noAdminFound": "管理者アカウントが見つかりません。開始するにはアカウントを作成してください。",
+    "step1Username": "ステップ 1/3：管理者ユーザー名を入力（3文字以上、英数字）",
+    "step2Password": "ステップ 2/3：\"{{username}}\" のパスワードを入力",
+    "step3Confirm": "ステップ 3/3：パスワードを確認",
+    "creatingAdmin": "管理者アカウントを作成中...",
+    "adminCreated": "管理者 \"{{username}}\" を作成しました。ログイン済みです。",
+    "setupFailed": "設定に失敗しました：{{error}}",
+    "creatingAdminActivity": "管理者 \"{{username}}\" を作成中...",
+    "adminCreatedSuccess": "管理者 \"{{username}}\" を作成しました",
+    "failedToCreateAdmin": "管理者の作成に失敗しました",
+    "setupFailedGeneric": "設定に失敗しました",
+    "passwordRequirements": "パスワード要件：",
+    "passwordMinLength": "  - 12文字以上",
+    "passwordUppercase": "  - 大文字1文字",
+    "passwordLowercase": "  - 小文字1文字",
+    "passwordNumber": "  - 数字1文字",
+    "passwordSpecialChar": "  - 特殊文字1文字"
+  },
+  "security": {
+    "usageUnlock": "使用法：/security unlock <lock-id> [メモ]",
+    "noLockedAccounts": "ロックされたアカウントはありません。",
+    "foundLockedAccounts": "{{count}} 件のロックされたアカウントが見つかりました：",
+    "lockedAccountEntry": "  [{{id}}] {{identifier}} ({{type}}) - {{attempts}} 回の試行 - {{lockedAt}} にロック",
+    "unlockSuccess": "アカウントロック {{lockId}} を解除しました",
+    "failedToListLocked": "ロックされたアカウントの一覧取得に失敗しました",
+    "failedToUnlock": "アカウントのロック解除に失敗しました",
+    "unlockedViaCli": "{{username}} がCLI経由でロック解除"
+  },
+  "updates": {
+    "failedToCheck": "アップデートの確認に失敗しました",
+    "noInfoAvailable": "アップデート情報はありません",
+    "currentVersion": "現在のバージョン：{{version}}",
+    "updateAvailable": "アップデートあり：{{version}}",
+    "latestVersion": "最新バージョンを使用中：{{version}}"
+  },
+  "backup": {
+    "usageImport": "使用法：/backup import <パス> [--overwrite]",
+    "pathRequired": "パスは必須です",
+    "pathInvalidChars": "パスに無効な文字が含まれています",
+    "pathNoParentDir": "パスに \"..\" を含めることはできません",
+    "exportingTo": "{{path}} にバックアップをエクスポート中...",
+    "exportSuccess": "{{path}} にバックアップをエクスポートしました",
+    "checksumLabel": "チェックサム：{{checksum}}",
+    "failedToExport": "バックアップのエクスポートに失敗しました",
+    "importingFrom": "{{path}} からバックアップをインポート中...",
+    "importSuccess": "{{path}} からバックアップをインポートしました",
+    "importStats": "ユーザー：{{users}}、サーバー：{{servers}}",
+    "failedToImport": "バックアップのインポートに失敗しました"
+  },
+  "users": {
+    "usageResetPassword": "使用法：/user reset-password <username>",
+    "usernameValidation": "ユーザー名は3～50文字（英字、数字、_、-）で入力してください",
+    "passwordResetSuccess": "{{username}} のパスワードをリセットしました",
+    "failedToResetPassword": "パスワードのリセットに失敗しました",
+    "resettingPassword": "{{username}} のパスワードをリセット中..."
+  },
+  "validation": {
+    "usernameRequired": "ユーザー名は必須です",
+    "usernameMinLength": "ユーザー名は3文字以上にしてください",
+    "usernameMaxLength": "ユーザー名は50文字未満にしてください",
+    "usernameInvalidChars": "ユーザー名には英字、数字、ハイフン、アンダースコアのみ使用できます",
+    "passwordRequired": "パスワードは必須です",
+    "passwordMinLength": "パスワードは12文字以上にしてください",
+    "passwordMaxLength": "パスワードは128文字未満にしてください",
+    "passwordUppercase": "パスワードには大文字を含めてください",
+    "passwordLowercase": "パスワードには小文字を含めてください",
+    "passwordNumber": "パスワードには数字を含めてください",
+    "passwordSpecialChar": "パスワードには特殊文字を含めてください",
+    "mcpUrlProtocol": "MCP URLはhttpまたはhttpsプロトコルを使用してください",
+    "invalidUrlFormat": "無効なURL形式です",
+    "passwordsDoNotMatch": "パスワードが一致しません",
+    "invalidUsername": "無効なユーザー名です",
+    "invalidPassword": "無効なパスワードです"
+  },
+  "errors": {
+    "notConnected": "MCPサーバーに接続されていません",
+    "connectionFailed": "接続に失敗しました",
+    "failedToListServers": "サーバー一覧の取得に失敗しました",
+    "failedToInstallAgent": "エージェントのインストールに失敗しました",
+    "failedToCreateAdmin": "管理者の作成に失敗しました",
+    "failedToResetPassword": "パスワードのリセットに失敗しました",
+    "failedToUnlockAccount": "アカウントのロック解除に失敗しました",
+    "failedToExportBackup": "バックアップのエクスポートに失敗しました",
+    "failedToImportBackup": "バックアップのインポートに失敗しました"
+  },
+  "logs": {
+    "title": "最近のアクティビティ"
+  }
+}

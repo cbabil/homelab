@@ -5,6 +5,7 @@
 import { useState, useCallback } from 'react';
 import { authenticateAdmin } from '../lib/auth.js';
 import type { ActivityEntry } from '../app/dashboard-types.js';
+import { t } from '../i18n/index.js';
 
 export type LoginStep = 'username' | 'password' | null;
 
@@ -41,22 +42,22 @@ export function useLoginFlow({
       if (loginStep === 'password') {
         setInputValue('');
         setRunning(true);
-        addActivity('SYS', `Authenticating ${loginUsername}...`);
+        addActivity('SYS', t('auth.authenticating', { username: loginUsername }));
         try {
           const result = await authenticateAdmin(loginUsername, input);
           if (result.success) {
             setLoginStep(null);
             setRunning(false);
             onAuthenticated(loginUsername);
-            addActivity('OK', `Authenticated as ${loginUsername}`);
+            addActivity('OK', t('auth.authenticated', { username: loginUsername }));
           } else {
             setRunning(false);
-            addActivity('ERR', result.error || 'Authentication failed');
+            addActivity('ERR', result.error || t('auth.authenticationFailed'));
             setLoginStep('username');
           }
         } catch (err) {
           setRunning(false);
-          const msg = err instanceof Error ? err.message : 'Authentication failed';
+          const msg = err instanceof Error ? err.message : t('auth.authenticationFailed');
           addActivity('ERR', msg);
           setLoginStep('username');
         }
@@ -66,8 +67,8 @@ export function useLoginFlow({
     [loginStep, loginUsername, addActivity, onAuthenticated, setInputValue, setRunning]
   );
 
-  const promptLabel = loginStep === 'username' ? 'Username: '
-    : loginStep === 'password' ? 'Password: '
+  const promptLabel = loginStep === 'username' ? t('prompts.username')
+    : loginStep === 'password' ? t('prompts.password')
     : undefined;
 
   const promptMask = loginStep === 'password';

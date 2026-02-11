@@ -5,6 +5,7 @@
  */
 
 import { getMCPClient } from './mcp-client.js';
+import { t } from '../i18n/index.js';
 
 interface LoginResponse {
   token: string;
@@ -102,11 +103,11 @@ export async function authenticateAdmin(
     const { token, refresh_token, user } = response.data;
 
     if (!isValidToken(token)) {
-      return { success: false, error: 'Invalid token received from server' };
+      return { success: false, error: t('auth.invalidToken') };
     }
 
     if (user.role !== 'admin') {
-      return { success: false, error: 'Only admin users can run CLI commands' };
+      return { success: false, error: t('auth.adminOnly') };
     }
 
     authStore.set({
@@ -119,7 +120,7 @@ export async function authenticateAdmin(
     return { success: true };
   }
 
-  return { success: false, error: 'Invalid credentials' };
+  return { success: false, error: t('auth.invalidCredentials') };
 }
 
 /**

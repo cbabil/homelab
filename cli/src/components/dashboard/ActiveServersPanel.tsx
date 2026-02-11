@@ -7,6 +7,7 @@ import { Panel } from './Panel.js';
 import { DataTable, type DataColumn } from './DataTable.js';
 import { StatusBadge } from './StatusBadge.js';
 import type { BadgeStatus } from '../../app/theme.js';
+import { t } from '../../i18n/index.js';
 
 export interface ServerRow {
   id: string;
@@ -29,12 +30,12 @@ function mapServerStatus(status: string): BadgeStatus {
 }
 
 const SERVER_COLUMNS: DataColumn<ServerRow>[] = [
-  { key: 'id', header: 'ID', width: 10 },
-  { key: 'name', header: 'Name', width: 14 },
-  { key: 'hostname', header: 'Hostname', width: 16 },
+  { key: 'id', header: t('servers.columnId'), width: 10 },
+  { key: 'name', header: t('servers.columnName'), width: 14 },
+  { key: 'hostname', header: t('servers.columnHostname'), width: 16 },
   {
     key: 'status',
-    header: 'Status',
+    header: t('servers.columnStatus'),
     width: 12,
     render: (row: ServerRow) => (
       <StatusBadge status={mapServerStatus(row.status)} />
@@ -48,11 +49,11 @@ interface ActiveServersPanelProps {
 
 export function ActiveServersPanel({ servers }: ActiveServersPanelProps) {
   return (
-    <Panel title="ACTIVE_SERVERS">
+    <Panel title={t('dashboard.activeServers')}>
       <DataTable
         columns={SERVER_COLUMNS}
         data={servers}
-        emptyMessage="No servers registered"
+        emptyMessage={t('dashboard.noServersRegistered')}
       />
     </Panel>
   );

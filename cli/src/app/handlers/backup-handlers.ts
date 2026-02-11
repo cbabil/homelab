@@ -9,19 +9,20 @@ import path from 'path';
 import type { CommandResult } from '../types.js';
 import { SIGNALS } from '../signals.js';
 import { sanitizeForDisplay } from '../../lib/validation.js';
+import { t } from '../../i18n/index.js';
 
 const DEFAULT_BACKUP_PATH = './backup.enc';
 
 function validatePath(inputPath: string): string | null {
   if (!inputPath) {
-    return 'Path is required';
+    return t('backup.pathRequired');
   }
   if (/[\0]/.test(inputPath)) {
-    return 'Path contains invalid characters';
+    return t('backup.pathInvalidChars');
   }
   const normalized = path.normalize(inputPath);
   if (normalized.includes('..')) {
-    return 'Path must not contain ".."';
+    return t('backup.pathNoParentDir');
   }
   return null;
 }
@@ -42,7 +43,7 @@ export async function handleBackupCommand(
 
     case 'import': {
       if (!args[0]) {
-        return [{ type: 'error', content: 'Usage: /backup import <path> [--overwrite]' }];
+        return [{ type: 'error', content: t('backup.usageImport') }];
       }
       const path = args[0];
       const pathError = validatePath(path);
@@ -61,8 +62,8 @@ export async function handleBackupCommand(
         {
           type: 'error',
           content: subcommand
-            ? `Unknown backup subcommand: ${sanitizeForDisplay(subcommand)}`
-            : 'Usage: /backup <export|import> [args]',
+            ? t('commands.backup.unknownSubcommand', { subcommand: sanitizeForDisplay(subcommand) })
+            : t('commands.backup.usage'),
         },
       ];
   }

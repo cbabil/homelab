@@ -17,6 +17,7 @@ import { handleBackupCommand } from './handlers/backup-handlers.js';
 import { handleUserCommand } from './handlers/user-handlers.js';
 import { getHelpText } from './handlers/help-handler.js';
 import { sanitizeForDisplay } from '../lib/validation.js';
+import { t } from '../i18n/index.js';
 
 /**
  * Guard for commands that require authentication.
@@ -24,10 +25,10 @@ import { sanitizeForDisplay } from '../lib/validation.js';
  */
 function requireAuth(state: AppState): CommandResult[] | null {
   if (!state.mcpConnected) {
-    return [{ type: 'error', content: 'Not connected to MCP server' }];
+    return [{ type: 'error', content: t('auth.notConnected') }];
   }
   if (!state.authenticated) {
-    return [{ type: 'error', content: 'Authentication required. Use /login first.' }];
+    return [{ type: 'error', content: t('auth.authRequired') }];
   }
   return null;
 }
@@ -43,42 +44,44 @@ const slashCommands: SlashCommand[] = [
   {
     name: 'help',
     aliases: ['h', '?'],
-    description: 'Show available commands',
+    description: t('commands.help.description'),
     handler: async () => getHelpText(),
   },
   {
     name: 'clear',
     aliases: ['cls'],
-    description: 'Clear output history',
+    description: t('commands.clear.description'),
     handler: async () => [{ type: 'system', content: SIGNALS.CLEAR }],
   },
   {
     name: 'quit',
     aliases: ['exit', 'q'],
-    description: 'Exit the CLI',
-    handler: async () => [{ type: 'system', content: 'Goodbye!', exit: true }],
+    description: t('commands.quit.description'),
+    handler: async () => [{ type: 'system', content: t('common.goodbye'), exit: true }],
   },
   {
     name: 'status',
     aliases: [],
-    description: 'Show connection status',
+    description: t('commands.status.description'),
     handler: async (_args, state) => [
-      { type: 'info', content: 'Connection Status:' },
+      { type: 'info', content: t('commands.status.title') },
       {
         type: state.mcpConnected ? 'success' : 'error',
-        content: `  MCP: ${state.mcpConnected ? 'Connected' : 'Disconnected'}`,
+        content: state.mcpConnected ? t('commands.status.mcpConnected') : t('commands.status.mcpDisconnected'),
       },
-      { type: 'info', content: `  URL: ${state.mcpUrl}` },
+      { type: 'info', content: t('commands.status.urlPrefix', { url: state.mcpUrl }) },
       {
         type: state.authenticated ? 'success' : 'info',
-        content: `  Auth: ${state.authenticated ? `Authenticated as ${state.username}` : 'Not authenticated'}`,
+        content: state.authenticated
+          ? t('commands.status.authenticated', { username: state.username })
+          : t('commands.status.notAuthenticated'),
       },
     ],
   },
   {
     name: 'servers',
     aliases: [],
-    description: 'List all servers',
+    description: t('commands.servers.description'),
     handler: async (_args, state) => {
       const authError = requireAuth(state);
       if (authError) return authError;
@@ -89,7 +92,7 @@ const slashCommands: SlashCommand[] = [
   {
     name: 'agents',
     aliases: [],
-    description: 'List all agents',
+    description: t('commands.agents.description'),
     handler: async (_args, state) => {
       const authError = requireAuth(state);
       if (authError) return authError;
@@ -100,28 +103,28 @@ const slashCommands: SlashCommand[] = [
   {
     name: 'login',
     aliases: [],
-    description: 'Authenticate as admin',
+    description: t('commands.login.description'),
     handler: async () => [{ type: 'system', content: SIGNALS.LOGIN }],
   },
   {
     name: 'logout',
     aliases: [],
-    description: 'Clear authentication',
+    description: t('commands.logout.description'),
     handler: async () => [
       { type: 'system', content: SIGNALS.LOGOUT },
-      { type: 'success', content: 'Logged out successfully' },
+      { type: 'success', content: t('commands.logout.success') },
     ],
   },
   {
     name: 'view',
     aliases: [],
-    description: 'Switch dashboard view',
+    description: t('commands.view.description'),
     handler: async (args) => {
       const target = args[0]?.toLowerCase();
 
       if (!target || !VALID_VIEWS.includes(target as never)) {
         return [
-          { type: 'error', content: `Usage: /view <${VALID_VIEWS.join('|')}>` },
+          { type: 'error', content: t('commands.view.usage', { views: VALID_VIEWS.join('|') }) },
         ];
       }
 
@@ -131,13 +134,13 @@ const slashCommands: SlashCommand[] = [
   {
     name: 'refresh',
     aliases: [],
-    description: 'Force data refresh',
+    description: t('commands.refresh.description'),
     handler: async () => [{ type: 'system', content: SIGNALS.REFRESH }],
   },
   {
     name: 'agent',
     aliases: [],
-    description: 'Agent management',
+    description: t('commands.agent.description'),
     handler: async (args, state) => {
       const authError = requireAuth(state);
       if (authError) return authError;
@@ -150,7 +153,7 @@ const slashCommands: SlashCommand[] = [
   {
     name: 'server',
     aliases: [],
-    description: 'Server management',
+    description: t('commands.server.description'),
     handler: async (args, state) => {
       const authError = requireAuth(state);
       if (authError) return authError;
@@ -163,7 +166,7 @@ const slashCommands: SlashCommand[] = [
   {
     name: 'update',
     aliases: [],
-    description: 'Check for updates',
+    description: t('commands.update.description'),
     handler: async (_args, state) => {
       const authError = requireAuth(state);
       if (authError) return authError;
@@ -174,7 +177,7 @@ const slashCommands: SlashCommand[] = [
   {
     name: 'security',
     aliases: [],
-    description: 'Security management',
+    description: t('commands.security.description'),
     handler: async (args, state) => {
       const authError = requireAuth(state);
       if (authError) return authError;
@@ -186,7 +189,7 @@ const slashCommands: SlashCommand[] = [
   {
     name: 'backup',
     aliases: [],
-    description: 'Backup and restore',
+    description: t('commands.backup.description'),
     handler: async (args, state) => {
       const authError = requireAuth(state);
       if (authError) return authError;
@@ -198,7 +201,7 @@ const slashCommands: SlashCommand[] = [
   {
     name: 'user',
     aliases: [],
-    description: 'User management',
+    description: t('commands.user.description'),
     handler: async (args, state) => {
       const authError = requireAuth(state);
       if (authError) return authError;
@@ -210,7 +213,7 @@ const slashCommands: SlashCommand[] = [
   {
     name: 'admin',
     aliases: [],
-    description: 'Admin management',
+    description: t('commands.admin.description'),
     handler: async (args) => {
       const subcommand = args[0]?.toLowerCase() ?? '';
 
@@ -222,8 +225,8 @@ const slashCommands: SlashCommand[] = [
         {
           type: 'error',
           content: subcommand
-            ? `Unknown admin subcommand: ${sanitizeForDisplay(subcommand)}`
-            : 'Usage: /admin <create>',
+            ? t('commands.admin.unknownSubcommand', { subcommand: sanitizeForDisplay(subcommand) })
+            : t('commands.admin.usage'),
         },
       ];
     },
@@ -253,14 +256,14 @@ export async function routeCommand(
     }
 
     return [
-      { type: 'error', content: `Unknown command: /${sanitizeForDisplay(cmdName)}` },
-      { type: 'info', content: 'Type /help for available commands' },
+      { type: 'error', content: t('commands.unknownCommand', { command: sanitizeForDisplay(cmdName) }) },
+      { type: 'info', content: t('common.typeHelpForCommands') },
     ];
   }
 
   // No regular commands — all commands must use / prefix
   return [
-    { type: 'error', content: `Unknown input: ${sanitizeForDisplay(trimmed)}` },
-    { type: 'info', content: 'Type /help for available commands' },
+    { type: 'error', content: t('commands.unknownInput', { input: sanitizeForDisplay(trimmed) }) },
+    { type: 'info', content: t('common.typeHelpForCommands') },
   ];
 }

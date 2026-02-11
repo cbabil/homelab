@@ -3,52 +3,53 @@
  */
 
 import type { CommandResult } from '../types.js';
+import { t } from '../../i18n/index.js';
 
 export function getHelpText(): CommandResult[] {
   return [
     {
       type: 'info',
-      content: 'Available Commands:',
+      content: t('commands.help.title'),
     },
     {
       type: 'system',
-      content: '  /help, /h, /?          - Show this help message',
+      content: t('commands.help.helpLine'),
     },
     {
       type: 'system',
-      content: '  /clear, /cls           - Clear output history',
+      content: t('commands.help.clearLine'),
     },
     {
       type: 'system',
-      content: '  /quit, /exit, /q       - Exit the CLI',
+      content: t('commands.help.quitLine'),
     },
     {
       type: 'system',
-      content: '  /status                - Show connection status',
+      content: t('commands.help.statusLine'),
     },
     {
       type: 'system',
-      content: '  /servers               - List all servers',
+      content: t('commands.help.serversLine'),
     },
     {
       type: 'system',
-      content: '  /agents                - List all agents',
+      content: t('commands.help.agentsLine'),
     },
     {
       type: 'system',
-      content: '  /login                 - Authenticate as admin',
+      content: t('commands.help.loginLine'),
     },
     {
       type: 'system',
-      content: '  /logout                - Clear authentication',
+      content: t('commands.help.logoutLine'),
     },
     {
       type: 'system',
-      content: '  /view <tab>            - Switch view (dashboard|agents|logs|settings)',
+      content: t('commands.help.viewLine'),
     },
     {
       type: 'system',
-      content: '  /refresh               - Force data refresh',
+      content: t('commands.help.refreshLine'),
     },
     {
       type: 'info',
@@ -56,35 +57,35 @@ export function getHelpText(): CommandResult[] {
     },
     {
       type: 'info',
-      content: 'Management Commands:',
+      content: t('commands.help.managementTitle'),
     },
     {
       type: 'system',
-      content: '  /agent <sub> [args]    - Agent management (list|status|ping|rotate|install)',
+      content: t('commands.help.agentMgmtLine'),
     },
     {
       type: 'system',
-      content: '  /server <sub>          - Server management (list)',
+      content: t('commands.help.serverMgmtLine'),
     },
     {
       type: 'system',
-      content: '  /update                - Check for updates',
+      content: t('commands.help.updateLine'),
     },
     {
       type: 'system',
-      content: '  /security <sub> [args] - Security (list-locked|unlock)',
+      content: t('commands.help.securityLine'),
     },
     {
       type: 'system',
-      content: '  /backup <sub> [args]   - Backup (export|import)',
+      content: t('commands.help.backupLine'),
     },
     {
       type: 'system',
-      content: '  /user <sub> <args>     - User management (reset-password)',
+      content: t('commands.help.userLine'),
     },
     {
       type: 'system',
-      content: '  /admin create          - Initial admin setup',
+      content: t('commands.help.adminLine'),
     },
   ];
 }
